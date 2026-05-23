@@ -215,10 +215,21 @@
       }
       return { credited, queued };
     },
-    spendEastPoints(n) {
+    // Spend EP. When logged in, state.eastPoints mirrors the real
+    // members/{uid}.totalPoints (synced on login + each earn/spend), so
+    // checking local balance is the same as checking server balance. The
+    // Firestore decrement is fired async; failures get queued and retried.
+    spendEastPoints(n, opts) {
+      opts = opts || {};
       if (this.data.eastPoints < n) return false;
       this.data.eastPoints -= n;
       this.save();
+      // Mirror to member account if logged in (optimistic + queue on failure)
+      if (window.Farm && Farm.fbAuth && Farm.fbAuth.isLoggedIn() && Farm.fbPoints) {
+        Farm.fbPoints.syncEpSpend(n, opts.source || 'unknown', opts.description || '');
+      }
+      // Reflect new balance in topbar immediately (callers no longer need to)
+      if (window.Farm && Farm.ui && Farm.ui.refreshHUD) Farm.ui.refreshHUD();
       return true;
     },
 
@@ -238,8 +249,11 @@
     exchangeEpToCoins(epAmt) {
       epAmt = Math.floor(epAmt);
       if (epAmt <= 0) return { ok: false, reason: 'too_small' };
-      if (this.data.eastPoints < epAmt) return { ok: false, reason: 'insufficient_ep' };
-      this.data.eastPoints -= epAmt;
+      // Route through spendEastPoints so the spend syncs to the member
+      // account when logged in (Firestore decrement + audit row).
+      if (!this.spendEastPoints(epAmt, { source: 'coin_exchange', description: 'EP → coins exchange' })) {
+        return { ok: false, reason: 'insufficient_ep' };
+      }
       const coinAmount = epAmt * 10;
       this.data.coins += coinAmount;
       this.save();

@@ -48,6 +48,71 @@
       }
     },
 
+    // Sync an in-game spend (EP shop purchase, EP→coins exchange). Decrements
+    // members/{uid}.totalPoints and creates a points_transactions doc with
+    // type='redeem' so the main store's PointsHistory shows it as "spent".
+    // lifetimePoints is NOT decremented (it's a "lifetime earned" counter).
+    async syncEpSpend(amount, source, description, eventId) {
+      eventId = eventId || uuid();
+      if (amount <= 0) return { synced: true, eventId, noop: true };
+      if (!Farm.fb || !Farm.fb.available || !Farm.fbAuth.isLoggedIn()) {
+        if (Farm.fbQueue) Farm.fbQueue.enqueue({ kind: 'spend', amount, source, description, eventId });
+        return { synced: false, eventId, queued: true, reason: 'not_logged_in' };
+      }
+      const uid = Farm.fbAuth.uid();
+      try {
+        await this._writeSpendTransaction(uid, amount, source, description, eventId);
+        return { synced: true, eventId };
+      } catch (e) {
+        console.warn('[fb-points] spend sync failed; queuing', e);
+        if (Farm.fbQueue) Farm.fbQueue.enqueue({ kind: 'spend', amount, source, description, eventId });
+        return { synced: false, eventId, queued: true, reason: e.code || e.message };
+      }
+    },
+
+    async _writeSpendTransaction(uid, amount, source, description, eventId) {
+      const db = Farm.fb.db;
+      const memberRef = db.collection('members').doc(uid);
+      const txCol = db.collection('points_transactions');
+
+      // Idempotency: dedupe by eventId
+      const dupCheck = await txCol
+        .where('memberId', '==', uid)
+        .where('eventId', '==', eventId)
+        .limit(1)
+        .get();
+      if (!dupCheck.empty) return;
+
+      await db.runTransaction(async (t) => {
+        const memberSnap = await t.get(memberRef);
+        if (!memberSnap.exists) throw new Error('member_doc_missing');
+        const data = memberSnap.data();
+        const current = data.totalPoints || 0;
+        if (current < amount) throw new Error('insufficient_server_balance');
+        t.update(memberRef, {
+          totalPoints: current - amount,
+          updatedAt: Farm.fb.serverTimestamp(),
+        });
+        const newTxRef = txCol.doc();
+        t.set(newTxRef, {
+          memberId: uid,
+          type: 'redeem',
+          points: amount,
+          source: 'game:farm',
+          subSource: source || 'unknown',
+          description: description || '游戏内消费',
+          eventId,
+          createdAt: Farm.fb.serverTimestamp(),
+        });
+      });
+
+      // Update cached member doc + refresh topbar
+      if (Farm.fbAuth.memberDoc) {
+        Farm.fbAuth.memberDoc.totalPoints = Math.max(0, (Farm.fbAuth.memberDoc.totalPoints || 0) - amount);
+        Farm.fbAuth._renderTopbar();
+      }
+    },
+
     async _writeEarnTransaction(uid, amount, source, description, eventId) {
       const db = Farm.fb.db;
       const memberRef = db.collection('members').doc(uid);
@@ -117,6 +182,9 @@
         data.unsyncedEp = Math.max(0, local - amount);
         data.backfillDone = true;
         Farm.state.save();
+        // After backfill, memberDoc.totalPoints was bumped — re-sync local
+        // state.eastPoints so HUD reflects the post-backfill total.
+        if (Farm.fbAuth && Farm.fbAuth._syncLocalBalance) Farm.fbAuth._syncLocalBalance();
         Farm.ui.refreshHUD();
         const lang = data.language;
         setTimeout(() => {

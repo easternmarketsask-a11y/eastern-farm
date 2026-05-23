@@ -41,9 +41,9 @@
       const remaining = [];
       for (const item of q) {
         try {
-          const r = await Farm.fbPoints.syncEpEarn(
-            item.amount, item.source, item.description, item.eventId
-          );
+          const r = item.kind === 'spend'
+            ? await Farm.fbPoints.syncEpSpend(item.amount, item.source, item.description, item.eventId)
+            : await Farm.fbPoints.syncEpEarn (item.amount, item.source, item.description, item.eventId);
           if (!r.synced) remaining.push(item);
         } catch (e) {
           remaining.push(item);

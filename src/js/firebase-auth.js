@@ -39,6 +39,14 @@
         } else {
           this.currentUser = null;
           this.memberDoc = null;
+          // On signout: drop any cached server balance from state.eastPoints
+          // so the next viewer doesn't see (or spend!) the previous user's EP.
+          // Local-earned guest EP (unsyncedEp) is still safe.
+          if (Farm.state && Farm.state.data) {
+            Farm.state.data.eastPoints = Farm.state.data.unsyncedEp || 0;
+            Farm.state.save();
+            if (Farm.ui && Farm.ui.refreshHUD) Farm.ui.refreshHUD();
+          }
           this._notify();
           this._renderTopbar();
         }
@@ -67,21 +75,35 @@
         const direct = await Farm.fb.db.collection('members').doc(uid).get();
         if (direct.exists) {
           this.memberDoc = { id: direct.id, ...direct.data() };
-          return;
+        } else {
+          // Fallback: query by firebase_uid field (for legacy ru_ docs)
+          const q = await Farm.fb.db.collection('members')
+            .where('firebase_uid', '==', uid).limit(1).get();
+          if (!q.empty) {
+            const d = q.docs[0];
+            this.memberDoc = { id: d.id, ...d.data() };
+          } else {
+            this.memberDoc = null;
+          }
         }
-        // Fallback: query by firebase_uid field (for legacy ru_ docs)
-        const q = await Farm.fb.db.collection('members')
-          .where('firebase_uid', '==', uid).limit(1).get();
-        if (!q.empty) {
-          const d = q.docs[0];
-          this.memberDoc = { id: d.id, ...d.data() };
-          return;
-        }
-        // No member doc — auth user exists but no profile (edge case)
-        this.memberDoc = null;
       } catch (e) {
         console.warn('member doc load failed', e);
         this.memberDoc = null;
+      }
+      this._syncLocalBalance();
+    },
+
+    // Mirror the real member-account balance into state.eastPoints so the
+    // game's display + spend logic sees the unified number. Game EP and
+    // store EP are the same currency (1:1) — they MUST stay in lockstep.
+    _syncLocalBalance() {
+      if (!this.memberDoc || this.memberDoc.totalPoints == null) return;
+      if (!Farm.state || !Farm.state.data) return;
+      const newBalance = this.memberDoc.totalPoints || 0;
+      if (Farm.state.data.eastPoints !== newBalance) {
+        Farm.state.data.eastPoints = newBalance;
+        Farm.state.save();
+        if (Farm.ui && Farm.ui.refreshHUD) Farm.ui.refreshHUD();
       }
     },
 

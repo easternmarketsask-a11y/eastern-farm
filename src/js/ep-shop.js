@@ -46,7 +46,10 @@
       const can = this.canBuy(item);
       if (!can.ok) return can;
 
-      Farm.state.spendEastPoints(item.cost_ep);
+      Farm.state.spendEastPoints(item.cost_ep, {
+        source: 'ep_shop:' + item.id,
+        description: '积分商城: ' + (item.name_zh || item.id),
+      });
       const effect = this._apply(item, opts);
       Farm.ui.refreshHUD();
       if (Farm.audio) Farm.audio.play('coin');
