@@ -1,0 +1,86 @@
+{
+  "_comment": "Daily rotating news tips. Pick deterministic by date hash. Each item shown roughly once every N days. Mix store-promo, recipe tip, festival reminder, local Saskatoon flavor, farm-game tip.",
+  "_schema_version": 1,
+  "items": [
+    {
+      "id": "weekly_bok_choy",
+      "category": "store",
+      "title_zh": "🥬 本周特价：上海青",
+      "title_en": "🥬 This week: Bok Choy on sale",
+      "body_zh": "新鲜上海青本周到货充足，店里 $1.49/lb，比平时便宜 30%。游戏里也能种它哦。",
+      "body_en": "Fresh bok choy is in stock this week at $1.49/lb, 30% off. You can also grow it in the game!"
+    },
+    {
+      "id": "recipe_garlic_bok",
+      "category": "recipe",
+      "title_zh": "🍳 今日食谱：蒜蓉上海青",
+      "title_en": "🍳 Today's recipe: Garlic Bok Choy",
+      "body_zh": "热锅冷油下蒜末爆香，下上海青大火快炒 90 秒，几滴生抽，出锅。",
+      "body_en": "Heat oil, sizzle garlic, toss in bok choy on high heat for 90 seconds, splash of soy sauce, done."
+    },
+    {
+      "id": "saskatoon_winter",
+      "category": "local",
+      "title_zh": "❄️ 萨斯卡通天气",
+      "title_en": "❄️ Saskatoon weather",
+      "body_zh": "今天 -25°C 别忘了多穿，店里有热豆浆和煲汤料包，回家煲一锅暖身。",
+      "body_en": "It's -25°C today — bundle up. The store has hot soy milk and soup base kits to warm up at home."
+    },
+    {
+      "id": "tip_chive",
+      "category": "tip",
+      "title_zh": "💡 游戏小贴士：韭菜",
+      "title_en": "💡 Game tip: Chives",
+      "body_zh": "韭菜种一次能割 3 次！每次再长只要 1 小时，超划算。",
+      "body_en": "Chinese chives can be harvested 3 times from one planting — regrow only 1 hour each. Best deal!"
+    },
+    {
+      "id": "festival_spring_coming",
+      "category": "festival",
+      "title_zh": "🏮 春节将至",
+      "title_en": "🏮 Spring Festival is coming",
+      "body_zh": "节日窗口开放时，水仙花、年橘等限定作物会出现在种子店。",
+      "body_en": "When the festival window opens, limited crops like narcissus and kumquat will show up in the shop."
+    },
+    {
+      "id": "tip_jackpot",
+      "category": "tip",
+      "title_zh": "🎰 收获时小心金疙瘩",
+      "title_en": "🎰 Watch for the Golden Nugget!",
+      "body_zh": "每次收获有 1% 概率掉落金疙瘩，最高 +500 东方积分。",
+      "body_en": "Every harvest has a 1% chance to drop a Golden Nugget, up to +500 EP!"
+    },
+    {
+      "id": "weekend_meteor",
+      "category": "tip",
+      "title_zh": "☄️ 周末流星雨",
+      "title_en": "☄️ Weekend Meteor Shower",
+      "body_zh": "每周六周日积分双倍！集中在周末收获能拿更多。",
+      "body_en": "Every Saturday and Sunday, EP rewards are doubled! Stockpile harvests for the weekend."
+    },
+    {
+      "id": "ep_shop_open",
+      "category": "feature",
+      "title_zh": "🛍️ 积分商城上线",
+      "title_en": "🛍️ EP Shop is open",
+      "body_zh": "用东方积分换加速券、装饰品、扩展地块，让农场更丰富。",
+      "body_en": "Spend EP on acceleration tickets, decorations, and plot expansions — make your farm yours."
+    },
+    {
+      "id": "recipe_tomato_egg",
+      "category": "recipe",
+      "title_zh": "🍳 番茄炒蛋",
+      "title_en": "🍳 Tomato & Egg Stir-fry",
+      "body_zh": "番茄切块 + 鸡蛋打散，先炒蛋盛出，再炒番茄，最后合炒。出锅前撒葱花。",
+      "body_en": "Cube tomatoes, beat eggs. Scramble eggs first, set aside. Stir-fry tomatoes, combine, garnish with scallion."
+    },
+    {
+      "id": "store_address",
+      "category": "store",
+      "title_zh": "🏪 我们的店",
+      "title_en": "🏪 Visit us",
+      "body_zh": "133-412 Willowgrove Square, Saskatoon. 周一至周六 10am-6:30pm。",
+      "body_en": "133-412 Willowgrove Square, Saskatoon. Mon-Sat 10am-6:30pm."
+    }
+  ]
+}

@@ -54,10 +54,20 @@
     <span class="festival-text" id="festivalText"></span>
   </div>
 
+  <!-- "今日" daily panel button (always visible, badge shows unclaimed items) -->
+  <button id="todayButton" class="today-button">
+    <span class="today-icon">🌅</span>
+    <span class="today-label" data-i18n="nav_today">今日</span>
+    <span id="todayBadge" class="today-badge"></span>
+  </button>
+
   <!-- Main farm view -->
   <main id="farm">
     <div class="farm-grid" id="farmGrid">
       <!-- Plots injected here by farm.js -->
+    </div>
+    <div id="farmDecorations" class="farm-decorations">
+      <!-- Decorations injected here by farm.js renderDecorations() -->
     </div>
   </main>
 
@@ -114,6 +124,9 @@
 <script src="js/crops.js"></script>
 <script src="js/crop-art.js"></script>
 <script src="js/ui.js"></script>
+<script src="js/ep-shop.js"></script>
+<script src="js/neighbors.js"></script>
+<script src="js/daily.js"></script>
 <script src="js/farm.js"></script>
 <script src="js/shop.js"></script>
 <script src="js/tasks.js"></script>

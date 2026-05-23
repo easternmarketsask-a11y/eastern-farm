@@ -19,6 +19,7 @@
         });
       }
 
+      const specialId = Farm.daily ? Farm.daily.getSpecialSeedId() : null;
       const html = `
         <h2 class="modal-title">🛒 ${Farm.i18n.t('shop_title')}</h2>
         <p class="modal-subtitle">${Farm.i18n.t('shop_subtitle')}</p>
@@ -26,15 +27,24 @@
           ${cropsToShow.map(c => {
             const locked = c.unlock_level > playerLevel;
             const owned = Farm.state.data.seeds[c.id] || 0;
+            const isSpecial = !locked && c.id === specialId;
+            const price = isSpecial ? Farm.daily.discountedSeedCost(c.id) : c.seed_cost;
+            const priceCell = isSpecial
+              ? `<div class="seed-cost"><s style="color:#bbb;">🪙 ${c.seed_cost}</s> <strong style="color:var(--barn-red);">🪙 ${price}</strong></div>`
+              : `<div class="seed-cost">🪙 ${c.seed_cost}</div>`;
+            const specialBadge = isSpecial
+              ? '<div class="seed-special-badge">⭐ ' + (lang === 'en' ? 'TODAY -50%' : '今日 -50%') + '</div>'
+              : '';
             return `
-              <div class="seed-card ${locked ? 'locked' : ''}" data-crop-id="${c.id}" data-action="buy">
+              <div class="seed-card ${locked ? 'locked' : ''} ${isSpecial ? 'special' : ''}" data-crop-id="${c.id}" data-action="buy">
+                ${specialBadge}
                 <span class="seed-icon">${c.icon}</span>
                 <div class="seed-name">${c[nameKey]}</div>
-                <div class="seed-cost">🪙 ${c.seed_cost}</div>
+                ${priceCell}
                 <div class="seed-time">⏱ ${formatMinutes(c.grow_minutes)}</div>
                 ${locked
                   ? `<div style="font-size:10px;color:#999;margin-top:4px;">Lv ${c.unlock_level}</div>`
-                  : `<div style="font-size:10px;color:var(--leaf-dark);margin-top:4px;">已有 ${owned}</div>`}
+                  : `<div style="font-size:10px;color:var(--leaf-dark);margin-top:4px;">${lang === 'en' ? 'Own' : '已有'} ${owned}</div>`}
               </div>
             `;
           }).join('')}
@@ -58,7 +68,8 @@
     buySeed(cropId) {
       const def = Farm.crops.get(cropId);
       if (!def) return;
-      if (!Farm.state.spendCoins(def.seed_cost)) {
+      const price = (Farm.daily && Farm.daily.discountedSeedCost(cropId)) || def.seed_cost;
+      if (!Farm.state.spendCoins(price)) {
         Farm.ui.toast(Farm.i18n.t('toast_not_enough_coins'));
         if (Farm.audio) Farm.audio.play('error');
         return;

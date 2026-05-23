@@ -1,0 +1,99 @@
+{
+  "_comment": "Eastern Point shop catalog. id is save-stable (don't rename). 'kind' drives the purchase effect — see ep-shop.js apply(). 'category' groups in UI.",
+  "_schema_version": 1,
+  "items": [
+    {
+      "id": "acceleration_ticket",
+      "name_zh": "加速券",
+      "name_en": "Acceleration Ticket",
+      "icon": "⚡",
+      "cost_ep": 10,
+      "category": "consumable",
+      "kind": "stack_consumable",
+      "stock_key": "accelerationCharges",
+      "desc_zh": "瞬间让一块地的作物成熟。用完即消。",
+      "desc_en": "Instantly mature one crop. One-shot consumable."
+    },
+    {
+      "id": "lottery_ticket",
+      "name_zh": "抽奖券",
+      "name_en": "Lottery Ticket",
+      "icon": "🎁",
+      "cost_ep": 20,
+      "category": "consumable",
+      "kind": "instant_spin",
+      "desc_zh": "抽一次大转盘，赢取金币、积分或限定礼品。",
+      "desc_en": "One spin on the lottery wheel — win coins, EP, or rare items."
+    },
+    {
+      "id": "festival_seed_pack",
+      "name_zh": "节日种子包",
+      "name_en": "Festival Seed Pack",
+      "icon": "🌸",
+      "cost_ep": 30,
+      "category": "consumable",
+      "kind": "festival_seeds",
+      "desc_zh": "5 包随机节日限定种子（水仙/年橘/芋头/柚子/桂花），平时也能种。",
+      "desc_en": "5 random festival seeds (narcissus, kumquat, taro, pomelo, osmanthus) — plant any time."
+    },
+    {
+      "id": "decoration_lantern",
+      "name_zh": "红灯笼",
+      "name_en": "Red Lantern",
+      "icon": "🏮",
+      "cost_ep": 50,
+      "category": "decoration",
+      "kind": "decoration",
+      "decoration_emoji": "🏮",
+      "desc_zh": "永久装饰品。挂在农场角上，节日感扑面而来。",
+      "desc_en": "Permanent decoration. A festive lantern hung at the corner of your farm."
+    },
+    {
+      "id": "decoration_windmill",
+      "name_zh": "风车",
+      "name_en": "Windmill",
+      "icon": "🎐",
+      "cost_ep": 80,
+      "category": "decoration",
+      "kind": "decoration",
+      "decoration_emoji": "🎐",
+      "desc_zh": "永久装饰品。随风转动的小风车。",
+      "desc_en": "Permanent decoration. A gentle spinning pinwheel."
+    },
+    {
+      "id": "decoration_dog",
+      "name_zh": "农场狗狗",
+      "name_en": "Farm Dog",
+      "icon": "🐶",
+      "cost_ep": 200,
+      "category": "pet",
+      "kind": "decoration",
+      "decoration_emoji": "🐶",
+      "desc_zh": "永久陪伴。它会在农场里走来走去，无任何功能但很治愈。",
+      "desc_en": "A permanent companion. Wanders around your farm, no utility, pure joy."
+    },
+    {
+      "id": "extra_plot",
+      "name_zh": "扩展地块",
+      "name_en": "Expand Plot",
+      "icon": "🏞",
+      "cost_ep": 100,
+      "category": "upgrade",
+      "kind": "extra_plot",
+      "max_owned": 4,
+      "desc_zh": "永久 +1 块地（最多再加 4 块）。从 12 块扩到 16 块。",
+      "desc_en": "Permanently add 1 plot (max +4). Expand from 12 to 16 plots total."
+    }
+  ],
+  "_lottery_prizes": [
+    { "id": "lot_coins_sm", "weight": 25, "kind": "coins", "amount": 100, "label_zh": "+100 农场币", "label_en": "+100 coins", "icon": "🪙" },
+    { "id": "lot_coins_md", "weight": 15, "kind": "coins", "amount": 300, "label_zh": "+300 农场币", "label_en": "+300 coins", "icon": "🪙" },
+    { "id": "lot_coins_lg", "weight": 5, "kind": "coins", "amount": 1000, "label_zh": "+1000 农场币", "label_en": "+1000 coins", "icon": "💰" },
+    { "id": "lot_ep_sm", "weight": 20, "kind": "ep", "amount": 5, "label_zh": "+5 东方积分", "label_en": "+5 EP", "icon": "🎫" },
+    { "id": "lot_ep_md", "weight": 10, "kind": "ep", "amount": 25, "label_zh": "+25 东方积分", "label_en": "+25 EP", "icon": "🎫" },
+    { "id": "lot_ep_lg", "weight": 3, "kind": "ep", "amount": 100, "label_zh": "+100 东方积分", "label_en": "+100 EP", "icon": "💎" },
+    { "id": "lot_seed_pack", "weight": 12, "kind": "seed_pack", "amount": 3, "label_zh": "随机种子 ×3", "label_en": "3 random seeds", "icon": "🌱" },
+    { "id": "lot_acc_ticket", "weight": 8, "kind": "shop_item", "itemId": "acceleration_ticket", "amount": 1, "label_zh": "加速券 ×1", "label_en": "1 Acceleration", "icon": "⚡" },
+    { "id": "lot_jackpot", "weight": 2, "kind": "ep", "amount": 500, "label_zh": "🎉 大奖 +500 EP", "label_en": "🎉 JACKPOT +500 EP", "icon": "🎰" }
+  ]
+}

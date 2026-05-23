@@ -1,0 +1,272 @@
+/**
+ * daily.js — "今日" panel: daily special seed, news, lottery wheel.
+ *
+ * All daily features use a deterministic hash of the date string so every
+ * player sees the same "today" content. Claims persist in
+ * state.dailyClaims (resets at midnight via state.init()).
+ *
+ *   Farm.daily.getSpecialSeedId() → cropId of today's 50%-off seed
+ *   Farm.daily.getTodaysNews()    → news object from data/news.json
+ *   Farm.daily.open()             → render the aggregator modal
+ *   Farm.daily.openWheel()        → render the lottery wheel modal
+ */
+(function() {
+  const SPECIAL_SEED_DISCOUNT = 0.5;  // 50% off
+
+  // FNV-1a-ish hash for deterministic daily picks
+  function hashStr(s) {
+    let h = 2166136261;
+    for (let i = 0; i < s.length; i++) {
+      h ^= s.charCodeAt(i);
+      h = (h * 16777619) >>> 0;
+    }
+    return h;
+  }
+
+  const daily = {
+    news: [],
+    loaded: false,
+
+    async load() {
+      try {
+        const res = await fetch('../data/news.json');
+        const data = await res.json();
+        this.news = data.items || [];
+        this.loaded = true;
+      } catch (e) {
+        console.error('news load failed', e);
+        this.news = [];
+        this.loaded = true;
+      }
+    },
+
+    todayStr() { return Farm.state.getDateString(); },
+
+    // Deterministic: pick a crop that the player has unlocked
+    getSpecialSeedId() {
+      const playerLevel = Farm.state.data.level;
+      const candidates = Farm.crops.all().filter(c => c.unlock_level <= playerLevel);
+      if (candidates.length === 0) return null;
+      const idx = hashStr(this.todayStr() + ':seed') % candidates.length;
+      return candidates[idx].id;
+    },
+
+    isSpecialSeed(cropId) {
+      return this.getSpecialSeedId() === cropId;
+    },
+
+    discountedSeedCost(cropId) {
+      const def = Farm.crops.get(cropId);
+      if (!def) return 0;
+      if (this.isSpecialSeed(cropId)) {
+        return Math.max(1, Math.floor(def.seed_cost * SPECIAL_SEED_DISCOUNT));
+      }
+      return def.seed_cost;
+    },
+
+    getTodaysNews() {
+      if (this.news.length === 0) return null;
+      const idx = hashStr(this.todayStr() + ':news') % this.news.length;
+      return this.news[idx];
+    },
+
+    // ============ "今日" panel ============
+    open() {
+      const lang = Farm.state.data.language;
+      const news = this.getTodaysNews();
+      const specialId = this.getSpecialSeedId();
+      const specialCrop = specialId ? Farm.crops.get(specialId) : null;
+      const specialPrice = specialCrop ? this.discountedSeedCost(specialId) : 0;
+      const claims = Farm.state.data.dailyClaims;
+      const visited = (claims.neighborsVisited || []).length;
+      const visitedComplete = visited >= 3;
+      const freeSpin = !claims.lotterySpunFree;
+      const titleKey = lang === 'en' ? 'title_en' : 'title_zh';
+      const bodyKey  = lang === 'en' ? 'body_en'  : 'body_zh';
+      const nameKey  = lang === 'en' ? 'name_en'  : 'name_zh';
+
+      const newsHTML = news ? `
+        <div class="daily-card daily-news">
+          <div class="daily-card-title">${news[titleKey]}</div>
+          <div class="daily-card-body">${news[bodyKey]}</div>
+          ${claims.newsRead ? '' : `<button class="daily-claim" id="dailyReadNews">📰 ${lang === 'en' ? 'Mark read +2🎫' : '已读 +2🎫'}</button>`}
+        </div>` : '';
+
+      const specialHTML = specialCrop ? `
+        <div class="daily-card daily-special">
+          <div class="daily-card-title">🛒 ${lang === 'en' ? "Today's Special Seed" : '今日特价种子'}</div>
+          <div class="daily-card-body" style="display:flex;align-items:center;gap:12px;">
+            <div style="font-size:38px;">${specialCrop.icon || '🌱'}</div>
+            <div style="flex:1;">
+              <div style="font-weight:700;">${specialCrop[nameKey]}</div>
+              <div style="font-size:12px;color:var(--warm-text-soft);">
+                <s>🪙 ${specialCrop.seed_cost}</s>
+                <strong style="color:var(--barn-red);font-size:14px;margin-left:6px;">🪙 ${specialPrice}</strong>
+                <span style="background:var(--barn-red);color:white;font-size:10px;padding:1px 5px;border-radius:6px;margin-left:6px;">-50%</span>
+              </div>
+            </div>
+            <button class="daily-claim" id="dailyBuySpecial">${lang === 'en' ? 'Buy' : '买'}</button>
+          </div>
+        </div>` : '';
+
+      const lotteryHTML = `
+        <div class="daily-card daily-lottery">
+          <div class="daily-card-title">🎰 ${lang === 'en' ? 'Daily Lottery' : '每日大转盘'}</div>
+          <div class="daily-card-body">
+            ${freeSpin
+              ? (lang === 'en' ? 'Free spin available!' : '今日免费转一次！')
+              : (lang === 'en' ? 'Free spin used. 20 🎫 per extra spin.' : '免费机会已用，再转 20 🎫/次')}
+          </div>
+          <button class="daily-claim" id="dailyOpenWheel">${freeSpin ? '🎁 ' + (lang === 'en' ? 'Free Spin' : '免费转一次') : '🎫 ' + (lang === 'en' ? 'Pay & Spin' : '付费转一次')}</button>
+        </div>`;
+
+      const neighborHTML = `
+        <div class="daily-card daily-neighbor">
+          <div class="daily-card-title">🏘 ${lang === 'en' ? 'Visit Neighbors' : '邻居走访'}</div>
+          <div class="daily-card-body">
+            ${lang === 'en' ? `Visit 3 neighbors today (${visited}/3) → +5 🎫` : `今日走访 3 户邻居 (${visited}/3) → +5 🎫`}
+          </div>
+          <button class="daily-claim" id="dailyOpenNeighbors">
+            ${visitedComplete ? '✅ ' + (lang === 'en' ? 'Done' : '已完成') : '🚪 ' + (lang === 'en' ? 'Visit' : '去走访')}
+          </button>
+        </div>`;
+
+      const html = `
+        <h2 class="modal-title">🌅 ${lang === 'en' ? 'Today' : '今日'}</h2>
+        <div class="daily-list">
+          ${newsHTML}
+          ${specialHTML}
+          ${lotteryHTML}
+          ${neighborHTML}
+        </div>
+        <div class="btn-row">
+          <button class="btn secondary" onclick="Farm.ui.hideModal()">${Farm.i18n.t('btn_close')}</button>
+        </div>
+      `;
+      Farm.ui.showModal(html);
+
+      const $ = (id) => document.getElementById(id);
+      const readBtn = $('dailyReadNews');
+      if (readBtn) readBtn.onclick = () => {
+        if (Farm.state.claimDailyNews()) {
+          Farm.state.addEastPoints(2);
+          Farm.ui.refreshHUD();
+          Farm.ui.toast(lang === 'en' ? '📰 +2 EP' : '📰 +2 积分', 1800);
+          if (Farm.audio) Farm.audio.play('coin');
+          setTimeout(() => this.open(), 600);
+        }
+      };
+      const buySpecialBtn = $('dailyBuySpecial');
+      if (buySpecialBtn) buySpecialBtn.onclick = () => {
+        if (!Farm.state.spendCoins(specialPrice)) {
+          Farm.ui.toast(Farm.i18n.t('toast_not_enough_coins'));
+          if (Farm.audio) Farm.audio.play('error');
+          return;
+        }
+        Farm.state.addSeed(specialId, 1);
+        Farm.ui.refreshHUD();
+        Farm.ui.toast('🌱 +1 ' + specialCrop[nameKey]);
+        if (Farm.audio) Farm.audio.play('buy');
+        setTimeout(() => this.open(), 400);
+      };
+      const wheelBtn = $('dailyOpenWheel');
+      if (wheelBtn) wheelBtn.onclick = () => this.openWheel();
+      const neighborBtn = $('dailyOpenNeighbors');
+      if (neighborBtn) neighborBtn.onclick = () => {
+        if (Farm.neighbors) Farm.neighbors.open();
+      };
+    },
+
+    // ============ Lottery wheel ============
+    openWheel() {
+      const lang = Farm.state.data.language;
+      const free = !Farm.state.data.dailyClaims.lotterySpunFree;
+      const cost = free ? 0 : 20;
+      const html = `
+        <h2 class="modal-title">🎰 ${lang === 'en' ? 'Daily Wheel' : '每日大转盘'}</h2>
+        <div class="lottery-wheel-container">
+          <div class="lottery-wheel" id="lotteryWheel">
+            ${this.renderWheelSegments()}
+          </div>
+          <div class="lottery-pointer">▼</div>
+        </div>
+        <div id="lotteryResult" class="lottery-result"></div>
+        <div class="btn-row">
+          <button class="btn secondary" onclick="Farm.ui.hideModal()">${Farm.i18n.t('btn_close')}</button>
+          <button class="btn" id="spinBtn">
+            ${cost > 0 ? '🎫 ' + cost + ' · ' : ''}${lang === 'en' ? 'Spin!' : '开转！'}
+          </button>
+        </div>
+      `;
+      Farm.ui.showModal(html);
+
+      const spinBtn = document.getElementById('spinBtn');
+      const wheel = document.getElementById('lotteryWheel');
+      const resultEl = document.getElementById('lotteryResult');
+      spinBtn.onclick = () => {
+        const cost2 = Farm.state.data.dailyClaims.lotterySpunFree ? 20 : 0;
+        if (cost2 > 0) {
+          if (!Farm.state.spendEastPoints(cost2)) {
+            Farm.ui.toast(Farm.i18n.t('toast_not_enough_points'));
+            if (Farm.audio) Farm.audio.play('error');
+            return;
+          }
+        } else {
+          Farm.state.consumeFreeSpin();
+        }
+        Farm.ui.refreshHUD();
+
+        const result = Farm.epShop.spinLottery({ source: 'daily' });
+        const prize = result.prize;
+        const segments = Farm.epShop.lotteryPrizes;
+        const idx = segments.findIndex(p => p.id === prize.id);
+        const segAngle = 360 / segments.length;
+        const targetAngle = 360 * 5 + (360 - idx * segAngle - segAngle / 2);
+        wheel.style.transition = 'transform 3.2s cubic-bezier(0.15, 0.85, 0.25, 1)';
+        wheel.style.transform = 'rotate(' + targetAngle + 'deg)';
+        spinBtn.disabled = true;
+        resultEl.textContent = '';
+
+        setTimeout(() => {
+          const label = lang === 'en' ? prize.label_en : prize.label_zh;
+          resultEl.innerHTML = '🎉 ' + label;
+          resultEl.classList.add('show');
+          spinBtn.disabled = false;
+          // Re-render button with possibly-different label
+          const freeNow = !Farm.state.data.dailyClaims.lotterySpunFree;
+          spinBtn.innerHTML = (freeNow ? '' : '🎫 20 · ') + (lang === 'en' ? 'Spin again' : '再来一次');
+        }, 3300);
+      };
+    },
+
+    renderWheelSegments() {
+      const segments = Farm.epShop.lotteryPrizes;
+      const n = segments.length;
+      const angle = 360 / n;
+      // Build SVG conic wheel with segments + labels
+      const slices = segments.map((p, i) => {
+        const startAngle = i * angle;
+        const colors = ['#ffd6a5', '#caffbf', '#9bf6ff', '#a0c4ff', '#bdb2ff', '#ffc6ff', '#fdffb6', '#ffadad', '#ffb4a2'];
+        const fill = colors[i % colors.length];
+        const x1 = 50 + 50 * Math.cos((startAngle - 90) * Math.PI / 180);
+        const y1 = 50 + 50 * Math.sin((startAngle - 90) * Math.PI / 180);
+        const x2 = 50 + 50 * Math.cos((startAngle + angle - 90) * Math.PI / 180);
+        const y2 = 50 + 50 * Math.sin((startAngle + angle - 90) * Math.PI / 180);
+        const lg = angle > 180 ? 1 : 0;
+        // Label position (radius 30 from center)
+        const lx = 50 + 30 * Math.cos((startAngle + angle/2 - 90) * Math.PI / 180);
+        const ly = 50 + 30 * Math.sin((startAngle + angle/2 - 90) * Math.PI / 180);
+        return `
+          <path d="M 50 50 L ${x1.toFixed(2)} ${y1.toFixed(2)} A 50 50 0 ${lg} 1 ${x2.toFixed(2)} ${y2.toFixed(2)} Z"
+                fill="${fill}" stroke="#fff" stroke-width="0.5"/>
+          <text x="${lx.toFixed(2)}" y="${ly.toFixed(2)}" text-anchor="middle" dominant-baseline="central"
+                font-size="8" font-weight="700" fill="#3a2e26">${p.icon}</text>
+        `;
+      }).join('');
+      return `<svg viewBox="0 0 100 100" width="240" height="240" xmlns="http://www.w3.org/2000/svg">${slices}</svg>`;
+    },
+  };
+
+  window.Farm = window.Farm || {};
+  window.Farm.daily = daily;
+})();

@@ -23,6 +23,8 @@
       Farm.crops.load(),
       Farm.rewards.load(),
       Farm.achievements.load(),
+      Farm.epShop.load(),
+      Farm.daily.load(),
     ]);
 
     // 2. Init state
@@ -52,10 +54,15 @@
     // retroactive achievement unlocks) are deferred to after splash dismiss
     // so they're not hidden under the splash overlay.
     wireNav();
+    wireTodayButton();
     wireSplash(() => {
       checkDailyLogin();
       Farm.achievements.checkAll();
+      refreshTodayBadge();
     });
+
+    // Refresh the today badge whenever the modal closes
+    setInterval(refreshTodayBadge, 60000);
 
     // 9. Ticks
     setInterval(() => Farm.farm.tick(), 1000);
@@ -128,6 +135,30 @@
         dismiss();
       }
     });
+  }
+
+  function wireTodayButton() {
+    const btn = document.getElementById('todayButton');
+    if (!btn) return;
+    btn.onclick = () => {
+      if (Farm.audio) Farm.audio.play('tap');
+      Farm.daily.open();
+    };
+  }
+
+  // Show how many daily items are still unclaimed today (news + lottery + neighbors + special seed = up to 4).
+  function refreshTodayBadge() {
+    const badge = document.getElementById('todayBadge');
+    if (!badge) return;
+    const c = Farm.state.data.dailyClaims;
+    let pending = 0;
+    if (!c.newsRead) pending++;
+    if (!c.lotterySpunFree) pending++;
+    if ((c.neighborsVisited || []).length < 3) pending++;
+    // Special seed is always there if not bought; we'll count it if not yet planted today
+    const specId = Farm.daily && Farm.daily.getSpecialSeedId();
+    if (specId) pending++;
+    badge.textContent = pending > 0 ? pending : '';
   }
 
   function wireNav() {

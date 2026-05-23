@@ -110,12 +110,50 @@
       const festForCounter = (def.festival_only && def.festival_only === activeFest) ? activeFest : null;
       Farm.state.recordHarvest(cropId, festForCounter);
 
-      // Random East Point chance
+      // ============ Variable EP rewards (V1.1) ============
+      // Layer 1: base random chance (1% chance of +5 instead of old 5% +1)
       let bonusPoints = 0;
-      if (Math.random() < 0.05) bonusPoints += 1;
-      // Festival crops give bonus
-      if (def.east_points_bonus) bonusPoints += def.east_points_bonus;
-      if (bonusPoints > 0) Farm.state.addEastPoints(bonusPoints);
+      const bonusReasons = [];   // for farm.js to render celebratory toasts
+      if (Math.random() < 0.03) {
+        bonusPoints += 5;
+        bonusReasons.push({ kind: 'lucky', amount: 5 });
+      }
+
+      // Layer 2: festival crop fixed bonus
+      if (def.east_points_bonus) {
+        bonusPoints += def.east_points_bonus;
+        bonusReasons.push({ kind: 'festival', amount: def.east_points_bonus });
+      }
+
+      // Layer 3: 1% gold-nugget jackpot: +50~500 EP burst (log-uniform random)
+      if (Math.random() < 0.01) {
+        const jackpot = 50 + Math.floor(Math.pow(Math.random(), 2) * 450);  // weighted toward smaller
+        bonusPoints += jackpot;
+        bonusReasons.push({ kind: 'jackpot', amount: jackpot });
+      }
+
+      // Layer 4: first harvest of the day → +10 EP welcome bonus
+      if (Farm.state.markFirstHarvest()) {
+        bonusPoints += 10;
+        bonusReasons.push({ kind: 'first_harvest', amount: 10 });
+      }
+
+      // Layer 5: weekend meteor shower → multiplier on all earned EP
+      const dayOfWeek = new Date().getDay();  // 0=Sun, 6=Sat
+      const weekendMultiplier = (dayOfWeek === 0 || dayOfWeek === 6) ? 2 : 1;
+      if (weekendMultiplier > 1 && bonusPoints > 0) {
+        const extra = bonusPoints * (weekendMultiplier - 1);
+        bonusPoints += extra;
+        bonusReasons.push({ kind: 'weekend', amount: extra });
+      }
+
+      // Credit (respects daily cap; overflow queues for tomorrow)
+      let epCredited = 0, epQueued = 0;
+      if (bonusPoints > 0) {
+        const r = Farm.state.addEastPoints(bonusPoints);
+        epCredited = r.credited;
+        epQueued = r.queued;
+      }
 
       if (plot.harvestsLeft > 0) {
         // Multi-harvest crop: restart from regrow time
@@ -135,6 +173,10 @@
         coins: sellPrice,
         xp,
         eastPoints: bonusPoints,
+        epCredited,
+        epQueued,
+        bonusReasons,
+        weekendMultiplier,
         levelInfo,
         multiHarvestRemaining: plot.harvestsLeft,
       };

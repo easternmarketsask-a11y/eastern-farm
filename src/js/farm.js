@@ -10,6 +10,45 @@
         const el = this.createPlotElement(plot, idx);
         grid.appendChild(el);
       });
+      this.renderDecorations();
+    },
+
+    renderDecorations() {
+      const layer = document.getElementById('farmDecorations');
+      if (!layer) return;
+      layer.innerHTML = '';
+      if (!Farm.epShop || !Farm.epShop.items.length) return;
+      const decos = Farm.state.data.decorations || [];
+      // Find pets (animated) vs static decorations
+      const pets = [];
+      const statics = [];
+      decos.forEach(d => {
+        const item = Farm.epShop.items.find(i => i.id === d.itemId);
+        if (!item || !item.decoration_emoji) return;
+        if (item.category === 'pet') pets.push(item.decoration_emoji);
+        else statics.push(item.decoration_emoji);
+      });
+      // Static decorations as a row
+      if (statics.length > 0) {
+        const row = document.createElement('div');
+        row.className = 'farm-deco-row';
+        statics.forEach((emoji, i) => {
+          const span = document.createElement('span');
+          span.className = 'farm-deco-static';
+          span.textContent = emoji;
+          span.style.animationDelay = (i * 0.3) + 's';
+          row.appendChild(span);
+        });
+        layer.appendChild(row);
+      }
+      // Pets — each wanders horizontally
+      pets.forEach((emoji, i) => {
+        const pet = document.createElement('div');
+        pet.className = 'farm-deco-pet';
+        pet.textContent = emoji;
+        pet.style.animationDelay = (i * -2) + 's';
+        layer.appendChild(pet);
+      });
     },
 
     createPlotElement(plot, idx) {
@@ -79,13 +118,57 @@
         if (isMature) {
           this.harvestPlot(idx, e);
         } else {
-          const lang = Farm.state.data.language;
-          const nameKey = lang === 'en' ? 'name_en' : 'name_zh';
-          Farm.ui.toast(def[nameKey] + ' · ' + Farm.crops.formatTimeRemaining(Farm.crops.timeRemaining(plot)));
+          this.offerAccelerate(idx, plot, def);
         }
       };
 
       return el;
+    },
+
+    // Show option to spend an acceleration ticket on a growing plot.
+    offerAccelerate(plotIdx, plot, def) {
+      const lang = Farm.state.data.language;
+      const nameKey = lang === 'en' ? 'name_en' : 'name_zh';
+      const remaining = Farm.crops.formatTimeRemaining(Farm.crops.timeRemaining(plot));
+      const charges = (Farm.state.data.activeEffects && Farm.state.data.activeEffects.accelerationCharges) || 0;
+      if (charges <= 0) {
+        // No tickets — just show the standard timer toast
+        Farm.ui.toast(def[nameKey] + ' · ' + remaining);
+        return;
+      }
+      // Has tickets: offer to use one
+      const html = `
+        <h2 class="modal-title">⚡ ${lang === 'en' ? 'Speed Up?' : '加速生长？'}</h2>
+        <p style="text-align:center;margin:16px 0;">
+          ${def[nameKey]} · ${lang === 'en' ? remaining + ' left' : '还剩 ' + remaining}
+        </p>
+        <p style="text-align:center;font-size:13px;color:var(--warm-text-soft);margin-bottom:16px;">
+          ${lang === 'en'
+            ? 'Use 1 ⚡ Acceleration Ticket to mature instantly?'
+            : '使用 1 张 ⚡ 加速券立刻成熟？'}
+          <br>${lang === 'en' ? 'You have ' : '你有 '}<strong>${charges}</strong> ⚡
+        </p>
+        <div class="btn-row">
+          <button class="btn secondary" onclick="Farm.ui.hideModal()">${Farm.i18n.t('btn_cancel')}</button>
+          <button class="btn" id="accelConfirm">⚡ ${lang === 'en' ? 'Use' : '使用'}</button>
+        </div>
+      `;
+      Farm.ui.showModal(html);
+      document.getElementById('accelConfirm').onclick = () => {
+        if (Farm.state.data.activeEffects.accelerationCharges <= 0) {
+          Farm.ui.toast(lang === 'en' ? 'No tickets left' : '没有加速券了');
+          Farm.ui.hideModal();
+          return;
+        }
+        Farm.state.data.activeEffects.accelerationCharges -= 1;
+        // Set plantedAt back in time so the crop is now mature
+        plot.plantedAt = Date.now() - def.grow_minutes * 60000 - 1000;
+        Farm.state.save();
+        Farm.ui.hideModal();
+        this.renderGrid();
+        if (Farm.audio) Farm.audio.play('achievement');
+        Farm.ui.toast(lang === 'en' ? '⚡ Mature! Tap to harvest.' : '⚡ 已成熟，点击收获！', 2200);
+      };
     },
 
     harvestPlot(plotIdx, evt) {
@@ -106,6 +189,34 @@
               rect.left + rect.width/2 - 15, rect.top, '#9b59b6');
           }, 300);
         }
+      }
+
+      // Celebratory toasts for the variable-reward layers (P0.3)
+      const lang = Farm.state.data.language;
+      (result.bonusReasons || []).forEach((br, i) => {
+        let msg = '';
+        if (br.kind === 'jackpot') {
+          msg = (lang === 'en' ? '🎰 Golden Nugget! +' : '🎰 金疙瘩！+') + br.amount + ' 🎫';
+        } else if (br.kind === 'first_harvest') {
+          msg = (lang === 'en' ? '🌅 First harvest of the day +' : '🌅 今日首收 +') + br.amount + ' 🎫';
+        } else if (br.kind === 'weekend') {
+          msg = (lang === 'en' ? '☄️ Weekend Meteor 2× +' : '☄️ 周末流星雨 ×2 +') + br.amount + ' 🎫';
+        }
+        if (msg) {
+          setTimeout(() => {
+            Farm.ui.toast(msg, 2800);
+            if (Farm.audio) Farm.audio.play(br.kind === 'jackpot' ? 'achievement' : 'coin');
+          }, 600 + i * 700);
+        }
+      });
+      // Queue overflow notice (only when nothing credited or significant queue)
+      if (result.epQueued > 0 && result.epCredited === 0) {
+        setTimeout(() => {
+          Farm.ui.toast(
+            (lang === 'en' ? '🚦 Daily EP cap reached. ' : '🚦 今日积分已达上限，') +
+            (lang === 'en' ? '+' + result.epQueued + ' queued for tomorrow' : '+' + result.epQueued + ' 排队明日入账'),
+            3000);
+        }, 900);
       }
 
       // Update HUD

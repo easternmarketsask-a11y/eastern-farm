@@ -49,6 +49,30 @@
     festivalHarvests: { spring_festival: 0, mid_autumn: 0 },
     // Audio preference
     audioMuted: false,
+
+    // ============ Eastern Points cap + exchange (v2 currency design) ============
+    // Daily EP credit cap (anti-abuse). 1000 EP/day = $1/day per user.
+    epDailyCap: 1000,
+    epEarnedToday: 0,
+    epEarnedDate: '',           // YYYY-MM-DD; reset counter when date rolls
+    pendingEp: 0,               // EP earned but blocked by cap, credited next day
+
+    // ============ EP shop + daily features ============
+    decorations: [],            // [{itemId, x, y}] cosmetic placements
+    extraPlots: 0,              // additional plots unlocked beyond the base 12 (max 4)
+    ownedShopItems: {},         // {itemId: count} consumables remaining (acceleration tickets etc.)
+    theme: 'default',           // 'default' | 'spring' | 'summer' | 'autumn' | 'winter' | 'festival'
+    dailyClaims: {              // resets when date changes
+      date: '',
+      lotterySpunFree: false,   // free daily spin used?
+      neighborsVisited: [],     // neighbor IDs visited today
+      newsRead: false,
+      firstHarvestDone: false,  // first harvest of day bonus claimed?
+    },
+    activeEffects: {            // toggleable consumable effects
+      accelerationCharges: 0,   // # of 加速券 in inventory (consumed on use)
+      freshnessCharges: 0,      // # of 保鲜券 in inventory
+    },
   };
 
   function getDateString(d) {
@@ -64,9 +88,14 @@
       if (saved) {
         try {
           const parsed = JSON.parse(saved);
-          // Future: migrate by version here.
+          // Object.assign auto-fills any new STARTER fields missing from old saves.
           this.data = Object.assign({}, STARTER_STATE, parsed);
-          // Ensure sessionStats today is fresh
+          // Deep-fill nested objects added in later versions
+          this.data.dailyClaims = Object.assign({}, STARTER_STATE.dailyClaims, this.data.dailyClaims || {});
+          this.data.activeEffects = Object.assign({}, STARTER_STATE.activeEffects, this.data.activeEffects || {});
+          this.data.ownedShopItems = this.data.ownedShopItems || {};
+          this.data.decorations = this.data.decorations || [];
+          // Reset session stats daily
           const today = getDateString();
           if (this.data.sessionStats.date !== today) {
             this.data.sessionStats = {
@@ -75,14 +104,40 @@
               coinsEarned: 0, seedsBought: 0, coinsSpent: 0,
             };
           }
+          // Roll daily EP cap counter + drain queued EP first thing on a new day
+          if (this.data.epEarnedDate !== today) {
+            this.data.epEarnedDate = today;
+            this.data.epEarnedToday = 0;
+            // Drain pending queue into today's balance, respecting the cap
+            if (this.data.pendingEp > 0) {
+              const drainAmount = Math.min(this.data.pendingEp, this.data.epDailyCap);
+              this.data.eastPoints += drainAmount;
+              this.data.pendingEp -= drainAmount;
+              this.data.epEarnedToday += drainAmount;
+            }
+          }
+          // Reset daily claims
+          if (this.data.dailyClaims.date !== today) {
+            this.data.dailyClaims = {
+              date: today,
+              lotterySpunFree: false,
+              neighborsVisited: [],
+              newsRead: false,
+              firstHarvestDone: false,
+            };
+          }
         } catch (e) {
           console.error('Save corrupted, starting fresh', e);
           this.data = JSON.parse(JSON.stringify(STARTER_STATE));
           this.data.sessionStats.date = getDateString();
+          this.data.epEarnedDate = getDateString();
+          this.data.dailyClaims.date = getDateString();
         }
       } else {
         this.data = JSON.parse(JSON.stringify(STARTER_STATE));
         this.data.sessionStats.date = getDateString();
+        this.data.epEarnedDate = getDateString();
+        this.data.dailyClaims.date = getDateString();
       }
     },
 
@@ -113,13 +168,114 @@
       this.save();
       return true;
     },
+    // Add EP respecting daily cap. Overflow above the cap goes into pendingEp
+    // queue, which gets drained next day in init(). Returns { credited, queued }.
     addEastPoints(n) {
-      this.data.eastPoints += n;
+      if (n <= 0) { this.save(); return { credited: 0, queued: 0 }; }
+      // Make sure the daily counter is for today
+      const today = getDateString();
+      if (this.data.epEarnedDate !== today) {
+        this.data.epEarnedDate = today;
+        this.data.epEarnedToday = 0;
+      }
+      const headroom = Math.max(0, (this.data.epDailyCap || 1000) - (this.data.epEarnedToday || 0));
+      const credited = Math.min(n, headroom);
+      const queued = n - credited;
+      if (credited > 0) {
+        this.data.eastPoints += credited;
+        this.data.epEarnedToday += credited;
+      }
+      if (queued > 0) {
+        this.data.pendingEp = (this.data.pendingEp || 0) + queued;
+      }
       this.save();
+      return { credited, queued };
     },
     spendEastPoints(n) {
       if (this.data.eastPoints < n) return false;
       this.data.eastPoints -= n;
+      this.save();
+      return true;
+    },
+
+    // Bidirectional 10:1 exchange.
+    // exchangeCoinsToEp(coinAmt): 10 coins → 1 EP; respects daily cap (overflow queues)
+    // exchangeEpToCoins(epAmt):    1 EP → 10 coins; no cap (player spending their own)
+    exchangeCoinsToEp(coinAmt) {
+      coinAmt = Math.floor(coinAmt / 10) * 10;  // round to multiple of 10
+      if (coinAmt <= 0) return { ok: false, reason: 'too_small' };
+      if (this.data.coins < coinAmt) return { ok: false, reason: 'insufficient_coins' };
+      this.data.coins -= coinAmt;
+      const epAmount = coinAmt / 10;
+      const result = this.addEastPoints(epAmount);
+      this.save();
+      return { ok: true, coinsSpent: coinAmt, epGained: epAmount, ...result };
+    },
+    exchangeEpToCoins(epAmt) {
+      epAmt = Math.floor(epAmt);
+      if (epAmt <= 0) return { ok: false, reason: 'too_small' };
+      if (this.data.eastPoints < epAmt) return { ok: false, reason: 'insufficient_ep' };
+      this.data.eastPoints -= epAmt;
+      const coinAmount = epAmt * 10;
+      this.data.coins += coinAmount;
+      this.save();
+      return { ok: true, epSpent: epAmt, coinsGained: coinAmount };
+    },
+
+    // ============ Shop / decorations / consumables ============
+    addShopItem(itemId, qty) {
+      qty = qty || 1;
+      this.data.ownedShopItems[itemId] = (this.data.ownedShopItems[itemId] || 0) + qty;
+      this.save();
+    },
+    consumeShopItem(itemId) {
+      const have = this.data.ownedShopItems[itemId] || 0;
+      if (have <= 0) return false;
+      this.data.ownedShopItems[itemId] = have - 1;
+      this.save();
+      return true;
+    },
+    addDecoration(itemId) {
+      this.data.decorations.push({ itemId, placedAt: Date.now() });
+      this.save();
+    },
+    addExtraPlot() {
+      if (this.data.extraPlots >= 4) return false;
+      this.data.extraPlots += 1;
+      // Append a new unlocked plot to the plots array
+      const newId = 12 + this.data.extraPlots - 1;
+      this.data.plots.push({ id: newId, crop: null, plantedAt: 0, harvestsLeft: 0, unlocked: true });
+      this.save();
+      return true;
+    },
+    setTheme(themeId) {
+      this.data.theme = themeId;
+      this.save();
+    },
+
+    // ============ Daily claim helpers ============
+    claimDailyNews() {
+      if (this.data.dailyClaims.newsRead) return false;
+      this.data.dailyClaims.newsRead = true;
+      this.save();
+      return true;
+    },
+    claimNeighborVisit(neighborId) {
+      const list = this.data.dailyClaims.neighborsVisited;
+      if (list.includes(neighborId)) return false;
+      list.push(neighborId);
+      this.save();
+      return true;
+    },
+    consumeFreeSpin() {
+      if (this.data.dailyClaims.lotterySpunFree) return false;
+      this.data.dailyClaims.lotterySpunFree = true;
+      this.save();
+      return true;
+    },
+    markFirstHarvest() {
+      if (this.data.dailyClaims.firstHarvestDone) return false;
+      this.data.dailyClaims.firstHarvestDone = true;
       this.save();
       return true;
     },

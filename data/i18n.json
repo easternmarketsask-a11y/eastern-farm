@@ -6,9 +6,10 @@
     "tagline": { "zh": "种在心里的家乡味", "en": "A taste of home, grown by you" },
 
     "nav_farm": { "zh": "农场", "en": "Farm" },
+    "nav_today": { "zh": "今日", "en": "Today" },
     "nav_shop": { "zh": "种子店", "en": "Shop" },
     "nav_tasks": { "zh": "今日任务", "en": "Today's Tasks" },
-    "nav_rewards": { "zh": "兑换", "en": "Rewards" },
+    "nav_rewards": { "zh": "积分", "en": "Points" },
     "nav_collection": { "zh": "图鉴", "en": "Collection" },
     "nav_settings": { "zh": "设置", "en": "Settings" },
 

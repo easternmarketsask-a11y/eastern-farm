@@ -1,161 +1,191 @@
 /**
- * rewards.js — East Point → real Eastern Market coupon redemption.
+ * rewards.js — Eastern Point overview + exchange + how-to-earn page.
  *
- * V1 model: pre-generated codes in data/coupons.json. Player redeems by
- * spending East Points; we mark the code as used in localStorage to
- * prevent re-redemption. Cashier validates by code lookup.
+ * V1.1 redesign (per owner): the game no longer shows in-game coupon tiers
+ * or redemption values. Eastern Points are equivalent to real Eastern
+ * Market member points; redemption value is governed by the store, not
+ * the game. This page only shows:
+ *   1. Current EP balance + today's cap status + queued EP
+ *   2. Bidirectional exchange (10 farm coins ⇄ 1 EP)
+ *   3. List of how to earn EP
+ *   4. Link to EP shop
  *
- * V2: backend API for live validation.
+ * The legacy coupon catalog (data/coupons.json) is kept as a V0 fallback
+ * for future cashier-validated promotions but is no longer rendered.
  */
 (function() {
   const rewards = {
     couponData: null,
 
     async load() {
+      // Keep loader for backward-compat; data is no longer rendered in V1.1
       try {
         const res = await fetch('../data/coupons.json');
         this.couponData = await res.json();
       } catch (e) {
-        console.error('coupons load failed', e);
-        this.couponData = { tiers: {}, codes: [] };
+        this.couponData = null;
       }
     },
 
     open() {
       const lang = Farm.state.data.language;
-      const data = this.couponData || { tiers: {}, codes: [] };
-      const tiers = data.tiers || {};
-      const playerPoints = Farm.state.data.eastPoints;
+      const s = Farm.state.data;
+      const ep = s.eastPoints;
+      const coins = s.coins;
+      const cap = s.epDailyCap || 1000;
+      const earnedToday = s.epEarnedToday || 0;
+      const pending = s.pendingEp || 0;
+      const headroom = Math.max(0, cap - earnedToday);
 
-      const tierEntries = Object.entries(tiers);
+      const balanceHTML = `
+        <div class="ep-overview">
+          <div class="ep-overview-balance">
+            <div class="ep-overview-label">${lang === 'en' ? 'Your Eastern Points' : '您的东方积分'}</div>
+            <div class="ep-overview-value">🎫 ${ep.toLocaleString()}</div>
+            <div class="ep-overview-note">
+              ${lang === 'en'
+                ? 'Equivalent to your Eastern Market member points'
+                : '等同于东方超市会员积分'}
+            </div>
+          </div>
+          <div class="ep-cap-row">
+            <div>${lang === 'en' ? 'Today:' : '今日入账:'} <strong>${earnedToday}</strong> / ${cap} 🎫</div>
+            ${pending > 0 ? `<div class="ep-cap-pending">⏳ ${lang === 'en' ? 'Queued for tomorrow:' : '排队明日入账:'} ${pending} 🎫</div>` : ''}
+          </div>
+        </div>
+      `;
+
+      const exchangeHTML = `
+        <h3 class="rewards-section">${lang === 'en' ? '🔄 Exchange (10 ⇄ 1)' : '🔄 兑换 (10 ⇄ 1)'}</h3>
+        <div class="exchange-row">
+          <div class="exchange-side">
+            <label>🪙 ${lang === 'en' ? 'Coins → EP' : '农场币 → 积分'}</label>
+            <div class="exchange-input-group">
+              <input type="number" id="exCoinAmt" min="10" step="10" value="100" placeholder="10x" />
+              <span class="exchange-arrow">→ <span id="exCoinPreview">10</span> 🎫</span>
+            </div>
+            <div class="exchange-balance">${lang === 'en' ? 'Have' : '有'} 🪙 ${coins.toLocaleString()}</div>
+            <button class="btn exchange-btn" id="exCoinBtn">${lang === 'en' ? 'Exchange' : '兑换'}</button>
+          </div>
+          <div class="exchange-side">
+            <label>🎫 ${lang === 'en' ? 'EP → Coins' : '积分 → 农场币'}</label>
+            <div class="exchange-input-group">
+              <input type="number" id="exEpAmt" min="1" step="1" value="10" />
+              <span class="exchange-arrow">→ <span id="exEpPreview">100</span> 🪙</span>
+            </div>
+            <div class="exchange-balance">${lang === 'en' ? 'Have' : '有'} 🎫 ${ep.toLocaleString()}</div>
+            <button class="btn exchange-btn" id="exEpBtn">${lang === 'en' ? 'Exchange' : '兑换'}</button>
+          </div>
+        </div>
+      `;
+
+      const earnList = lang === 'en' ? [
+        { icon: '🌅', text: 'Daily login +1 (7-day streak ×2, 30-day ×3, 90-day ×5)' },
+        { icon: '📋', text: 'Complete daily tasks +1 each (3/day)' },
+        { icon: '🌽', text: '3% random bonus on harvest +5' },
+        { icon: '🎰', text: '1% Golden Nugget chance +50~500' },
+        { icon: '🌅', text: 'First harvest of the day +10' },
+        { icon: '☄️', text: 'Saturday/Sunday Meteor Shower 2× all EP' },
+        { icon: '🏆', text: 'Achievement unlock +5~+30' },
+        { icon: '🎊', text: 'Festival tasks +5~+10' },
+        { icon: '🏘', text: 'Visit 3 neighbors daily +5' },
+        { icon: '📰', text: 'Mark news as read +2' },
+        { icon: '🔄', text: 'Convert farm coins 10:1' },
+      ] : [
+        { icon: '🌅', text: '每日登录 +1（连 7 天翻倍，30 天 ×3，90 天 ×5）' },
+        { icon: '📋', text: '完成每日任务 +1/个（每日 3 个）' },
+        { icon: '🌽', text: '收获时 3% 概率 +5' },
+        { icon: '🎰', text: '1% 金疙瘩大奖 +50~500' },
+        { icon: '🌅', text: '今日首次收获 +10' },
+        { icon: '☄️', text: '周末（六/日）流星雨 ×2 全部积分' },
+        { icon: '🏆', text: '解锁成就 +5~+30' },
+        { icon: '🎊', text: '节日任务 +5~+10' },
+        { icon: '🏘', text: '走访 3 户邻居 +5' },
+        { icon: '📰', text: '读今日新闻 +2' },
+        { icon: '🔄', text: '农场币 10:1 兑换' },
+      ];
+
+      const earnHTML = `
+        <h3 class="rewards-section">${lang === 'en' ? '💡 How to earn EP' : '💡 如何获取积分'}</h3>
+        <ul class="earn-list">
+          ${earnList.map(e => `<li><span class="earn-icon">${e.icon}</span> ${e.text}</li>`).join('')}
+        </ul>
+      `;
+
+      const shopHTML = `
+        <button class="btn ep-shop-link" id="openEpShopBtn">
+          🛍️ ${lang === 'en' ? 'Open EP Shop' : '打开积分商城'}
+        </button>
+        <div style="font-size:11px;color:var(--warm-text-soft);text-align:center;margin-top:8px;line-height:1.5;">
+          ${lang === 'en'
+            ? 'Redemption rules match Eastern Market in-store policy.'
+            : '兑换规则与东方超市店内会员系统一致'}
+        </div>
+      `;
 
       const html = `
-        <h2 class="modal-title">🎁 ${Farm.i18n.t('rewards_title')}</h2>
-        <p class="modal-subtitle">${Farm.i18n.t('rewards_subtitle')}</p>
-
-        <div style="text-align:center;margin-bottom:16px;padding:12px;background:linear-gradient(135deg,#f4e8ff,#e8d5ff);border-radius:var(--radius-md);">
-          <div style="font-size:12px;color:var(--warm-text-soft);">${Farm.i18n.t('currency_east_points')}</div>
-          <div style="font-size:24px;font-weight:700;color:var(--purple-points);">🎫 ${playerPoints}</div>
-        </div>
-
-        ${tierEntries.map(([tierId, tier]) => {
-          const label = tier[lang === 'en' ? 'value_label_en' : 'value_label_zh'];
-          const canAfford = playerPoints >= tier.cost_points;
-          const available = data.codes.filter(c => !c.used && c.tier === tierId && !Farm.state.data.redeemedCoupons.includes(c.code)).length;
-          const outOfStock = available === 0;
-          return `
-            <div class="reward-tier">
-              <div class="reward-info">
-                <div class="reward-value">${label}</div>
-                <div class="reward-cost">🎫 ${tier.cost_points} ${lang === 'en' ? 'points' : '点'}</div>
-                ${outOfStock ? `<div style="font-size:10px;color:#999;margin-top:2px;">${lang === 'en' ? 'Sold out' : '已售罄'}</div>` : ''}
-              </div>
-              <button class="btn-exchange" data-tier="${tierId}" ${(!canAfford || outOfStock) ? 'disabled' : ''}>
-                ${Farm.i18n.t('btn_exchange')}
-              </button>
-            </div>
-          `;
-        }).join('')}
-
-        <div style="margin-top:16px;padding:10px;background:#fff8e1;border-radius:var(--radius-md);font-size:11px;color:var(--warm-text-soft);line-height:1.5;">
-          ${lang === 'en'
-            ? '💡 How it works: Exchange points → get a coupon code → screenshot and show at Eastern Market checkout.'
-            : '💡 玩法说明：兑换后会拿到优惠码，截图保存，在东方超市结账时给收银员看即可。'}
-        </div>
-
+        <h2 class="modal-title">🎫 ${lang === 'en' ? 'Eastern Points' : '东方积分'}</h2>
+        ${balanceHTML}
+        ${exchangeHTML}
+        ${shopHTML}
+        ${earnHTML}
         <div class="btn-row">
           <button class="btn secondary" onclick="Farm.ui.hideModal()">${Farm.i18n.t('btn_close')}</button>
         </div>
       `;
       Farm.ui.showModal(html);
 
-      document.querySelectorAll('.btn-exchange[data-tier]').forEach(btn => {
-        if (btn.disabled) return;
-        btn.onclick = () => {
-          this.confirmExchange(btn.dataset.tier);
-        };
-      });
-    },
+      // Live preview wiring
+      const exCoinAmt = document.getElementById('exCoinAmt');
+      const exCoinPreview = document.getElementById('exCoinPreview');
+      const exEpAmt = document.getElementById('exEpAmt');
+      const exEpPreview = document.getElementById('exEpPreview');
+      exCoinAmt.oninput = () => {
+        const n = Math.max(0, parseInt(exCoinAmt.value, 10) || 0);
+        exCoinPreview.textContent = Math.floor(n / 10);
+      };
+      exEpAmt.oninput = () => {
+        const n = Math.max(0, parseInt(exEpAmt.value, 10) || 0);
+        exEpPreview.textContent = n * 10;
+      };
 
-    confirmExchange(tierId) {
-      const lang = Farm.state.data.language;
-      const tier = this.couponData.tiers[tierId];
-      const label = tier[lang === 'en' ? 'value_label_en' : 'value_label_zh'];
-
-      const html = `
-        <h2 class="modal-title">${lang === 'en' ? 'Confirm Exchange' : '确认兑换'}</h2>
-        <p style="text-align:center;margin:16px 0;font-size:14px;">
-          ${Farm.i18n.t('rewards_confirm_zh', { points: tier.cost_points, value: label })}
-        </p>
-        <div class="btn-row">
-          <button class="btn secondary" onclick="Farm.rewards.open()">${Farm.i18n.t('btn_cancel')}</button>
-          <button class="btn" id="confirmRedeemBtn">${Farm.i18n.t('btn_confirm')}</button>
-        </div>
-      `;
-      Farm.ui.showModal(html);
-
-      document.getElementById('confirmRedeemBtn').onclick = () => this.doExchange(tierId);
-    },
-
-    doExchange(tierId) {
-      const tier = this.couponData.tiers[tierId];
-      if (!tier) return;
-
-      if (!Farm.state.spendEastPoints(tier.cost_points)) {
-        Farm.ui.toast(Farm.i18n.t('toast_not_enough_points'));
-        return;
-      }
-
-      // Find an unused code of this tier that this player hasn't already taken
-      const redeemed = Farm.state.data.redeemedCoupons;
-      const available = this.couponData.codes.filter(c =>
-        c.tier === tierId && !c.used && !redeemed.includes(c.code)
-      );
-      if (available.length === 0) {
-        // Edge case: out of stock right after they spent points. Refund.
-        Farm.state.addEastPoints(tier.cost_points);
-        Farm.ui.toast('Sorry, sold out!');
-        this.open();
-        return;
-      }
-
-      const picked = available[Math.floor(Math.random() * available.length)];
-      // Mark used (this is client-side; cashier should also confirm)
-      picked.used = true;
-      Farm.state.data.redeemedCoupons.push(picked.code);
-      Farm.state.recordCouponRedeem();
-      Farm.state.save();
-      Farm.ui.refreshHUD();
-      if (Farm.audio) Farm.audio.play('coin');
-      if (Farm.achievements) Farm.achievements.checkAll();
-
-      this.showCouponCode(picked, tier);
-    },
-
-    showCouponCode(coupon, tier) {
-      const lang = Farm.state.data.language;
-      const label = tier[lang === 'en' ? 'value_label_en' : 'value_label_zh'];
-      const expiry = new Date(Date.now() + tier.expires_days * 86400000);
-      const expiryStr = expiry.toISOString().slice(0, 10);
-
-      const html = `
-        <h2 class="modal-title">🎉 ${Farm.i18n.t('rewards_code_title')}</h2>
-        <div class="coupon-display">
-          <div class="coupon-value">${label}</div>
-          <div class="coupon-code">${coupon.code}</div>
-          <div class="coupon-instruction">${Farm.i18n.t('rewards_code_instruction')}</div>
-          <div style="font-size:11px;color:var(--warm-text-soft);margin-top:6px;">
-            ${Farm.i18n.t('rewards_code_valid_until', { date: expiryStr })}
-          </div>
-          <div style="font-size:11px;color:var(--barn-red);margin-top:8px;font-weight:600;">
-            📸 ${Farm.i18n.t('rewards_save_screenshot')}
-          </div>
-        </div>
-        <div class="btn-row">
-          <button class="btn" onclick="Farm.ui.hideModal()">${Farm.i18n.t('btn_close')}</button>
-        </div>
-      `;
-      Farm.ui.showModal(html);
+      document.getElementById('exCoinBtn').onclick = () => {
+        const n = Math.max(0, parseInt(exCoinAmt.value, 10) || 0);
+        const r = Farm.state.exchangeCoinsToEp(n);
+        if (!r.ok) {
+          Farm.ui.toast(r.reason === 'insufficient_coins'
+            ? Farm.i18n.t('toast_not_enough_coins')
+            : (lang === 'en' ? 'Enter at least 10 coins' : '至少 10 农场币'));
+          if (Farm.audio) Farm.audio.play('error');
+          return;
+        }
+        Farm.ui.refreshHUD();
+        if (Farm.audio) Farm.audio.play('coin');
+        let msg = `🔄 +${r.epGained} 🎫`;
+        if (r.queued > 0) {
+          msg += lang === 'en'
+            ? ` (${r.queued} queued for tomorrow)`
+            : ` (${r.queued} 排队明日入账)`;
+        }
+        Farm.ui.toast(msg, 2800);
+        setTimeout(() => this.open(), 600);
+      };
+      document.getElementById('exEpBtn').onclick = () => {
+        const n = Math.max(0, parseInt(exEpAmt.value, 10) || 0);
+        const r = Farm.state.exchangeEpToCoins(n);
+        if (!r.ok) {
+          Farm.ui.toast(lang === 'en' ? 'Not enough EP' : '积分不够');
+          if (Farm.audio) Farm.audio.play('error');
+          return;
+        }
+        Farm.ui.refreshHUD();
+        if (Farm.audio) Farm.audio.play('coin');
+        Farm.ui.toast(`🔄 +${r.coinsGained} 🪙`, 2200);
+        setTimeout(() => this.open(), 600);
+      };
+      document.getElementById('openEpShopBtn').onclick = () => {
+        if (Farm.epShop) Farm.epShop.open();
+      };
     },
   };
 
