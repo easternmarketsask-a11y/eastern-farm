@@ -15,7 +15,7 @@
  */
 (function() {
   async function boot() {
-    console.log('🌱 Eastern Farm booting...');
+    console.log('🌱 Happy Farm booting...');
 
     // 1. Load data files in parallel
     await Promise.all([
@@ -74,7 +74,7 @@
     setInterval(() => Farm.storekeeper.refresh(), 45000);  // rotate every 45s
     setInterval(() => Farm.events.check(), 60000 * 30);    // re-check every 30 min
 
-    console.log('✅ Eastern Farm ready.');
+    console.log('✅ Happy Farm ready.');
   }
 
   function checkDailyLogin() {

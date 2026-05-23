@@ -67,6 +67,24 @@ body {
   box-shadow: 0 0 40px rgba(139, 90, 60, 0.1);
 }
 
+/* =============== BRAND BAR (above topbar, always visible) =============== */
+.brandbar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 16px 4px;
+  background: linear-gradient(180deg, #ffffff 0%, #fffaeb 100%);
+  border-bottom: 1px solid var(--border-soft);
+  position: sticky;
+  top: 0;
+  z-index: 11;
+}
+.brandbar-logo {
+  height: 28px;
+  width: auto;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.08));
+}
+
 /* =============== TOP BAR (5 compact slots) =============== */
 #topbar {
   display: flex;
@@ -98,27 +116,33 @@ body {
 
 .topbar-member-slot { display: inline-flex; }
 
-.level-block {
+/* Legacy .level-block / .xp-bar / .xp-fill removed (moved to .statusbar) */
+
+/* =============== STATUS BAR (Lv + XP, above bottom nav) =============== */
+.statusbar {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 3px;
-  min-width: 60px;
+  gap: 8px;
+  padding: 4px 16px;
+  background: linear-gradient(180deg, transparent 0%, #faf0d8 100%);
+  border-top: 1px solid var(--border-soft);
 }
-.level-label {
+.status-level {
   font-family: var(--font-display);
   font-size: 13px;
   color: var(--barn-red);
   font-weight: 700;
+  min-width: 36px;
+  white-space: nowrap;
 }
-.xp-bar {
-  width: 56px;
-  height: 4px;
+.status-xp-bar {
+  flex: 1;
+  height: 6px;
   background: var(--border-soft);
   border-radius: var(--radius-pill);
   overflow: hidden;
 }
-.xp-fill {
+.status-xp-fill {
   height: 100%;
   width: 0%;
   background: linear-gradient(90deg, var(--leaf-green), var(--mature-glow));

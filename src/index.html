@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#fdf8ee">
-<title>东方农场 · Eastern Farm</title>
+<title>东方超市·快乐农场 · Happy Farm</title>
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -13,8 +13,8 @@
 <div id="splash" class="splash">
   <div class="splash-content">
     <img class="splash-logo" src="assets/images/logo-horizontal.png" alt="东方超市 · Eastern Market">
-    <div class="splash-title-zh">东方农场</div>
-    <div class="splash-title-en">Eastern Farm</div>
+    <div class="splash-title-zh">快乐农场</div>
+    <div class="splash-title-en">Happy Farm</div>
     <div class="splash-tagline">
       <span class="splash-tagline-zh">好菜自己种</span>
       <span class="splash-tagline-en">Grow your own</span>
@@ -32,16 +32,17 @@
 
 <div id="app">
 
-  <!-- Top status bar (5 slots, compact) -->
+  <!-- Brand bar (always visible) -->
+  <div id="brandbar" class="brandbar">
+    <img class="brandbar-logo" src="assets/images/logo-horizontal.png" alt="东方超市 Eastern Market">
+  </div>
+
+  <!-- Top status bar (4 slots, compact) -->
   <header id="topbar">
     <div id="memberButton" class="topbar-member-slot"></div>
     <div class="currency coins" title="农场币">
       <span class="icon">🪙</span>
       <span class="value" id="coinsValue">100</span>
-    </div>
-    <div class="level-block">
-      <div class="level-label">Lv <span id="levelValue">1</span></div>
-      <div class="xp-bar"><div class="xp-fill" id="xpFill"></div></div>
     </div>
     <div class="currency points" title="东方积分">
       <span class="icon">🎫</span>
@@ -74,8 +75,14 @@
   <div id="storekeeper" class="storekeeper">
     <div class="storekeeper-avatar">👨‍🌾</div>
     <div class="storekeeper-bubble" id="storekeeperBubble">
-      欢迎来到东方农场！
+      点击棕色的地块种下第一粒种子。
     </div>
+  </div>
+
+  <!-- Player status strip (Lv + XP), above bottom nav -->
+  <div id="statusbar" class="statusbar">
+    <span class="status-level">Lv <span id="levelValue">1</span></span>
+    <div class="status-xp-bar"><div class="status-xp-fill" id="xpFill"></div></div>
   </div>
 
   <!-- Bottom action bar -->

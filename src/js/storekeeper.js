@@ -38,8 +38,8 @@
       // Context: new player
       if (data.coins === 100 && Object.values(data.sessionStats.harvested).reduce((s,n)=>s+n,0) === 0) {
         const newPlayerLine = lang === 'en'
-          ? "Welcome! Tap a brown plot to plant your first seed."
-          : "欢迎来到东方农场！点击棕色的地块种下第一粒种子吧。";
+          ? "Tap a brown plot to plant your first seed."
+          : "点击棕色的地块种下第一粒种子。";
         Farm.ui.setStorekeeperLine(newPlayerLine);
         return;
       }
