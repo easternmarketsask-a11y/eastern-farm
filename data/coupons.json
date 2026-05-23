@@ -1,0 +1,42 @@
+{
+  "_comment": "Pre-generated coupon codes. Each player who exchanges East Points takes one from the pool. V1 trust model: cashier validates by code lookup. Run scripts/gen_coupons.py to regenerate.",
+  "_schema_version": 1,
+  "tiers": {
+    "tier_5": {
+      "cost_points": 100,
+      "value_label_zh": "$5 优惠",
+      "value_label_en": "$5 Off",
+      "value_cad": 5,
+      "expires_days": 30
+    },
+    "tier_20": {
+      "cost_points": 300,
+      "value_label_zh": "$20 优惠 + 礼品",
+      "value_label_en": "$20 Off + Gift",
+      "value_cad": 20,
+      "expires_days": 30,
+      "includes_gift": true
+    },
+    "tier_special": {
+      "cost_points": 500,
+      "value_label_zh": "限定礼包（春节红包/中秋月饼）",
+      "value_label_en": "Limited Festival Gift",
+      "value_cad": 0,
+      "expires_days": 30,
+      "festival_only": true
+    }
+  },
+  "codes": [
+    { "code": "EMFARM-A4F8K2", "tier": "tier_5", "used": false },
+    { "code": "EMFARM-X9P3Q7", "tier": "tier_5", "used": false },
+    { "code": "EMFARM-M2N8L5", "tier": "tier_5", "used": false },
+    { "code": "EMFARM-B7K4D9", "tier": "tier_5", "used": false },
+    { "code": "EMFARM-W6R2C8", "tier": "tier_5", "used": false },
+    { "code": "EMFARM-G3Y8H4", "tier": "tier_20", "used": false },
+    { "code": "EMFARM-T5Z9V1", "tier": "tier_20", "used": false },
+    { "code": "EMFARM-J7Q4N2", "tier": "tier_20", "used": false },
+    { "code": "EMFARM-FESTL01", "tier": "tier_special", "used": false },
+    { "code": "EMFARM-FESTL02", "tier": "tier_special", "used": false }
+  ],
+  "_admin_note": "Cashier validation flow: when customer shows code, look up here (or in spreadsheet exported from this file). If code exists and used=false, apply discount and mark used. If used=true, decline. Restock by regenerating codes monthly."
+}

@@ -1,0 +1,176 @@
+{
+  "_comment": "Task templates. The game randomly picks 3 daily + 1 weekly task at midnight.",
+  "_schema_version": 1,
+
+  "daily": [
+    {
+      "id": "plant_3_any",
+      "type": "plant",
+      "target_count": 3,
+      "target_crop": "any",
+      "title_zh": "种 3 棵作物",
+      "title_en": "Plant 3 crops",
+      "reward_coins": 20,
+      "reward_points": 0
+    },
+    {
+      "id": "plant_5_bokchoy",
+      "type": "plant",
+      "target_count": 5,
+      "target_crop": "qingcai",
+      "title_zh": "种 5 棵上海青",
+      "title_en": "Plant 5 bok choy",
+      "reward_coins": 30,
+      "reward_points": 1
+    },
+    {
+      "id": "harvest_5_any",
+      "type": "harvest",
+      "target_count": 5,
+      "target_crop": "any",
+      "title_zh": "收获 5 次",
+      "title_en": "Harvest 5 times",
+      "reward_coins": 25,
+      "reward_points": 1
+    },
+    {
+      "id": "harvest_3_tomato",
+      "type": "harvest",
+      "target_count": 3,
+      "target_crop": "tomato",
+      "title_zh": "收获 3 颗番茄",
+      "title_en": "Harvest 3 tomatoes",
+      "reward_coins": 30,
+      "reward_points": 1,
+      "min_level": 2
+    },
+    {
+      "id": "earn_100_coins",
+      "type": "earn_coins",
+      "target_count": 100,
+      "title_zh": "靠收获赚 100 金币",
+      "title_en": "Earn 100 coins from harvests",
+      "reward_coins": 30,
+      "reward_points": 1
+    },
+    {
+      "id": "earn_300_coins",
+      "type": "earn_coins",
+      "target_count": 300,
+      "title_zh": "靠收获赚 300 金币",
+      "title_en": "Earn 300 coins from harvests",
+      "reward_coins": 0,
+      "reward_points": 2,
+      "min_level": 3
+    },
+    {
+      "id": "buy_5_seeds",
+      "type": "buy_seeds",
+      "target_count": 5,
+      "title_zh": "在种子店买 5 包种子",
+      "title_en": "Buy 5 packs of seeds at the shop",
+      "reward_coins": 15,
+      "reward_points": 0
+    },
+    {
+      "id": "try_new_crop",
+      "type": "plant_new",
+      "target_count": 1,
+      "title_zh": "尝试种一种以前没种过的作物",
+      "title_en": "Try planting a crop you've never grown",
+      "reward_coins": 0,
+      "reward_points": 2,
+      "min_level": 3
+    },
+    {
+      "id": "harvest_chili",
+      "type": "harvest",
+      "target_count": 2,
+      "target_crop": "chili",
+      "title_zh": "收获 2 颗辣椒",
+      "title_en": "Harvest 2 chili peppers",
+      "reward_coins": 40,
+      "reward_points": 1,
+      "min_level": 4
+    },
+    {
+      "id": "harvest_jiucai_all3",
+      "type": "harvest_multi_complete",
+      "target_count": 3,
+      "target_crop": "jiucai",
+      "title_zh": "把一棵韭菜割完全部 3 次",
+      "title_en": "Harvest a chive plant all 3 times",
+      "reward_coins": 0,
+      "reward_points": 3,
+      "min_level": 5
+    }
+  ],
+
+  "weekly": [
+    {
+      "id": "harvest_50_week",
+      "type": "harvest",
+      "target_count": 50,
+      "target_crop": "any",
+      "title_zh": "本周收获 50 次",
+      "title_en": "Harvest 50 times this week",
+      "reward_coins": 100,
+      "reward_points": 5
+    },
+    {
+      "id": "try_3_crops_week",
+      "type": "variety",
+      "target_count": 3,
+      "title_zh": "本周种 3 种不同的作物",
+      "title_en": "Plant 3 different crop types this week",
+      "reward_coins": 60,
+      "reward_points": 3
+    },
+    {
+      "id": "spend_500_week",
+      "type": "spend_coins",
+      "target_count": 500,
+      "title_zh": "本周在种子店花 500 金币",
+      "title_en": "Spend 500 coins at the shop this week",
+      "reward_coins": 0,
+      "reward_points": 3
+    }
+  ],
+
+  "festival_spring": [
+    {
+      "id": "spring_kumquat_3",
+      "type": "harvest",
+      "target_count": 3,
+      "target_crop": "kumquat",
+      "title_zh": "收获 3 颗年橘——「桔」祥如意",
+      "title_en": "Harvest 3 kumquats — for good fortune",
+      "reward_coins": 50,
+      "reward_points": 5,
+      "festival_only": "spring_festival"
+    },
+    {
+      "id": "spring_full_set",
+      "type": "harvest_set",
+      "target_crops": ["narcissus", "kumquat"],
+      "title_zh": "集齐春节限定作物",
+      "title_en": "Collect all Spring Festival limited crops",
+      "reward_coins": 0,
+      "reward_points": 10,
+      "festival_only": "spring_festival"
+    }
+  ],
+
+  "festival_mid_autumn": [
+    {
+      "id": "mooncake_plate",
+      "type": "harvest_set",
+      "target_crops": ["taro", "pomelo", "osmanthus"],
+      "title_zh": "拼一盘中秋月饼盘——芋头 + 柚子 + 桂花",
+      "title_en": "Make a Mid-Autumn plate — taro + pomelo + osmanthus",
+      "reward_coins": 0,
+      "reward_points": 8,
+      "festival_only": "mid_autumn"
+    }
+  ]
+}

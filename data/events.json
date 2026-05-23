@@ -1,0 +1,167 @@
+{
+  "_comment": "Festival events. Activated automatically when system date falls within window. Dates given as month-day; year-agnostic.",
+  "_schema_version": 1,
+  "events": [
+    {
+      "id": "spring_festival",
+      "name_zh": "春节",
+      "name_en": "Spring Festival",
+      "description_zh": "新年新气象，种一片喜庆农场",
+      "description_en": "Lunar New Year — plant a festive farm",
+      "date_mode": "lunar_calendar",
+      "_lunar_note": "Lunar date is year-dependent. V1 hardcodes for the next 3 years; the code looks up by current date.",
+      "windows": {
+        "2026": { "start": "2026-02-03", "end": "2026-02-23" },
+        "2027": { "start": "2027-01-23", "end": "2027-02-12" },
+        "2028": { "start": "2028-02-11", "end": "2028-03-02" }
+      },
+      "duration_days": 21,
+      "decorations": {
+        "lanterns": "top_corners",
+        "spring_couplets": "border",
+        "fireworks_animation": "occasional"
+      },
+      "limited_crops": ["narcissus", "kumquat"],
+      "east_points_multiplier": 2.0,
+      "_storekeeper_greetings_zh": [
+        "新年快乐！今年是 [生肖] 年，种一盆年橘讨吉利吧。",
+        "腊月二十三小年到，东方超市的年货货架已经摆好了。",
+        "记得吃饺子！游戏里种的韭菜可以包饺子皮的好馅~",
+        "春节限定的水仙花已经上架啦，水培装的，10 天就开花。",
+        "新年新气象，今年想种点什么新作物试试吗？"
+      ],
+      "_storekeeper_greetings_en": [
+        "Happy Lunar New Year! Plant a kumquat for good fortune.",
+        "The Spring Festival shelves at Eastern Market are stocked. Come visit!",
+        "Don't forget the dumplings! Chive from your farm makes great filling.",
+        "Limited narcissus flowers are now in shop — bloom in 10 days.",
+        "New year, new crops. What will you try this year?"
+      ],
+      "real_world_promo_hint_zh": "现实小贴士：东方超市春节期间「八角」全场 7 折，包饺子炖肉都用得上。",
+      "real_world_promo_hint_en": "Real-world tip: Eastern Market has star anise on sale during Spring Festival — perfect for dumplings and braising."
+    },
+
+    {
+      "id": "qingming",
+      "name_zh": "清明",
+      "name_en": "Qingming Festival",
+      "description_zh": "清明时节，种艾草做青团",
+      "description_en": "Qingming — plant mugwort for green rice balls",
+      "date_mode": "solar_calendar",
+      "windows": {
+        "default": { "start_mmdd": "04-01", "end_mmdd": "04-08" }
+      },
+      "duration_days": 8,
+      "decorations": {
+        "willow_branches": "border"
+      },
+      "limited_crops": [],
+      "_note": "V1 placeholder — implement later. Mugwort crop and 青团 mini-game in V2.",
+      "_storekeeper_greetings_zh": [
+        "清明时节雨纷纷，记得给家人打个电话。",
+        "想吃青团了，东方超市艾草到货了。"
+      ],
+      "_storekeeper_greetings_en": [
+        "Qingming is a quiet day to remember family.",
+        "Mugwort is in stock at Eastern Market — for making green rice balls."
+      ]
+    },
+
+    {
+      "id": "dragon_boat",
+      "name_zh": "端午",
+      "name_en": "Dragon Boat Festival",
+      "description_zh": "端午包粽子，挂艾草，吃咸鸭蛋",
+      "description_en": "Make zongzi, hang mugwort, eat salted duck eggs",
+      "date_mode": "lunar_calendar",
+      "windows": {
+        "2026": { "start": "2026-06-15", "end": "2026-06-22" },
+        "2027": { "start": "2027-06-04", "end": "2027-06-11" },
+        "2028": { "start": "2028-06-22", "end": "2028-06-29" }
+      },
+      "duration_days": 8,
+      "_note": "V2 — add 粽叶, 糯米, 蜜枣 crops + zongzi-wrapping mini-game",
+      "_storekeeper_greetings_zh": [
+        "端午安康！今年要包甜粽还是咸粽？"
+      ],
+      "_storekeeper_greetings_en": [
+        "Happy Dragon Boat Festival! Sweet or savory zongzi this year?"
+      ]
+    },
+
+    {
+      "id": "mid_autumn",
+      "name_zh": "中秋",
+      "name_en": "Mid-Autumn Festival",
+      "description_zh": "月圆人圆，种芋头、柚子、桂花",
+      "description_en": "Full moon, family reunion — grow taro, pomelo, osmanthus",
+      "date_mode": "lunar_calendar",
+      "windows": {
+        "2026": { "start": "2026-09-19", "end": "2026-09-29" },
+        "2027": { "start": "2027-09-08", "end": "2027-09-18" },
+        "2028": { "start": "2028-09-27", "end": "2028-10-07" }
+      },
+      "duration_days": 11,
+      "decorations": {
+        "moon": "upper_corner_glow",
+        "osmanthus_petals": "drift_animation"
+      },
+      "limited_crops": ["taro", "pomelo", "osmanthus"],
+      "east_points_multiplier": 2.0,
+      "_storekeeper_greetings_zh": [
+        "中秋节快乐！今晚月亮特别圆。",
+        "拼齐芋头 + 柚子 + 桂花，就是一盘中秋的家。",
+        "东方超市的月饼已经到货——双黄莲蓉、抹茶豆沙、海盐流心。",
+        "「八月桂花遍地开」——你的农场也种一棵吧。"
+      ],
+      "_storekeeper_greetings_en": [
+        "Happy Mid-Autumn Festival! Tonight the moon is full.",
+        "Taro + pomelo + osmanthus — a plate of home.",
+        "Mooncakes are in at Eastern Market — double yolk lotus, matcha red bean, salted caramel.",
+        "August osmanthus blossoms — try growing one on your farm."
+      ],
+      "real_world_promo_hint_zh": "现实小贴士：东方超市中秋月饼礼盒系列已上架，预购送桂花茶包。",
+      "real_world_promo_hint_en": "Real-world tip: Eastern Market's mooncake gift boxes are now available — pre-order gets an osmanthus tea pack."
+    },
+
+    {
+      "id": "chongyang",
+      "name_zh": "重阳",
+      "name_en": "Chongyang (Double Ninth)",
+      "description_zh": "敬老节，给爷爷奶奶捎个问候",
+      "description_en": "Honor the elders day — send a hello to grandparents",
+      "date_mode": "lunar_calendar",
+      "windows": {
+        "2026": { "start": "2026-10-18", "end": "2026-10-22" }
+      },
+      "duration_days": 5,
+      "_note": "V2 — adds chrysanthemum crop, special elder-themed tasks",
+      "_storekeeper_greetings_zh": [
+        "重阳节，记得给爷爷奶奶外公外婆打个电话。"
+      ],
+      "_storekeeper_greetings_en": [
+        "Chongyang — call your grandparents today if you can."
+      ]
+    },
+
+    {
+      "id": "winter_solstice",
+      "name_zh": "冬至",
+      "name_en": "Winter Solstice",
+      "description_zh": "冬至吃饺子，不冻耳朵",
+      "description_en": "Eat dumplings on the longest night",
+      "date_mode": "solar_calendar",
+      "windows": {
+        "default": { "start_mmdd": "12-20", "end_mmdd": "12-24" }
+      },
+      "duration_days": 5,
+      "_note": "V2 — add dumpling-folding mini-game, requires chive harvest",
+      "_storekeeper_greetings_zh": [
+        "冬至到，吃饺子。北方的传统，南方吃汤圆也行。"
+      ],
+      "_storekeeper_greetings_en": [
+        "Winter solstice — dumpling day in the north, tangyuan in the south. Both delicious."
+      ]
+    }
+  ]
+}

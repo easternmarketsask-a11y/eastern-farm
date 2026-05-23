@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#fdf8ee">
+<title>东方农场 · Eastern Farm</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div id="app">
+
+  <!-- Top status bar -->
+  <header id="topbar">
+    <div class="currency coins" title="金币">
+      <span class="icon">🪙</span>
+      <span class="value" id="coinsValue">100</span>
+    </div>
+    <div class="level-block">
+      <div class="level-label">Lv <span id="levelValue">1</span></div>
+      <div class="xp-bar"><div class="xp-fill" id="xpFill"></div></div>
+    </div>
+    <div class="currency points" title="东方点">
+      <span class="icon">🎫</span>
+      <span class="value" id="pointsValue">0</span>
+    </div>
+  </header>
+
+  <!-- Festival banner (shows during events) -->
+  <div id="festivalBanner" class="festival-banner hidden">
+    <span class="festival-icon">🎊</span>
+    <span class="festival-text" id="festivalText"></span>
+  </div>
+
+  <!-- Main farm view -->
+  <main id="farm">
+    <div class="farm-grid" id="farmGrid">
+      <!-- Plots injected here by farm.js -->
+    </div>
+  </main>
+
+  <!-- Storekeeper NPC -->
+  <div id="storekeeper" class="storekeeper">
+    <div class="storekeeper-avatar">👨‍🌾</div>
+    <div class="storekeeper-bubble" id="storekeeperBubble">
+      欢迎来到东方农场！
+    </div>
+  </div>
+
+  <!-- Bottom action bar -->
+  <nav id="bottombar">
+    <button class="action-btn" data-action="shop">
+      <span class="action-icon">🛒</span>
+      <span class="action-label" data-i18n="nav_shop">种子店</span>
+    </button>
+    <button class="action-btn" data-action="tasks">
+      <span class="action-icon">📋</span>
+      <span class="action-label" data-i18n="nav_tasks">任务</span>
+      <span class="task-badge" id="taskBadge"></span>
+    </button>
+    <button class="action-btn" data-action="rewards">
+      <span class="action-icon">🎁</span>
+      <span class="action-label" data-i18n="nav_rewards">兑换</span>
+    </button>
+    <button class="action-btn" data-action="collection">
+      <span class="action-icon">📖</span>
+      <span class="action-label" data-i18n="nav_collection">图鉴</span>
+    </button>
+    <button class="action-btn" data-action="settings">
+      <span class="action-icon">⚙️</span>
+      <span class="action-label" data-i18n="nav_settings">设置</span>
+    </button>
+  </nav>
+
+  <!-- Modal overlay (used by all dialogs) -->
+  <div id="modal" class="modal hidden">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content" id="modalContent">
+      <!-- Content injected per dialog -->
+    </div>
+  </div>
+
+  <!-- Toast notifications -->
+  <div id="toast" class="toast hidden"></div>
+
+</div>
+
+<!-- Module loading: order matters -->
+<script src="js/i18n.js"></script>
+<script src="js/state.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/crops.js"></script>
+<script src="js/crop-art.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/farm.js"></script>
+<script src="js/shop.js"></script>
+<script src="js/tasks.js"></script>
+<script src="js/events.js"></script>
+<script src="js/storekeeper.js"></script>
+<script src="js/rewards.js"></script>
+<script src="js/achievements.js"></script>
+<script src="js/main.js"></script>
+
+</body>
+</html>

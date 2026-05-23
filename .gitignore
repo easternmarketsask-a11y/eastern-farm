@@ -1,0 +1,22 @@
+# OS / editor cruft
+Thumbs.db
+desktop.ini
+.DS_Store
+.vscode/
+.idea/
+*.swp
+*~
+
+# Local-only test harness pages and scratch files
+src/__test_*.html
+*.log
+
+# Dependency installs (the game itself has no build step, but keep this for
+# defensive measure in case Chris adds tooling later)
+node_modules/
+
+# Local Python tooling that might end up here
+__pycache__/
+*.pyc
+.venv/
+venv/

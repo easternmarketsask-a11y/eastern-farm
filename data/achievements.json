@@ -1,0 +1,129 @@
+{
+  "_comment": "Achievement catalog. id is the save-stable key (don't rename). The `check` object is interpreted by achievements.js — see that file for supported types.",
+  "_schema_version": 1,
+  "achievements": [
+    {
+      "id": "first_harvest",
+      "name_zh": "第一抓",
+      "name_en": "First Harvest",
+      "icon": "🌱",
+      "desc_zh": "收获你的第一棵作物。",
+      "desc_en": "Harvest your very first crop.",
+      "reward_points": 2,
+      "check": { "type": "stat", "key": "totalHarvests", "min": 1 }
+    },
+    {
+      "id": "green_thumb",
+      "name_zh": "绿手指",
+      "name_en": "Green Thumb",
+      "icon": "🌿",
+      "desc_zh": "累计收获 25 次。",
+      "desc_en": "Harvest 25 crops in total.",
+      "reward_points": 3,
+      "check": { "type": "stat", "key": "totalHarvests", "min": 25 }
+    },
+    {
+      "id": "bumper_harvest",
+      "name_zh": "丰收年",
+      "name_en": "Bumper Harvest",
+      "icon": "🌾",
+      "desc_zh": "累计收获 100 次。",
+      "desc_en": "Harvest 100 crops in total.",
+      "reward_points": 10,
+      "check": { "type": "stat", "key": "totalHarvests", "min": 100 }
+    },
+    {
+      "id": "level_5",
+      "name_zh": "老农民",
+      "name_en": "Seasoned Farmer",
+      "icon": "🧑‍🌾",
+      "desc_zh": "等级达到 5 级。",
+      "desc_en": "Reach level 5.",
+      "reward_points": 5,
+      "check": { "type": "level", "min": 5 }
+    },
+    {
+      "id": "level_10",
+      "name_zh": "农场大师",
+      "name_en": "Farm Master",
+      "icon": "🏆",
+      "desc_zh": "等级达到 10 级。",
+      "desc_en": "Reach level 10.",
+      "reward_points": 15,
+      "check": { "type": "level", "min": 10 }
+    },
+    {
+      "id": "try_all_main",
+      "name_zh": "八仙过海",
+      "name_en": "Variety Pack",
+      "icon": "🥬",
+      "desc_zh": "尝试种植全部 8 种常规作物。",
+      "desc_en": "Plant every one of the 8 main crops at least once.",
+      "reward_points": 10,
+      "check": {
+        "type": "crops_set",
+        "ids": ["qingcai", "tomato", "cucumber", "chili", "eggplant", "jiucai", "garlic", "cilantro"]
+      }
+    },
+    {
+      "id": "spring_festival_master",
+      "name_zh": "新春大吉",
+      "name_en": "Spring Festival Master",
+      "icon": "🏮",
+      "desc_zh": "春节期间收获 3 次节日限定作物。",
+      "desc_en": "Harvest 3 festival crops during Spring Festival.",
+      "reward_points": 8,
+      "check": { "type": "festival_harvests", "festival": "spring_festival", "min": 3 }
+    },
+    {
+      "id": "mid_autumn_master",
+      "name_zh": "月圆人圆",
+      "name_en": "Mid-Autumn Master",
+      "icon": "🌕",
+      "desc_zh": "中秋期间收获 3 次节日限定作物。",
+      "desc_en": "Harvest 3 festival crops during Mid-Autumn.",
+      "reward_points": 8,
+      "check": { "type": "festival_harvests", "festival": "mid_autumn", "min": 3 }
+    },
+    {
+      "id": "streak_7",
+      "name_zh": "一周打卡",
+      "name_en": "Week Devotee",
+      "icon": "📅",
+      "desc_zh": "连续登录 7 天。",
+      "desc_en": "Log in 7 days in a row.",
+      "reward_points": 5,
+      "check": { "type": "stat", "key": "maxStreak", "min": 7 }
+    },
+    {
+      "id": "streak_30",
+      "name_zh": "月光宝盒",
+      "name_en": "Month-Long Loyalty",
+      "icon": "🗓️",
+      "desc_zh": "连续登录 30 天。",
+      "desc_en": "Log in 30 days in a row.",
+      "reward_points": 20,
+      "check": { "type": "stat", "key": "maxStreak", "min": 30 }
+    },
+    {
+      "id": "first_coupon",
+      "name_zh": "第一张优惠券",
+      "name_en": "First Coupon",
+      "icon": "🎫",
+      "desc_zh": "兑换你的第一张东方超市优惠券。",
+      "desc_en": "Redeem your first Eastern Market coupon.",
+      "reward_points": 3,
+      "check": { "type": "stat", "key": "totalCouponsRedeemed", "min": 1 }
+    },
+    {
+      "id": "task_runner",
+      "name_zh": "勤快人",
+      "name_en": "Task Runner",
+      "icon": "📋",
+      "desc_zh": "累计完成 10 个每日任务。",
+      "desc_en": "Claim 10 daily tasks in total.",
+      "reward_points": 5,
+      "check": { "type": "stat", "key": "totalTasksClaimed", "min": 10 }
+    }
+  ]
+}

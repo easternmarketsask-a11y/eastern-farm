@@ -1,0 +1,112 @@
+{
+  "_comment": "All static UI strings. Key once, two languages. Add new keys as needed.",
+  "_schema_version": 1,
+  "strings": {
+    "app_title": { "zh": "东方农场", "en": "Eastern Farm" },
+    "tagline": { "zh": "种在心里的家乡味", "en": "A taste of home, grown by you" },
+
+    "nav_farm": { "zh": "农场", "en": "Farm" },
+    "nav_shop": { "zh": "种子店", "en": "Shop" },
+    "nav_tasks": { "zh": "今日任务", "en": "Today's Tasks" },
+    "nav_rewards": { "zh": "兑换", "en": "Rewards" },
+    "nav_collection": { "zh": "图鉴", "en": "Collection" },
+    "nav_settings": { "zh": "设置", "en": "Settings" },
+
+    "currency_coins": { "zh": "金币", "en": "Coins" },
+    "currency_east_points": { "zh": "东方点", "en": "East Points" },
+    "label_level": { "zh": "等级", "en": "Level" },
+    "label_xp": { "zh": "经验", "en": "XP" },
+
+    "plot_empty_hint": { "zh": "点击种植", "en": "Tap to plant" },
+    "plot_locked_hint_template": { "zh": "等级 {n} 解锁", "en": "Level {n} to unlock" },
+    "plot_growing": { "zh": "生长中", "en": "Growing" },
+    "plot_ready": { "zh": "可以收获了!", "en": "Ready to harvest!" },
+
+    "btn_plant": { "zh": "种植", "en": "Plant" },
+    "btn_harvest": { "zh": "收获", "en": "Harvest" },
+    "btn_buy": { "zh": "购买", "en": "Buy" },
+    "btn_close": { "zh": "关闭", "en": "Close" },
+    "btn_confirm": { "zh": "确认", "en": "Confirm" },
+    "btn_cancel": { "zh": "取消", "en": "Cancel" },
+    "btn_exchange": { "zh": "兑换", "en": "Exchange" },
+    "btn_claim": { "zh": "领取", "en": "Claim" },
+    "btn_view_recipe": { "zh": "看食谱", "en": "View Recipe" },
+    "btn_view_in_store": { "zh": "店里看实物", "en": "See in Store" },
+
+    "toast_planted": { "zh": "已种下 {crop}", "en": "Planted {crop}" },
+    "toast_harvested": { "zh": "+{coins} 金币", "en": "+{coins} coins" },
+    "toast_harvested_bonus": { "zh": "+{coins} 金币 +1 东方点!", "en": "+{coins} coins +1 East Point!" },
+    "toast_level_up": { "zh": "等级提升! 解锁新内容", "en": "Level up! New content unlocked" },
+    "toast_task_complete": { "zh": "任务完成! +{coins} +{points}🎫", "en": "Task done! +{coins} +{points}🎫" },
+    "toast_not_enough_coins": { "zh": "金币不够", "en": "Not enough coins" },
+    "toast_not_enough_seeds": { "zh": "种子不够", "en": "Not enough seeds" },
+    "toast_not_enough_points": { "zh": "东方点不够", "en": "Not enough East Points" },
+
+    "daily_login_title": { "zh": "🌅 欢迎回来", "en": "🌅 Welcome back" },
+    "daily_login_streak": { "zh": "连续登录第 {n} 天", "en": "Day {n} login streak" },
+    "daily_login_reward": { "zh": "今日奖励: {coins}🪙 + {points}🎫", "en": "Today: {coins}🪙 + {points}🎫" },
+
+    "shop_title": { "zh": "种子店", "en": "Seed Shop" },
+    "shop_subtitle": { "zh": "买种子，种希望", "en": "Buy seeds, grow hope" },
+
+    "tasks_title": { "zh": "今日任务", "en": "Today's Tasks" },
+    "tasks_progress": { "zh": "{done}/{total}", "en": "{done}/{total}" },
+    "tasks_all_done": { "zh": "今日任务全部完成! 明天见 ✨", "en": "All done for today! See you tomorrow ✨" },
+
+    "rewards_title": { "zh": "东方点兑换", "en": "East Point Rewards" },
+    "rewards_subtitle": { "zh": "兑换真实的东方超市优惠券", "en": "Exchange for real Eastern Market coupons" },
+    "rewards_confirm_zh": { "zh": "用 {points} 东方点兑换 {value} 优惠券?", "en": "Exchange {points} East Points for {value} coupon?" },
+    "rewards_code_title": { "zh": "你的优惠码", "en": "Your Coupon Code" },
+    "rewards_code_instruction": { "zh": "结账时给收银员看这个码即可", "en": "Show this code at checkout" },
+    "rewards_code_valid_until": { "zh": "有效期至 {date}", "en": "Valid until {date}" },
+    "rewards_save_screenshot": { "zh": "记得截图保存", "en": "Screenshot to save" },
+    "rewards_used": { "zh": "已使用", "en": "Used" },
+
+    "festival_active_banner": { "zh": "{festival} 正在进行!", "en": "{festival} is here!" },
+    "festival_limited_crops": { "zh": "限定作物已上架", "en": "Limited crops in shop" },
+
+    "collection_title": { "zh": "蔬菜图鉴", "en": "Crop Collection" },
+    "collection_locked": { "zh": "???", "en": "???" },
+    "collection_progress": { "zh": "已解锁 {done} / {total}", "en": "{done} / {total} unlocked" },
+    "collection_tab_crops": { "zh": "作物", "en": "Crops" },
+    "collection_tab_achievements": { "zh": "成就", "en": "Achievements" },
+    "achievements_progress": { "zh": "解锁 {done} / {total}", "en": "{done} / {total} unlocked" },
+    "achievements_unlocked_toast": { "zh": "🏆 解锁成就: {name}", "en": "🏆 Achievement unlocked: {name}" },
+
+    "settings_title": { "zh": "设置", "en": "Settings" },
+    "settings_language": { "zh": "语言", "en": "Language" },
+    "settings_sound": { "zh": "声音", "en": "Sound" },
+    "settings_about": { "zh": "关于", "en": "About" },
+    "settings_reset": { "zh": "重置游戏", "en": "Reset Game" },
+    "settings_reset_confirm": { "zh": "确定要重置吗? 进度无法恢复.", "en": "Reset progress? This cannot be undone." },
+
+    "about_made_by": { "zh": "本游戏由东方超市制作", "en": "Made by Eastern Market" },
+    "about_visit_us": { "zh": "欢迎光临 Saskatoon 东方超市", "en": "Visit us at Eastern Market, Saskatoon" }
+  },
+
+  "_storekeeper_pool_default_zh": [
+    "今天农场怎么样?",
+    "新鲜的青菜是早上 8 点到货,东方超市每天 9 点开门.",
+    "种子店有新种子上架了,要去看看吗?",
+    "韭菜割了还会长,种一次能割三次,很划算.",
+    "今天 Saskatoon 天气怎么样?农场可不怕冷.",
+    "我妈以前总说『种地不偷懒,饭碗自然满』.",
+    "Bessborough 旁边的河今天结冰了吗?",
+    "种番茄要等阳光,种香菜随便撒就行.",
+    "记得来店里看看新货,这周到了 5 种新鲜叶菜.",
+    "种子下地的那一刻,是一周里最有希望的几秒."
+  ],
+
+  "_storekeeper_pool_default_en": [
+    "How's the farm today?",
+    "Fresh greens arrive 8am at Eastern Market — we open at 9.",
+    "New seeds at the shop. Want to take a look?",
+    "Chinese chives grow back after cutting — three harvests per plant.",
+    "How's the weather in Saskatoon today? Farms don't mind the cold.",
+    "My mom used to say: 'Work the land honestly, your bowl will be full.'",
+    "Is the river by Bessborough frozen yet?",
+    "Tomatoes need sun. Cilantro just needs to be scattered.",
+    "Stop by the store — 5 new leafy greens came in this week.",
+    "The moment a seed touches soil is the most hopeful second of the week."
+  ]
+}
