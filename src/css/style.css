@@ -67,12 +67,13 @@ body {
   box-shadow: 0 0 40px rgba(139, 90, 60, 0.1);
 }
 
-/* =============== TOP BAR =============== */
+/* =============== TOP BAR (5 compact slots) =============== */
 #topbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 14px 16px;
+  gap: 6px;
+  padding: 10px 10px;
   background: linear-gradient(180deg, #fffaeb 0%, #faf0d8 100%);
   border-bottom: 2px solid var(--border-soft);
   position: sticky;
@@ -83,34 +84,36 @@ body {
 .currency {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   background: var(--cream-card);
-  padding: 6px 12px;
+  padding: 5px 10px;
   border-radius: var(--radius-pill);
   border: 1.5px solid var(--border-soft);
   font-weight: 700;
-  font-size: 14px;
+  font-size: 13px;
 }
 .currency.coins { color: #b8860b; }
 .currency.points { color: var(--purple-points); }
-.currency .icon { font-size: 18px; }
+.currency .icon { font-size: 16px; }
+
+.topbar-member-slot { display: inline-flex; }
 
 .level-block {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
-  min-width: 80px;
+  gap: 3px;
+  min-width: 60px;
 }
 .level-label {
   font-family: var(--font-display);
-  font-size: 14px;
+  font-size: 13px;
   color: var(--barn-red);
   font-weight: 700;
 }
 .xp-bar {
-  width: 70px;
-  height: 5px;
+  width: 56px;
+  height: 4px;
   background: var(--border-soft);
   border-radius: var(--radius-pill);
   overflow: hidden;
@@ -720,39 +723,39 @@ body {
   animation: splashSlideUp 0.6s ease 0.95s both;
 }
 
-/* =============== MEMBER STATUS ROW =============== */
-.member-row {
-  display: flex;
-  justify-content: center;
-  padding: 6px 16px 0;
-}
-.member-button-slot { display: contents; }
+/* =============== MEMBER BUTTON (topbar slot) =============== */
 .member-btn {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  justify-content: center;
+  gap: 3px;
   background: var(--cream-card);
   border: 1.5px solid var(--border-soft);
-  padding: 5px 14px;
+  padding: 5px 8px;
   border-radius: var(--radius-pill);
   font-family: inherit;
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 13px;
+  font-weight: 700;
   color: var(--warm-text-soft);
   cursor: pointer;
   transition: transform 0.15s ease, background 0.15s ease;
+  min-width: 32px;
+  line-height: 1;
 }
-.member-btn:active { transform: scale(0.97); }
+.member-btn:active { transform: scale(0.94); }
 .member-btn--in {
   background: linear-gradient(135deg, #f4e8ff, #e8d5ff);
   border-color: rgba(155, 89, 182, 0.4);
   color: var(--purple-points);
+  padding: 5px 10px;
 }
 .member-name {
-  max-width: 140px;
+  max-width: 64px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-size: 11px;
+  margin-left: 2px;
 }
 .member-input {
   width: 100%;
@@ -769,46 +772,44 @@ body {
   border-color: var(--leaf-green);
 }
 
-/* =============== "今日" BUTTON =============== */
+/* =============== "今日" BUTTON (topbar slot) =============== */
 .today-button {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 6px;
-  margin: 12px auto 0;
+  justify-content: center;
   background: linear-gradient(135deg, #ffe9b8, #ffd286);
   border: 1.5px solid #f0c674;
-  padding: 8px 16px;
+  padding: 5px 10px;
   border-radius: var(--radius-pill);
   font-family: inherit;
-  font-size: 13px;
-  font-weight: 600;
-  color: #8b4513;
   cursor: pointer;
   position: relative;
-  box-shadow: 0 2px 6px rgba(247, 201, 72, 0.4);
+  box-shadow: 0 1px 4px rgba(247, 201, 72, 0.35);
   transition: transform 0.15s ease;
   animation: todayPulse 3s ease-in-out infinite;
+  min-width: 32px;
+  line-height: 1;
 }
-.today-button:active { transform: scale(0.96); }
-.today-icon { font-size: 16px; }
+.today-button:active { transform: scale(0.94); }
+.today-icon { font-size: 16px; line-height: 1; }
 .today-badge {
   position: absolute;
-  top: -4px;
-  right: -4px;
+  top: -5px;
+  right: -5px;
   background: var(--barn-red);
   color: white;
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 700;
-  padding: 1px 6px;
+  padding: 1px 5px;
   border-radius: var(--radius-pill);
-  min-width: 16px;
+  min-width: 14px;
   text-align: center;
   box-shadow: 0 1px 3px rgba(0,0,0,0.3);
 }
 .today-badge:empty { display: none; }
 @keyframes todayPulse {
-  0%, 100% { box-shadow: 0 2px 6px rgba(247, 201, 72, 0.4); }
-  50%      { box-shadow: 0 4px 14px rgba(247, 201, 72, 0.7); }
+  0%, 100% { box-shadow: 0 1px 4px rgba(247, 201, 72, 0.35); }
+  50%      { box-shadow: 0 2px 10px rgba(247, 201, 72, 0.7); }
 }
 
 /* =============== EP OVERVIEW (rewards modal) =============== */

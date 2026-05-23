@@ -32,8 +32,9 @@
 
 <div id="app">
 
-  <!-- Top status bar -->
+  <!-- Top status bar (5 slots, compact) -->
   <header id="topbar">
+    <div id="memberButton" class="topbar-member-slot"></div>
     <div class="currency coins" title="农场币">
       <span class="icon">🪙</span>
       <span class="value" id="coinsValue">100</span>
@@ -46,12 +47,11 @@
       <span class="icon">🎫</span>
       <span class="value" id="pointsValue">0</span>
     </div>
+    <button id="todayButton" class="today-button" title="今日">
+      <span class="today-icon">🌅</span>
+      <span id="todayBadge" class="today-badge"></span>
+    </button>
   </header>
-
-  <!-- Member status row (sign-in button or member name/tier) -->
-  <div id="memberRow" class="member-row">
-    <div id="memberButton" class="member-button-slot"></div>
-  </div>
 
   <!-- Festival banner (shows during events) -->
   <div id="festivalBanner" class="festival-banner hidden">
@@ -59,12 +59,6 @@
     <span class="festival-text" id="festivalText"></span>
   </div>
 
-  <!-- "今日" daily panel button (always visible, badge shows unclaimed items) -->
-  <button id="todayButton" class="today-button">
-    <span class="today-icon">🌅</span>
-    <span class="today-label" data-i18n="nav_today">今日</span>
-    <span id="todayBadge" class="today-badge"></span>
-  </button>
 
   <!-- Main farm view -->
   <main id="farm">

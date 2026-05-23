@@ -99,14 +99,16 @@
       if (this.currentUser) {
         const name = (this.memberDoc && (this.memberDoc.name || this.memberDoc.username))
           || this.currentUser.displayName
-          || this.currentUser.email
+          || (this.currentUser.email ? this.currentUser.email.split('@')[0] : '')
           || (lang === 'en' ? 'Member' : '会员');
         const tier = this.memberDoc && this.memberDoc.tier ? this.memberDoc.tier : 'bronze';
         const tierEmoji = tier === 'gold' ? '🥇' : tier === 'silver' ? '🥈' : '🥉';
-        slot.innerHTML = `<button class="member-btn member-btn--in" id="memberBtnInner">${tierEmoji}<span class="member-name">${name}</span></button>`;
+        const tierTitle = lang === 'en' ? 'Member: ' + name : '会员: ' + name;
+        slot.innerHTML = `<button class="member-btn member-btn--in" id="memberBtnInner" title="${tierTitle}">${tierEmoji}<span class="member-name">${name}</span></button>`;
         document.getElementById('memberBtnInner').onclick = () => this.openMenu();
       } else {
-        slot.innerHTML = `<button class="member-btn" id="memberBtnInner">👤 ${lang === 'en' ? 'Sign in' : '登录'}</button>`;
+        const title = lang === 'en' ? 'Sign in' : '登录';
+        slot.innerHTML = `<button class="member-btn" id="memberBtnInner" title="${title}">👤</button>`;
         document.getElementById('memberBtnInner').onclick = () => this.openLoginModal();
       }
     },
