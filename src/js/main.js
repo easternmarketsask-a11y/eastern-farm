@@ -34,32 +34,30 @@
     // 3. Language
     Farm.i18n.setLanguage(Farm.state.data.language || 'zh');
 
-    // 4. Daily login bonus
-    checkDailyLogin();
-
-    // 5. Daily tasks
+    // 4. Daily tasks
     Farm.tasks.initDaily();
     Farm.tasks.updateBadge();
 
-    // 6. Festival check
+    // 5. Festival check
     Farm.events.check();
 
-    // 7. Initial render
+    // 6. Initial render
     Farm.ui.refreshHUD();
     Farm.farm.renderGrid();
 
-    // 8. Storekeeper
+    // 7. Storekeeper
     Farm.storekeeper.refresh();
 
-    // 8b. Retroactive achievement check (catches unlocks for existing saves
-    // after a new achievement is shipped, or for the streak/level the player
-    // already had on first launch).
-    Farm.achievements.checkAll();
-
-    // 9. Wire nav buttons
+    // 8. Wire nav buttons + splash. Toast-emitting steps (daily login bonus,
+    // retroactive achievement unlocks) are deferred to after splash dismiss
+    // so they're not hidden under the splash overlay.
     wireNav();
+    wireSplash(() => {
+      checkDailyLogin();
+      Farm.achievements.checkAll();
+    });
 
-    // 10. Ticks
+    // 9. Ticks
     setInterval(() => Farm.farm.tick(), 1000);
     setInterval(() => Farm.storekeeper.refresh(), 45000);  // rotate every 45s
     setInterval(() => Farm.events.check(), 60000 * 30);    // re-check every 30 min
@@ -93,6 +91,7 @@
     const points = 1 * multiplier;
     Farm.state.addCoins(coins);
     Farm.state.addEastPoints(points);
+    Farm.ui.refreshHUD();
 
     setTimeout(() => {
       const lang = data.language;
@@ -103,6 +102,32 @@
     }, 500);
 
     if (Farm.achievements) Farm.achievements.checkAll();
+  }
+
+  function wireSplash(onDismiss) {
+    const splash = document.getElementById('splash');
+    const startBtn = document.getElementById('splashStart');
+    if (!splash || !startBtn) { if (onDismiss) onDismiss(); return; }
+    let fired = false;
+    const dismiss = () => {
+      if (fired) return;
+      fired = true;
+      splash.classList.add('dismissed');
+      if (Farm.audio) Farm.audio.play('plant');
+      // Hand off to caller (daily login + retroactive achievements) after the
+      // fade-out completes, so the toasts pop on a clean game screen.
+      setTimeout(() => {
+        splash.remove();
+        if (onDismiss) onDismiss();
+      }, 600);
+    };
+    startBtn.onclick = dismiss;
+    document.addEventListener('keydown', (e) => {
+      if (splash.parentNode && (e.key === 'Enter' || e.key === ' ')) {
+        e.preventDefault();
+        dismiss();
+      }
+    });
   }
 
   function wireNav() {
