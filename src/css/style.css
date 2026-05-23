@@ -100,9 +100,16 @@ body {
 }
 .brandbar-title {
   display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  position: relative;
+  line-height: 1;
+}
+.brandbar-title-zh-row {
+  display: inline-flex;
   align-items: center;
   gap: 4px;
-  position: relative;
 }
 .brandbar-title-zh {
   font-family: var(--font-display);
@@ -115,6 +122,15 @@ body {
   letter-spacing: 3px;
   text-shadow: 0 1px 0 rgba(255, 255, 255, 0.4);
   line-height: 1;
+}
+.brandbar-title-en {
+  font-family: var(--font-en);
+  font-size: 10px;
+  font-weight: 600;
+  color: #E8522A;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  margin-top: 2px;
 }
 .brandbar-sprout {
   font-size: 18px;
