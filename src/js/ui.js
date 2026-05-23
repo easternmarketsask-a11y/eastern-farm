@@ -5,16 +5,29 @@
   const ui = {
     refreshHUD() {
       const s = Farm.state.data;
+      const lang = s.language || 'zh';
       document.getElementById('coinsValue').textContent = s.coins.toLocaleString();
       document.getElementById('pointsValue').textContent = s.eastPoints.toLocaleString();
       document.getElementById('levelValue').textContent = s.level;
 
-      // XP bar
-      const thresholds = [0, 50, 150, 350, 700, 1200, 2000, 3000, 4500, 6500, 9000];
-      const curT = thresholds[s.level - 1] || 0;
-      const nextT = thresholds[s.level] || (curT * 1.5);
-      const pct = Math.min(100, (s.xp - curT) / Math.max(1, nextT - curT) * 100);
+      // Title (e.g. 新手 / 学徒 / 农神 / 萨城传说)
+      const titleEl = document.getElementById('titleLabel');
+      if (titleEl) {
+        const t = Farm.state.levelTitle ? Farm.state.levelTitle(s.level) : null;
+        titleEl.textContent = t ? (lang === 'en' ? t.en : t.zh) : '';
+      }
+
+      // XP bar — formula handles any level (level system is open-ended)
+      const curT = Farm.state.xpForLevel ? Farm.state.xpForLevel(s.level) : 0;
+      const nextT = Farm.state.xpForLevel ? Farm.state.xpForLevel(s.level + 1) : (curT + 1);
+      const span = Math.max(1, nextT - curT);
+      const progress = Math.max(0, s.xp - curT);
+      const pct = Math.min(100, progress / span * 100);
       document.getElementById('xpFill').style.width = pct + '%';
+      const xpTextEl = document.getElementById('xpText');
+      if (xpTextEl) {
+        xpTextEl.textContent = progress.toLocaleString() + ' / ' + span.toLocaleString();
+      }
     },
 
     showModal(html) {

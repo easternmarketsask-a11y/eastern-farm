@@ -34,7 +34,9 @@
 
   <!-- Brand bar (always visible) -->
   <div id="brandbar" class="brandbar">
-    <img class="brandbar-logo" src="assets/images/logo-horizontal.png" alt="东方超市 Eastern Market">
+    <a class="brandbar-logo-link" href="https://easternmarket.ca/" target="_blank" rel="noopener" title="访问东方超市官网 · Visit Eastern Market">
+      <img class="brandbar-logo" src="assets/images/logo-horizontal.png" alt="东方超市 Eastern Market">
+    </a>
     <span class="brandbar-divider"></span>
     <span class="brandbar-title">
       <span class="brandbar-title-zh-row">
@@ -87,10 +89,12 @@
     </div>
   </div>
 
-  <!-- Player status strip (Lv + XP), above bottom nav -->
+  <!-- Player status strip (Lv + title + XP), above bottom nav -->
   <div id="statusbar" class="statusbar">
     <span class="status-level">Lv <span id="levelValue">1</span></span>
+    <span class="status-title" id="titleLabel">新手</span>
     <div class="status-xp-bar"><div class="status-xp-fill" id="xpFill"></div></div>
+    <span class="status-xp-text" id="xpText"></span>
   </div>
 
   <!-- Bottom action bar -->

@@ -87,6 +87,14 @@ body {
   border-bottom: 1px solid var(--border-soft);
   padding-top: calc(8px + env(safe-area-inset-top));
 }
+.brandbar-logo-link {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+.brandbar-logo-link:active { transform: scale(0.94); }
 .brandbar-logo {
   height: 30px;
   width: auto;
@@ -174,12 +182,12 @@ body {
 
 /* Legacy .level-block / .xp-bar / .xp-fill removed (moved to .statusbar) */
 
-/* =============== STATUS BAR (Lv + XP, above bottom nav) =============== */
+/* =============== STATUS BAR (Lv + title + XP, above bottom nav) =============== */
 .statusbar {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 4px 16px;
+  padding: 5px 14px;
   background: linear-gradient(180deg, transparent 0%, #faf0d8 100%);
   border-top: 1px solid var(--border-soft);
 }
@@ -191,12 +199,23 @@ body {
   min-width: 36px;
   white-space: nowrap;
 }
+.status-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--leaf-dark);
+  background: rgba(106, 176, 76, 0.14);
+  padding: 1px 8px;
+  border-radius: var(--radius-pill);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
 .status-xp-bar {
   flex: 1;
   height: 6px;
   background: var(--border-soft);
   border-radius: var(--radius-pill);
   overflow: hidden;
+  min-width: 40px;
 }
 .status-xp-fill {
   height: 100%;
@@ -204,6 +223,13 @@ body {
   background: linear-gradient(90deg, var(--leaf-green), var(--mature-glow));
   border-radius: var(--radius-pill);
   transition: width 0.4s ease;
+}
+.status-xp-text {
+  font-family: var(--font-en);
+  font-size: 10px;
+  color: var(--warm-text-soft);
+  white-space: nowrap;
+  min-width: 0;
 }
 
 /* =============== FESTIVAL BANNER =============== */

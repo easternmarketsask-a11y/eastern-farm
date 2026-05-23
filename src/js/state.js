@@ -87,6 +87,54 @@
     return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
   }
 
+  // ============ Level progression (open-ended) ============
+  // Backward-compat: first 11 levels match the old hardcoded array; beyond
+  // that, formula extrapolates so progression never stops.
+  const XP_TABLE_FIXED = [0, 50, 150, 350, 700, 1200, 2000, 3000, 4500, 6500, 9000];
+  function xpForLevel(level) {
+    if (level <= 0) return 0;
+    if (level <= XP_TABLE_FIXED.length) return XP_TABLE_FIXED[level - 1];
+    const k = level - XP_TABLE_FIXED.length;
+    // Each level past 11 needs ~3,500 base, growing quadratically with `k`.
+    return Math.round(9000 + 3500 * k * (1 + k * 0.15));
+  }
+
+  // Levels that grant a new plot. Through Lv 5 every level gives +2 (matches
+  // the original 4→12 ramp). After Lv 5 plots come less often, but never
+  // stop, so there's always a long-term carrot.
+  const PLOT_UNLOCK_AT = {
+    2: 2, 3: 2, 4: 2, 5: 2,                          // 12 plots total by Lv 5 (unchanged)
+    7: 1, 10: 1, 15: 1, 20: 1,                       // → 16 plots by Lv 20
+    30: 1, 50: 1, 75: 1, 100: 1,                     // → 20 plots by Lv 100
+    150: 1, 200: 1, 300: 1, 500: 1,                  // → 24 plots by Lv 500
+  };
+
+  // Title tiers — purely cosmetic but signal long-haul progression.
+  const LEVEL_TITLES = [
+    { min: 1,   zh: '新手',       en: 'Newbie' },
+    { min: 3,   zh: '小工',       en: 'Helper' },
+    { min: 5,   zh: '学徒',       en: 'Apprentice' },
+    { min: 10,  zh: '农夫',       en: 'Farmer' },
+    { min: 15,  zh: '老农',       en: 'Veteran' },
+    { min: 20,  zh: '田园',       en: 'Field Master' },
+    { min: 25,  zh: '农场主',     en: 'Farm Owner' },
+    { min: 30,  zh: '庄园主',     en: 'Estate Owner' },
+    { min: 40,  zh: '农神',       en: 'Harvest Spirit' },
+    { min: 50,  zh: '田神',       en: 'Field God' },
+    { min: 75,  zh: '农圣',       en: 'Land Sage' },
+    { min: 100, zh: '传奇',       en: 'Legend' },
+    { min: 150, zh: '神话',       en: 'Myth' },
+    { min: 200, zh: '萨城传说',   en: 'Saskatoon Legend' },
+  ];
+  function levelTitle(level) {
+    let title = LEVEL_TITLES[0];
+    for (const t of LEVEL_TITLES) {
+      if (level >= t.min) title = t;
+      else break;
+    }
+    return title;
+  }
+
   const state = {
     data: null,
 
@@ -323,33 +371,49 @@
       return this.checkLevelUp();
     },
     checkLevelUp() {
-      const thresholds = [0, 50, 150, 350, 700, 1200, 2000, 3000, 4500, 6500, 9000];
-      const newLevel = thresholds.findIndex((t, i) => this.data.xp < (thresholds[i+1] ?? Infinity) && this.data.xp >= t) + 1;
+      let newLevel = this.data.level;
+      // Loop in case a single XP gain spans multiple levels (e.g. a big
+      // achievement reward dropping while we're 90% into the current level)
+      while (this.data.xp >= xpForLevel(newLevel + 1) && newLevel < 9999) {
+        newLevel++;
+      }
       if (newLevel > this.data.level) {
         const oldLevel = this.data.level;
+        for (let lv = oldLevel + 1; lv <= newLevel; lv++) {
+          this.unlockPlotsForLevel(lv);
+        }
         this.data.level = newLevel;
-        // Unlock new plots
-        this.unlockPlotsForLevel(newLevel);
         this.save();
         return { leveledUp: true, oldLevel, newLevel };
       }
       return { leveledUp: false };
     },
+
+    // Unlock the plots granted at this specific level. If the existing
+    // plots[] array already has locked slots, unlock the next one(s);
+    // otherwise append new unlocked plots.
     unlockPlotsForLevel(level) {
-      // Levels 2,3,4,5 each unlock 2 plots
-      const plotsToUnlock = {
-        2: [4, 5],
-        3: [6, 7],
-        4: [8, 9],
-        5: [10, 11],
-      };
-      const newPlots = plotsToUnlock[level];
-      if (newPlots) {
-        newPlots.forEach(pid => {
-          if (this.data.plots[pid]) this.data.plots[pid].unlocked = true;
-        });
+      const count = PLOT_UNLOCK_AT[level] || 0;
+      for (let i = 0; i < count; i++) {
+        const lockedIdx = this.data.plots.findIndex(p => !p.unlocked);
+        if (lockedIdx !== -1) {
+          this.data.plots[lockedIdx].unlocked = true;
+        } else {
+          const newId = this.data.plots.length;
+          this.data.plots.push({
+            id: newId,
+            crop: null,
+            plantedAt: 0,
+            harvestsLeft: 0,
+            unlocked: true,
+          });
+        }
       }
     },
+
+    // Expose helpers for UI / external modules
+    xpForLevel,
+    levelTitle,
 
     addSeed(cropId, n) {
       this.data.seeds[cropId] = (this.data.seeds[cropId] || 0) + n;
