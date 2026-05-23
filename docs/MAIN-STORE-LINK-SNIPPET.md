@@ -13,8 +13,6 @@ In `frontend-web/src/components/TTHeader.tsx`, add a nav button:
 ```tsx
 <a
   href="https://farm.easternmarket.ca/"
-  target="_blank"
-  rel="noopener noreferrer"
   className="text-sm font-medium text-green-700 hover:text-green-900 flex items-center gap-1"
 >
   🌱 玩快乐农场
@@ -31,8 +29,6 @@ hero carousel:
 ```tsx
 <a
   href="https://farm.easternmarket.ca/"
-  target="_blank"
-  rel="noopener noreferrer"
   className="block mx-4 my-6 rounded-2xl p-5 bg-gradient-to-br from-green-50 to-amber-50
              border-2 border-green-200 shadow-sm hover:shadow-md transition-all"
 >
@@ -59,8 +55,6 @@ add a card that says "玩游戏多赚积分":
 ```tsx
 <a
   href="https://farm.easternmarket.ca/"
-  target="_blank"
-  rel="noopener noreferrer"
   className="block rounded-xl p-4 bg-amber-50 border border-amber-200 hover:bg-amber-100"
 >
   <div className="flex items-center gap-3">
@@ -83,8 +77,6 @@ add a 5th tab or replace an underused one:
 ```tsx
 <a
   href="https://farm.easternmarket.ca/"
-  target="_blank"
-  rel="noopener noreferrer"
   className="flex flex-col items-center gap-0.5 px-3 py-2"
 >
   <span className="text-2xl">🌱</span>
@@ -107,3 +99,13 @@ view that's easy to swipe back from.
 
 Once added, deploy the main store as usual (GitHub Actions → Firebase
 Hosting). Game side is already deployed.
+
+## Same-tab navigation (per Chris)
+
+All snippets above use plain `<a href>` with no `target` attribute, so
+clicking navigates in the same tab. This matches the game-side behavior
+where tapping the brand-bar logo navigates back to easternmarket.ca in
+the same tab. If you later want the link to open in a new tab instead
+(e.g. to preserve shopping cart state on the store side), add
+`target="_blank" rel="noopener noreferrer"` back to the specific link.
+

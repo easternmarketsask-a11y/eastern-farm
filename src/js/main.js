@@ -317,7 +317,7 @@
           ${Farm.i18n.t('about_made_by')}<br>
           ${Farm.i18n.t('about_visit_us')}
         </div>
-        <a href="https://easternmarket.ca/" target="_blank" rel="noopener"
+        <a href="https://easternmarket.ca/"
            style="display:inline-flex;align-items:center;gap:6px;margin-top:10px;padding:8px 14px;background:linear-gradient(135deg,#3a8c50,#2a5c34);color:#fff;text-decoration:none;border-radius:var(--radius-pill);font-size:13px;font-weight:600;">
           🏪 ${lang === 'en' ? 'Visit Eastern Market site' : '访问东方超市官网'} →
         </a>
