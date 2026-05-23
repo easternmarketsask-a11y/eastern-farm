@@ -720,6 +720,55 @@ body {
   animation: splashSlideUp 0.6s ease 0.95s both;
 }
 
+/* =============== MEMBER STATUS ROW =============== */
+.member-row {
+  display: flex;
+  justify-content: center;
+  padding: 6px 16px 0;
+}
+.member-button-slot { display: contents; }
+.member-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--cream-card);
+  border: 1.5px solid var(--border-soft);
+  padding: 5px 14px;
+  border-radius: var(--radius-pill);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--warm-text-soft);
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+.member-btn:active { transform: scale(0.97); }
+.member-btn--in {
+  background: linear-gradient(135deg, #f4e8ff, #e8d5ff);
+  border-color: rgba(155, 89, 182, 0.4);
+  color: var(--purple-points);
+}
+.member-name {
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.member-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1.5px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  font-family: inherit;
+  font-size: 14px;
+  margin-top: 4px;
+  background: var(--cream-bg);
+}
+.member-input:focus {
+  outline: none;
+  border-color: var(--leaf-green);
+}
+
 /* =============== "今日" BUTTON =============== */
 .today-button {
   display: flex;

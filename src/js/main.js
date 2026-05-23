@@ -33,6 +33,11 @@
     // 2b. Arm the one-time gesture gate so audio can resume on first interaction
     Farm.audio.armGestureGate();
 
+    // 2c. Initialize member auth (Firebase). Safe no-op when Firebase is
+    // unavailable (offline, CDN blocked, etc.) — game continues as guest.
+    if (Farm.fbAuth) Farm.fbAuth.init();
+    if (Farm.fbQueue) Farm.fbQueue.install();
+
     // 3. Language
     Farm.i18n.setLanguage(Farm.state.data.language || 'zh');
 

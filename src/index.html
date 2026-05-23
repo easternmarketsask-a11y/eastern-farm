@@ -16,8 +16,8 @@
     <div class="splash-title-zh">东方农场</div>
     <div class="splash-title-en">Eastern Farm</div>
     <div class="splash-tagline">
-      <span class="splash-tagline-zh">一份种在心里的家乡味</span>
-      <span class="splash-tagline-en">A taste of home, grown by you</span>
+      <span class="splash-tagline-zh">好菜自己种</span>
+      <span class="splash-tagline-en">Grow your own</span>
     </div>
     <button class="splash-start" id="splashStart">
       <span class="splash-start-icon">🌱</span>
@@ -34,7 +34,7 @@
 
   <!-- Top status bar -->
   <header id="topbar">
-    <div class="currency coins" title="金币">
+    <div class="currency coins" title="农场币">
       <span class="icon">🪙</span>
       <span class="value" id="coinsValue">100</span>
     </div>
@@ -42,11 +42,16 @@
       <div class="level-label">Lv <span id="levelValue">1</span></div>
       <div class="xp-bar"><div class="xp-fill" id="xpFill"></div></div>
     </div>
-    <div class="currency points" title="东方点">
+    <div class="currency points" title="东方积分">
       <span class="icon">🎫</span>
       <span class="value" id="pointsValue">0</span>
     </div>
   </header>
+
+  <!-- Member status row (sign-in button or member name/tier) -->
+  <div id="memberRow" class="member-row">
+    <div id="memberButton" class="member-button-slot"></div>
+  </div>
 
   <!-- Festival banner (shows during events) -->
   <div id="festivalBanner" class="festival-banner hidden">
@@ -117,6 +122,11 @@
 
 </div>
 
+<!-- Firebase SDKs (compat builds — keep global firebase.* namespace) -->
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+
 <!-- Module loading: order matters -->
 <script src="js/i18n.js"></script>
 <script src="js/state.js"></script>
@@ -124,6 +134,10 @@
 <script src="js/crops.js"></script>
 <script src="js/crop-art.js"></script>
 <script src="js/ui.js"></script>
+<script src="js/firebase-init.js"></script>
+<script src="js/firebase-queue.js"></script>
+<script src="js/firebase-points.js"></script>
+<script src="js/firebase-auth.js"></script>
 <script src="js/ep-shop.js"></script>
 <script src="js/neighbors.js"></script>
 <script src="js/daily.js"></script>

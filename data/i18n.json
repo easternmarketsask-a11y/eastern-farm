@@ -86,28 +86,38 @@
   },
 
   "_storekeeper_pool_default_zh": [
-    "今天农场怎么样?",
-    "新鲜的青菜是早上 8 点到货,东方超市每天 9 点开门.",
-    "种子店有新种子上架了,要去看看吗?",
-    "韭菜割了还会长,种一次能割三次,很划算.",
-    "今天 Saskatoon 天气怎么样?农场可不怕冷.",
-    "我妈以前总说『种地不偷懒,饭碗自然满』.",
-    "Bessborough 旁边的河今天结冰了吗?",
-    "种番茄要等阳光,种香菜随便撒就行.",
-    "记得来店里看看新货,这周到了 5 种新鲜叶菜.",
-    "种子下地的那一刻,是一周里最有希望的几秒."
+    "今天上海青到货，叶尖嫩。",
+    "外面 -25°C，店里热豆浆桶现煮。",
+    "周三韭菜到货，提醒你一下。",
+    "8th Street 那段路结冰，开车小心。",
+    "我画的茄子有点歪，凑合看。",
+    "韭菜种一次能割三次，先种这个准没错。",
+    "番茄要等 30 分钟才熟，去做点别的吧。",
+    "积分商城新到了灯笼装饰，看看？",
+    "今天周末，收菜积分翻倍。",
+    "种子店上海青又补货了。",
+    "店里 10am 开门，6:30pm 关门，周日休息。",
+    "金疙瘩这种东西，看运气。",
+    "新鲜蒜苔到了，店里 $1.99/lb。",
+    "Costco 那边今天人多，我们这边清静。",
+    "种子撒下去之后就别盯着看了，去做点别的。"
   ],
 
   "_storekeeper_pool_default_en": [
-    "How's the farm today?",
-    "Fresh greens arrive 8am at Eastern Market — we open at 9.",
-    "New seeds at the shop. Want to take a look?",
-    "Chinese chives grow back after cutting — three harvests per plant.",
-    "How's the weather in Saskatoon today? Farms don't mind the cold.",
-    "My mom used to say: 'Work the land honestly, your bowl will be full.'",
-    "Is the river by Bessborough frozen yet?",
-    "Tomatoes need sun. Cilantro just needs to be scattered.",
-    "Stop by the store — 5 new leafy greens came in this week.",
-    "The moment a seed touches soil is the most hopeful second of the week."
+    "Fresh bok choy arrived. Tips are tender.",
+    "It's -25°C out there. We've got hot soy milk on tap.",
+    "Garlic chives come in Wednesday — just so you know.",
+    "8th Street is icy. Drive careful.",
+    "I drew the eggplant a bit crooked. Eh.",
+    "Chives can be cut 3 times from one planting. Start there.",
+    "Tomatoes need 30 min. Go do something else.",
+    "New lanterns in the EP shop. Take a look.",
+    "It's the weekend — EP earnings double on harvests.",
+    "Bok choy seeds restocked at the shop.",
+    "Open 10am-6:30pm Mon-Sat. Closed Sunday.",
+    "Golden Nugget drops are luck. Don't grind.",
+    "Garlic stems came in fresh, $1.99/lb at the store.",
+    "Costco's packed today. It's quiet here.",
+    "Plant the seed, then stop staring. Go do something."
   ]
 }

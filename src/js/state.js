@@ -73,6 +73,13 @@
       accelerationCharges: 0,   // # of 加速券 in inventory (consumed on use)
       freshnessCharges: 0,      // # of 保鲜券 in inventory
     },
+
+    // ============ Member sync (v1.2) ============
+    // unsyncedEp accumulates EP earned while NOT logged into a member account.
+    // On first successful login, up to BACKFILL_CAP gets one-shot credited to
+    // the real member balance; remainder discarded (per anti-abuse policy).
+    unsyncedEp: 0,
+    backfillDone: false,
   };
 
   function getDateString(d) {
@@ -170,7 +177,16 @@
     },
     // Add EP respecting daily cap. Overflow above the cap goes into pendingEp
     // queue, which gets drained next day in init(). Returns { credited, queued }.
-    addEastPoints(n) {
+    //
+    // When the player is logged into a member account, credited EP is also
+    // pushed to Firestore (members/{uid}.totalPoints + points_transactions/)
+    // via Farm.fbPoints.syncEpEarn(). When NOT logged in, credited EP stays
+    // local in `eastPoints` AND mirrors into `unsyncedEp` so the first-login
+    // backfill knows how much to credit.
+    //
+    // `opts.source` and `opts.description` are passed through for audit.
+    addEastPoints(n, opts) {
+      opts = opts || {};
       if (n <= 0) { this.save(); return { credited: 0, queued: 0 }; }
       // Make sure the daily counter is for today
       const today = getDateString();
@@ -184,11 +200,19 @@
       if (credited > 0) {
         this.data.eastPoints += credited;
         this.data.epEarnedToday += credited;
+        // Track unsynced-while-guest so first login can backfill
+        if (!(window.Farm && Farm.fbAuth && Farm.fbAuth.isLoggedIn())) {
+          this.data.unsyncedEp = (this.data.unsyncedEp || 0) + credited;
+        }
       }
       if (queued > 0) {
         this.data.pendingEp = (this.data.pendingEp || 0) + queued;
       }
       this.save();
+      // Fire member-account sync (no-op if logged out — Farm.fbPoints handles that)
+      if (credited > 0 && window.Farm && Farm.fbPoints) {
+        Farm.fbPoints.syncEpEarn(credited, opts.source || 'unknown', opts.description || '');
+      }
       return { credited, queued };
     },
     spendEastPoints(n) {
