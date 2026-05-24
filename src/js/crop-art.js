@@ -138,19 +138,65 @@
         </g>
       `;
     },
+    // jiucai (Chinese chives) — emoji-style. Bundle of 7 FLAT BLADE leaves
+    // (key distinction vs xiao_cong's tubular leaves). Tied at base, fanning
+    // slightly upward, deep saturated green.
     jiucai(c) {
-      const green = c || '#558b2f';
-      const dark = darken(green, 0.2);
-      const light = lighten(green, 0.18);
       return `
-        <path d="M 36 88 L 30 28 L 34 26 Z" fill="${green}" stroke="${dark}" stroke-width="0.8"/>
-        <path d="M 42 88 L 40 20 L 44 20 Z" fill="${light}" stroke="${dark}" stroke-width="0.8"/>
-        <path d="M 48 88 L 47 14 L 51 14 Z" fill="${green}" stroke="${dark}" stroke-width="0.8"/>
-        <path d="M 54 88 L 56 22 L 60 22 Z" fill="${light}" stroke="${dark}" stroke-width="0.8"/>
-        <path d="M 60 88 L 64 28 L 68 28 Z" fill="${green}" stroke="${dark}" stroke-width="0.8"/>
-        <path d="M 66 88 L 70 36 L 74 36 Z" fill="${light}" stroke="${dark}" stroke-width="0.8"/>
-        <ellipse cx="50" cy="85" rx="20" ry="3" fill="#a86c44" stroke="#6d4528" stroke-width="0.8"/>
-        <path d="M 32 85 L 32 86 M 68 85 L 68 86" stroke="#6d4528" stroke-width="0.6"/>
+        <defs>
+          <filter id="ds_jiucai" x="-15%" y="-15%" width="130%" height="130%">
+            <feGaussianBlur in="SourceAlpha" stdDeviation="1.2"/>
+            <feOffset dy="1.6" result="off"/>
+            <feComponentTransfer><feFuncA type="linear" slope="0.38"/></feComponentTransfer>
+            <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <linearGradient id="bladeA_jiucai" x1="0%" y1="100%" x2="0%" y2="0%">
+            <stop offset="0%" stop-color="#1f4d10"/>
+            <stop offset="50%" stop-color="#558b2f"/>
+            <stop offset="100%" stop-color="#aed581"/>
+          </linearGradient>
+          <linearGradient id="bladeB_jiucai" x1="0%" y1="100%" x2="0%" y2="0%">
+            <stop offset="0%" stop-color="#2e6b1d"/>
+            <stop offset="50%" stop-color="#6db835"/>
+            <stop offset="100%" stop-color="#c5e1a5"/>
+          </linearGradient>
+        </defs>
+        <ellipse cx="50" cy="92" rx="18" ry="2.5" fill="#000" opacity="0.22"/>
+
+        <g filter="url(#ds_jiucai)">
+          <!-- 7 flat blade leaves fanning from a tight base -->
+          <!-- Outer-left blade (longest, leans left) -->
+          <path d="M 46 86 Q 36 60 28 18 L 32 16 Q 38 56 50 86 Z"
+                fill="url(#bladeA_jiucai)" stroke="#1a3b0c" stroke-width="0.4"/>
+          <!-- Outer-right blade (longest, leans right) -->
+          <path d="M 54 86 Q 64 60 72 18 L 68 16 Q 62 56 50 86 Z"
+                fill="url(#bladeA_jiucai)" stroke="#1a3b0c" stroke-width="0.4"/>
+          <!-- Mid-left blade -->
+          <path d="M 47 86 Q 42 55 38 12 L 42 10 Q 44 55 50 86 Z"
+                fill="url(#bladeB_jiucai)" stroke="#1a3b0c" stroke-width="0.4"/>
+          <!-- Mid-right blade -->
+          <path d="M 53 86 Q 58 55 62 12 L 58 10 Q 56 55 50 86 Z"
+                fill="url(#bladeB_jiucai)" stroke="#1a3b0c" stroke-width="0.4"/>
+          <!-- Inner-left blade -->
+          <path d="M 48 86 Q 46 52 44 8 L 47 6 Q 49 52 50 86 Z"
+                fill="url(#bladeA_jiucai)" stroke="#1a3b0c" stroke-width="0.4"/>
+          <!-- Inner-right blade -->
+          <path d="M 52 86 Q 54 52 56 8 L 53 6 Q 51 52 50 86 Z"
+                fill="url(#bladeA_jiucai)" stroke="#1a3b0c" stroke-width="0.4"/>
+          <!-- Center tallest blade -->
+          <path d="M 49 86 Q 49 50 49 4 L 51 4 Q 51 50 51 86 Z"
+                fill="url(#bladeB_jiucai)" stroke="#1a3b0c" stroke-width="0.4"/>
+
+          <!-- Subtle vein highlights on top-leaning blades -->
+          <path d="M 50 86 Q 49 50 49 8" stroke="#aed581" stroke-width="0.4" fill="none" opacity="0.55"/>
+        </g>
+
+        <!-- Glossy highlight stripes on a couple of front blades -->
+        <ellipse cx="44" cy="40" rx="0.7" ry="20" fill="#fff" opacity="0.4" transform="rotate(-3 44 40)"/>
+        <ellipse cx="50" cy="30" rx="0.7" ry="22" fill="#fff" opacity="0.4"/>
+
+        <!-- Base shadow -->
+        <ellipse cx="50" cy="87" rx="9" ry="1.4" fill="#000" opacity="0.28"/>
       `;
     },
     garlic(c) {
@@ -1133,82 +1179,348 @@
       `;
     },
 
-    // niu_jiao_jiao (horn pepper) uses the chili shape, slightly milder color
-    niu_jiao_jiao(c) { return matureArt.chili(c); },
+    // niu_jiao_jiao (horn pepper) — emoji-style. Long curved cayenne-type
+    // pepper, sizable + thin-skinned. Bold red gradient + glossy highlight
+    // + small green calyx + stem at top.
+    niu_jiao_jiao(c) {
+      return `
+        <defs>
+          <filter id="ds_niu_jiao_jiao" x="-15%" y="-15%" width="130%" height="130%">
+            <feGaussianBlur in="SourceAlpha" stdDeviation="1.2"/>
+            <feOffset dy="1.6" result="off"/>
+            <feComponentTransfer><feFuncA type="linear" slope="0.38"/></feComponentTransfer>
+            <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <linearGradient id="body_niu_jiao_jiao" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#8b1d1d"/>
+            <stop offset="35%" stop-color="#c62828"/>
+            <stop offset="55%" stop-color="#e94d3f"/>
+            <stop offset="100%" stop-color="#ff6f43"/>
+          </linearGradient>
+        </defs>
+        <ellipse cx="50" cy="92" rx="18" ry="2.5" fill="#000" opacity="0.22"/>
 
+        <g filter="url(#ds_niu_jiao_jiao)">
+          <!-- Curved horn-shaped pepper body, bent slightly to the right -->
+          <path d="M 38 22
+                   Q 30 32 30 50
+                   Q 32 70 44 84
+                   Q 56 90 64 80
+                   Q 72 64 70 44
+                   Q 66 28 56 22
+                   Q 48 18 38 22
+                   Z"
+                fill="url(#body_niu_jiao_jiao)" stroke="#5c1010" stroke-width="0.6"/>
+
+          <!-- Glossy highlight strip on the upper-left -->
+          <path d="M 38 30 Q 34 44 38 64" stroke="#ffaa90" stroke-width="3.5" fill="none" opacity="0.45" stroke-linecap="round"/>
+          <path d="M 38 30 Q 34 44 38 64" stroke="#ffe0d4" stroke-width="1.5" fill="none" opacity="0.7" stroke-linecap="round"/>
+
+          <!-- Pepper tip subtle shadow ridge -->
+          <path d="M 64 80 Q 56 82 50 80" stroke="#5c1010" stroke-width="0.5" fill="none" opacity="0.4"/>
+
+          <!-- Green calyx (5 small leaves at top) -->
+          <path d="M 38 22 Q 40 16 46 14 Q 50 18 48 22 Z" fill="#7cb342" stroke="#3a6e1a" stroke-width="0.5"/>
+          <path d="M 50 16 Q 54 14 58 16 Q 56 22 50 20 Z" fill="#8bc34a" stroke="#3a6e1a" stroke-width="0.5"/>
+          <path d="M 56 22 Q 60 20 62 24 Q 58 26 54 24 Z" fill="#7cb342" stroke="#3a6e1a" stroke-width="0.5"/>
+
+          <!-- Short stem nub -->
+          <path d="M 50 16 L 50 8" stroke="#5d8a2f" stroke-width="2.2" stroke-linecap="round"/>
+        </g>
+
+        <!-- Tiny specular hot spot -->
+        <ellipse cx="40" cy="38" rx="2" ry="3" fill="#fff" opacity="0.6"/>
+        <!-- Base shadow -->
+        <ellipse cx="54" cy="86" rx="10" ry="1.3" fill="#000" opacity="0.25"/>
+      `;
+    },
+
+    // da_bai_cai (full-size napa cabbage) — emoji-style. Bigger version of
+    // wa_wa_cai (~50% larger body) with the same single iconic shape.
+    // Distinguished by size and slightly more pronounced top-leaf curl.
     da_bai_cai(c) {
-      const cream = c || '#f0f4c3';
-      const dark = darken(cream, 0.28);
-      const green = '#aed581';
-      const darkGreen = '#558b2f';
       return `
-        <ellipse cx="50" cy="86" rx="16" ry="3" fill="#a86c44"/>
-        <path d="M 32 86 L 32 38 Q 32 24 50 22 Q 68 24 68 38 L 68 86 Z" fill="${cream}" stroke="${dark}" stroke-width="1.5"/>
-        <path d="M 38 86 L 38 32" stroke="${dark}" stroke-width="0.5" opacity="0.5"/>
-        <path d="M 46 86 L 46 26" stroke="${dark}" stroke-width="0.5" opacity="0.5"/>
-        <path d="M 54 86 L 54 26" stroke="${dark}" stroke-width="0.5" opacity="0.5"/>
-        <path d="M 62 86 L 62 32" stroke="${dark}" stroke-width="0.5" opacity="0.5"/>
-        <path d="M 32 38 Q 24 30 24 14 Q 36 10 40 26 Q 38 34 32 38 Z" fill="${green}" stroke="${darkGreen}" stroke-width="1"/>
-        <path d="M 42 26 Q 40 18 44 6 Q 56 6 56 18 Q 56 26 50 26 Z" fill="${darkGreen}" stroke="${darkGreen}" stroke-width="1"/>
-        <path d="M 68 38 Q 76 30 76 14 Q 64 10 60 26 Q 62 34 68 38 Z" fill="${green}" stroke="${darkGreen}" stroke-width="1"/>
+        <defs>
+          <filter id="ds_da_bai_cai" x="-15%" y="-15%" width="130%" height="130%">
+            <feGaussianBlur in="SourceAlpha" stdDeviation="1.4"/>
+            <feOffset dy="1.8" result="off"/>
+            <feComponentTransfer><feFuncA type="linear" slope="0.4"/></feComponentTransfer>
+            <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <linearGradient id="body_da_bai_cai" x1="0%" y1="100%" x2="0%" y2="0%">
+            <stop offset="0%" stop-color="#dac98a"/>
+            <stop offset="35%" stop-color="#fff8dc"/>
+            <stop offset="70%" stop-color="#dcedc8"/>
+            <stop offset="100%" stop-color="#7cb342"/>
+          </linearGradient>
+          <linearGradient id="shade_da_bai_cai" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#000" stop-opacity="0.18"/>
+            <stop offset="40%" stop-color="#000" stop-opacity="0"/>
+            <stop offset="60%" stop-color="#000" stop-opacity="0"/>
+            <stop offset="100%" stop-color="#000" stop-opacity="0.18"/>
+          </linearGradient>
+        </defs>
+        <ellipse cx="50" cy="92" rx="22" ry="3" fill="#000" opacity="0.25"/>
+
+        <g filter="url(#ds_da_bai_cai)">
+          <!-- Big oblong body (wider + taller than wa_wa_cai) -->
+          <path d="M 26 88
+                   Q 20 64 24 40
+                   Q 28 12 50 8
+                   Q 72 12 76 40
+                   Q 80 64 74 88
+                   Z"
+                fill="url(#body_da_bai_cai)" stroke="#4a7d1e" stroke-width="0.8"/>
+
+          <!-- Side shading overlay -->
+          <path d="M 26 88
+                   Q 20 64 24 40
+                   Q 28 12 50 8
+                   Q 72 12 76 40
+                   Q 80 64 74 88
+                   Z"
+                fill="url(#shade_da_bai_cai)"/>
+
+          <!-- Stronger vertical white veins (more numerous than wa_wa_cai) -->
+          <path d="M 33 86 Q 30 60 33 36" stroke="#fff" stroke-width="0.8" fill="none" opacity="0.55"/>
+          <path d="M 42 87 Q 40 58 41 30" stroke="#fff" stroke-width="0.9" fill="none" opacity="0.65"/>
+          <path d="M 50 88 L 50 26" stroke="#fff" stroke-width="1" fill="none" opacity="0.75"/>
+          <path d="M 58 87 Q 60 58 59 30" stroke="#fff" stroke-width="0.9" fill="none" opacity="0.65"/>
+          <path d="M 67 86 Q 70 60 67 36" stroke="#fff" stroke-width="0.8" fill="none" opacity="0.55"/>
+
+          <!-- Top leaf curl bumps (4 scalloped definitions) -->
+          <path d="M 30 28 Q 36 22 42 26" stroke="#558b2f" stroke-width="0.8" fill="none" opacity="0.75"/>
+          <path d="M 42 26 Q 46 18 50 22" stroke="#558b2f" stroke-width="0.8" fill="none" opacity="0.75"/>
+          <path d="M 50 22 Q 54 18 58 26" stroke="#558b2f" stroke-width="0.8" fill="none" opacity="0.75"/>
+          <path d="M 58 26 Q 64 22 70 28" stroke="#558b2f" stroke-width="0.8" fill="none" opacity="0.75"/>
+          <path d="M 36 16 Q 42 12 48 16" stroke="#558b2f" stroke-width="0.7" fill="none" opacity="0.55"/>
+          <path d="M 52 16 Q 58 12 64 16" stroke="#558b2f" stroke-width="0.7" fill="none" opacity="0.55"/>
+        </g>
+
+        <!-- Glossy highlight on upper-left -->
+        <ellipse cx="36" cy="40" rx="4" ry="14" fill="#fff" opacity="0.4" transform="rotate(-6 36 40)"/>
+        <ellipse cx="38" cy="22" rx="2" ry="3" fill="#fff" opacity="0.6"/>
+
+        <!-- Base shadow -->
+        <ellipse cx="50" cy="88" rx="15" ry="1.4" fill="#000" opacity="0.28"/>
       `;
     },
 
+    // suan_tai (garlic scapes) — emoji-style. Long slender stems with the
+    // characteristic CURL/COIL at the top (the iconic feature of scapes).
+    // Each stem ends in a small flower bud (umbel). Bright spring green.
     suan_tai(c) {
-      const green = c || '#7cb342';
-      const dark = darken(green, 0.22);
-      const light = lighten(green, 0.15);
       return `
-        <ellipse cx="50" cy="88" rx="14" ry="3" fill="#a86c44"/>
-        <path d="M 35 88 Q 30 60 32 30 Q 30 22 34 16" stroke="${green}" stroke-width="3" fill="none" stroke-linecap="round"/>
-        <path d="M 35 88 Q 30 60 32 30 Q 30 22 34 16" stroke="${dark}" stroke-width="0.6" fill="none" stroke-linecap="round" opacity="0.5"/>
-        <circle cx="34" cy="14" r="2.5" fill="${light}" stroke="${dark}" stroke-width="0.5"/>
-        <path d="M 45 88 Q 42 56 46 22 Q 48 12 52 8" stroke="${light}" stroke-width="3" fill="none" stroke-linecap="round"/>
-        <circle cx="52" cy="6" r="2.5" fill="#fff8e7" stroke="${dark}" stroke-width="0.5"/>
-        <path d="M 55 88 Q 56 60 58 32 Q 60 20 64 14" stroke="${green}" stroke-width="3" fill="none" stroke-linecap="round"/>
-        <circle cx="64" cy="12" r="2.5" fill="${light}" stroke="${dark}" stroke-width="0.5"/>
-        <path d="M 65 88 Q 68 64 70 40 Q 72 30 76 26" stroke="${dark}" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-        <circle cx="76" cy="24" r="2.5" fill="${light}" stroke="${dark}" stroke-width="0.5"/>
+        <defs>
+          <filter id="ds_suan_tai" x="-15%" y="-15%" width="130%" height="130%">
+            <feGaussianBlur in="SourceAlpha" stdDeviation="1"/>
+            <feOffset dy="1.4" result="off"/>
+            <feComponentTransfer><feFuncA type="linear" slope="0.35"/></feComponentTransfer>
+            <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <linearGradient id="stem_suan_tai" x1="0%" y1="100%" x2="0%" y2="0%">
+            <stop offset="0%" stop-color="#5a8a2e"/>
+            <stop offset="50%" stop-color="#9ccc65"/>
+            <stop offset="100%" stop-color="#c5e1a5"/>
+          </linearGradient>
+          <radialGradient id="bud_suan_tai" cx="35%" cy="30%" r="80%">
+            <stop offset="0%" stop-color="#dcedc8"/>
+            <stop offset="60%" stop-color="#aed581"/>
+            <stop offset="100%" stop-color="#558b2f"/>
+          </radialGradient>
+        </defs>
+        <ellipse cx="50" cy="92" rx="14" ry="2.5" fill="#000" opacity="0.22"/>
+
+        <g filter="url(#ds_suan_tai)">
+          <!-- Stem 1 (left): rises straight, then curls into a loop at top -->
+          <path d="M 42 88
+                   Q 38 60 36 36
+                   Q 34 22 40 18
+                   Q 48 14 48 22
+                   Q 48 28 42 28"
+                stroke="url(#stem_suan_tai)" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+
+          <!-- Stem 2 (center, tallest): rises higher, then curls -->
+          <path d="M 50 88
+                   Q 50 50 52 24
+                   Q 54 10 62 12
+                   Q 68 16 66 24
+                   Q 64 32 56 30"
+                stroke="url(#stem_suan_tai)" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+
+          <!-- Stem 3 (right): mid-height, curls -->
+          <path d="M 58 88
+                   Q 62 60 64 40
+                   Q 66 28 72 26
+                   Q 78 26 76 34
+                   Q 74 42 68 40"
+                stroke="url(#stem_suan_tai)" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+
+          <!-- Flower buds at the end of each curl -->
+          <ellipse cx="42" cy="28" rx="3" ry="4" fill="url(#bud_suan_tai)" stroke="#3a6e1a" stroke-width="0.4"/>
+          <ellipse cx="56" cy="30" rx="3.2" ry="4.5" fill="url(#bud_suan_tai)" stroke="#3a6e1a" stroke-width="0.4"/>
+          <ellipse cx="68" cy="40" rx="3" ry="4" fill="url(#bud_suan_tai)" stroke="#3a6e1a" stroke-width="0.4"/>
+
+          <!-- Pointy tips on buds -->
+          <path d="M 42 24 L 41 21 M 56 25 L 55 22 M 68 36 L 67 33"
+                stroke="#3a6e1a" stroke-width="0.8" stroke-linecap="round"/>
+        </g>
+
+        <!-- Highlight stripes on stems -->
+        <path d="M 41 80 Q 36 56 35 38" stroke="#fff" stroke-width="0.5" fill="none" opacity="0.55"/>
+        <path d="M 49 80 Q 49 50 51 26" stroke="#fff" stroke-width="0.55" fill="none" opacity="0.6"/>
+        <path d="M 57 80 Q 61 60 63 42" stroke="#fff" stroke-width="0.5" fill="none" opacity="0.55"/>
+        <!-- Bud highlight specs -->
+        <ellipse cx="41" cy="26" rx="1" ry="1.4" fill="#fff" opacity="0.6"/>
+        <ellipse cx="55" cy="28" rx="1.1" ry="1.5" fill="#fff" opacity="0.6"/>
+
+        <!-- Base shadow -->
+        <ellipse cx="50" cy="88" rx="9" ry="1.3" fill="#000" opacity="0.25"/>
       `;
     },
 
+    // bai_luo_bo (daikon radish) — emoji-style. Long cylindrical white root
+    // with ROUNDED tip (not pointed like a carrot). Pale green hint at the
+    // top shoulder. Big leafy green crown with serrated leaf edges.
     bai_luo_bo(c) {
-      const white = c || '#f5f5f5';
-      const dark = '#8b7355';
-      const green = '#7cb342';
-      const darkGreen = '#3a7d2c';
       return `
-        <path d="M 30 86 Q 26 60 32 46 Q 42 38 50 38 Q 58 38 68 46 Q 74 60 70 86 Q 60 92 50 92 Q 40 92 30 86 Z" fill="${white}" stroke="${dark}" stroke-width="1.2"/>
-        <path d="M 38 86 Q 36 60 40 46" stroke="${dark}" stroke-width="0.6" opacity="0.45" fill="none"/>
-        <path d="M 62 86 Q 64 60 60 46" stroke="${dark}" stroke-width="0.6" opacity="0.45" fill="none"/>
-        <ellipse cx="40" cy="55" rx="4" ry="14" fill="#fff" opacity="0.55"/>
-        <path d="M 50 92 L 50 96" stroke="${dark}" stroke-width="1" stroke-linecap="round"/>
-        <path d="M 42 38 L 36 14" stroke="${darkGreen}" stroke-width="2" stroke-linecap="round"/>
-        <path d="M 50 38 L 50 8" stroke="${darkGreen}" stroke-width="2.2" stroke-linecap="round"/>
-        <path d="M 58 38 L 64 14" stroke="${darkGreen}" stroke-width="2" stroke-linecap="round"/>
-        <ellipse cx="36" cy="14" rx="7" ry="4" fill="${green}" stroke="${darkGreen}" stroke-width="0.8" transform="rotate(-25 36 14)"/>
-        <ellipse cx="50" cy="8" rx="9" ry="5" fill="${green}" stroke="${darkGreen}" stroke-width="0.8"/>
-        <ellipse cx="64" cy="14" rx="7" ry="4" fill="${green}" stroke="${darkGreen}" stroke-width="0.8" transform="rotate(25 64 14)"/>
+        <defs>
+          <filter id="ds_bai_luo_bo" x="-15%" y="-15%" width="130%" height="130%">
+            <feGaussianBlur in="SourceAlpha" stdDeviation="1.2"/>
+            <feOffset dy="1.6" result="off"/>
+            <feComponentTransfer><feFuncA type="linear" slope="0.4"/></feComponentTransfer>
+            <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <linearGradient id="root_bai_luo_bo" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#bfb89a"/>
+            <stop offset="30%" stop-color="#f5f5f0"/>
+            <stop offset="60%" stop-color="#fffffe"/>
+            <stop offset="100%" stop-color="#aaa280"/>
+          </linearGradient>
+          <linearGradient id="shoulder_bai_luo_bo" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stop-color="#9ccc65"/>
+            <stop offset="100%" stop-color="#f5f5f0" stop-opacity="0"/>
+          </linearGradient>
+          <radialGradient id="leaf_bai_luo_bo" cx="40%" cy="80%" r="80%">
+            <stop offset="0%" stop-color="#aed581"/>
+            <stop offset="55%" stop-color="#558b2f"/>
+            <stop offset="100%" stop-color="#2e5613"/>
+          </radialGradient>
+        </defs>
+        <ellipse cx="50" cy="94" rx="14" ry="2" fill="#000" opacity="0.22"/>
+
+        <g filter="url(#ds_bai_luo_bo)">
+          <!-- Daikon root: long cylindrical, rounded tip -->
+          <path d="M 40 38
+                   Q 36 50 38 70
+                   Q 42 90 50 92
+                   Q 58 90 62 70
+                   Q 64 50 60 38
+                   Z"
+                fill="url(#root_bai_luo_bo)" stroke="#8b7c5a" stroke-width="0.7"/>
+
+          <!-- Pale green shoulder shading -->
+          <path d="M 40 38 Q 50 36 60 38 L 60 50 Q 50 48 40 50 Z"
+                fill="url(#shoulder_bai_luo_bo)" opacity="0.85"/>
+
+          <!-- Horizontal root ring marks -->
+          <path d="M 40 50 Q 50 52 60 50" stroke="#8b7c5a" stroke-width="0.4" fill="none" opacity="0.4"/>
+          <path d="M 39 64 Q 50 66 61 64" stroke="#8b7c5a" stroke-width="0.4" fill="none" opacity="0.4"/>
+          <path d="M 40 78 Q 50 80 60 78" stroke="#8b7c5a" stroke-width="0.4" fill="none" opacity="0.35"/>
+
+          <!-- Leafy green crown (4 jagged leaves) -->
+          <path d="M 50 36 Q 42 26 30 18 Q 26 14 34 12 Q 38 18 42 22 Q 38 16 44 14 Q 46 22 50 30 Z"
+                fill="url(#leaf_bai_luo_bo)" stroke="#2e5613" stroke-width="0.5"/>
+          <path d="M 50 36 Q 50 22 46 10 Q 50 6 54 10 Q 56 22 52 34 Z"
+                fill="url(#leaf_bai_luo_bo)" stroke="#2e5613" stroke-width="0.5"/>
+          <path d="M 50 36 Q 58 26 70 18 Q 74 14 66 12 Q 62 18 58 22 Q 62 16 56 14 Q 54 22 50 30 Z"
+                fill="url(#leaf_bai_luo_bo)" stroke="#2e5613" stroke-width="0.5"/>
+
+          <!-- Center leaf vein -->
+          <path d="M 50 34 Q 50 22 50 10" stroke="#2e5613" stroke-width="0.4" fill="none" opacity="0.6"/>
+        </g>
+
+        <!-- Long highlight stripe on left side of root -->
+        <ellipse cx="44" cy="60" rx="2" ry="18" fill="#fff" opacity="0.45" transform="rotate(-4 44 60)"/>
+        <!-- Hot spec on root -->
+        <ellipse cx="44" cy="48" rx="2" ry="2.5" fill="#fff" opacity="0.6"/>
+        <!-- Leaf hot spot -->
+        <ellipse cx="44" cy="18" rx="1.5" ry="2.5" fill="#fff" opacity="0.55"/>
+
+        <!-- Base shadow under root -->
+        <ellipse cx="50" cy="90" rx="9" ry="1.4" fill="#000" opacity="0.25"/>
       `;
     },
 
+    // hu_luo_bo (carrot) — emoji-style. Classic orange tapered cone with
+    // POINTED tip (distinct from daikon's rounded tip). Feathery green tops
+    // (carrot leaves have fern-like fronds, similar to dill).
     hu_luo_bo(c) {
-      const orange = c || '#ff7043';
-      const dark = darken(orange, 0.25);
-      const green = '#7cb342';
-      const darkGreen = '#3a7d2c';
       return `
-        <path d="M 40 38 Q 36 50 38 70 Q 44 92 50 94 Q 56 92 62 70 Q 64 50 60 38 Z" fill="${orange}" stroke="${dark}" stroke-width="1.2"/>
-        <path d="M 44 42 L 44 84" stroke="${dark}" stroke-width="0.6" opacity="0.5"/>
-        <path d="M 50 42 L 50 92" stroke="${dark}" stroke-width="0.6" opacity="0.5"/>
-        <path d="M 56 42 L 56 84" stroke="${dark}" stroke-width="0.6" opacity="0.5"/>
-        <ellipse cx="44" cy="55" rx="3" ry="14" fill="#fff" opacity="0.4"/>
-        <path d="M 42 38 L 36 14" stroke="${darkGreen}" stroke-width="2" stroke-linecap="round"/>
-        <path d="M 50 38 L 50 8" stroke="${darkGreen}" stroke-width="2.2" stroke-linecap="round"/>
-        <path d="M 58 38 L 64 14" stroke="${darkGreen}" stroke-width="2" stroke-linecap="round"/>
-        <ellipse cx="36" cy="14" rx="6" ry="9" fill="${green}" stroke="${darkGreen}" stroke-width="0.8" transform="rotate(-20 36 14)"/>
-        <ellipse cx="50" cy="8" rx="7" ry="11" fill="${green}" stroke="${darkGreen}" stroke-width="0.8"/>
-        <ellipse cx="64" cy="14" rx="6" ry="9" fill="${green}" stroke="${darkGreen}" stroke-width="0.8" transform="rotate(20 64 14)"/>
+        <defs>
+          <filter id="ds_hu_luo_bo" x="-15%" y="-15%" width="130%" height="130%">
+            <feGaussianBlur in="SourceAlpha" stdDeviation="1.2"/>
+            <feOffset dy="1.6" result="off"/>
+            <feComponentTransfer><feFuncA type="linear" slope="0.4"/></feComponentTransfer>
+            <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <linearGradient id="root_hu_luo_bo" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#a83608"/>
+            <stop offset="30%" stop-color="#ed5c1d"/>
+            <stop offset="60%" stop-color="#ff7e3f"/>
+            <stop offset="100%" stop-color="#c54514"/>
+          </linearGradient>
+          <radialGradient id="leaf_hu_luo_bo" cx="50%" cy="80%" r="70%">
+            <stop offset="0%" stop-color="#aed581"/>
+            <stop offset="55%" stop-color="#558b2f"/>
+            <stop offset="100%" stop-color="#2e5613"/>
+          </radialGradient>
+        </defs>
+        <ellipse cx="50" cy="94" rx="11" ry="1.8" fill="#000" opacity="0.22"/>
+
+        <g filter="url(#ds_hu_luo_bo)">
+          <!-- Tapered carrot root: wide at top, pointed at bottom -->
+          <path d="M 40 36
+                   Q 38 50 42 70
+                   Q 46 88 50 94
+                   Q 54 88 58 70
+                   Q 62 50 60 36
+                   Z"
+                fill="url(#root_hu_luo_bo)" stroke="#5c2008" stroke-width="0.7"/>
+
+          <!-- Horizontal carrot ring marks -->
+          <path d="M 42 48 Q 50 50 58 48" stroke="#5c2008" stroke-width="0.4" fill="none" opacity="0.5"/>
+          <path d="M 43 58 Q 50 60 57 58" stroke="#5c2008" stroke-width="0.4" fill="none" opacity="0.45"/>
+          <path d="M 44 68 Q 50 70 56 68" stroke="#5c2008" stroke-width="0.4" fill="none" opacity="0.4"/>
+          <path d="M 45 78 Q 50 80 55 78" stroke="#5c2008" stroke-width="0.4" fill="none" opacity="0.35"/>
+
+          <!-- Feathery carrot tops (3 frond-like leaf clusters) -->
+          <path d="M 50 36 Q 40 26 32 14 L 36 12 Q 42 22 46 32 Z"
+                fill="url(#leaf_hu_luo_bo)" stroke="#2e5613" stroke-width="0.5"/>
+          <path d="M 50 36 Q 46 22 48 8 L 52 8 Q 54 22 50 36 Z"
+                fill="url(#leaf_hu_luo_bo)" stroke="#2e5613" stroke-width="0.5"/>
+          <path d="M 50 36 Q 60 26 68 14 L 64 12 Q 58 22 54 32 Z"
+                fill="url(#leaf_hu_luo_bo)" stroke="#2e5613" stroke-width="0.5"/>
+
+          <!-- Small additional feathery sub-leaflets -->
+          <ellipse cx="34" cy="18" rx="3" ry="2" fill="#558b2f" stroke="#2e5613" stroke-width="0.4" transform="rotate(-40 34 18)"/>
+          <ellipse cx="66" cy="18" rx="3" ry="2" fill="#558b2f" stroke="#2e5613" stroke-width="0.4" transform="rotate(40 66 18)"/>
+          <ellipse cx="42" cy="22" rx="2.5" ry="1.6" fill="#7cb342" stroke="#3a6e1a" stroke-width="0.4" transform="rotate(-25 42 22)"/>
+          <ellipse cx="58" cy="22" rx="2.5" ry="1.6" fill="#7cb342" stroke="#3a6e1a" stroke-width="0.4" transform="rotate(25 58 22)"/>
+
+          <!-- Center leaf vein -->
+          <path d="M 50 36 L 50 8" stroke="#2e5613" stroke-width="0.4" fill="none" opacity="0.6"/>
+        </g>
+
+        <!-- Glossy highlight stripe on the left side of root -->
+        <ellipse cx="44" cy="58" rx="2" ry="18" fill="#fff" opacity="0.45" transform="rotate(-4 44 58)"/>
+        <!-- Hot spec -->
+        <ellipse cx="44" cy="46" rx="1.5" ry="2.5" fill="#fff" opacity="0.65"/>
+        <!-- Top leaf hot spot -->
+        <ellipse cx="48" cy="14" rx="1.5" ry="2" fill="#fff" opacity="0.6"/>
+
+        <!-- Base shadow -->
+        <ellipse cx="50" cy="90" rx="7" ry="1.2" fill="#000" opacity="0.25"/>
       `;
     },
 
