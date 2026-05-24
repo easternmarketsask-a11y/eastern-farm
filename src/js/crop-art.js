@@ -659,99 +659,329 @@
       `;
     },
 
+    // tong_hao (Crown Daisy / Chrysanthemum Greens): bipinnately-lobed
+    // fern-like leaves. Drawn as clusters of small lobes hanging off thin
+    // stems — gives that characteristic "feathery" silhouette without
+    // attempting actual deep botanical detail.
     tong_hao(c) {
-      const green = c || '#8bc34a';
-      const dark = darken(green, 0.22);
-      const light = lighten(green, 0.15);
       return `
-        <ellipse cx="50" cy="86" rx="14" ry="3" fill="${darken(green, 0.3)}"/>
-        <path d="M 40 86 Q 34 60 30 32" stroke="${dark}" stroke-width="1.5" fill="none"/>
-        <path d="M 50 86 Q 50 56 50 22" stroke="${dark}" stroke-width="1.5" fill="none"/>
-        <path d="M 60 86 Q 66 60 70 32" stroke="${dark}" stroke-width="1.5" fill="none"/>
-        <g fill="${green}" stroke="${dark}" stroke-width="0.4">
-          <ellipse cx="30" cy="32" rx="3" ry="1.5" transform="rotate(-30 30 32)"/>
-          <ellipse cx="34" cy="36" rx="3" ry="1.5" transform="rotate(20 34 36)"/>
-          <ellipse cx="26" cy="38" rx="3" ry="1.5" transform="rotate(-60 26 38)"/>
-          <ellipse cx="30" cy="44" rx="3" ry="1.5" transform="rotate(0 30 44)"/>
-          <ellipse cx="36" cy="50" rx="3" ry="1.5" transform="rotate(45 36 50)"/>
-          <ellipse cx="28" cy="52" rx="3" ry="1.5" transform="rotate(-30 28 52)"/>
+        <defs>
+          <filter id="ds_tong_hao" x="-15%" y="-15%" width="130%" height="130%">
+            <feGaussianBlur in="SourceAlpha" stdDeviation="0.8"/>
+            <feOffset dy="1.2" result="off"/>
+            <feComponentTransfer><feFuncA type="linear" slope="0.3"/></feComponentTransfer>
+            <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <linearGradient id="stem_tong_hao" x1="0%" y1="100%" x2="0%" y2="0%">
+            <stop offset="0%" stop-color="#3a6e1a"/>
+            <stop offset="100%" stop-color="#7cb342"/>
+          </linearGradient>
+          <radialGradient id="lobe_tong_hao" cx="35%" cy="30%" r="80%">
+            <stop offset="0%" stop-color="#c5e1a5"/>
+            <stop offset="55%" stop-color="#7cb342"/>
+            <stop offset="100%" stop-color="#3a6e1a"/>
+          </radialGradient>
+        </defs>
+        <ellipse cx="50" cy="92" rx="14" ry="2.5" fill="#000" opacity="0.2"/>
+
+        <!-- 4 stems in a tight cluster, slightly fanning -->
+        <g stroke-linecap="round" fill="none">
+          <path d="M 44 88 Q 40 56 36 22" stroke="url(#stem_tong_hao)" stroke-width="1.4"/>
+          <path d="M 48 88 Q 47 50 46 14" stroke="url(#stem_tong_hao)" stroke-width="1.6"/>
+          <path d="M 52 88 Q 53 50 54 14" stroke="url(#stem_tong_hao)" stroke-width="1.6"/>
+          <path d="M 56 88 Q 60 56 64 22" stroke="url(#stem_tong_hao)" stroke-width="1.4"/>
         </g>
-        <g fill="${light}" stroke="${dark}" stroke-width="0.4">
-          <ellipse cx="50" cy="22" rx="3.5" ry="1.6"/>
-          <ellipse cx="46" cy="28" rx="3" ry="1.5" transform="rotate(-30 46 28)"/>
-          <ellipse cx="54" cy="28" rx="3" ry="1.5" transform="rotate(30 54 28)"/>
-          <ellipse cx="50" cy="36" rx="3" ry="1.5"/>
-          <ellipse cx="44" cy="42" rx="3" ry="1.5" transform="rotate(-30 44 42)"/>
-          <ellipse cx="56" cy="42" rx="3" ry="1.5" transform="rotate(30 56 42)"/>
-          <ellipse cx="50" cy="50" rx="3" ry="1.5"/>
+
+        <!-- Fern-like leaf clusters (each cluster = 5-7 small lobes) -->
+        <g filter="url(#ds_tong_hao)">
+          <!-- Left-outer stem leaf clusters -->
+          <g transform="translate(40 70)">
+            <ellipse cx="-5" cy="-1" rx="3" ry="1.6" fill="url(#lobe_tong_hao)" transform="rotate(-30)"/>
+            <ellipse cx="-3" cy="-4" rx="2.5" ry="1.4" fill="url(#lobe_tong_hao)" transform="rotate(-50)"/>
+            <ellipse cx="-7" cy="-3" rx="2.8" ry="1.5" fill="url(#lobe_tong_hao)" transform="rotate(-15)"/>
+            <ellipse cx="-5" cy="2" rx="2.8" ry="1.5" fill="url(#lobe_tong_hao)" transform="rotate(-45)"/>
+            <ellipse cx="-2" cy="0" rx="2.5" ry="1.4" fill="url(#lobe_tong_hao)" transform="rotate(20)"/>
+          </g>
+          <g transform="translate(37 48)">
+            <ellipse cx="-5" cy="-1" rx="3" ry="1.6" fill="url(#lobe_tong_hao)" transform="rotate(-25)"/>
+            <ellipse cx="-3" cy="-4" rx="2.5" ry="1.4" fill="url(#lobe_tong_hao)" transform="rotate(-50)"/>
+            <ellipse cx="-7" cy="0" rx="2.8" ry="1.5" fill="url(#lobe_tong_hao)" transform="rotate(0)"/>
+            <ellipse cx="-2" cy="-2" rx="2.5" ry="1.4" fill="url(#lobe_tong_hao)" transform="rotate(25)"/>
+          </g>
+
+          <!-- Center-left/right stem leaf clusters -->
+          <g transform="translate(46 30)">
+            <ellipse cx="-4" cy="-1" rx="2.8" ry="1.5" fill="url(#lobe_tong_hao)" transform="rotate(-30)"/>
+            <ellipse cx="-1" cy="-4" rx="2.5" ry="1.4" fill="url(#lobe_tong_hao)" transform="rotate(-15)"/>
+            <ellipse cx="-6" cy="-3" rx="2.5" ry="1.4" fill="url(#lobe_tong_hao)" transform="rotate(-50)"/>
+            <ellipse cx="-3" cy="2" rx="2.5" ry="1.4" fill="url(#lobe_tong_hao)" transform="rotate(-45)"/>
+            <ellipse cx="0" cy="-2" rx="2.5" ry="1.4" fill="url(#lobe_tong_hao)" transform="rotate(15)"/>
+          </g>
+          <g transform="translate(54 30)">
+            <ellipse cx="4" cy="-1" rx="2.8" ry="1.5" fill="url(#lobe_tong_hao)" transform="rotate(30)"/>
+            <ellipse cx="1" cy="-4" rx="2.5" ry="1.4" fill="url(#lobe_tong_hao)" transform="rotate(15)"/>
+            <ellipse cx="6" cy="-3" rx="2.5" ry="1.4" fill="url(#lobe_tong_hao)" transform="rotate(50)"/>
+            <ellipse cx="3" cy="2" rx="2.5" ry="1.4" fill="url(#lobe_tong_hao)" transform="rotate(45)"/>
+            <ellipse cx="0" cy="-2" rx="2.5" ry="1.4" fill="url(#lobe_tong_hao)" transform="rotate(-15)"/>
+          </g>
+
+          <!-- Right-outer stem leaf clusters -->
+          <g transform="translate(63 48)">
+            <ellipse cx="5" cy="-1" rx="3" ry="1.6" fill="url(#lobe_tong_hao)" transform="rotate(25)"/>
+            <ellipse cx="3" cy="-4" rx="2.5" ry="1.4" fill="url(#lobe_tong_hao)" transform="rotate(50)"/>
+            <ellipse cx="7" cy="0" rx="2.8" ry="1.5" fill="url(#lobe_tong_hao)" transform="rotate(0)"/>
+            <ellipse cx="2" cy="-2" rx="2.5" ry="1.4" fill="url(#lobe_tong_hao)" transform="rotate(-25)"/>
+          </g>
+          <g transform="translate(60 70)">
+            <ellipse cx="5" cy="-1" rx="3" ry="1.6" fill="url(#lobe_tong_hao)" transform="rotate(30)"/>
+            <ellipse cx="3" cy="-4" rx="2.5" ry="1.4" fill="url(#lobe_tong_hao)" transform="rotate(50)"/>
+            <ellipse cx="7" cy="-3" rx="2.8" ry="1.5" fill="url(#lobe_tong_hao)" transform="rotate(15)"/>
+            <ellipse cx="5" cy="2" rx="2.8" ry="1.5" fill="url(#lobe_tong_hao)" transform="rotate(45)"/>
+            <ellipse cx="2" cy="0" rx="2.5" ry="1.4" fill="url(#lobe_tong_hao)" transform="rotate(-20)"/>
+          </g>
+
+          <!-- Top tip clusters (smallest) -->
+          <g transform="translate(46 14)">
+            <ellipse cx="0" cy="0" rx="2.5" ry="1.4" fill="url(#lobe_tong_hao)" transform="rotate(-30)"/>
+            <ellipse cx="-2" cy="-2" rx="2" ry="1.3" fill="url(#lobe_tong_hao)" transform="rotate(-60)"/>
+            <ellipse cx="2" cy="-2" rx="2" ry="1.3" fill="url(#lobe_tong_hao)" transform="rotate(20)"/>
+          </g>
+          <g transform="translate(54 14)">
+            <ellipse cx="0" cy="0" rx="2.5" ry="1.4" fill="url(#lobe_tong_hao)" transform="rotate(30)"/>
+            <ellipse cx="-2" cy="-2" rx="2" ry="1.3" fill="url(#lobe_tong_hao)" transform="rotate(-20)"/>
+            <ellipse cx="2" cy="-2" rx="2" ry="1.3" fill="url(#lobe_tong_hao)" transform="rotate(60)"/>
+          </g>
         </g>
-        <g fill="${green}" stroke="${dark}" stroke-width="0.4">
-          <ellipse cx="70" cy="32" rx="3" ry="1.5" transform="rotate(30 70 32)"/>
-          <ellipse cx="66" cy="36" rx="3" ry="1.5" transform="rotate(-20 66 36)"/>
-          <ellipse cx="74" cy="38" rx="3" ry="1.5" transform="rotate(60 74 38)"/>
-          <ellipse cx="70" cy="44" rx="3" ry="1.5"/>
-          <ellipse cx="64" cy="50" rx="3" ry="1.5" transform="rotate(-45 64 50)"/>
-          <ellipse cx="72" cy="52" rx="3" ry="1.5" transform="rotate(30 72 52)"/>
-        </g>
+
+        <!-- highlight hot spots on a few lobes -->
+        <ellipse cx="34" cy="46" rx="1" ry="0.6" fill="#fff" opacity="0.55"/>
+        <ellipse cx="34" cy="68" rx="1" ry="0.6" fill="#fff" opacity="0.55"/>
+        <ellipse cx="48" cy="28" rx="0.9" ry="0.5" fill="#fff" opacity="0.65"/>
+        <ellipse cx="65" cy="46" rx="1" ry="0.6" fill="#fff" opacity="0.55"/>
+
+        <ellipse cx="50" cy="87" rx="7" ry="1" fill="#000" opacity="0.25"/>
       `;
     },
 
+    // bo_cai (Chinese spinach 红根菠菜): rosette of 5 oval-lance leaves
+    // radiating from a central crown. Smooth glossy leaves. Distinctive
+    // RED LOWER STEM near the root (the "red-root" Chinese variety).
     bo_cai(c) {
-      const green = c || '#558b2f';
-      const dark = darken(green, 0.22);
-      const light = lighten(green, 0.15);
       return `
-        <ellipse cx="50" cy="86" rx="14" ry="3" fill="${darken(green, 0.3)}"/>
-        <path d="M 26 80 Q 22 60 30 42 Q 36 38 42 42 Q 44 60 42 84 Z" fill="${green}" stroke="${dark}" stroke-width="1.2"/>
-        <path d="M 42 84 Q 38 56 44 26 Q 50 22 56 26 Q 62 56 58 84 Z" fill="${light}" stroke="${dark}" stroke-width="1.2"/>
-        <path d="M 58 84 Q 56 60 58 42 Q 64 38 70 42 Q 78 60 74 80 Z" fill="${green}" stroke="${dark}" stroke-width="1.2"/>
-        <path d="M 34 78 Q 32 60 36 44" stroke="${dark}" stroke-width="0.5" opacity="0.6" fill="none"/>
-        <path d="M 50 80 Q 50 50 50 28" stroke="${dark}" stroke-width="0.5" opacity="0.6" fill="none"/>
-        <path d="M 66 78 Q 68 60 64 44" stroke="${dark}" stroke-width="0.5" opacity="0.6" fill="none"/>
+        <defs>
+          <filter id="ds_bo_cai" x="-15%" y="-15%" width="130%" height="130%">
+            <feGaussianBlur in="SourceAlpha" stdDeviation="0.9"/>
+            <feOffset dy="1.4" result="off"/>
+            <feComponentTransfer><feFuncA type="linear" slope="0.32"/></feComponentTransfer>
+            <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <radialGradient id="leafA_bo_cai" cx="35%" cy="25%" r="85%">
+            <stop offset="0%" stop-color="#aed581"/>
+            <stop offset="55%" stop-color="#558b2f"/>
+            <stop offset="100%" stop-color="#2e5613"/>
+          </radialGradient>
+          <radialGradient id="leafB_bo_cai" cx="50%" cy="25%" r="80%">
+            <stop offset="0%" stop-color="#c5e1a5"/>
+            <stop offset="55%" stop-color="#6ab041"/>
+            <stop offset="100%" stop-color="#2e5613"/>
+          </radialGradient>
+          <linearGradient id="redroot_bo_cai" x1="0%" y1="100%" x2="0%" y2="0%">
+            <stop offset="0%" stop-color="#7a1f1f"/>
+            <stop offset="60%" stop-color="#c1402c"/>
+            <stop offset="100%" stop-color="#9ccc65"/>
+          </linearGradient>
+        </defs>
+        <ellipse cx="50" cy="92" rx="18" ry="3" fill="#000" opacity="0.2"/>
+
+        <!-- Back layer leaves -->
+        <g filter="url(#ds_bo_cai)">
+          <!-- left back leaf -->
+          <path d="M 50 80 Q 26 70 22 44 Q 28 26 38 28 Q 44 48 50 80 Z"
+                fill="url(#leafA_bo_cai)" stroke="#2e5613" stroke-width="0.5"/>
+          <!-- right back leaf -->
+          <path d="M 50 80 Q 74 70 78 44 Q 72 26 62 28 Q 56 48 50 80 Z"
+                fill="url(#leafA_bo_cai)" stroke="#2e5613" stroke-width="0.5"/>
+          <!-- center back tall leaf -->
+          <path d="M 50 80 Q 44 50 46 16 Q 50 10 54 16 Q 56 50 50 80 Z"
+                fill="url(#leafB_bo_cai)" stroke="#2e5613" stroke-width="0.5"/>
+          <!-- front-left leaf (lower, brighter) -->
+          <path d="M 50 82 Q 36 74 30 56 Q 32 42 42 44 Q 48 58 50 82 Z"
+                fill="url(#leafB_bo_cai)" stroke="#2e5613" stroke-width="0.5"/>
+          <!-- front-right leaf -->
+          <path d="M 50 82 Q 64 74 70 56 Q 68 42 58 44 Q 52 58 50 82 Z"
+                fill="url(#leafB_bo_cai)" stroke="#2e5613" stroke-width="0.5"/>
+
+          <!-- Veins on visible front-leaves -->
+          <path d="M 50 80 Q 48 50 50 18" stroke="#2e5613" stroke-width="0.5" fill="none" opacity="0.55"/>
+          <path d="M 50 82 Q 42 66 36 52" stroke="#2e5613" stroke-width="0.4" fill="none" opacity="0.5"/>
+          <path d="M 50 82 Q 58 66 64 52" stroke="#2e5613" stroke-width="0.4" fill="none" opacity="0.5"/>
+          <path d="M 28 60 Q 30 46 36 32" stroke="#2e5613" stroke-width="0.35" fill="none" opacity="0.4"/>
+          <path d="M 72 60 Q 70 46 64 32" stroke="#2e5613" stroke-width="0.35" fill="none" opacity="0.4"/>
+        </g>
+
+        <!-- The signature RED ROOT at the base -->
+        <path d="M 47 90 Q 46 86 47 80 L 53 80 Q 54 86 53 90 Z"
+              fill="url(#redroot_bo_cai)" stroke="#5a1212" stroke-width="0.5"/>
+
+        <!-- glossy highlight blobs on front leaves -->
+        <ellipse cx="42" cy="58" rx="3" ry="6" fill="#fff" opacity="0.35" transform="rotate(-20 42 58)"/>
+        <ellipse cx="48" cy="28" rx="2" ry="6" fill="#fff" opacity="0.4" transform="rotate(-8 48 28)"/>
+        <!-- spec hot spot near top of tallest -->
+        <ellipse cx="48" cy="22" rx="1.5" ry="2" fill="#fff" opacity="0.7"/>
+
+        <!-- soil base shadow -->
+        <ellipse cx="50" cy="88" rx="9" ry="1.3" fill="#000" opacity="0.25"/>
       `;
     },
 
+    // wa_wa_cai (baby napa cabbage): compact oblong head, 3:1 height ratio,
+    // pale cream/yellow body, green leaf tips at the top (curling outward),
+    // prominent VERTICAL VEINS visible through translucent outer leaves.
+    // Smaller and more delicate than full-size napa (da_bai_cai).
     wa_wa_cai(c) {
-      const cream = c || '#dcedc8';
-      const dark = darken(cream, 0.25);
-      const green = '#9ccc65';
-      const darkGreen = '#558b2f';
       return `
-        <ellipse cx="50" cy="86" rx="14" ry="3" fill="#a86c44"/>
-        <path d="M 36 86 L 36 50 Q 36 38 50 36 Q 64 38 64 50 L 64 86 Z" fill="${cream}" stroke="${dark}" stroke-width="1.2"/>
-        <path d="M 40 86 L 40 48" stroke="${dark}" stroke-width="0.5" opacity="0.5"/>
-        <path d="M 50 86 L 50 38" stroke="${dark}" stroke-width="0.5" opacity="0.5"/>
-        <path d="M 60 86 L 60 48" stroke="${dark}" stroke-width="0.5" opacity="0.5"/>
-        <path d="M 36 50 Q 30 40 32 26 Q 42 22 44 38 Q 42 46 36 50 Z" fill="${green}" stroke="${darkGreen}" stroke-width="0.8"/>
-        <path d="M 50 36 Q 44 26 46 14 Q 56 12 58 26 Q 56 32 50 36 Z" fill="${darkGreen}" stroke="${darkGreen}" stroke-width="0.8"/>
-        <path d="M 64 50 Q 70 40 68 26 Q 58 22 56 38 Q 58 46 64 50 Z" fill="${green}" stroke="${darkGreen}" stroke-width="0.8"/>
+        <defs>
+          <filter id="ds_wa_wa_cai" x="-15%" y="-15%" width="130%" height="130%">
+            <feGaussianBlur in="SourceAlpha" stdDeviation="1"/>
+            <feOffset dy="1.4" result="off"/>
+            <feComponentTransfer><feFuncA type="linear" slope="0.35"/></feComponentTransfer>
+            <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <linearGradient id="body_wa_wa_cai" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#c9b890"/>
+            <stop offset="30%" stop-color="#fff8e1"/>
+            <stop offset="65%" stop-color="#fff8e1"/>
+            <stop offset="100%" stop-color="#b9a570"/>
+          </linearGradient>
+          <linearGradient id="heart_wa_wa_cai" x1="0%" y1="100%" x2="0%" y2="0%">
+            <stop offset="0%" stop-color="#fff59d"/>
+            <stop offset="100%" stop-color="#dce775"/>
+          </linearGradient>
+          <radialGradient id="topleaf_wa_wa_cai" cx="40%" cy="80%" r="80%">
+            <stop offset="0%" stop-color="#aed581"/>
+            <stop offset="60%" stop-color="#7cb342"/>
+            <stop offset="100%" stop-color="#3a6e1a"/>
+          </radialGradient>
+        </defs>
+        <ellipse cx="50" cy="92" rx="15" ry="2.5" fill="#000" opacity="0.2"/>
+
+        <g filter="url(#ds_wa_wa_cai)">
+          <!-- Main oblong body (compact baby napa) -->
+          <path d="M 35 88 Q 32 60 36 38 Q 50 30 64 38 Q 68 60 65 88 Z"
+                fill="url(#body_wa_wa_cai)" stroke="#a89466" stroke-width="0.8"/>
+
+          <!-- Inner heart peeking at top (pale yellow inner leaves) -->
+          <path d="M 42 40 Q 50 32 58 40 Q 58 48 50 50 Q 42 48 42 40 Z"
+                fill="url(#heart_wa_wa_cai)" stroke="#bfb060" stroke-width="0.5"/>
+
+          <!-- Vertical vein lines (white veins on outer leaves) -->
+          <path d="M 39 86 Q 38 60 41 38" stroke="#d4c099" stroke-width="0.6" fill="none" opacity="0.85"/>
+          <path d="M 44 86 Q 43 60 45 36" stroke="#d4c099" stroke-width="0.6" fill="none" opacity="0.85"/>
+          <path d="M 50 88 L 50 36" stroke="#d4c099" stroke-width="0.7" fill="none" opacity="0.9"/>
+          <path d="M 56 86 Q 57 60 55 36" stroke="#d4c099" stroke-width="0.6" fill="none" opacity="0.85"/>
+          <path d="M 61 86 Q 62 60 59 38" stroke="#d4c099" stroke-width="0.6" fill="none" opacity="0.85"/>
+
+          <!-- Green top leaves curling outward -->
+          <path d="M 36 38 Q 28 32 26 18 Q 38 14 42 32 Q 40 38 36 38 Z"
+                fill="url(#topleaf_wa_wa_cai)" stroke="#2e5613" stroke-width="0.5"/>
+          <path d="M 44 32 Q 40 20 44 8 Q 52 8 54 18 Q 52 28 48 32 Z"
+                fill="url(#topleaf_wa_wa_cai)" stroke="#2e5613" stroke-width="0.5"/>
+          <path d="M 56 32 Q 60 20 56 8 Q 48 8 46 18 Q 48 28 52 32 Z"
+                fill="url(#topleaf_wa_wa_cai)" stroke="#2e5613" stroke-width="0.5"/>
+          <path d="M 64 38 Q 72 32 74 18 Q 62 14 58 32 Q 60 38 64 38 Z"
+                fill="url(#topleaf_wa_wa_cai)" stroke="#2e5613" stroke-width="0.5"/>
+        </g>
+
+        <!-- Body left highlight stripe -->
+        <ellipse cx="40" cy="55" rx="3" ry="14" fill="#fff" opacity="0.4" transform="rotate(-4 40 55)"/>
+        <!-- Heart hot spot -->
+        <ellipse cx="48" cy="42" rx="2" ry="1.5" fill="#fff" opacity="0.65"/>
+        <!-- Top leaf hot spots -->
+        <ellipse cx="32" cy="22" rx="1.5" ry="3" fill="#fff" opacity="0.5"/>
+        <ellipse cx="68" cy="22" rx="1.5" ry="3" fill="#fff" opacity="0.5"/>
+
+        <!-- soil shadow at base -->
+        <ellipse cx="50" cy="88" rx="11" ry="1.4" fill="#000" opacity="0.25"/>
       `;
     },
 
+    // xi_lan_hua (broccoli): thick pale-green stem + dome of densely packed
+    // dark green florets. Florets render as overlapping bumpy clusters of
+    // small circles for that "bouquet" head appearance.
     xi_lan_hua(c) {
-      const green = c || '#558b2f';
-      const dark = darken(green, 0.25);
-      const light = lighten(green, 0.1);
       return `
-        <ellipse cx="50" cy="86" rx="14" ry="3" fill="#a86c44"/>
-        <rect x="46" y="58" width="8" height="28" rx="3" fill="#dcedc8" stroke="${dark}" stroke-width="0.8"/>
-        <path d="M 38 56 Q 32 38 50 28 Q 68 38 62 56 Q 50 64 38 56 Z" fill="${green}" stroke="${dark}" stroke-width="1.5"/>
-        <g fill="${light}" stroke="${dark}" stroke-width="0.4">
-          <circle cx="38" cy="44" r="4"/>
-          <circle cx="46" cy="38" r="4.5"/>
-          <circle cx="54" cy="36" r="4.5"/>
-          <circle cx="62" cy="44" r="4"/>
-          <circle cx="42" cy="50" r="4"/>
-          <circle cx="50" cy="46" r="4"/>
-          <circle cx="58" cy="50" r="4"/>
+        <defs>
+          <filter id="ds_xi_lan_hua" x="-15%" y="-15%" width="130%" height="130%">
+            <feGaussianBlur in="SourceAlpha" stdDeviation="1"/>
+            <feOffset dy="1.6" result="off"/>
+            <feComponentTransfer><feFuncA type="linear" slope="0.35"/></feComponentTransfer>
+            <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <linearGradient id="stem_xi_lan_hua" x1="0%" y1="100%" x2="0%" y2="0%">
+            <stop offset="0%" stop-color="#bcd486"/>
+            <stop offset="60%" stop-color="#dcedc8"/>
+            <stop offset="100%" stop-color="#aed581"/>
+          </linearGradient>
+          <radialGradient id="floretA_xi_lan_hua" cx="35%" cy="30%" r="80%">
+            <stop offset="0%" stop-color="#9ccc65"/>
+            <stop offset="55%" stop-color="#558b2f"/>
+            <stop offset="100%" stop-color="#2e5613"/>
+          </radialGradient>
+          <radialGradient id="floretB_xi_lan_hua" cx="60%" cy="30%" r="80%">
+            <stop offset="0%" stop-color="#aed581"/>
+            <stop offset="55%" stop-color="#6ab041"/>
+            <stop offset="100%" stop-color="#2e5613"/>
+          </radialGradient>
+        </defs>
+        <ellipse cx="50" cy="92" rx="20" ry="3" fill="#000" opacity="0.2"/>
+
+        <g filter="url(#ds_xi_lan_hua)">
+          <!-- Thick stem -->
+          <path d="M 42 88 Q 40 70 44 56 L 56 56 Q 60 70 58 88 Z"
+                fill="url(#stem_xi_lan_hua)" stroke="#7a9a4d" stroke-width="0.7"/>
+          <!-- Stem vertical line texture -->
+          <path d="M 47 86 L 47 60" stroke="#9ab26b" stroke-width="0.4" opacity="0.7"/>
+          <path d="M 53 86 L 53 60" stroke="#9ab26b" stroke-width="0.4" opacity="0.7"/>
+
+          <!-- Big background dome shadow (back layer of florets) -->
+          <path d="M 26 50 Q 22 30 50 22 Q 78 30 74 50 Q 60 62 50 62 Q 40 62 26 50 Z"
+                fill="url(#floretA_xi_lan_hua)" stroke="#2e5613" stroke-width="0.8"/>
+
+          <!-- Mid-back florets (slightly smaller) -->
+          <circle cx="30" cy="46" r="6" fill="url(#floretA_xi_lan_hua)" stroke="#2e5613" stroke-width="0.4"/>
+          <circle cx="40" cy="36" r="6.5" fill="url(#floretB_xi_lan_hua)" stroke="#2e5613" stroke-width="0.4"/>
+          <circle cx="50" cy="30" r="7" fill="url(#floretA_xi_lan_hua)" stroke="#2e5613" stroke-width="0.4"/>
+          <circle cx="60" cy="36" r="6.5" fill="url(#floretB_xi_lan_hua)" stroke="#2e5613" stroke-width="0.4"/>
+          <circle cx="70" cy="46" r="6" fill="url(#floretA_xi_lan_hua)" stroke="#2e5613" stroke-width="0.4"/>
+
+          <!-- Front florets (larger, on top) -->
+          <circle cx="34" cy="52" r="6" fill="url(#floretB_xi_lan_hua)" stroke="#2e5613" stroke-width="0.4"/>
+          <circle cx="44" cy="46" r="6.5" fill="url(#floretA_xi_lan_hua)" stroke="#2e5613" stroke-width="0.4"/>
+          <circle cx="56" cy="46" r="6.5" fill="url(#floretB_xi_lan_hua)" stroke="#2e5613" stroke-width="0.4"/>
+          <circle cx="66" cy="52" r="6" fill="url(#floretA_xi_lan_hua)" stroke="#2e5613" stroke-width="0.4"/>
+
+          <!-- Tiny bud texture dots on top of florets -->
+          <g fill="#2e5613" opacity="0.5">
+            <circle cx="30" cy="44" r="0.7"/><circle cx="33" cy="48" r="0.7"/>
+            <circle cx="40" cy="34" r="0.7"/><circle cx="44" cy="38" r="0.7"/>
+            <circle cx="50" cy="28" r="0.7"/><circle cx="48" cy="32" r="0.7"/><circle cx="52" cy="32" r="0.7"/>
+            <circle cx="60" cy="34" r="0.7"/><circle cx="64" cy="38" r="0.7"/>
+            <circle cx="70" cy="44" r="0.7"/><circle cx="67" cy="48" r="0.7"/>
+            <circle cx="34" cy="50" r="0.7"/><circle cx="38" cy="54" r="0.7"/>
+            <circle cx="44" cy="44" r="0.7"/><circle cx="56" cy="44" r="0.7"/>
+            <circle cx="62" cy="54" r="0.7"/><circle cx="66" cy="50" r="0.7"/>
+          </g>
         </g>
-        <g fill="${green}" opacity="0.6">
-          <circle cx="40" cy="42" r="1.5"/>
-          <circle cx="48" cy="38" r="1.5"/>
-          <circle cx="56" cy="38" r="1.5"/>
-          <circle cx="60" cy="46" r="1.5"/>
-          <circle cx="52" cy="48" r="1.5"/>
-        </g>
+
+        <!-- Highlight gleams on upper-left of florets -->
+        <ellipse cx="42" cy="32" rx="2.5" ry="3.5" fill="#fff" opacity="0.45"/>
+        <ellipse cx="36" cy="44" rx="1.6" ry="2.2" fill="#fff" opacity="0.5"/>
+        <ellipse cx="48" cy="26" rx="1.4" ry="1.8" fill="#fff" opacity="0.65"/>
+        <!-- Stem highlight stripe -->
+        <ellipse cx="46" cy="72" rx="1.2" ry="10" fill="#fff" opacity="0.4"/>
+
+        <!-- soil shadow -->
+        <ellipse cx="50" cy="88" rx="11" ry="1.4" fill="#000" opacity="0.25"/>
       `;
     },
 
