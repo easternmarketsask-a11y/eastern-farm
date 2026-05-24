@@ -381,7 +381,131 @@
       `;
     },
 
+    // cai_xin (choy sum / yu choy): based on Wikipedia + flavor365 reference.
+    // Real-world appearance: sold as a tied bundle of 4-6 stems. Slender
+    // pale-green erect stems, leaves alternate along upper 2/3 of each
+    // stem, EVERY stem ends in a yellow 4-petal flower cluster. Compact
+    // bouquet shape, not a tall sparse tree.
     cai_xin(c) {
+      return `
+        <defs>
+          <filter id="ds_cai_xin" x="-15%" y="-15%" width="130%" height="130%">
+            <feGaussianBlur in="SourceAlpha" stdDeviation="0.7"/>
+            <feOffset dy="1" result="off"/>
+            <feComponentTransfer><feFuncA type="linear" slope="0.3"/></feComponentTransfer>
+            <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <linearGradient id="stem_cai_xin" x1="0%" y1="100%" x2="0%" y2="0%">
+            <stop offset="0%" stop-color="#5d8b2f"/>
+            <stop offset="50%" stop-color="#8bc34a"/>
+            <stop offset="100%" stop-color="#c5e1a5"/>
+          </linearGradient>
+          <radialGradient id="leaf_cai_xin" cx="35%" cy="30%" r="80%">
+            <stop offset="0%" stop-color="#aed581"/>
+            <stop offset="55%" stop-color="#558b2f"/>
+            <stop offset="100%" stop-color="#2e5613"/>
+          </radialGradient>
+          <radialGradient id="flower_cai_xin" cx="40%" cy="30%" r="65%">
+            <stop offset="0%" stop-color="#fffde7"/>
+            <stop offset="55%" stop-color="#fff176"/>
+            <stop offset="100%" stop-color="#f57f17"/>
+          </radialGradient>
+        </defs>
+
+        <!-- ground shadow only -->
+        <ellipse cx="50" cy="92" rx="12" ry="2" fill="#000" opacity="0.2"/>
+
+        <!-- Stems (4 in a tight bundle, painted first so leaves & flowers sit on top) -->
+        <g stroke-linecap="round" fill="none">
+          <path d="M 46 88 Q 44 60 41 22" stroke="#4a7d1e" stroke-width="2.6"/>
+          <path d="M 49 88 Q 49 52 49 16" stroke="#4a7d1e" stroke-width="2.8"/>
+          <path d="M 52 88 Q 53 52 53 16" stroke="#4a7d1e" stroke-width="2.8"/>
+          <path d="M 55 88 Q 57 60 60 22" stroke="#4a7d1e" stroke-width="2.6"/>
+          <!-- highlight stripe on stems (pale green inner) -->
+          <path d="M 46 88 Q 44 60 41 22" stroke="url(#stem_cai_xin)" stroke-width="1.6"/>
+          <path d="M 49 88 Q 49 52 49 16" stroke="url(#stem_cai_xin)" stroke-width="1.8"/>
+          <path d="M 52 88 Q 53 52 53 16" stroke="url(#stem_cai_xin)" stroke-width="1.8"/>
+          <path d="M 55 88 Q 57 60 60 22" stroke="url(#stem_cai_xin)" stroke-width="1.6"/>
+        </g>
+
+        <!-- Leaves (small drop shadow lifts them off stems) -->
+        <g filter="url(#ds_cai_xin)">
+          <!-- Upper-left leaf -->
+          <path d="M 41 30 Q 30 27 27 33 Q 31 38 39 35 Q 42 33 41 30 Z"
+                fill="url(#leaf_cai_xin)" stroke="#2e5613" stroke-width="0.4"/>
+          <!-- Upper-right leaf -->
+          <path d="M 59 30 Q 70 27 73 33 Q 69 38 61 35 Q 58 33 59 30 Z"
+                fill="url(#leaf_cai_xin)" stroke="#2e5613" stroke-width="0.4"/>
+          <!-- Mid leaves on outer stems -->
+          <path d="M 43 48 Q 32 44 28 50 Q 33 56 42 52 Q 45 50 43 48 Z"
+                fill="url(#leaf_cai_xin)" stroke="#2e5613" stroke-width="0.4"/>
+          <path d="M 57 48 Q 68 44 72 50 Q 67 56 58 52 Q 55 50 57 48 Z"
+                fill="url(#leaf_cai_xin)" stroke="#2e5613" stroke-width="0.4"/>
+          <!-- Center pair (smaller, behind front stems) -->
+          <path d="M 49 40 Q 41 36 39 42 Q 43 47 50 43 Z"
+                fill="url(#leaf_cai_xin)" stroke="#2e5613" stroke-width="0.35"/>
+          <path d="M 51 40 Q 59 36 61 42 Q 57 47 50 43 Z"
+                fill="url(#leaf_cai_xin)" stroke="#2e5613" stroke-width="0.35"/>
+          <!-- Lower leaves (larger, hang lower) -->
+          <path d="M 44 64 Q 30 60 25 67 Q 32 74 43 69 Q 47 66 44 64 Z"
+                fill="url(#leaf_cai_xin)" stroke="#2e5613" stroke-width="0.4"/>
+          <path d="M 56 64 Q 70 60 75 67 Q 68 74 57 69 Q 53 66 56 64 Z"
+                fill="url(#leaf_cai_xin)" stroke="#2e5613" stroke-width="0.4"/>
+        </g>
+
+        <!-- Yellow 4-petal flower puff at top of EACH stem -->
+        <g filter="url(#ds_cai_xin)">
+          <!-- Outer-left stem flower -->
+          <g transform="translate(41 20)">
+            <circle cx="-1.5" cy="-1" r="1.4" fill="url(#flower_cai_xin)"/>
+            <circle cx="1.5" cy="-1" r="1.4" fill="url(#flower_cai_xin)"/>
+            <circle cx="-1.5" cy="1.8" r="1.4" fill="url(#flower_cai_xin)"/>
+            <circle cx="1.5" cy="1.8" r="1.4" fill="url(#flower_cai_xin)"/>
+            <circle cx="0" cy="0.5" r="0.8" fill="#f9a825"/>
+          </g>
+          <!-- Center-left stem flower (taller) -->
+          <g transform="translate(49 13)">
+            <circle cx="-1.8" cy="-1.3" r="1.7" fill="url(#flower_cai_xin)"/>
+            <circle cx="1.8" cy="-1.3" r="1.7" fill="url(#flower_cai_xin)"/>
+            <circle cx="-1.8" cy="2.2" r="1.7" fill="url(#flower_cai_xin)"/>
+            <circle cx="1.8" cy="2.2" r="1.7" fill="url(#flower_cai_xin)"/>
+            <circle cx="0" cy="0.5" r="0.9" fill="#f9a825"/>
+          </g>
+          <!-- Center-right stem flower (taller) -->
+          <g transform="translate(53 13)">
+            <circle cx="-1.8" cy="-1.3" r="1.7" fill="url(#flower_cai_xin)"/>
+            <circle cx="1.8" cy="-1.3" r="1.7" fill="url(#flower_cai_xin)"/>
+            <circle cx="-1.8" cy="2.2" r="1.7" fill="url(#flower_cai_xin)"/>
+            <circle cx="1.8" cy="2.2" r="1.7" fill="url(#flower_cai_xin)"/>
+            <circle cx="0" cy="0.5" r="0.9" fill="#f9a825"/>
+          </g>
+          <!-- Outer-right stem flower -->
+          <g transform="translate(60 20)">
+            <circle cx="-1.5" cy="-1" r="1.4" fill="url(#flower_cai_xin)"/>
+            <circle cx="1.5" cy="-1" r="1.4" fill="url(#flower_cai_xin)"/>
+            <circle cx="-1.5" cy="1.8" r="1.4" fill="url(#flower_cai_xin)"/>
+            <circle cx="1.5" cy="1.8" r="1.4" fill="url(#flower_cai_xin)"/>
+            <circle cx="0" cy="0.5" r="0.8" fill="#f9a825"/>
+          </g>
+        </g>
+
+        <!-- Leaf hot spots (over filter group) -->
+        <ellipse cx="33" cy="50" rx="1.5" ry="0.9" fill="#fff" opacity="0.5"/>
+        <ellipse cx="33" cy="32" rx="1.3" ry="0.8" fill="#fff" opacity="0.5"/>
+        <ellipse cx="33" cy="68" rx="1.5" ry="0.9" fill="#fff" opacity="0.5"/>
+        <!-- Flower hot spots -->
+        <ellipse cx="48" cy="11" rx="1" ry="0.7" fill="#fff" opacity="0.8"/>
+        <ellipse cx="52" cy="11" rx="1" ry="0.7" fill="#fff" opacity="0.8"/>
+
+        <!-- Base shadow at soil line -->
+        <ellipse cx="50" cy="87" rx="6" ry="1" fill="#000" opacity="0.28"/>
+      `;
+    },
+
+    // OLD bad version, kept disabled (do not call) — composition wrong:
+    // flowers floated, center stem hidden by leaves, drop-shadow filter
+    // over tall stems created an oversized brown blob.
+    cai_xinDISABLED(c) {
       return `
         <defs>
           <filter id="ds_cai_xin" x="-25%" y="-25%" width="150%" height="150%">
@@ -390,57 +514,101 @@
             <feComponentTransfer><feFuncA type="linear" slope="0.38"/></feComponentTransfer>
             <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
           </filter>
-          <radialGradient id="leaf_cai_xin" cx="45%" cy="25%" r="80%">
-            <stop offset="0%" stop-color="#c8e08c"/>
-            <stop offset="55%" stop-color="#7cb342"/>
-            <stop offset="100%" stop-color="#3a6e1a"/>
-          </radialGradient>
           <linearGradient id="stem_cai_xin" x1="0%" y1="100%" x2="0%" y2="0%">
-            <stop offset="0%" stop-color="#3a7d2c"/>
-            <stop offset="100%" stop-color="#9ccc65"/>
+            <stop offset="0%" stop-color="#6db835"/>
+            <stop offset="60%" stop-color="#9ccc65"/>
+            <stop offset="100%" stop-color="#c5e1a5"/>
           </linearGradient>
-          <radialGradient id="flower_cai_xin" cx="50%" cy="40%" r="60%">
+          <radialGradient id="leafA_cai_xin" cx="30%" cy="25%" r="85%">
+            <stop offset="0%" stop-color="#aed581"/>
+            <stop offset="55%" stop-color="#558b2f"/>
+            <stop offset="100%" stop-color="#2e5613"/>
+          </radialGradient>
+          <radialGradient id="leafB_cai_xin" cx="70%" cy="25%" r="85%">
+            <stop offset="0%" stop-color="#aed581"/>
+            <stop offset="55%" stop-color="#558b2f"/>
+            <stop offset="100%" stop-color="#2e5613"/>
+          </radialGradient>
+          <radialGradient id="flower_cai_xin" cx="50%" cy="35%" r="60%">
             <stop offset="0%" stop-color="#fff9c4"/>
             <stop offset="60%" stop-color="#fff176"/>
-            <stop offset="100%" stop-color="#fbc02d"/>
+            <stop offset="100%" stop-color="#f9a825"/>
           </radialGradient>
         </defs>
-        <ellipse cx="50" cy="92" rx="20" ry="3" fill="#000" opacity="0.18"/>
+
+        <ellipse cx="50" cy="92" rx="14" ry="2.5" fill="#000" opacity="0.18"/>
+
         <g filter="url(#ds_cai_xin)">
-          <!-- 3 stems rising from base -->
-          <path d="M 50 88 Q 42 64 38 38" stroke="url(#stem_cai_xin)" stroke-width="2.2" fill="none" stroke-linecap="round"/>
-          <path d="M 50 88 Q 50 60 50 28" stroke="url(#stem_cai_xin)" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-          <path d="M 50 88 Q 58 64 62 38" stroke="url(#stem_cai_xin)" stroke-width="2.2" fill="none" stroke-linecap="round"/>
-          <!-- big round leaves at mid-height -->
-          <path d="M 38 52 Q 26 48 24 60 Q 28 70 40 64 Q 44 58 38 52 Z"
-                fill="url(#leaf_cai_xin)" stroke="#2e5613" stroke-width="0.5"/>
-          <path d="M 62 52 Q 74 48 76 60 Q 72 70 60 64 Q 56 58 62 52 Z"
-                fill="url(#leaf_cai_xin)" stroke="#2e5613" stroke-width="0.5"/>
-          <!-- upper smaller leaves -->
-          <path d="M 38 36 Q 30 30 28 42 Q 32 48 42 44 Z"
-                fill="url(#leaf_cai_xin)" stroke="#2e5613" stroke-width="0.45"/>
-          <path d="M 62 36 Q 70 30 72 42 Q 68 48 58 44 Z"
-                fill="url(#leaf_cai_xin)" stroke="#2e5613" stroke-width="0.45"/>
-          <!-- yellow flower cluster on center stem -->
-          <circle cx="50" cy="22" r="3.5" fill="url(#flower_cai_xin)" stroke="#e69500" stroke-width="0.4"/>
-          <circle cx="44" cy="18" r="2.8" fill="url(#flower_cai_xin)" stroke="#e69500" stroke-width="0.4"/>
-          <circle cx="56" cy="18" r="2.8" fill="url(#flower_cai_xin)" stroke="#e69500" stroke-width="0.4"/>
-          <circle cx="47" cy="13" r="2.2" fill="url(#flower_cai_xin)" stroke="#e69500" stroke-width="0.4"/>
-          <circle cx="53" cy="13" r="2.2" fill="url(#flower_cai_xin)" stroke="#e69500" stroke-width="0.4"/>
-          <circle cx="50" cy="9" r="1.8" fill="url(#flower_cai_xin)" stroke="#e69500" stroke-width="0.4"/>
-          <!-- tiny flower centers (darker spec) -->
-          <g fill="#ef6c00">
-            <circle cx="50" cy="22" r="0.7"/>
-            <circle cx="44" cy="18" r="0.6"/>
-            <circle cx="56" cy="18" r="0.6"/>
+          <!-- LEFT stem (shorter), slight outward lean -->
+          <path d="M 42 88 Q 40 64 38 36" stroke="url(#stem_cai_xin)" stroke-width="2.3"
+                fill="none" stroke-linecap="round"/>
+          <!-- leaves on left stem, alternating sides -->
+          <path d="M 40 72 Q 30 68 26 74 Q 30 80 38 75 Q 41 74 40 72 Z"
+                fill="url(#leafA_cai_xin)" stroke="#2e5613" stroke-width="0.4"/>
+          <path d="M 39 58 Q 47 54 50 60 Q 47 65 41 62 Q 38 60 39 58 Z"
+                fill="url(#leafB_cai_xin)" stroke="#2e5613" stroke-width="0.4"/>
+          <path d="M 38 44 Q 28 41 26 47 Q 30 51 37 48 Q 39 46 38 44 Z"
+                fill="url(#leafA_cai_xin)" stroke="#2e5613" stroke-width="0.4"/>
+
+          <!-- CENTER stem (tallest, ends in flower cluster) -->
+          <path d="M 50 88 Q 50 52 50 14" stroke="url(#stem_cai_xin)" stroke-width="2.6"
+                fill="none" stroke-linecap="round"/>
+          <!-- leaves alternating along center stem -->
+          <path d="M 51 78 Q 62 74 66 80 Q 62 86 53 81 Q 50 80 51 78 Z"
+                fill="url(#leafB_cai_xin)" stroke="#2e5613" stroke-width="0.4"/>
+          <path d="M 49 64 Q 38 60 34 67 Q 38 74 47 68 Q 50 66 49 64 Z"
+                fill="url(#leafA_cai_xin)" stroke="#2e5613" stroke-width="0.4"/>
+          <path d="M 51 48 Q 62 44 65 50 Q 61 56 53 52 Q 50 50 51 48 Z"
+                fill="url(#leafB_cai_xin)" stroke="#2e5613" stroke-width="0.4"/>
+          <path d="M 49 34 Q 40 31 38 36 Q 41 41 47 38 Q 50 36 49 34 Z"
+                fill="url(#leafA_cai_xin)" stroke="#2e5613" stroke-width="0.4"/>
+
+          <!-- RIGHT stem -->
+          <path d="M 58 88 Q 60 64 62 38" stroke="url(#stem_cai_xin)" stroke-width="2.3"
+                fill="none" stroke-linecap="round"/>
+          <path d="M 60 72 Q 70 68 74 74 Q 70 80 62 76 Q 59 74 60 72 Z"
+                fill="url(#leafB_cai_xin)" stroke="#2e5613" stroke-width="0.4"/>
+          <path d="M 61 58 Q 52 55 49 60 Q 52 65 59 62 Q 62 60 61 58 Z"
+                fill="url(#leafA_cai_xin)" stroke="#2e5613" stroke-width="0.4"/>
+          <path d="M 62 46 Q 71 43 74 49 Q 71 53 64 50 Q 61 48 62 46 Z"
+                fill="url(#leafB_cai_xin)" stroke="#2e5613" stroke-width="0.4"/>
+
+          <!-- Yellow 4-petal flower cluster at top of tallest stem -->
+          <g transform="translate(50 12)">
+            <!-- Main center flower (4 petals) -->
+            <circle cx="-2.5" cy="-1.5" r="1.7" fill="url(#flower_cai_xin)"/>
+            <circle cx="2.5" cy="-1.5" r="1.7" fill="url(#flower_cai_xin)"/>
+            <circle cx="-2.5" cy="2.5" r="1.7" fill="url(#flower_cai_xin)"/>
+            <circle cx="2.5" cy="2.5" r="1.7" fill="url(#flower_cai_xin)"/>
+            <circle cx="0" cy="0.5" r="1" fill="#f9a825"/>
+            <!-- Smaller side flowers -->
+            <g transform="translate(-5 -1)">
+              <circle cx="-1.5" cy="-1" r="1.1" fill="url(#flower_cai_xin)"/>
+              <circle cx="1.5" cy="-1" r="1.1" fill="url(#flower_cai_xin)"/>
+              <circle cx="0" cy="1.5" r="1.1" fill="url(#flower_cai_xin)"/>
+              <circle cx="0" cy="0" r="0.6" fill="#f9a825"/>
+            </g>
+            <g transform="translate(5 -1)">
+              <circle cx="-1.5" cy="-1" r="1.1" fill="url(#flower_cai_xin)"/>
+              <circle cx="1.5" cy="-1" r="1.1" fill="url(#flower_cai_xin)"/>
+              <circle cx="0" cy="1.5" r="1.1" fill="url(#flower_cai_xin)"/>
+              <circle cx="0" cy="0" r="0.6" fill="#f9a825"/>
+            </g>
+            <!-- 2 small bud-tips above -->
+            <circle cx="-1.5" cy="-4" r="0.9" fill="url(#flower_cai_xin)"/>
+            <circle cx="1.5" cy="-4" r="0.9" fill="url(#flower_cai_xin)"/>
           </g>
         </g>
-        <!-- leaf highlights -->
-        <ellipse cx="32" cy="56" rx="3.5" ry="2.5" fill="#fff" opacity="0.45"/>
-        <ellipse cx="68" cy="56" rx="3.5" ry="2.5" fill="#fff" opacity="0.45"/>
+
+        <!-- leaf highlight specs -->
+        <ellipse cx="34" cy="68" rx="2" ry="1" fill="#fff" opacity="0.45" transform="rotate(-10 34 68)"/>
+        <ellipse cx="42" cy="62" rx="2" ry="1" fill="#fff" opacity="0.45"/>
+        <ellipse cx="46" cy="46" rx="2" ry="1" fill="#fff" opacity="0.5"/>
+        <ellipse cx="60" cy="48" rx="2" ry="1" fill="#fff" opacity="0.45"/>
         <!-- flower hot spot -->
-        <ellipse cx="48" cy="19" rx="1.5" ry="1.2" fill="#fff" opacity="0.75"/>
-        <ellipse cx="50" cy="87" rx="8" ry="1.3" fill="#000" opacity="0.22"/>
+        <ellipse cx="48" cy="9" rx="1.5" ry="1" fill="#fff" opacity="0.75"/>
+
+        <ellipse cx="50" cy="87" rx="7" ry="1.2" fill="#000" opacity="0.22"/>
       `;
     },
 
