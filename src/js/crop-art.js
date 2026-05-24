@@ -659,11 +659,91 @@
       `;
     },
 
-    // tong_hao (Crown Daisy / Chrysanthemum Greens): bipinnately-lobed
-    // fern-like leaves. Drawn as clusters of small lobes hanging off thin
-    // stems — gives that characteristic "feathery" silhouette without
-    // attempting actual deep botanical detail.
+    // tong_hao (Crown Daisy / Chrysanthemum Greens) — EMOJI-STYLE rewrite.
+    // 3 fern fronds with bold lobed silhouettes (single SVG paths cut with
+    // multiple Q-curves to give that characteristic serrated chrysanthemum
+    // leaf shape). Iconic, not fussy.
     tong_hao(c) {
+      return `
+        <defs>
+          <filter id="ds_tong_hao" x="-15%" y="-15%" width="130%" height="130%">
+            <feGaussianBlur in="SourceAlpha" stdDeviation="1.2"/>
+            <feOffset dy="1.6" result="off"/>
+            <feComponentTransfer><feFuncA type="linear" slope="0.38"/></feComponentTransfer>
+            <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <linearGradient id="frondA_tong_hao" x1="0%" y1="100%" x2="0%" y2="0%">
+            <stop offset="0%" stop-color="#3a6e1a"/>
+            <stop offset="50%" stop-color="#7cb342"/>
+            <stop offset="100%" stop-color="#c5e1a5"/>
+          </linearGradient>
+          <linearGradient id="frondB_tong_hao" x1="0%" y1="100%" x2="0%" y2="0%">
+            <stop offset="0%" stop-color="#4a7d1e"/>
+            <stop offset="50%" stop-color="#8bc34a"/>
+            <stop offset="100%" stop-color="#dcedc8"/>
+          </linearGradient>
+        </defs>
+        <ellipse cx="50" cy="92" rx="20" ry="3" fill="#000" opacity="0.2"/>
+
+        <g filter="url(#ds_tong_hao)">
+          <!-- LEFT frond (back layer) — lobed leaf silhouette via Q curves -->
+          <path d="M 50 86
+                   Q 30 76 22 56
+                   Q 18 50 24 48
+                   Q 26 52 32 50
+                   Q 30 42 36 42
+                   Q 38 48 42 46
+                   Q 38 36 44 36
+                   Q 44 42 48 42
+                   Q 46 32 50 32
+                   Z"
+                fill="url(#frondA_tong_hao)" stroke="#2e5613" stroke-width="0.6"/>
+
+          <!-- CENTER frond (tallest, front) -->
+          <path d="M 50 86
+                   Q 40 60 42 32
+                   Q 38 28 44 22
+                   Q 46 28 50 26
+                   Q 52 22 54 18
+                   Q 50 14 50 8
+                   Q 50 14 56 18
+                   Q 56 22 58 28
+                   Q 60 22 58 30
+                   Q 60 34 56 36
+                   Q 62 40 58 42
+                   Q 58 50 62 56
+                   Q 56 62 50 86
+                   Z"
+                fill="url(#frondB_tong_hao)" stroke="#2e5613" stroke-width="0.6"/>
+
+          <!-- RIGHT frond (back layer mirror) -->
+          <path d="M 50 86
+                   Q 70 76 78 56
+                   Q 82 50 76 48
+                   Q 74 52 68 50
+                   Q 70 42 64 42
+                   Q 62 48 58 46
+                   Q 62 36 56 36
+                   Q 56 42 52 42
+                   Q 54 32 50 32
+                   Z"
+                fill="url(#frondA_tong_hao)" stroke="#2e5613" stroke-width="0.6"/>
+
+          <!-- center frond mid-vein -->
+          <path d="M 50 86 Q 49 50 50 20"
+                stroke="#2e5613" stroke-width="0.6" fill="none" opacity="0.6"/>
+        </g>
+
+        <!-- highlight gleam on top-left of center frond -->
+        <ellipse cx="44" cy="36" rx="3" ry="8" fill="#fff" opacity="0.4" transform="rotate(-15 44 36)"/>
+        <ellipse cx="48" cy="22" rx="1.4" ry="2.5" fill="#fff" opacity="0.65"/>
+
+        <!-- base shadow -->
+        <ellipse cx="50" cy="87" rx="9" ry="1.3" fill="#000" opacity="0.25"/>
+      `;
+    },
+
+    tong_haoOLD(c) {
       return `
         <defs>
           <filter id="ds_tong_hao" x="-15%" y="-15%" width="130%" height="130%">
@@ -834,11 +914,79 @@
       `;
     },
 
-    // wa_wa_cai (baby napa cabbage): compact oblong head, 3:1 height ratio,
-    // pale cream/yellow body, green leaf tips at the top (curling outward),
-    // prominent VERTICAL VEINS visible through translucent outer leaves.
-    // Smaller and more delicate than full-size napa (da_bai_cai).
+    // wa_wa_cai (baby napa cabbage) — EMOJI-STYLE rewrite.
+    // Single compact oblong body, smooth transition from pale cream base
+    // to pale-green leafy crown. Vertical white veins. No spiky leaf-tips
+    // (the old version's "cone hats" problem).
     wa_wa_cai(c) {
+      return `
+        <defs>
+          <filter id="ds_wa_wa_cai" x="-15%" y="-15%" width="130%" height="130%">
+            <feGaussianBlur in="SourceAlpha" stdDeviation="1.2"/>
+            <feOffset dy="1.6" result="off"/>
+            <feComponentTransfer><feFuncA type="linear" slope="0.38"/></feComponentTransfer>
+            <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <!-- Body gradient: pale cream base → pale green top (single smooth blend) -->
+          <linearGradient id="body_wa_wa_cai" x1="0%" y1="100%" x2="0%" y2="0%">
+            <stop offset="0%" stop-color="#e8d99a"/>
+            <stop offset="35%" stop-color="#fff8e1"/>
+            <stop offset="65%" stop-color="#dcedc8"/>
+            <stop offset="100%" stop-color="#7cb342"/>
+          </linearGradient>
+          <!-- Side shading (left-right) for roundness -->
+          <linearGradient id="shade_wa_wa_cai" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#000" stop-opacity="0.18"/>
+            <stop offset="40%" stop-color="#000" stop-opacity="0"/>
+            <stop offset="60%" stop-color="#000" stop-opacity="0"/>
+            <stop offset="100%" stop-color="#000" stop-opacity="0.18"/>
+          </linearGradient>
+        </defs>
+        <ellipse cx="50" cy="92" rx="15" ry="2.5" fill="#000" opacity="0.22"/>
+
+        <g filter="url(#ds_wa_wa_cai)">
+          <!-- Single iconic oblong body — taller than wide, soft-rounded top, narrower base -->
+          <path d="M 35 88
+                   Q 30 70 32 44
+                   Q 36 16 50 12
+                   Q 64 16 68 44
+                   Q 70 70 65 88
+                   Z"
+                fill="url(#body_wa_wa_cai)" stroke="#4a7d1e" stroke-width="0.7"/>
+
+          <!-- Side shading overlay (gives 3D roundness) -->
+          <path d="M 35 88
+                   Q 30 70 32 44
+                   Q 36 16 50 12
+                   Q 64 16 68 44
+                   Q 70 70 65 88
+                   Z"
+                fill="url(#shade_wa_wa_cai)"/>
+
+          <!-- Vertical white veins (subtle, only on the lower cream portion) -->
+          <path d="M 41 86 Q 39 60 42 38" stroke="#fff" stroke-width="0.7" fill="none" opacity="0.55"/>
+          <path d="M 50 87 L 50 36" stroke="#fff" stroke-width="0.9" fill="none" opacity="0.65"/>
+          <path d="M 59 86 Q 61 60 58 38" stroke="#fff" stroke-width="0.7" fill="none" opacity="0.55"/>
+
+          <!-- Top leafy crown definition: soft scallop edge -->
+          <path d="M 36 28 Q 42 22 50 24 Q 58 22 64 28"
+                stroke="#558b2f" stroke-width="0.7" fill="none" opacity="0.7"/>
+          <path d="M 38 18 Q 44 13 50 16 Q 56 13 62 18"
+                stroke="#558b2f" stroke-width="0.6" fill="none" opacity="0.55"/>
+        </g>
+
+        <!-- Top glossy highlight on left side -->
+        <ellipse cx="42" cy="34" rx="3" ry="9" fill="#fff" opacity="0.4" transform="rotate(-8 42 34)"/>
+        <!-- Hot spec -->
+        <ellipse cx="44" cy="22" rx="1.5" ry="2.5" fill="#fff" opacity="0.65"/>
+
+        <!-- Base shadow -->
+        <ellipse cx="50" cy="88" rx="11" ry="1.4" fill="#000" opacity="0.25"/>
+      `;
+    },
+
+    // OLD wa_wa_cai (kept disabled — green top leaves looked like spiky cone-hats)
+    wa_wa_caiOLD(c) {
       return `
         <defs>
           <filter id="ds_wa_wa_cai" x="-15%" y="-15%" width="130%" height="130%">
