@@ -47,6 +47,11 @@
                 ? 'Equivalent to your Eastern Market member points'
                 : '等同于东方超市会员积分'}
             </div>
+            <div class="ep-overview-sync-note">
+              ${lang === 'en'
+                ? '⏱ Shown instantly; synced to your account once daily.'
+                : '⏱ 实时显示，每日凌晨同步至会员账户'}
+            </div>
           </div>
           <div class="ep-cap-row">
             <div>${lang === 'en' ? 'Today:' : '今日入账:'} <strong>${earnedToday}</strong> / ${cap} 🎫</div>

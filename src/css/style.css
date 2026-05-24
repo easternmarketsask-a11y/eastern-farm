@@ -942,6 +942,13 @@ body {
   font-size: 11px;
   color: var(--warm-text-soft);
 }
+.ep-overview-sync-note {
+  font-size: 10px;
+  color: var(--warm-text-soft);
+  opacity: 0.85;
+  margin-top: 4px;
+  font-style: italic;
+}
 .ep-cap-row {
   display: flex;
   justify-content: space-between;

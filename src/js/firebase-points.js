@@ -1,21 +1,39 @@
 /**
- * firebase-points.js — Sync game EP earnings to the real Eastern Market
- * member account (Firestore: members/{uid}.totalPoints + points_transactions/).
+ * firebase-points.js — Sync game EP changes through the StockWise proxy.
  *
- * Each earn event is idempotent via eventId (UUID). The Firestore transaction:
- *   1. Verifies the eventId hasn't been credited before (dedupe).
- *   2. Atomically increments members/{uid}.{totalPoints, lifetimePoints}.
- *   3. Appends a points_transactions doc with source='game:farm' + subSource.
+ * Architecture (V2, daily-sync model):
  *
- * Failures (offline, rule rejected, network) queue via Farm.fbQueue for retry.
+ *   Game ── POST {STOCKWISE}/api/rewardup/me/earn ──► StockWise
+ *           POST {STOCKWISE}/api/rewardup/me/spend
+ *                       ↓
+ *                Firestore writes:
+ *                  members/{memberDocId}.totalPoints (cache, recomputed)
+ *                  members/{memberDocId}.pendingGameDelta (queued)
+ *                  points_transactions/ audit row
+ *                       ↓
+ *                Returns { new_balance, pendingGameDelta, ... }
+ *           Game UI updates from response.new_balance immediately.
  *
- * First-login backfill: when a guest with accumulated state.unsyncedEp logs
- * in, we credit min(unsyncedEp, 100) to their account as a one-time welcome.
+ *   Once per day (Cloud Scheduler):
+ *       StockWise /admin/daily-rewardup-push pushes pendingGameDelta to
+ *       RewardUp (the true loyalty system), zeros the pending queue.
+ *
+ * The game never writes Firestore directly. All authentication is via
+ * Firebase ID token in the Authorization header; the server validates it.
+ *
+ * Failure modes:
+ *   - Network/server error → queue via Farm.fbQueue, retry on online+login
+ *   - 429 daily-cap exceeded → toast user, don't queue (would just re-fail)
+ *   - 422 insufficient balance (spend) → toast user
+ *
+ * First-login backfill: when a guest with accumulated state.unsyncedEp
+ * logs in, credits min(unsyncedEp, BACKFILL_CAP) to their member account
+ * one-shot. Survives via state.backfillDone flag.
  */
 (function() {
+  const STOCKWISE_BASE = 'https://stockwise-app-873982544406.us-central1.run.app';
   const BACKFILL_CAP = 100;
 
-  // RFC4122 v4 (browser may have crypto.randomUUID; polyfill otherwise)
   function uuid() {
     if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
@@ -24,147 +42,119 @@
     });
   }
 
+  async function _callStockWise(path, body) {
+    if (!Farm.fbAuth || !Farm.fbAuth.isLoggedIn()) {
+      const err = new Error('not_logged_in');
+      err.code = 'not_logged_in';
+      throw err;
+    }
+    const idToken = await Farm.fbAuth.currentUser.getIdToken();
+    const res = await fetch(STOCKWISE_BASE + path, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + idToken,
+      },
+      body: JSON.stringify(body),
+    });
+    let data = null;
+    try { data = await res.json(); } catch (_) {}
+    if (!res.ok) {
+      const err = new Error((data && data.detail) || ('HTTP ' + res.status));
+      err.code = res.status;
+      err.detail = data && data.detail;
+      throw err;
+    }
+    return data || {};
+  }
+
+  function _applyServerResponseToLocal(resp) {
+    // Pull authoritative balance from server response into local state cache.
+    if (resp == null) return;
+    if (typeof resp.new_balance === 'number') {
+      Farm.state.data.eastPoints = resp.new_balance;
+      Farm.state.save();
+      if (Farm.fbAuth && Farm.fbAuth.memberDoc) {
+        Farm.fbAuth.memberDoc.totalPoints = resp.new_balance;
+        Farm.fbAuth._renderTopbar && Farm.fbAuth._renderTopbar();
+      }
+      if (Farm.ui && Farm.ui.refreshHUD) Farm.ui.refreshHUD();
+    }
+  }
+
   const points = {
-    // Public entry: sync one earn event. Returns { synced, eventId, queued }.
+    /**
+     * Sync a game-side EP earn event through StockWise. Returns
+     *   { synced, eventId, queued, new_balance? }.
+     * If the user isn't logged in or the request fails, the event is
+     * queued for retry (Farm.fbQueue) and `synced: false` is returned.
+     */
     async syncEpEarn(amount, source, description, eventId) {
       eventId = eventId || uuid();
-      if (!Farm.fb || !Farm.fb.available) {
-        // No Firebase → queue for later
-        if (Farm.fbQueue) Farm.fbQueue.enqueue({ amount, source, description, eventId });
-        return { synced: false, eventId, queued: true, reason: 'no_firebase' };
-      }
-      if (!Farm.fbAuth.isLoggedIn()) {
-        if (Farm.fbQueue) Farm.fbQueue.enqueue({ amount, source, description, eventId });
+      if (!Farm.fbAuth || !Farm.fbAuth.isLoggedIn()) {
+        if (Farm.fbQueue) Farm.fbQueue.enqueue({ kind: 'earn', amount, source, description, eventId });
         return { synced: false, eventId, queued: true, reason: 'not_logged_in' };
       }
-      const uid = Farm.fbAuth.uid();
       try {
-        await this._writeEarnTransaction(uid, amount, source, description, eventId);
-        return { synced: true, eventId };
+        const resp = await _callStockWise('/api/rewardup/me/earn', {
+          points: amount,
+          source: source || 'unknown',
+          eventId,
+          description: description || '',
+        });
+        _applyServerResponseToLocal(resp);
+        return { synced: true, eventId, new_balance: resp.new_balance };
       } catch (e) {
-        console.warn('[fb-points] sync failed; queuing', e);
-        if (Farm.fbQueue) Farm.fbQueue.enqueue({ amount, source, description, eventId });
+        // 429 = daily cap, 422 = validation → don't queue (would just fail again)
+        if (e.code === 429 || e.code === 422 || e.code === 404) {
+          console.warn('[fb-points] earn rejected:', e.code, e.detail);
+          return { synced: false, eventId, rejected: true, reason: e.detail || String(e) };
+        }
+        // Network / 5xx → queue for retry
+        console.warn('[fb-points] earn failed, queuing:', e.code || e.message);
+        if (Farm.fbQueue) Farm.fbQueue.enqueue({ kind: 'earn', amount, source, description, eventId });
         return { synced: false, eventId, queued: true, reason: e.code || e.message };
       }
     },
 
-    // Sync an in-game spend (EP shop purchase, EP→coins exchange). Decrements
-    // members/{uid}.totalPoints and creates a points_transactions doc with
-    // type='redeem' so the main store's PointsHistory shows it as "spent".
-    // lifetimePoints is NOT decremented (it's a "lifetime earned" counter).
+    /**
+     * Sync a game-side EP spend event through StockWise. Same shape as
+     * syncEpEarn. Server enforces "balance must not go negative".
+     */
     async syncEpSpend(amount, source, description, eventId) {
       eventId = eventId || uuid();
       if (amount <= 0) return { synced: true, eventId, noop: true };
-      if (!Farm.fb || !Farm.fb.available || !Farm.fbAuth.isLoggedIn()) {
+      if (!Farm.fbAuth || !Farm.fbAuth.isLoggedIn()) {
         if (Farm.fbQueue) Farm.fbQueue.enqueue({ kind: 'spend', amount, source, description, eventId });
         return { synced: false, eventId, queued: true, reason: 'not_logged_in' };
       }
-      const uid = Farm.fbAuth.uid();
       try {
-        await this._writeSpendTransaction(uid, amount, source, description, eventId);
-        return { synced: true, eventId };
+        const resp = await _callStockWise('/api/rewardup/me/spend', {
+          points: amount,
+          source: source || 'unknown',
+          eventId,
+          description: description || '',
+        });
+        _applyServerResponseToLocal(resp);
+        return { synced: true, eventId, new_balance: resp.new_balance };
       } catch (e) {
-        console.warn('[fb-points] spend sync failed; queuing', e);
+        if (e.code === 422 || e.code === 404) {
+          console.warn('[fb-points] spend rejected:', e.code, e.detail);
+          return { synced: false, eventId, rejected: true, reason: e.detail || String(e) };
+        }
+        console.warn('[fb-points] spend failed, queuing:', e.code || e.message);
         if (Farm.fbQueue) Farm.fbQueue.enqueue({ kind: 'spend', amount, source, description, eventId });
         return { synced: false, eventId, queued: true, reason: e.code || e.message };
       }
     },
 
-    async _writeSpendTransaction(uid, amount, source, description, eventId) {
-      const db = Farm.fb.db;
-      const memberRef = db.collection('members').doc(uid);
-      const txCol = db.collection('points_transactions');
-
-      // Idempotency: dedupe by eventId
-      const dupCheck = await txCol
-        .where('memberId', '==', uid)
-        .where('eventId', '==', eventId)
-        .limit(1)
-        .get();
-      if (!dupCheck.empty) return;
-
-      await db.runTransaction(async (t) => {
-        const memberSnap = await t.get(memberRef);
-        if (!memberSnap.exists) throw new Error('member_doc_missing');
-        const data = memberSnap.data();
-        const current = data.totalPoints || 0;
-        if (current < amount) throw new Error('insufficient_server_balance');
-        t.update(memberRef, {
-          totalPoints: current - amount,
-          updatedAt: Farm.fb.serverTimestamp(),
-        });
-        const newTxRef = txCol.doc();
-        t.set(newTxRef, {
-          memberId: uid,
-          type: 'redeem',
-          points: amount,
-          source: 'game:farm',
-          subSource: source || 'unknown',
-          description: description || '游戏内消费',
-          eventId,
-          createdAt: Farm.fb.serverTimestamp(),
-        });
-      });
-
-      // Update cached member doc + refresh topbar
-      if (Farm.fbAuth.memberDoc) {
-        Farm.fbAuth.memberDoc.totalPoints = Math.max(0, (Farm.fbAuth.memberDoc.totalPoints || 0) - amount);
-        Farm.fbAuth._renderTopbar();
-      }
-    },
-
-    async _writeEarnTransaction(uid, amount, source, description, eventId) {
-      const db = Farm.fb.db;
-      const memberRef = db.collection('members').doc(uid);
-      const txCol = db.collection('points_transactions');
-
-      // Dedupe: if a tx with this eventId already exists, do nothing
-      const dupCheck = await txCol
-        .where('memberId', '==', uid)
-        .where('eventId', '==', eventId)
-        .limit(1)
-        .get();
-      if (!dupCheck.empty) return;
-
-      // Single Firestore transaction: update member + write tx
-      await db.runTransaction(async (t) => {
-        const memberSnap = await t.get(memberRef);
-        if (!memberSnap.exists) {
-          throw new Error('member_doc_missing');
-        }
-        const data = memberSnap.data();
-        t.update(memberRef, {
-          totalPoints: (data.totalPoints || 0) + amount,
-          lifetimePoints: (data.lifetimePoints || 0) + amount,
-          updatedAt: Farm.fb.serverTimestamp(),
-        });
-        const newTxRef = txCol.doc();
-        t.set(newTxRef, {
-          memberId: uid,
-          type: 'earn',
-          points: amount,
-          source: 'game:farm',
-          subSource: source || 'unknown',
-          description: description || '',
-          eventId,
-          createdAt: Farm.fb.serverTimestamp(),
-        });
-      });
-
-      // Update cached member doc with new total
-      if (Farm.fbAuth.memberDoc) {
-        Farm.fbAuth.memberDoc.totalPoints = (Farm.fbAuth.memberDoc.totalPoints || 0) + amount;
-        Farm.fbAuth.memberDoc.lifetimePoints = (Farm.fbAuth.memberDoc.lifetimePoints || 0) + amount;
-        Farm.fbAuth._renderTopbar();
-      }
-    },
-
-    // Called by firebase-auth.js after a successful login. If the player has
-    // unsynced local EP from playing as a guest, credit up to BACKFILL_CAP
-    // to their member account (one-time per account).
+    /**
+     * On first successful login, credit any guest-mode-accumulated EP to
+     * the member account (capped at BACKFILL_CAP to limit abuse).
+     */
     async firstLoginBackfill(user) {
       const data = Farm.state.data;
-      if (data.backfillDone) return;             // already backfilled before
+      if (data.backfillDone) return;
       const local = data.unsyncedEp || 0;
       if (local <= 0) {
         data.backfillDone = true;
@@ -182,19 +172,17 @@
         data.unsyncedEp = Math.max(0, local - amount);
         data.backfillDone = true;
         Farm.state.save();
-        // After backfill, memberDoc.totalPoints was bumped — re-sync local
-        // state.eastPoints so HUD reflects the post-backfill total.
+        // Re-sync local state from authoritative server balance
         if (Farm.fbAuth && Farm.fbAuth._syncLocalBalance) Farm.fbAuth._syncLocalBalance();
-        Farm.ui.refreshHUD();
+        if (Farm.ui && Farm.ui.refreshHUD) Farm.ui.refreshHUD();
         const lang = data.language;
         setTimeout(() => {
           Farm.ui.toast(lang === 'en'
-            ? `🎁 ${amount} EP backfilled to your member account`
-            : `🎁 ${amount} 积分已回填到您的会员账户`, 4000);
+            ? '🎁 ' + amount + ' EP backfilled to your member account'
+            : '🎁 ' + amount + ' 积分已回填到您的会员账户', 4000);
         }, 800);
       }
-      // If sync failed (queued), backfillDone stays false and will retry on
-      // next login or queue flush.
+      // If failed, backfillDone stays false; retried on next login or queue flush.
     },
   };
 
