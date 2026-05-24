@@ -135,6 +135,24 @@
     return title;
   }
 
+  // Next title milestone above the current level. Returns null if already at top.
+  function nextTitleAt(level) {
+    for (const t of LEVEL_TITLES) {
+      if (t.min > level) return t;
+    }
+    return null;
+  }
+
+  // Next level at which the player gains a new plot. Returns null if no more.
+  // Sorted numerically (PLOT_UNLOCK_AT keys are stringified when iterated).
+  const _PLOT_UNLOCK_LEVELS_SORTED = Object.keys(PLOT_UNLOCK_AT).map(Number).sort(function (a, b) { return a - b; });
+  function nextPlotUnlockAt(level) {
+    for (const lv of _PLOT_UNLOCK_LEVELS_SORTED) {
+      if (lv > level) return lv;
+    }
+    return null;
+  }
+
   const state = {
     data: null,
 
@@ -417,6 +435,10 @@
     // Expose helpers for UI / external modules
     xpForLevel,
     levelTitle,
+    nextTitleAt,
+    nextPlotUnlockAt,
+    LEVEL_TITLES,
+    PLOT_UNLOCK_AT,
 
     addSeed(cropId, n) {
       this.data.seeds[cropId] = (this.data.seeds[cropId] || 0) + n;

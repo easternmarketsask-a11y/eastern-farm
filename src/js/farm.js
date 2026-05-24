@@ -224,15 +224,20 @@
 
       // Level up?
       if (result.levelInfo && result.levelInfo.leveledUp) {
+        const li = result.levelInfo;
+        const epAward = 5 * (li.newLevel - li.oldLevel);   // 5 EP per level gained
+        const coinAward = 50 * (li.newLevel - li.oldLevel);
         setTimeout(() => {
-          Farm.ui.toast('🎉 Lv ' + result.levelInfo.newLevel + ' ' + Farm.i18n.t('toast_level_up'), 3500);
-          Farm.state.addEastPoints(5, {
+          Farm.state.addCoins(coinAward);
+          Farm.state.addEastPoints(epAward, {
             source: 'level_up',
-            description: 'Level ' + result.levelInfo.oldLevel + ' → ' + result.levelInfo.newLevel,
+            description: 'Level ' + li.oldLevel + ' → ' + li.newLevel,
           });
           Farm.ui.refreshHUD();
           this.renderGrid();  // unlock new plots
-          if (Farm.audio) Farm.audio.play('levelUp');
+          // Celebratory modal instead of a tiny toast (per owner request:
+          // make level-up feel meaningful + preview the next milestone)
+          Farm.ui.showLevelUpModal(li.oldLevel, li.newLevel, { epAwarded: epAward });
         }, 500);
       }
 

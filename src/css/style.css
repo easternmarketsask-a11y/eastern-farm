@@ -231,6 +231,208 @@ body {
   white-space: nowrap;
   min-width: 0;
 }
+.status-next-plot {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--soil-brown);
+  background: rgba(139, 90, 60, 0.10);
+  padding: 1px 6px;
+  border-radius: var(--radius-pill);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* =============== LEVEL-UP CELEBRATION MODAL =============== */
+.lvup-modal {
+  text-align: center;
+  padding: 8px 4px 0;
+}
+.lvup-confetti {
+  font-size: 56px;
+  line-height: 1;
+  margin-bottom: 6px;
+  animation: lvupBounce 1.2s ease-in-out infinite;
+}
+@keyframes lvupBounce {
+  0%, 100% { transform: scale(1) rotate(-3deg); }
+  50%      { transform: scale(1.12) rotate(3deg); }
+}
+.lvup-label {
+  font-family: var(--font-display);
+  font-size: 22px;
+  color: var(--barn-red);
+  margin-bottom: 8px;
+}
+.lvup-jump {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  font-family: var(--font-display);
+  font-size: 28px;
+  margin-bottom: 8px;
+}
+.lvup-old {
+  color: var(--warm-text-soft);
+  opacity: 0.65;
+}
+.lvup-arrow {
+  font-size: 18px;
+  color: var(--leaf-green);
+}
+.lvup-new {
+  color: var(--leaf-dark);
+  text-shadow: 0 0 18px rgba(106, 176, 76, 0.5);
+}
+.lvup-title-change, .lvup-title-stay {
+  font-size: 14px;
+  margin-bottom: 14px;
+  color: var(--warm-text);
+}
+.lvup-title-old {
+  color: var(--warm-text-soft);
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+  opacity: 0.7;
+}
+.lvup-title-new {
+  font-weight: 700;
+  color: var(--leaf-dark);
+  background: rgba(106, 176, 76, 0.14);
+  padding: 1px 8px;
+  border-radius: var(--radius-pill);
+}
+.lvup-unlocked {
+  background: linear-gradient(135deg, #fffaeb, #fff3d6);
+  border: 2px solid #f0c674;
+  border-radius: var(--radius-md);
+  padding: 12px;
+  margin-bottom: 14px;
+}
+.lvup-unlocked-row {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--warm-text);
+  padding: 3px 0;
+}
+.lvup-next {
+  background: var(--cream-bg);
+  border: 1.5px dashed var(--border-soft);
+  border-radius: var(--radius-md);
+  padding: 12px;
+  margin-bottom: 12px;
+  text-align: left;
+}
+.lvup-next-label {
+  font-size: 11px;
+  color: var(--warm-text-soft);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  margin-bottom: 6px;
+}
+.lvup-next-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  margin: 4px 0;
+  color: var(--warm-text);
+}
+.lvup-next-bar {
+  margin-top: 8px;
+  height: 5px;
+  background: var(--border-soft);
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+}
+.lvup-next-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--leaf-green), var(--mature-glow));
+  border-radius: var(--radius-pill);
+  transition: width 0.4s ease;
+}
+.lvup-next-xp {
+  font-family: var(--font-en);
+  font-size: 10px;
+  color: var(--warm-text-soft);
+  text-align: right;
+  margin-top: 4px;
+}
+.lvup-next-max {
+  text-align: center;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--barn-red);
+}
+
+/* =============== JOURNEY TAB =============== */
+.journey-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 6px;
+}
+.journey-row {
+  display: grid;
+  grid-template-columns: 52px 1fr auto;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: var(--radius-md);
+  border: 1.5px solid var(--border-soft);
+  font-size: 13px;
+}
+.journey-past {
+  background: linear-gradient(135deg, #e8f4d2, #d8ecc0);
+  border-color: var(--leaf-green);
+  color: var(--leaf-dark);
+}
+.journey-current {
+  background: linear-gradient(135deg, #fff3d6, #ffe0a8);
+  border-color: var(--barn-red);
+  box-shadow: 0 0 0 2px rgba(196, 69, 54, 0.18);
+  font-weight: 700;
+}
+.journey-future {
+  background: var(--cream-bg);
+  color: var(--warm-text-soft);
+  opacity: 0.78;
+}
+.journey-level {
+  font-family: var(--font-display);
+  font-size: 13px;
+  color: var(--barn-red);
+  white-space: nowrap;
+}
+.journey-future .journey-level {
+  color: var(--warm-text-soft);
+}
+.journey-label {
+  font-size: 13px;
+}
+.journey-meta {
+  text-align: right;
+  white-space: nowrap;
+}
+.journey-check {
+  color: var(--leaf-dark);
+  font-weight: 700;
+}
+.journey-xp-needed {
+  font-family: var(--font-en);
+  font-size: 10px;
+  color: var(--warm-text-soft);
+}
+.journey-footer {
+  margin-top: 14px;
+  padding: 10px 12px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--barn-red);
+  background: linear-gradient(135deg, #fffaeb, #fff3d6);
+  border-radius: var(--radius-md);
+  border: 1px dashed var(--barn-red);
+  font-weight: 600;
+}
 
 /* =============== FESTIVAL BANNER =============== */
 .festival-banner {

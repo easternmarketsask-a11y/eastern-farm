@@ -185,7 +185,7 @@
     });
   }
 
-  let _collectionTab = 'crops';  // 'crops' | 'achievements'
+  let _collectionTab = 'crops';  // 'crops' | 'achievements' | 'journey'
 
   function openCollection() {
     const lang = Farm.state.data.language;
@@ -200,16 +200,28 @@
     const achProgress = Farm.i18n.t('achievements_progress', { done: achDone, total: achTotal });
     const tabCropsLabel = Farm.i18n.t('collection_tab_crops');
     const tabAchLabel = Farm.i18n.t('collection_tab_achievements');
+    const tabJourneyLabel = lang === 'en' ? 'Journey' : '成长之路';
 
     const tabsHTML = `
       <div class="tab-bar">
         <button class="tab-btn ${_collectionTab === 'crops' ? 'active' : ''}" data-tab="crops">🥬 ${tabCropsLabel}</button>
         <button class="tab-btn ${_collectionTab === 'achievements' ? 'active' : ''}" data-tab="achievements">🏆 ${tabAchLabel}</button>
+        <button class="tab-btn ${_collectionTab === 'journey' ? 'active' : ''}" data-tab="journey">🌱 ${tabJourneyLabel}</button>
       </div>
     `;
 
-    const subtitle = _collectionTab === 'crops' ? cropProgress : achProgress;
-    const bodyHTML = _collectionTab === 'crops' ? renderCropsList(all, grown, lang) : Farm.achievements.renderListHTML();
+    const lvl = Farm.state.data.level;
+    const title = Farm.state.levelTitle(lvl);
+    const journeySubtitle = lang === 'en'
+      ? 'Lv ' + lvl + ' · ' + title.en
+      : 'Lv ' + lvl + ' · ' + title.zh;
+
+    const subtitle = _collectionTab === 'crops' ? cropProgress
+                   : _collectionTab === 'achievements' ? achProgress
+                   : journeySubtitle;
+    const bodyHTML = _collectionTab === 'crops' ? renderCropsList(all, grown, lang)
+                   : _collectionTab === 'achievements' ? Farm.achievements.renderListHTML()
+                   : renderJourney(lang);
 
     const html = `
       <h2 class="modal-title">📖 ${Farm.i18n.t('collection_title')}</h2>
@@ -231,6 +243,71 @@
     });
 
     if (_collectionTab === 'crops') bindCropDetailClicks(lang, grown);
+  }
+
+  // Build the "成长之路 / Journey" timeline: titles + plot-unlock milestones,
+  // merged + sorted by level, current row highlighted, past = green dimmed,
+  // future = grey. Footer = the final goal (萨城传说 at Lv 200).
+  function renderJourney(lang) {
+    const curLevel = Farm.state.data.level;
+    const curXp = Farm.state.data.xp;
+    const titles = Farm.state.LEVEL_TITLES || [];
+    const plotMap = Farm.state.PLOT_UNLOCK_AT || {};
+
+    // Merge milestones into a single sorted list
+    const milestones = [];
+    titles.forEach(t => {
+      milestones.push({
+        level: t.min,
+        kind: 'title',
+        labelZh: '🏷 「' + t.zh + '」',
+        labelEn: '🏷 ' + t.en,
+      });
+    });
+    Object.keys(plotMap).forEach(lvStr => {
+      const lv = parseInt(lvStr, 10);
+      const count = plotMap[lvStr];
+      milestones.push({
+        level: lv,
+        kind: 'plot',
+        labelZh: '🏞 +' + count + ' 块地',
+        labelEn: '🏞 +' + count + ' plot' + (count > 1 ? 's' : ''),
+      });
+    });
+    milestones.sort(function (a, b) {
+      if (a.level !== b.level) return a.level - b.level;
+      return a.kind === 'title' ? -1 : 1;
+    });
+
+    const rowsHTML = milestones.map(function (m) {
+      const isPast = m.level <= curLevel;
+      const isCurrent = m.level === curLevel;
+      const isFuture = m.level > curLevel;
+      const stateClass = isCurrent ? 'current' : (isPast ? 'past' : 'future');
+      const xpNeeded = isFuture ? Farm.state.xpForLevel(m.level) : null;
+      const xpRemaining = xpNeeded != null ? Math.max(0, xpNeeded - curXp) : null;
+      const label = lang === 'en' ? m.labelEn : m.labelZh;
+      const xpHint = isFuture
+        ? '<span class="journey-xp-needed">' +
+            (lang === 'en' ? '−' + xpRemaining.toLocaleString() + ' XP' : '还需 ' + xpRemaining.toLocaleString() + ' XP') +
+          '</span>'
+        : isPast ? '<span class="journey-check">✓</span>' : '';
+      return '<div class="journey-row journey-' + stateClass + '">' +
+        '<div class="journey-level">Lv ' + m.level + '</div>' +
+        '<div class="journey-label">' + label + '</div>' +
+        '<div class="journey-meta">' + xpHint + '</div>' +
+      '</div>';
+    }).join('');
+
+    const lastTitle = titles[titles.length - 1];
+    const lastTitleName = lang === 'en' ? lastTitle.en : lastTitle.zh;
+    const footer = '<div class="journey-footer">' +
+      '🌅 ' + (lang === 'en'
+        ? '「' + lastTitleName + '」 awaits — Lv ' + lastTitle.min
+        : '「' + lastTitleName + '」 在等你 — Lv ' + lastTitle.min) +
+    '</div>';
+
+    return '<div class="journey-list">' + rowsHTML + '</div>' + footer;
   }
 
   function renderCropsList(all, grown, lang) {
