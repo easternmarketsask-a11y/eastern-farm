@@ -27,8 +27,14 @@
       Farm.daily.load(),
     ]);
 
-    // 2. Init state
+    // 2. Init state, then migrate plots/seeds against the current catalog
+    // (drops crops no longer in data/crops.json, renames qingcai → shanghai_miao)
     Farm.state.init();
+    if (Farm.crops && Farm.crops.all) {
+      const mainIds = Farm.crops.all().map(function (c) { return c.id; });
+      const festIds = Object.keys(Farm.crops.festivalCrops || {});
+      Farm.state.migrateCrops(mainIds.concat(festIds));
+    }
 
     // 2b. Arm the one-time gesture gate so audio can resume on first interaction
     Farm.audio.armGestureGate();

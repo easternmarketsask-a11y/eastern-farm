@@ -17,7 +17,7 @@
       ...[0,1,2,3].map(i => ({ id: i, crop: null, plantedAt: 0, harvestsLeft: 0, unlocked: true })),
       ...[4,5,6,7,8,9,10,11].map(i => ({ id: i, crop: null, plantedAt: 0, harvestsLeft: 0, unlocked: false })),
     ],
-    seeds: { qingcai: 3 },  // starter seeds
+    seeds: { shanghai_miao: 3, xiao_cong: 2, cilantro: 2 },  // 3 starter crops for Lv 1 variety
     cropsEverGrown: [],     // for "try new crop" achievements
     lastLogin: 0,
     loginStreak: 0,
@@ -88,9 +88,11 @@
   }
 
   // ============ Level progression (open-ended) ============
-  // Backward-compat: first 11 levels match the old hardcoded array; beyond
-  // that, formula extrapolates so progression never stops.
-  const XP_TABLE_FIXED = [0, 50, 150, 350, 700, 1200, 2000, 3000, 4500, 6500, 9000];
+  // Early-game XP curve rebalanced (2026-05-24): old curve was 50/150/350/...
+  // which required ~25 bok choy harvests to reach Lv 2 (2+ hours of grind for
+  // a single new crop unlock). New curve targets ~5 harvests per level for
+  // Lv 1-5, then ramps up. Goal: player sees 5+ crops unlock in first 30 min.
+  const XP_TABLE_FIXED = [0, 10, 30, 80, 180, 350, 600, 1000, 1600, 2500, 4000];
   function xpForLevel(level) {
     if (level <= 0) return 0;
     if (level <= XP_TABLE_FIXED.length) return XP_TABLE_FIXED[level - 1];
@@ -226,6 +228,54 @@
       this.data = JSON.parse(JSON.stringify(STARTER_STATE));
       this.data.sessionStats.date = getDateString();
       this.save();
+    },
+
+    // Drop plot crops and seeds for IDs no longer in the catalog. Apply
+    // alias renames (e.g. qingcai → shanghai_miao). Called by main.js once
+    // crops.js has finished loading the JSON catalog.
+    migrateCrops(validIdArray) {
+      if (!validIdArray || !validIdArray.length) return null;
+      const valid = new Set(validIdArray);
+      const aliasMap = { qingcai: 'shanghai_miao' };
+      let cleanedPlots = 0;
+      let renamedPlots = 0;
+      for (const p of this.data.plots) {
+        if (!p.crop) continue;
+        if (aliasMap[p.crop] && valid.has(aliasMap[p.crop])) {
+          p.crop = aliasMap[p.crop];
+          renamedPlots++;
+          continue;
+        }
+        if (!valid.has(p.crop)) {
+          p.crop = null;
+          p.plantedAt = 0;
+          p.harvestsLeft = 0;
+          cleanedPlots++;
+        }
+      }
+      let cleanedSeeds = 0;
+      const newSeeds = {};
+      for (const cropId of Object.keys(this.data.seeds)) {
+        const count = this.data.seeds[cropId] || 0;
+        if (count <= 0) continue;
+        const id = aliasMap[cropId] || cropId;
+        if (valid.has(id)) {
+          newSeeds[id] = (newSeeds[id] || 0) + count;
+        } else {
+          cleanedSeeds++;
+        }
+      }
+      this.data.seeds = newSeeds;
+      // If the player ends up with no seeds at all (e.g. only had tomato),
+      // gift the standard 3 starter crops so the game stays playable
+      if (Object.keys(this.data.seeds).length === 0) {
+        this.data.seeds = { shanghai_miao: 3, xiao_cong: 2, cilantro: 2 };
+      }
+      if (cleanedPlots || renamedPlots || cleanedSeeds) {
+        console.log('[migration] plots cleared:', cleanedPlots, 'renamed:', renamedPlots, 'seed types removed:', cleanedSeeds);
+        this.save();
+      }
+      return { cleanedPlots, renamedPlots, cleanedSeeds };
     },
 
     // ============ Mutators (all auto-save) ============
