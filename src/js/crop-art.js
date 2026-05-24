@@ -122,20 +122,55 @@
         <path d="M 50 30 Q 48 25 44 22" stroke="#3a7d2c" stroke-width="0.8" fill="none"/>
       `;
     },
+    // eggplant (Asian long eggplant) — emoji-style. Deep purple slender
+    // body, slight curve, glossy reflective surface, green 5-leaf calyx
+    // + short stem at top.
     eggplant(c) {
-      const purple = c || '#7d3c98';
-      const dark = darken(purple, 0.2);
       return `
-        <g transform="rotate(-12 50 58)">
-          <ellipse cx="52" cy="58" rx="20" ry="32" fill="${purple}" stroke="${dark}" stroke-width="1.5"/>
-          <path d="M 38 42 Q 38 60 44 76" stroke="#fff" stroke-width="3" fill="none" opacity="0.28" stroke-linecap="round"/>
+        <defs>
+          <filter id="ds_eggplant" x="-15%" y="-15%" width="130%" height="130%">
+            <feGaussianBlur in="SourceAlpha" stdDeviation="1.3"/>
+            <feOffset dy="1.8" result="off"/>
+            <feComponentTransfer><feFuncA type="linear" slope="0.4"/></feComponentTransfer>
+            <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <linearGradient id="body_eggplant" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#3a0d4a"/>
+            <stop offset="35%" stop-color="#6a1b8a"/>
+            <stop offset="60%" stop-color="#9c40c4"/>
+            <stop offset="100%" stop-color="#4a1660"/>
+          </linearGradient>
+        </defs>
+        <ellipse cx="50" cy="92" rx="16" ry="2.5" fill="#000" opacity="0.22"/>
+
+        <g filter="url(#ds_eggplant)" transform="rotate(-10 50 58)">
+          <!-- Long slender eggplant body -->
+          <path d="M 50 88
+                   Q 38 86 36 70
+                   Q 34 50 40 38
+                   Q 48 28 52 28
+                   Q 56 28 60 38
+                   Q 64 50 62 70
+                   Q 60 86 50 88
+                   Z"
+                fill="url(#body_eggplant)" stroke="#1f0428" stroke-width="0.7"/>
+
+          <!-- Green 5-petal calyx at top -->
+          <g transform="translate(50 28)">
+            <path d="M -2 0 Q -8 -2 -10 -8 Q -3 -8 0 -4 Z" fill="#7cb342" stroke="#3a6e1a" stroke-width="0.5"/>
+            <path d="M 2 0 Q 8 -2 10 -8 Q 3 -8 0 -4 Z" fill="#7cb342" stroke="#3a6e1a" stroke-width="0.5"/>
+            <path d="M -3 -2 Q -6 -8 -4 -12 Q 0 -10 -1 -4 Z" fill="#8bc34a" stroke="#3a6e1a" stroke-width="0.5"/>
+            <path d="M 3 -2 Q 6 -8 4 -12 Q 0 -10 1 -4 Z" fill="#8bc34a" stroke="#3a6e1a" stroke-width="0.5"/>
+            <path d="M 0 -2 L 0 -14" stroke="#558b2f" stroke-width="2.3" stroke-linecap="round"/>
+          </g>
         </g>
-        <g transform="translate(42 28) rotate(-12)">
-          <path d="M 0 0 Q -6 4 -12 2 Q -10 9 -2 11 Z" fill="#6ab04c" stroke="#3a7d2c" stroke-width="0.8"/>
-          <path d="M 0 0 Q 6 4 12 2 Q 10 9 2 11 Z" fill="#6ab04c" stroke="#3a7d2c" stroke-width="0.8"/>
-          <path d="M -1 0 Q -3 8 -1 16 L 1 16 Q 3 8 1 0 Z" fill="#558b2f" stroke="#3a7d2c" stroke-width="0.8"/>
-          <path d="M 0 0 L 3 -10" stroke="#558b2f" stroke-width="2.5" stroke-linecap="round" fill="none"/>
-        </g>
+
+        <!-- Bold left-side glossy highlight stripe (eggplant's iconic shine) -->
+        <ellipse cx="40" cy="58" rx="3" ry="20" fill="#fff" opacity="0.42" transform="rotate(-15 40 58)"/>
+        <ellipse cx="40" cy="48" rx="2" ry="4" fill="#fff" opacity="0.7"/>
+
+        <!-- Base shadow -->
+        <ellipse cx="50" cy="88" rx="9" ry="1.3" fill="#000" opacity="0.28"/>
       `;
     },
     // jiucai (Chinese chives) — emoji-style. Bundle of 7 FLAT BLADE leaves
@@ -1524,22 +1559,62 @@
       `;
     },
 
+    // wo_sun (celtuce) — emoji-style. THICK pale yellow-green stem (the
+    // prized eating part) with vertical grooves + small green leaf cluster
+    // on top. The store's #1 vegetable.
     wo_sun(c) {
-      const green = c || '#aed581';
-      const dark = darken(green, 0.25);
-      const light = lighten(green, 0.15);
-      const stem = '#e6ee9c';
-      const darkStem = darken(stem, 0.25);
       return `
-        <ellipse cx="50" cy="88" rx="14" ry="3" fill="#a86c44"/>
-        <path d="M 40 86 Q 36 60 44 38 L 56 38 Q 64 60 60 86 Z" fill="${stem}" stroke="${darkStem}" stroke-width="1.2"/>
-        <path d="M 45 84 L 45 40" stroke="${darkStem}" stroke-width="0.5" opacity="0.6"/>
-        <path d="M 55 84 L 55 40" stroke="${darkStem}" stroke-width="0.5" opacity="0.6"/>
-        <path d="M 28 36 Q 32 20 44 22 Q 46 30 40 38 Q 32 38 28 36 Z" fill="${green}" stroke="${dark}" stroke-width="1"/>
-        <path d="M 72 36 Q 68 20 56 22 Q 54 30 60 38 Q 68 38 72 36 Z" fill="${green}" stroke="${dark}" stroke-width="1"/>
-        <path d="M 50 22 Q 42 8 38 14 Q 38 26 46 28 Q 50 26 50 22 Z" fill="${light}" stroke="${dark}" stroke-width="1"/>
-        <path d="M 50 22 Q 58 8 62 14 Q 62 26 54 28 Q 50 26 50 22 Z" fill="${light}" stroke="${dark}" stroke-width="1"/>
-        <path d="M 50 12 L 50 38" stroke="${dark}" stroke-width="0.6" opacity="0.5"/>
+        <defs>
+          <filter id="ds_wo_sun" x="-15%" y="-15%" width="130%" height="130%">
+            <feGaussianBlur in="SourceAlpha" stdDeviation="1.2"/>
+            <feOffset dy="1.6" result="off"/>
+            <feComponentTransfer><feFuncA type="linear" slope="0.38"/></feComponentTransfer>
+            <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <linearGradient id="stem_wo_sun" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#a3b85a"/>
+            <stop offset="30%" stop-color="#e6ee9c"/>
+            <stop offset="60%" stop-color="#fff59d"/>
+            <stop offset="100%" stop-color="#8b9c4a"/>
+          </linearGradient>
+          <radialGradient id="leaf_wo_sun" cx="40%" cy="70%" r="80%">
+            <stop offset="0%" stop-color="#c5e1a5"/>
+            <stop offset="55%" stop-color="#7cb342"/>
+            <stop offset="100%" stop-color="#3a6e1a"/>
+          </radialGradient>
+        </defs>
+        <ellipse cx="50" cy="92" rx="14" ry="2.5" fill="#000" opacity="0.22"/>
+
+        <g filter="url(#ds_wo_sun)">
+          <!-- Thick stem (main body) -->
+          <path d="M 38 88
+                   Q 34 70 36 50
+                   Q 38 36 42 32
+                   L 58 32
+                   Q 62 36 64 50
+                   Q 66 70 62 88
+                   Z"
+                fill="url(#stem_wo_sun)" stroke="#6b7a32" stroke-width="0.7"/>
+          <!-- Vertical grooves on stem -->
+          <path d="M 41 86 Q 39 68 41 42" stroke="#6b7a32" stroke-width="0.5" fill="none" opacity="0.65"/>
+          <path d="M 47 87 Q 45 65 47 38" stroke="#6b7a32" stroke-width="0.5" fill="none" opacity="0.65"/>
+          <path d="M 53 87 Q 55 65 53 38" stroke="#6b7a32" stroke-width="0.5" fill="none" opacity="0.65"/>
+          <path d="M 59 86 Q 61 68 59 42" stroke="#6b7a32" stroke-width="0.5" fill="none" opacity="0.65"/>
+
+          <!-- Small leaf cluster on top -->
+          <path d="M 42 32 Q 30 22 26 12 Q 36 8 44 22 Z" fill="url(#leaf_wo_sun)" stroke="#2e5613" stroke-width="0.5"/>
+          <path d="M 50 30 Q 46 16 48 6 Q 54 8 52 22 Z" fill="url(#leaf_wo_sun)" stroke="#2e5613" stroke-width="0.5"/>
+          <path d="M 58 32 Q 70 22 74 12 Q 64 8 56 22 Z" fill="url(#leaf_wo_sun)" stroke="#2e5613" stroke-width="0.5"/>
+        </g>
+
+        <!-- Highlight on left side of stem -->
+        <ellipse cx="42" cy="56" rx="2.5" ry="20" fill="#fff" opacity="0.4" transform="rotate(-3 42 56)"/>
+        <ellipse cx="44" cy="44" rx="2" ry="2.8" fill="#fff" opacity="0.65"/>
+        <!-- Leaf hot spot -->
+        <ellipse cx="48" cy="14" rx="1.5" ry="2" fill="#fff" opacity="0.55"/>
+
+        <!-- Base shadow -->
+        <ellipse cx="50" cy="88" rx="11" ry="1.4" fill="#000" opacity="0.28"/>
       `;
     },
 
@@ -1583,50 +1658,126 @@
       `;
     },
 
+    // tw_cauliflower (Taiwan cauliflower) — emoji-style. White/cream
+    // dome of loosely-packed florets (LOOSER than tight broccoli) with
+    // green leaves wrapping the base.
     tw_cauliflower(c) {
-      const cream = c || '#f5f5dc';
-      const dark = darken(cream, 0.3);
-      const green = '#9ccc65';
-      const darkGreen = '#558b2f';
       return `
-        <ellipse cx="50" cy="86" rx="14" ry="3" fill="#a86c44"/>
-        <path d="M 30 86 Q 26 60 30 50 Q 26 36 50 28 Q 74 36 70 50 Q 74 60 70 86 Z" fill="${cream}" stroke="${dark}" stroke-width="1.5"/>
-        <g fill="${lighten(cream, 0.05)}" stroke="${dark}" stroke-width="0.4" opacity="0.85">
-          <circle cx="36" cy="48" r="5"/>
-          <circle cx="44" cy="40" r="5.5"/>
-          <circle cx="54" cy="38" r="5.5"/>
-          <circle cx="62" cy="46" r="5"/>
-          <circle cx="40" cy="56" r="5"/>
-          <circle cx="50" cy="50" r="5.5"/>
-          <circle cx="60" cy="56" r="5"/>
-          <circle cx="46" cy="64" r="4.5"/>
-          <circle cx="55" cy="66" r="4.5"/>
+        <defs>
+          <filter id="ds_tw_cauliflower" x="-15%" y="-15%" width="130%" height="130%">
+            <feGaussianBlur in="SourceAlpha" stdDeviation="1.3"/>
+            <feOffset dy="1.8" result="off"/>
+            <feComponentTransfer><feFuncA type="linear" slope="0.4"/></feComponentTransfer>
+            <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <radialGradient id="floretA_tw_cauli" cx="35%" cy="30%" r="80%">
+            <stop offset="0%" stop-color="#fffefa"/>
+            <stop offset="55%" stop-color="#f0eed8"/>
+            <stop offset="100%" stop-color="#c9c39c"/>
+          </radialGradient>
+          <radialGradient id="floretB_tw_cauli" cx="60%" cy="30%" r="80%">
+            <stop offset="0%" stop-color="#fffefa"/>
+            <stop offset="60%" stop-color="#f5f3df"/>
+            <stop offset="100%" stop-color="#beba98"/>
+          </radialGradient>
+          <radialGradient id="leaf_tw_cauli" cx="40%" cy="70%" r="80%">
+            <stop offset="0%" stop-color="#aed581"/>
+            <stop offset="55%" stop-color="#558b2f"/>
+            <stop offset="100%" stop-color="#2e5613"/>
+          </radialGradient>
+        </defs>
+        <ellipse cx="50" cy="92" rx="22" ry="3" fill="#000" opacity="0.22"/>
+
+        <g filter="url(#ds_tw_cauliflower)">
+          <!-- Wrapping leaves at the base -->
+          <path d="M 22 70 Q 18 50 26 42 Q 36 44 34 62 Q 32 74 22 70 Z"
+                fill="url(#leaf_tw_cauli)" stroke="#2e5613" stroke-width="0.5"/>
+          <path d="M 78 70 Q 82 50 74 42 Q 64 44 66 62 Q 68 74 78 70 Z"
+                fill="url(#leaf_tw_cauli)" stroke="#2e5613" stroke-width="0.5"/>
+          <path d="M 28 86 Q 24 80 28 70 Q 38 70 36 80 Q 34 88 28 86 Z"
+                fill="url(#leaf_tw_cauli)" stroke="#2e5613" stroke-width="0.5"/>
+          <path d="M 72 86 Q 76 80 72 70 Q 62 70 64 80 Q 66 88 72 86 Z"
+                fill="url(#leaf_tw_cauli)" stroke="#2e5613" stroke-width="0.5"/>
+
+          <!-- Big dome of loose cauliflower florets -->
+          <path d="M 28 56 Q 24 30 50 22 Q 76 30 72 56 Q 60 70 50 70 Q 40 70 28 56 Z"
+                fill="url(#floretA_tw_cauli)" stroke="#a8a37c" stroke-width="0.6"/>
+
+          <!-- Looser, bigger florets on top -->
+          <circle cx="34" cy="48" r="8" fill="url(#floretA_tw_cauli)" stroke="#a8a37c" stroke-width="0.5"/>
+          <circle cx="44" cy="36" r="9" fill="url(#floretB_tw_cauli)" stroke="#a8a37c" stroke-width="0.5"/>
+          <circle cx="56" cy="34" r="9" fill="url(#floretA_tw_cauli)" stroke="#a8a37c" stroke-width="0.5"/>
+          <circle cx="66" cy="48" r="8" fill="url(#floretB_tw_cauli)" stroke="#a8a37c" stroke-width="0.5"/>
+          <circle cx="40" cy="58" r="7" fill="url(#floretB_tw_cauli)" stroke="#a8a37c" stroke-width="0.5"/>
+          <circle cx="50" cy="52" r="8" fill="url(#floretA_tw_cauli)" stroke="#a8a37c" stroke-width="0.5"/>
+          <circle cx="60" cy="58" r="7" fill="url(#floretB_tw_cauli)" stroke="#a8a37c" stroke-width="0.5"/>
         </g>
-        <path d="M 28 56 Q 22 60 22 70 Q 32 76 34 66 Z" fill="${green}" stroke="${darkGreen}" stroke-width="0.8"/>
-        <path d="M 72 56 Q 78 60 78 70 Q 68 76 66 66 Z" fill="${green}" stroke="${darkGreen}" stroke-width="0.8"/>
-        <path d="M 30 76 Q 26 80 28 86 L 34 86 Q 36 80 34 76 Z" fill="${green}" stroke="${darkGreen}" stroke-width="0.8"/>
-        <path d="M 70 76 Q 74 80 72 86 L 66 86 Q 64 80 66 76 Z" fill="${green}" stroke="${darkGreen}" stroke-width="0.8"/>
+
+        <!-- Glossy highlights on top of florets -->
+        <ellipse cx="40" cy="32" rx="2.5" ry="3.5" fill="#fff" opacity="0.7"/>
+        <ellipse cx="48" cy="26" rx="2" ry="2.5" fill="#fff" opacity="0.7"/>
+        <ellipse cx="32" cy="44" rx="2" ry="2.8" fill="#fff" opacity="0.6"/>
+
+        <!-- Base shadow -->
+        <ellipse cx="50" cy="88" rx="13" ry="1.4" fill="#000" opacity="0.25"/>
       `;
     },
 
+    // dong_gua (winter melon) — emoji-style. Big OVAL/OBLONG body
+    // (wider than tall), pale green with characteristic WHITE WAX dust
+    // spots, dark green stem nub on top.
     dong_gua(c) {
-      const green = c || '#a5d6a7';
-      const dark = darken(green, 0.3);
-      const light = lighten(green, 0.15);
       return `
-        <ellipse cx="50" cy="60" rx="34" ry="28" fill="${green}" stroke="${dark}" stroke-width="1.5"/>
-        <path d="M 18 60 Q 50 56 82 60" stroke="${dark}" stroke-width="0.6" opacity="0.5" fill="none"/>
-        <path d="M 20 50 Q 50 44 80 50" stroke="${dark}" stroke-width="0.6" opacity="0.4" fill="none"/>
-        <path d="M 20 70 Q 50 76 80 70" stroke="${dark}" stroke-width="0.6" opacity="0.4" fill="none"/>
-        <ellipse cx="35" cy="48" rx="14" ry="7" fill="${light}" opacity="0.6"/>
-        <ellipse cx="35" cy="46" rx="10" ry="4" fill="#fff" opacity="0.4"/>
-        <g fill="#fff" opacity="0.5">
-          <circle cx="32" cy="52" r="0.6"/><circle cx="40" cy="48" r="0.6"/><circle cx="50" cy="46" r="0.6"/>
-          <circle cx="60" cy="50" r="0.6"/><circle cx="68" cy="56" r="0.6"/><circle cx="60" cy="68" r="0.6"/>
-          <circle cx="45" cy="70" r="0.6"/><circle cx="32" cy="64" r="0.6"/>
+        <defs>
+          <filter id="ds_dong_gua" x="-15%" y="-15%" width="130%" height="130%">
+            <feGaussianBlur in="SourceAlpha" stdDeviation="1.5"/>
+            <feOffset dy="2" result="off"/>
+            <feComponentTransfer><feFuncA type="linear" slope="0.4"/></feComponentTransfer>
+            <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <radialGradient id="body_dong_gua" cx="40%" cy="35%" r="70%">
+            <stop offset="0%" stop-color="#dcedc8"/>
+            <stop offset="50%" stop-color="#a5d6a7"/>
+            <stop offset="100%" stop-color="#4a8a4f"/>
+          </radialGradient>
+        </defs>
+        <ellipse cx="50" cy="94" rx="30" ry="3" fill="#000" opacity="0.25"/>
+
+        <g filter="url(#ds_dong_gua)">
+          <!-- Big oval winter melon body -->
+          <ellipse cx="50" cy="60" rx="34" ry="28" fill="url(#body_dong_gua)" stroke="#2e5613" stroke-width="0.8"/>
+
+          <!-- Longitudinal stripe shading (subtle) -->
+          <path d="M 30 36 Q 30 60 36 84" stroke="#4a8a4f" stroke-width="0.6" fill="none" opacity="0.5"/>
+          <path d="M 50 32 L 50 88" stroke="#4a8a4f" stroke-width="0.6" fill="none" opacity="0.5"/>
+          <path d="M 70 36 Q 70 60 64 84" stroke="#4a8a4f" stroke-width="0.6" fill="none" opacity="0.5"/>
+
+          <!-- WHITE WAX DUST spots (the winter-melon signature) -->
+          <g fill="#fff" opacity="0.7">
+            <ellipse cx="30" cy="52" rx="1.2" ry="0.8"/>
+            <ellipse cx="38" cy="48" rx="1.5" ry="1"/>
+            <ellipse cx="46" cy="46" rx="1" ry="0.7"/>
+            <ellipse cx="58" cy="52" rx="1.3" ry="0.9"/>
+            <ellipse cx="66" cy="48" rx="1.2" ry="0.8"/>
+            <ellipse cx="34" cy="66" rx="1" ry="0.7"/>
+            <ellipse cx="42" cy="72" rx="1.2" ry="0.8"/>
+            <ellipse cx="54" cy="76" rx="1.4" ry="0.9"/>
+            <ellipse cx="62" cy="70" rx="1.1" ry="0.7"/>
+            <ellipse cx="72" cy="60" rx="1.2" ry="0.8"/>
+          </g>
+
+          <!-- Small dark green stem nub on top -->
+          <path d="M 50 34 L 50 22" stroke="#3a6e1a" stroke-width="2.3" stroke-linecap="round"/>
+          <ellipse cx="48" cy="24" rx="6" ry="3" fill="#7cb342" stroke="#3a6e1a" stroke-width="0.5" transform="rotate(-30 48 24)"/>
+          <ellipse cx="52" cy="24" rx="6" ry="3" fill="#7cb342" stroke="#3a6e1a" stroke-width="0.5" transform="rotate(30 52 24)"/>
         </g>
-        <path d="M 50 32 L 50 22" stroke="#6d4528" stroke-width="2" stroke-linecap="round"/>
-        <ellipse cx="48" cy="22" rx="6" ry="3" fill="#6ab04c" transform="rotate(-30 48 22)"/>
+
+        <!-- BIG glossy highlight (top-left blob) — this is what makes it look fresh/dewy -->
+        <ellipse cx="34" cy="44" rx="10" ry="8" fill="#fff" opacity="0.45"/>
+        <ellipse cx="32" cy="40" rx="5" ry="3" fill="#fff" opacity="0.75"/>
+
+        <!-- Base shadow -->
+        <ellipse cx="50" cy="90" rx="22" ry="1.5" fill="#000" opacity="0.3"/>
       `;
     },
 
@@ -1649,45 +1800,78 @@
       `;
     },
 
+    // lian_ou (lotus root) — emoji-style. 3 chained tubular segments lying
+    // horizontally. RIGHT END is sliced open showing the iconic 9-hole
+    // cross-section pattern (the "snowflake lace"). Cream colored body.
     lian_ou(c) {
-      const cream = c || '#fff8e7';
-      const dark = '#a89070';
-      const stroke = '#7a6649';
       return `
-        <ellipse cx="50" cy="86" rx="16" ry="3" fill="#a86c44" opacity="0.5"/>
-        <g transform="rotate(-15 50 58)">
-          <ellipse cx="28" cy="58" rx="10" ry="13" fill="${cream}" stroke="${stroke}" stroke-width="1.2"/>
-          <ellipse cx="50" cy="58" rx="12" ry="15" fill="${cream}" stroke="${stroke}" stroke-width="1.2"/>
-          <ellipse cx="72" cy="58" rx="10" ry="13" fill="${cream}" stroke="${stroke}" stroke-width="1.2"/>
-          <g fill="${dark}" opacity="0.85">
-            <circle cx="28" cy="56" r="1.8"/>
-            <circle cx="25" cy="60" r="1.4"/>
-            <circle cx="31" cy="60" r="1.4"/>
-            <circle cx="26" cy="55" r="1.2"/>
-            <circle cx="30" cy="55" r="1.2"/>
-            <circle cx="28" cy="62" r="1.2"/>
+        <defs>
+          <filter id="ds_lian_ou" x="-15%" y="-15%" width="130%" height="130%">
+            <feGaussianBlur in="SourceAlpha" stdDeviation="1.3"/>
+            <feOffset dy="1.8" result="off"/>
+            <feComponentTransfer><feFuncA type="linear" slope="0.38"/></feComponentTransfer>
+            <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <linearGradient id="body_lian_ou" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stop-color="#c5b18a"/>
+            <stop offset="30%" stop-color="#fff8e1"/>
+            <stop offset="65%" stop-color="#fff8e1"/>
+            <stop offset="100%" stop-color="#b8a374"/>
+          </linearGradient>
+          <radialGradient id="crosssect_lian_ou" cx="50%" cy="50%" r="55%">
+            <stop offset="0%" stop-color="#fffceb"/>
+            <stop offset="100%" stop-color="#d8c597"/>
+          </radialGradient>
+        </defs>
+        <ellipse cx="50" cy="90" rx="32" ry="3" fill="#000" opacity="0.22"/>
+
+        <g filter="url(#ds_lian_ou)" transform="rotate(-6 50 60)">
+          <!-- Three connected tubular segments (horizontal lying) -->
+          <path d="M 14 60
+                   Q 12 48 18 44
+                   Q 28 42 32 46
+                   Q 34 50 38 46
+                   Q 48 42 52 46
+                   Q 54 50 58 46
+                   Q 68 42 72 46
+                   Q 74 50 78 50
+                   Q 86 54 84 64
+                   Q 84 74 76 76
+                   Q 70 78 62 74
+                   Q 56 70 50 74
+                   Q 44 78 38 74
+                   Q 32 70 26 74
+                   Q 18 78 14 70
+                   Z"
+                fill="url(#body_lian_ou)" stroke="#8a7553" stroke-width="0.7"/>
+
+          <!-- Indentation lines between segments -->
+          <path d="M 34 48 Q 36 60 32 72" stroke="#8a7553" stroke-width="0.5" fill="none" opacity="0.65"/>
+          <path d="M 54 48 Q 56 60 52 72" stroke="#8a7553" stroke-width="0.5" fill="none" opacity="0.65"/>
+
+          <!-- Cross-section "snowflake" hole pattern on RIGHT END -->
+          <ellipse cx="80" cy="60" rx="6" ry="10" fill="url(#crosssect_lian_ou)" stroke="#8a7553" stroke-width="0.6"/>
+          <g fill="#7a6649">
+            <!-- Center large hole -->
+            <ellipse cx="80" cy="60" rx="1.6" ry="2" opacity="0.9"/>
+            <!-- 8 surrounding holes -->
+            <ellipse cx="80" cy="55" rx="1.1" ry="1.5" opacity="0.85"/>
+            <ellipse cx="80" cy="65" rx="1.1" ry="1.5" opacity="0.85"/>
+            <ellipse cx="76" cy="57" rx="1" ry="1.3" opacity="0.85"/>
+            <ellipse cx="76" cy="63" rx="1" ry="1.3" opacity="0.85"/>
+            <ellipse cx="83" cy="56" rx="1" ry="1.3" opacity="0.85"/>
+            <ellipse cx="83" cy="64" rx="1" ry="1.3" opacity="0.85"/>
+            <ellipse cx="77" cy="60" rx="1" ry="1.3" opacity="0.85"/>
+            <ellipse cx="83" cy="60" rx="1" ry="1.3" opacity="0.85"/>
           </g>
-          <g fill="${dark}" opacity="0.85">
-            <circle cx="50" cy="55" r="2"/>
-            <circle cx="46" cy="60" r="1.6"/>
-            <circle cx="54" cy="60" r="1.6"/>
-            <circle cx="47" cy="54" r="1.4"/>
-            <circle cx="53" cy="54" r="1.4"/>
-            <circle cx="50" cy="63" r="1.4"/>
-            <circle cx="44" cy="56" r="1.2"/>
-            <circle cx="56" cy="56" r="1.2"/>
-          </g>
-          <g fill="${dark}" opacity="0.85">
-            <circle cx="72" cy="56" r="1.8"/>
-            <circle cx="69" cy="60" r="1.4"/>
-            <circle cx="75" cy="60" r="1.4"/>
-            <circle cx="70" cy="55" r="1.2"/>
-            <circle cx="74" cy="55" r="1.2"/>
-            <circle cx="72" cy="62" r="1.2"/>
-          </g>
-          <ellipse cx="38" cy="58" rx="2" ry="3.5" fill="${stroke}" opacity="0.6"/>
-          <ellipse cx="62" cy="58" rx="2" ry="3.5" fill="${stroke}" opacity="0.6"/>
         </g>
+
+        <!-- Glossy top highlight along the length -->
+        <path d="M 18 52 Q 50 50 76 52" stroke="#fff" stroke-width="2" fill="none" opacity="0.5" stroke-linecap="round"/>
+        <ellipse cx="40" cy="52" rx="3" ry="1.5" fill="#fff" opacity="0.65"/>
+
+        <!-- Base shadow -->
+        <ellipse cx="50" cy="86" rx="24" ry="1.4" fill="#000" opacity="0.25"/>
       `;
     },
 
@@ -1816,17 +2000,63 @@
       `;
     },
 
+    // sheng_jiang (ginger) — emoji-style. Knobby root with 4 finger-like
+    // lobes. Tan/light brown skin with darker ridges.
     sheng_jiang(c) {
-      const tan = c || '#d4a574';
-      const dark = '#8b6543';
       return `
-        <ellipse cx="50" cy="88" rx="20" ry="3" fill="#a86c44" opacity="0.5"/>
-        <path d="M 22 72 Q 18 60 22 52 Q 30 46 36 50 Q 42 44 50 50 Q 58 44 64 50 Q 72 46 78 54 Q 80 64 74 72 Q 64 78 56 74 Q 50 80 42 76 Q 32 80 26 76 Q 20 76 22 72 Z" fill="${tan}" stroke="${dark}" stroke-width="1.2"/>
-        <path d="M 30 60 Q 38 58 36 64" stroke="${dark}" stroke-width="0.6" fill="none" opacity="0.55"/>
-        <path d="M 46 56 Q 52 56 50 62" stroke="${dark}" stroke-width="0.6" fill="none" opacity="0.55"/>
-        <path d="M 60 58 Q 68 60 66 66" stroke="${dark}" stroke-width="0.6" fill="none" opacity="0.55"/>
-        <ellipse cx="32" cy="56" rx="4" ry="2" fill="#fff" opacity="0.35"/>
-        <ellipse cx="56" cy="56" rx="5" ry="2" fill="#fff" opacity="0.35"/>
+        <defs>
+          <filter id="ds_sheng_jiang" x="-15%" y="-15%" width="130%" height="130%">
+            <feGaussianBlur in="SourceAlpha" stdDeviation="1.3"/>
+            <feOffset dy="1.8" result="off"/>
+            <feComponentTransfer><feFuncA type="linear" slope="0.4"/></feComponentTransfer>
+            <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <linearGradient id="body_sheng_jiang" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#f2d9b4"/>
+            <stop offset="50%" stop-color="#d4a574"/>
+            <stop offset="100%" stop-color="#8b6543"/>
+          </linearGradient>
+        </defs>
+        <ellipse cx="50" cy="90" rx="28" ry="3" fill="#000" opacity="0.22"/>
+
+        <g filter="url(#ds_sheng_jiang)">
+          <!-- Knobby ginger body with finger-like protrusions -->
+          <path d="M 18 64
+                   Q 14 50 22 44
+                   Q 30 42 32 50
+                   Q 36 44 42 46
+                   Q 46 50 48 56
+                   Q 52 46 60 44
+                   Q 68 46 66 56
+                   Q 74 50 82 56
+                   Q 86 66 78 72
+                   Q 70 76 64 70
+                   Q 60 78 52 76
+                   Q 46 72 44 64
+                   Q 38 76 30 74
+                   Q 22 72 20 68
+                   Z"
+                fill="url(#body_sheng_jiang)" stroke="#5c4226" stroke-width="0.7"/>
+
+          <!-- Knobby ridge details -->
+          <path d="M 26 58 Q 32 56 34 60" stroke="#8b6543" stroke-width="0.5" fill="none" opacity="0.7"/>
+          <path d="M 44 58 Q 50 56 52 62" stroke="#8b6543" stroke-width="0.5" fill="none" opacity="0.7"/>
+          <path d="M 62 58 Q 70 56 72 60" stroke="#8b6543" stroke-width="0.5" fill="none" opacity="0.7"/>
+
+          <!-- Vertical fiber lines -->
+          <path d="M 28 50 Q 30 60 28 70" stroke="#8b6543" stroke-width="0.4" fill="none" opacity="0.55"/>
+          <path d="M 50 48 Q 52 60 50 72" stroke="#8b6543" stroke-width="0.4" fill="none" opacity="0.55"/>
+          <path d="M 72 50 Q 74 60 72 70" stroke="#8b6543" stroke-width="0.4" fill="none" opacity="0.55"/>
+        </g>
+
+        <!-- Highlights on tops of fingers -->
+        <ellipse cx="26" cy="50" rx="3" ry="1.8" fill="#fff" opacity="0.5"/>
+        <ellipse cx="44" cy="52" rx="3" ry="1.8" fill="#fff" opacity="0.5"/>
+        <ellipse cx="62" cy="50" rx="3" ry="1.8" fill="#fff" opacity="0.5"/>
+        <ellipse cx="78" cy="58" rx="3" ry="1.8" fill="#fff" opacity="0.5"/>
+
+        <!-- Base shadow -->
+        <ellipse cx="50" cy="86" rx="22" ry="1.4" fill="#000" opacity="0.25"/>
       `;
     },
 
