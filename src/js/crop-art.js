@@ -1618,43 +1618,114 @@
       `;
     },
 
+    // pa_pa_gan (Papa Tangerine) — emoji-style. Large bright orange citrus
+    // with characteristic dimpled skin texture + green leaves + stem.
     pa_pa_gan(c) {
-      const orange = c || '#ffa726';
-      const dark = darken(orange, 0.2);
-      const green = '#558b2f';
       return `
-        <circle cx="50" cy="58" r="28" fill="${orange}" stroke="${dark}" stroke-width="1.5"/>
-        <ellipse cx="50" cy="58" rx="22" ry="6" fill="none" stroke="${dark}" stroke-width="0.6" opacity="0.35"/>
-        <ellipse cx="42" cy="48" rx="9" ry="5" fill="#fff" opacity="0.4"/>
-        <g fill="${dark}" opacity="0.3">
-          <circle cx="35" cy="50" r="0.7"/><circle cx="45" cy="46" r="0.7"/>
-          <circle cx="58" cy="48" r="0.7"/><circle cx="64" cy="56" r="0.7"/>
-          <circle cx="60" cy="68" r="0.7"/><circle cx="42" cy="72" r="0.7"/>
-          <circle cx="32" cy="62" r="0.7"/><circle cx="50" cy="78" r="0.7"/>
+        <defs>
+          <filter id="ds_pa_pa_gan" x="-15%" y="-15%" width="130%" height="130%">
+            <feGaussianBlur in="SourceAlpha" stdDeviation="1.4"/>
+            <feOffset dy="1.8" result="off"/>
+            <feComponentTransfer><feFuncA type="linear" slope="0.4"/></feComponentTransfer>
+            <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <radialGradient id="body_pa_pa_gan" cx="35%" cy="30%" r="80%">
+            <stop offset="0%" stop-color="#ffd180"/>
+            <stop offset="55%" stop-color="#ffa726"/>
+            <stop offset="100%" stop-color="#bf5500"/>
+          </radialGradient>
+          <radialGradient id="leaf_pa_pa_gan" cx="40%" cy="30%" r="80%">
+            <stop offset="0%" stop-color="#9ccc65"/>
+            <stop offset="100%" stop-color="#2e6b1d"/>
+          </radialGradient>
+        </defs>
+        <ellipse cx="50" cy="92" rx="24" ry="3" fill="#000" opacity="0.25"/>
+        <g filter="url(#ds_pa_pa_gan)">
+          <circle cx="50" cy="58" r="28" fill="url(#body_pa_pa_gan)" stroke="#8b3a00" stroke-width="0.8"/>
+          <!-- dimpled skin texture -->
+          <g fill="#bf5500" opacity="0.3">
+            <circle cx="35" cy="50" r="0.7"/><circle cx="45" cy="46" r="0.7"/><circle cx="58" cy="48" r="0.7"/>
+            <circle cx="64" cy="56" r="0.7"/><circle cx="60" cy="68" r="0.7"/><circle cx="42" cy="72" r="0.7"/>
+            <circle cx="32" cy="62" r="0.7"/><circle cx="50" cy="78" r="0.7"/><circle cx="38" cy="60" r="0.7"/>
+          </g>
+          <!-- stem nub + leaves -->
+          <path d="M 50 30 L 50 22" stroke="#6d4528" stroke-width="2.2" stroke-linecap="round"/>
+          <ellipse cx="42" cy="26" rx="6.5" ry="3.5" fill="url(#leaf_pa_pa_gan)" stroke="#2e5613" stroke-width="0.5" transform="rotate(-30 42 26)"/>
+          <ellipse cx="58" cy="26" rx="6.5" ry="3.5" fill="url(#leaf_pa_pa_gan)" stroke="#2e5613" stroke-width="0.5" transform="rotate(30 58 26)"/>
         </g>
-        <path d="M 50 30 L 50 22" stroke="#6d4528" stroke-width="2" stroke-linecap="round"/>
-        <ellipse cx="42" cy="26" rx="6" ry="3.5" fill="${green}" stroke="#3a7d2c" stroke-width="0.6" transform="rotate(-30 42 26)"/>
-        <ellipse cx="58" cy="26" rx="6" ry="3.5" fill="${green}" stroke="#3a7d2c" stroke-width="0.6" transform="rotate(30 58 26)"/>
+        <ellipse cx="40" cy="46" rx="8" ry="5" fill="#fff" opacity="0.55"/>
+        <ellipse cx="38" cy="42" rx="3" ry="2.5" fill="#fff" opacity="0.85"/>
+        <ellipse cx="50" cy="88" rx="16" ry="1.4" fill="#000" opacity="0.25"/>
       `;
     },
 
-    wo_gan(c) { return matureArt.pa_pa_gan(c || '#ff9800'); },
-    sha_tang_ju(c) {
-      // Small mandarins, render two side by side
-      const orange = c || '#ffb74d';
-      const dark = darken(orange, 0.2);
+    // wo_gan (Wokan Mandarin) — smaller, deeper orange version of pa_pa_gan
+    wo_gan(c) {
       return `
-        <ellipse cx="50" cy="84" rx="20" ry="4" fill="#a86c44" opacity="0.4"/>
-        <circle cx="36" cy="62" r="16" fill="${orange}" stroke="${dark}" stroke-width="1.2"/>
-        <ellipse cx="32" cy="56" rx="5" ry="3" fill="#fff" opacity="0.4"/>
-        <path d="M 36 46 L 36 40" stroke="#6d4528" stroke-width="1.5" stroke-linecap="round"/>
-        <ellipse cx="32" cy="42" rx="4" ry="2.5" fill="#558b2f" transform="rotate(-30 32 42)"/>
-        <circle cx="64" cy="58" r="14" fill="${orange}" stroke="${dark}" stroke-width="1.2"/>
-        <ellipse cx="61" cy="53" rx="4" ry="2.5" fill="#fff" opacity="0.4"/>
-        <path d="M 64 44 L 64 40" stroke="#6d4528" stroke-width="1.5" stroke-linecap="round"/>
-        <ellipse cx="68" cy="42" rx="4" ry="2.5" fill="#558b2f" transform="rotate(30 68 42)"/>
-        <circle cx="52" cy="76" r="12" fill="${orange}" stroke="${dark}" stroke-width="1.2"/>
-        <ellipse cx="49" cy="72" rx="3" ry="2" fill="#fff" opacity="0.4"/>
+        <defs>
+          <filter id="ds_wo_gan" x="-15%" y="-15%" width="130%" height="130%">
+            <feGaussianBlur in="SourceAlpha" stdDeviation="1.3"/>
+            <feOffset dy="1.6" result="off"/>
+            <feComponentTransfer><feFuncA type="linear" slope="0.38"/></feComponentTransfer>
+            <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <radialGradient id="body_wo_gan" cx="35%" cy="30%" r="80%">
+            <stop offset="0%" stop-color="#ffb74d"/>
+            <stop offset="55%" stop-color="#ef6c00"/>
+            <stop offset="100%" stop-color="#8b3a00"/>
+          </radialGradient>
+        </defs>
+        <ellipse cx="50" cy="92" rx="20" ry="2.5" fill="#000" opacity="0.22"/>
+        <g filter="url(#ds_wo_gan)">
+          <circle cx="50" cy="60" r="24" fill="url(#body_wo_gan)" stroke="#6b2a00" stroke-width="0.8"/>
+          <path d="M 50 36 L 50 28" stroke="#6d4528" stroke-width="2" stroke-linecap="round"/>
+          <ellipse cx="44" cy="32" rx="5" ry="3" fill="#558b2f" stroke="#2e5613" stroke-width="0.5" transform="rotate(-30 44 32)"/>
+          <ellipse cx="56" cy="32" rx="5" ry="3" fill="#558b2f" stroke="#2e5613" stroke-width="0.5" transform="rotate(30 56 32)"/>
+        </g>
+        <ellipse cx="42" cy="50" rx="6" ry="4" fill="#fff" opacity="0.55"/>
+        <ellipse cx="41" cy="46" rx="2.5" ry="2" fill="#fff" opacity="0.85"/>
+        <ellipse cx="50" cy="88" rx="13" ry="1.3" fill="#000" opacity="0.22"/>
+      `;
+    },
+
+    // sha_tang_ju (Sugar Mandarin) — small mandarins stacked in pyramid
+    sha_tang_ju(c) {
+      return `
+        <defs>
+          <filter id="ds_sha_tang_ju" x="-15%" y="-15%" width="130%" height="130%">
+            <feGaussianBlur in="SourceAlpha" stdDeviation="1.2"/>
+            <feOffset dy="1.6" result="off"/>
+            <feComponentTransfer><feFuncA type="linear" slope="0.38"/></feComponentTransfer>
+            <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <radialGradient id="body_sha_tang_ju" cx="35%" cy="30%" r="80%">
+            <stop offset="0%" stop-color="#ffd180"/>
+            <stop offset="55%" stop-color="#ff9800"/>
+            <stop offset="100%" stop-color="#a04500"/>
+          </radialGradient>
+        </defs>
+        <ellipse cx="50" cy="92" rx="24" ry="3" fill="#000" opacity="0.25"/>
+        <g filter="url(#ds_sha_tang_ju)">
+          <!-- back-left mandarin -->
+          <circle cx="34" cy="70" r="15" fill="url(#body_sha_tang_ju)" stroke="#8b3a00" stroke-width="0.7"/>
+          <path d="M 34 56 L 34 50" stroke="#6d4528" stroke-width="1.4" stroke-linecap="round"/>
+          <ellipse cx="31" cy="52" rx="3" ry="1.8" fill="#558b2f" transform="rotate(-30 31 52)"/>
+          <!-- back-right mandarin -->
+          <circle cx="66" cy="68" r="14" fill="url(#body_sha_tang_ju)" stroke="#8b3a00" stroke-width="0.7"/>
+          <path d="M 66 55 L 66 50" stroke="#6d4528" stroke-width="1.4" stroke-linecap="round"/>
+          <ellipse cx="69" cy="52" rx="3" ry="1.8" fill="#558b2f" transform="rotate(30 69 52)"/>
+          <!-- front mandarin (largest, on top) -->
+          <circle cx="50" cy="50" r="17" fill="url(#body_sha_tang_ju)" stroke="#8b3a00" stroke-width="0.7"/>
+          <path d="M 50 34 L 50 26" stroke="#6d4528" stroke-width="1.6" stroke-linecap="round"/>
+          <ellipse cx="44" cy="30" rx="4" ry="2.5" fill="#558b2f" stroke="#2e5613" stroke-width="0.4" transform="rotate(-30 44 30)"/>
+          <ellipse cx="56" cy="30" rx="4" ry="2.5" fill="#558b2f" stroke="#2e5613" stroke-width="0.4" transform="rotate(30 56 30)"/>
+        </g>
+        <!-- highlights on each -->
+        <ellipse cx="28" cy="64" rx="3" ry="2" fill="#fff" opacity="0.55"/>
+        <ellipse cx="60" cy="62" rx="3" ry="2" fill="#fff" opacity="0.55"/>
+        <ellipse cx="42" cy="42" rx="4" ry="3" fill="#fff" opacity="0.65"/>
+        <ellipse cx="40" cy="38" rx="2" ry="1.6" fill="#fff" opacity="0.85"/>
+        <ellipse cx="50" cy="88" rx="18" ry="1.4" fill="#000" opacity="0.25"/>
       `;
     },
 
@@ -1925,128 +1996,258 @@
       `;
     },
 
+    // ye_zi (Young Coconut) — emoji-style. Green outer husk (not the brown
+    // mature variant) with WHITE-FLAT-CIRCLE on top (the drinking hole cut)
+    // and the iconic 3-eye "face" on the front.
     ye_zi(c) {
-      const brown = c || '#8d6e63';
-      const dark = darken(brown, 0.22);
-      const cream = '#fff8e7';
-      const green = '#558b2f';
       return `
-        <circle cx="50" cy="62" r="28" fill="${brown}" stroke="${dark}" stroke-width="1.5"/>
-        <ellipse cx="44" cy="54" rx="10" ry="6" fill="${cream}" opacity="0.5"/>
-        <g fill="${dark}" opacity="0.7">
-          <circle cx="42" cy="48" r="2"/>
-          <circle cx="52" cy="45" r="2"/>
-          <circle cx="47" cy="56" r="2"/>
+        <defs>
+          <filter id="ds_ye_zi" x="-15%" y="-15%" width="130%" height="130%">
+            <feGaussianBlur in="SourceAlpha" stdDeviation="1.4"/>
+            <feOffset dy="1.8" result="off"/>
+            <feComponentTransfer><feFuncA type="linear" slope="0.4"/></feComponentTransfer>
+            <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <radialGradient id="body_ye_zi" cx="35%" cy="30%" r="80%">
+            <stop offset="0%" stop-color="#c5e1a5"/>
+            <stop offset="50%" stop-color="#7cb342"/>
+            <stop offset="100%" stop-color="#2e5613"/>
+          </radialGradient>
+          <radialGradient id="top_ye_zi" cx="50%" cy="40%" r="60%">
+            <stop offset="0%" stop-color="#ffffff"/>
+            <stop offset="80%" stop-color="#f5f0d8"/>
+            <stop offset="100%" stop-color="#c9b890"/>
+          </radialGradient>
+        </defs>
+        <ellipse cx="50" cy="92" rx="24" ry="3" fill="#000" opacity="0.25"/>
+        <g filter="url(#ds_ye_zi)">
+          <!-- Main green coconut body -->
+          <circle cx="50" cy="62" r="28" fill="url(#body_ye_zi)" stroke="#1f4d10" stroke-width="0.8"/>
+
+          <!-- 3-eye coconut "face" (front side dark holes) -->
+          <g fill="#1f4d10" opacity="0.8">
+            <circle cx="42" cy="56" r="2.2"/>
+            <circle cx="56" cy="54" r="2.2"/>
+            <circle cx="48" cy="68" r="2.2"/>
+          </g>
+          <g fill="#fff" opacity="0.6">
+            <circle cx="41.5" cy="55.5" r="0.7"/>
+            <circle cx="55.5" cy="53.5" r="0.7"/>
+            <circle cx="47.5" cy="67.5" r="0.7"/>
+          </g>
+
+          <!-- White drinking-hole cut on TOP -->
+          <ellipse cx="50" cy="36" rx="13" ry="4" fill="url(#top_ye_zi)" stroke="#7a6649" stroke-width="0.6"/>
+          <ellipse cx="50" cy="35" rx="6" ry="1.6" fill="#5a4a26"/>
+          <ellipse cx="50" cy="34" rx="3" ry="0.8" fill="#3a2810"/>
         </g>
-        <g fill="${cream}" opacity="0.85">
-          <circle cx="42" cy="48" r="0.7"/>
-          <circle cx="52" cy="45" r="0.7"/>
-          <circle cx="47" cy="56" r="0.7"/>
-        </g>
-        <path d="M 50 34 L 50 22" stroke="#6d4528" stroke-width="1.5" stroke-linecap="round"/>
-        <path d="M 50 22 Q 30 14 22 18 Q 32 26 50 22" fill="${green}" stroke="#3a7d2c" stroke-width="0.8"/>
-        <path d="M 50 22 Q 70 14 78 18 Q 68 26 50 22" fill="${green}" stroke="#3a7d2c" stroke-width="0.8"/>
-        <path d="M 50 22 Q 46 8 38 6 Q 42 16 50 22" fill="#7cb342" stroke="#3a7d2c" stroke-width="0.8"/>
-        <path d="M 50 22 Q 54 8 62 6 Q 58 16 50 22" fill="#7cb342" stroke="#3a7d2c" stroke-width="0.8"/>
+        <!-- Big shiny highlight on coconut left -->
+        <ellipse cx="38" cy="50" rx="6" ry="10" fill="#fff" opacity="0.4"/>
+        <ellipse cx="36" cy="44" rx="2.5" ry="3" fill="#fff" opacity="0.75"/>
+        <ellipse cx="50" cy="88" rx="20" ry="1.4" fill="#000" opacity="0.25"/>
       `;
     },
 
+    // xiang_yin_putao (Shine Muscat Grape) — emoji-style. Cluster of
+    // round PALE GREEN grapes (Shine Muscat is the green variety) tightly
+    // packed in classic triangular bunch shape, each with own highlight.
     xiang_yin_putao(c) {
-      const green = c || '#9ccc65';
-      const dark = darken(green, 0.25);
-      const light = lighten(green, 0.15);
-      const stem = '#6d4528';
       return `
-        <path d="M 50 18 L 50 32" stroke="${stem}" stroke-width="2" stroke-linecap="round"/>
-        <ellipse cx="42" cy="20" rx="7" ry="3" fill="#558b2f" stroke="#3a7d2c" stroke-width="0.6" transform="rotate(-30 42 20)"/>
-        <ellipse cx="58" cy="20" rx="7" ry="3" fill="#558b2f" stroke="#3a7d2c" stroke-width="0.6" transform="rotate(30 58 20)"/>
-        <g stroke="${dark}" stroke-width="0.6">
-          <circle cx="42" cy="38" r="7" fill="${green}"/>
-          <circle cx="50" cy="38" r="7" fill="${light}"/>
-          <circle cx="58" cy="38" r="7" fill="${green}"/>
-          <circle cx="38" cy="50" r="7" fill="${light}"/>
-          <circle cx="46" cy="50" r="7" fill="${green}"/>
-          <circle cx="54" cy="50" r="7" fill="${green}"/>
-          <circle cx="62" cy="50" r="7" fill="${light}"/>
-          <circle cx="42" cy="62" r="7" fill="${green}"/>
-          <circle cx="50" cy="62" r="7" fill="${light}"/>
-          <circle cx="58" cy="62" r="7" fill="${green}"/>
-          <circle cx="46" cy="74" r="7" fill="${light}"/>
-          <circle cx="54" cy="74" r="7" fill="${green}"/>
-          <circle cx="50" cy="84" r="6" fill="${green}"/>
+        <defs>
+          <filter id="ds_xiang_yin_putao" x="-15%" y="-15%" width="130%" height="130%">
+            <feGaussianBlur in="SourceAlpha" stdDeviation="1.2"/>
+            <feOffset dy="1.6" result="off"/>
+            <feComponentTransfer><feFuncA type="linear" slope="0.38"/></feComponentTransfer>
+            <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <radialGradient id="grape_xiang_yin_putao" cx="35%" cy="30%" r="80%">
+            <stop offset="0%" stop-color="#dce88f"/>
+            <stop offset="55%" stop-color="#9ccc65"/>
+            <stop offset="100%" stop-color="#4a7d1e"/>
+          </radialGradient>
+        </defs>
+        <ellipse cx="50" cy="92" rx="22" ry="3" fill="#000" opacity="0.25"/>
+        <g filter="url(#ds_xiang_yin_putao)">
+          <!-- Stem + leaves -->
+          <path d="M 50 18 L 50 30" stroke="#6d4528" stroke-width="2" stroke-linecap="round"/>
+          <ellipse cx="42" cy="20" rx="7" ry="3.5" fill="#558b2f" stroke="#2e5613" stroke-width="0.5" transform="rotate(-30 42 20)"/>
+          <ellipse cx="58" cy="20" rx="7" ry="3.5" fill="#558b2f" stroke="#2e5613" stroke-width="0.5" transform="rotate(30 58 20)"/>
+          <!-- Grape cluster, triangular arrangement -->
+          <g stroke="#2e5613" stroke-width="0.5">
+            <circle cx="42" cy="36" r="7" fill="url(#grape_xiang_yin_putao)"/>
+            <circle cx="50" cy="34" r="7.5" fill="url(#grape_xiang_yin_putao)"/>
+            <circle cx="58" cy="36" r="7" fill="url(#grape_xiang_yin_putao)"/>
+            <circle cx="38" cy="48" r="7" fill="url(#grape_xiang_yin_putao)"/>
+            <circle cx="46" cy="48" r="7" fill="url(#grape_xiang_yin_putao)"/>
+            <circle cx="54" cy="48" r="7" fill="url(#grape_xiang_yin_putao)"/>
+            <circle cx="62" cy="48" r="7" fill="url(#grape_xiang_yin_putao)"/>
+            <circle cx="42" cy="60" r="7" fill="url(#grape_xiang_yin_putao)"/>
+            <circle cx="50" cy="60" r="7.5" fill="url(#grape_xiang_yin_putao)"/>
+            <circle cx="58" cy="60" r="7" fill="url(#grape_xiang_yin_putao)"/>
+            <circle cx="46" cy="72" r="7" fill="url(#grape_xiang_yin_putao)"/>
+            <circle cx="54" cy="72" r="7" fill="url(#grape_xiang_yin_putao)"/>
+            <circle cx="50" cy="84" r="6.5" fill="url(#grape_xiang_yin_putao)"/>
+          </g>
         </g>
-        <g fill="#fff" opacity="0.5">
-          <circle cx="40" cy="36" r="1.5"/><circle cx="48" cy="36" r="1.5"/><circle cx="56" cy="36" r="1.5"/>
-          <circle cx="44" cy="48" r="1.5"/><circle cx="52" cy="48" r="1.5"/><circle cx="60" cy="48" r="1.5"/>
+        <!-- Individual grape highlights -->
+        <g fill="#fff" opacity="0.7">
+          <circle cx="40" cy="33" r="1.5"/><circle cx="48" cy="31" r="1.6"/><circle cx="56" cy="33" r="1.5"/>
+          <circle cx="36" cy="45" r="1.5"/><circle cx="44" cy="45" r="1.5"/><circle cx="52" cy="45" r="1.5"/><circle cx="60" cy="45" r="1.5"/>
+          <circle cx="40" cy="57" r="1.5"/><circle cx="48" cy="57" r="1.6"/><circle cx="56" cy="57" r="1.5"/>
+          <circle cx="44" cy="69" r="1.4"/><circle cx="52" cy="69" r="1.4"/>
+          <circle cx="48" cy="81" r="1.3"/>
         </g>
       `;
     },
 
+    // mang_guo (Mango) — emoji-style. Oval/kidney-bean shape with
+    // signature YELLOW→ORANGE→RED gradient (riper toward one end).
     mang_guo(c) {
-      const yellow = c || '#ffca28';
-      const dark = darken(yellow, 0.25);
-      const orange = '#ff9800';
       return `
-        <g transform="rotate(-15 50 58)">
-          <path d="M 30 60 Q 26 38 50 32 Q 76 38 72 64 Q 64 84 50 86 Q 34 82 30 60 Z" fill="${yellow}" stroke="${dark}" stroke-width="1.5"/>
-          <ellipse cx="42" cy="44" rx="14" ry="8" fill="#fff" opacity="0.35"/>
-          <path d="M 60 50 Q 64 64 56 78" stroke="${orange}" stroke-width="3" fill="none" opacity="0.5" stroke-linecap="round"/>
+        <defs>
+          <filter id="ds_mang_guo" x="-15%" y="-15%" width="130%" height="130%">
+            <feGaussianBlur in="SourceAlpha" stdDeviation="1.3"/>
+            <feOffset dy="1.8" result="off"/>
+            <feComponentTransfer><feFuncA type="linear" slope="0.4"/></feComponentTransfer>
+            <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <linearGradient id="body_mang_guo" x1="0%" y1="100%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#fff176"/>
+            <stop offset="30%" stop-color="#ffca28"/>
+            <stop offset="65%" stop-color="#ff9800"/>
+            <stop offset="100%" stop-color="#ff5722"/>
+          </linearGradient>
+        </defs>
+        <ellipse cx="50" cy="92" rx="22" ry="3" fill="#000" opacity="0.25"/>
+        <g filter="url(#ds_mang_guo)" transform="rotate(-15 50 58)">
+          <!-- Mango body, asymmetric oval -->
+          <path d="M 50 28
+                   Q 28 32 24 56
+                   Q 26 80 44 86
+                   Q 62 88 74 76
+                   Q 80 56 76 40
+                   Q 68 30 50 28 Z"
+                fill="url(#body_mang_guo)" stroke="#b34d00" stroke-width="0.8"/>
+          <!-- Stem nub at top-left -->
+          <path d="M 50 28 L 47 18" stroke="#6d4528" stroke-width="1.6" stroke-linecap="round"/>
+          <ellipse cx="46" cy="20" rx="4" ry="2" fill="#558b2f" stroke="#2e5613" stroke-width="0.4" transform="rotate(-20 46 20)"/>
         </g>
-        <path d="M 50 30 L 50 22" stroke="#6d4528" stroke-width="1.5" stroke-linecap="round"/>
-        <ellipse cx="48" cy="22" rx="5" ry="2.5" fill="#558b2f" transform="rotate(-30 48 22)"/>
+        <!-- Big glossy highlight (mango's iconic shine) -->
+        <ellipse cx="38" cy="46" rx="9" ry="6" fill="#fff" opacity="0.5" transform="rotate(-20 38 46)"/>
+        <ellipse cx="34" cy="42" rx="3.5" ry="2.5" fill="#fff" opacity="0.85"/>
+        <ellipse cx="50" cy="88" rx="16" ry="1.4" fill="#000" opacity="0.25"/>
       `;
     },
 
+    // huo_long_guo (Dragon Fruit) — emoji-style. Magenta-pink oval body
+    // with iconic GREEN-TIPPED PINK SCALES (leaf-like protrusions) curving
+    // outward from the body — these scales are THE defining feature.
     huo_long_guo(c) {
-      const pink = c || '#e91e63';
-      const dark = darken(pink, 0.22);
-      const green = '#7cb342';
-      const darkGreen = '#3a7d2c';
       return `
-        <ellipse cx="50" cy="60" rx="22" ry="28" fill="${pink}" stroke="${dark}" stroke-width="1.5"/>
-        <g fill="${green}" stroke="${darkGreen}" stroke-width="0.8">
-          <path d="M 30 50 Q 22 46 18 52 Q 26 56 32 54 Z"/>
-          <path d="M 28 60 Q 18 60 16 68 Q 26 70 32 64 Z"/>
-          <path d="M 32 72 Q 24 76 24 82 Q 32 82 36 76 Z"/>
-          <path d="M 70 50 Q 78 46 82 52 Q 74 56 68 54 Z"/>
-          <path d="M 72 60 Q 82 60 84 68 Q 74 70 68 64 Z"/>
-          <path d="M 68 72 Q 76 76 76 82 Q 68 82 64 76 Z"/>
-          <path d="M 50 34 Q 42 28 38 22 Q 48 24 52 30 Z"/>
-          <path d="M 50 34 Q 58 28 62 22 Q 52 24 48 30 Z"/>
-          <path d="M 50 30 Q 50 18 50 14" stroke-width="1.5"/>
+        <defs>
+          <filter id="ds_huo_long_guo" x="-15%" y="-15%" width="130%" height="130%">
+            <feGaussianBlur in="SourceAlpha" stdDeviation="1.4"/>
+            <feOffset dy="1.8" result="off"/>
+            <feComponentTransfer><feFuncA type="linear" slope="0.4"/></feComponentTransfer>
+            <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <radialGradient id="body_huo_long_guo" cx="35%" cy="30%" r="80%">
+            <stop offset="0%" stop-color="#f8bbd0"/>
+            <stop offset="50%" stop-color="#e91e63"/>
+            <stop offset="100%" stop-color="#8a0a3c"/>
+          </radialGradient>
+          <linearGradient id="scale_huo_long_guo" x1="0%" y1="100%" x2="0%" y2="0%">
+            <stop offset="0%" stop-color="#e91e63"/>
+            <stop offset="45%" stop-color="#f06292"/>
+            <stop offset="75%" stop-color="#aed581"/>
+            <stop offset="100%" stop-color="#558b2f"/>
+          </linearGradient>
+        </defs>
+        <ellipse cx="50" cy="92" rx="22" ry="3" fill="#000" opacity="0.25"/>
+        <g filter="url(#ds_huo_long_guo)">
+          <!-- Main oval body -->
+          <ellipse cx="50" cy="60" rx="22" ry="28" fill="url(#body_huo_long_guo)" stroke="#5a0826" stroke-width="0.8"/>
+
+          <!-- SCALES (the iconic dragon-fruit feature: green-tipped pink protrusions) -->
+          <!-- Top scales -->
+          <path d="M 42 36 Q 38 28 36 18 Q 44 22 46 34 Z" fill="url(#scale_huo_long_guo)" stroke="#5a0826" stroke-width="0.5"/>
+          <path d="M 50 32 Q 48 22 50 12 Q 52 22 50 32 Z" fill="url(#scale_huo_long_guo)" stroke="#5a0826" stroke-width="0.5"/>
+          <path d="M 58 36 Q 62 28 64 18 Q 56 22 54 34 Z" fill="url(#scale_huo_long_guo)" stroke="#5a0826" stroke-width="0.5"/>
+
+          <!-- Left side scales -->
+          <path d="M 30 50 Q 22 48 14 50 Q 22 54 32 54 Z" fill="url(#scale_huo_long_guo)" stroke="#5a0826" stroke-width="0.5"/>
+          <path d="M 28 64 Q 18 64 12 68 Q 20 72 30 68 Z" fill="url(#scale_huo_long_guo)" stroke="#5a0826" stroke-width="0.5"/>
+
+          <!-- Right side scales -->
+          <path d="M 70 50 Q 78 48 86 50 Q 78 54 68 54 Z" fill="url(#scale_huo_long_guo)" stroke="#5a0826" stroke-width="0.5"/>
+          <path d="M 72 64 Q 82 64 88 68 Q 80 72 70 68 Z" fill="url(#scale_huo_long_guo)" stroke="#5a0826" stroke-width="0.5"/>
+
+          <!-- Bottom scales -->
+          <path d="M 40 80 Q 36 86 32 90 Q 42 88 44 82 Z" fill="url(#scale_huo_long_guo)" stroke="#5a0826" stroke-width="0.5"/>
+          <path d="M 60 80 Q 64 86 68 90 Q 58 88 56 82 Z" fill="url(#scale_huo_long_guo)" stroke="#5a0826" stroke-width="0.5"/>
         </g>
-        <ellipse cx="42" cy="50" rx="8" ry="14" fill="#fff" opacity="0.28"/>
-        <g fill="${darkGreen}" opacity="0.7">
-          <circle cx="30" cy="50" r="1"/><circle cx="28" cy="60" r="1"/><circle cx="32" cy="72" r="1"/>
-          <circle cx="70" cy="50" r="1"/><circle cx="72" cy="60" r="1"/><circle cx="68" cy="72" r="1"/>
-        </g>
+        <!-- Body highlight -->
+        <ellipse cx="40" cy="48" rx="6" ry="12" fill="#fff" opacity="0.4"/>
+        <ellipse cx="38" cy="44" rx="2.5" ry="4" fill="#fff" opacity="0.75"/>
+        <ellipse cx="50" cy="88" rx="16" ry="1.4" fill="#000" opacity="0.25"/>
       `;
     },
 
+    // pi_pa (Loquat) — emoji-style. Cluster of 5 small golden-yellow round
+    // fruits on a stem, with green oval leaves at the top.
     pi_pa(c) {
-      const yellow = c || '#ffd54f';
-      const dark = darken(yellow, 0.25);
-      const green = '#558b2f';
-      const darkGreen = '#3a7d2c';
       return `
-        <ellipse cx="50" cy="88" rx="14" ry="2.5" fill="#a86c44" opacity="0.5"/>
-        <path d="M 50 70 L 50 32" stroke="#6d4528" stroke-width="1.5"/>
-        <path d="M 50 60 L 32 44" stroke="#6d4528" stroke-width="1"/>
-        <path d="M 50 60 L 68 44" stroke="#6d4528" stroke-width="1"/>
-        <path d="M 50 50 L 38 32" stroke="#6d4528" stroke-width="1"/>
-        <path d="M 50 50 L 62 32" stroke="#6d4528" stroke-width="1"/>
-        <ellipse cx="36" cy="22" rx="9" ry="5" fill="${green}" stroke="${darkGreen}" stroke-width="0.8" transform="rotate(-25 36 22)"/>
-        <ellipse cx="64" cy="22" rx="9" ry="5" fill="${green}" stroke="${darkGreen}" stroke-width="0.8" transform="rotate(25 64 22)"/>
-        <ellipse cx="50" cy="14" rx="10" ry="6" fill="${green}" stroke="${darkGreen}" stroke-width="0.8"/>
-        <circle cx="32" cy="46" r="6" fill="${yellow}" stroke="${dark}" stroke-width="0.8"/>
-        <circle cx="38" cy="34" r="5.5" fill="${yellow}" stroke="${dark}" stroke-width="0.8"/>
-        <circle cx="50" cy="72" r="6.5" fill="${yellow}" stroke="${dark}" stroke-width="0.8"/>
-        <circle cx="68" cy="46" r="6" fill="${yellow}" stroke="${dark}" stroke-width="0.8"/>
-        <circle cx="62" cy="34" r="5.5" fill="${yellow}" stroke="${dark}" stroke-width="0.8"/>
-        <g fill="#fff" opacity="0.4">
-          <circle cx="30" cy="44" r="1.2"/><circle cx="36" cy="32" r="1.2"/><circle cx="48" cy="70" r="1.5"/>
-          <circle cx="66" cy="44" r="1.2"/><circle cx="60" cy="32" r="1.2"/>
+        <defs>
+          <filter id="ds_pi_pa" x="-15%" y="-15%" width="130%" height="130%">
+            <feGaussianBlur in="SourceAlpha" stdDeviation="1.3"/>
+            <feOffset dy="1.6" result="off"/>
+            <feComponentTransfer><feFuncA type="linear" slope="0.38"/></feComponentTransfer>
+            <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <radialGradient id="fruit_pi_pa" cx="35%" cy="30%" r="80%">
+            <stop offset="0%" stop-color="#fff9c4"/>
+            <stop offset="55%" stop-color="#ffd54f"/>
+            <stop offset="100%" stop-color="#bf8700"/>
+          </radialGradient>
+          <radialGradient id="leaf_pi_pa" cx="40%" cy="30%" r="80%">
+            <stop offset="0%" stop-color="#aed581"/>
+            <stop offset="55%" stop-color="#558b2f"/>
+            <stop offset="100%" stop-color="#2e5613"/>
+          </radialGradient>
+        </defs>
+        <ellipse cx="50" cy="92" rx="22" ry="3" fill="#000" opacity="0.25"/>
+        <g filter="url(#ds_pi_pa)">
+          <!-- Twig connecting all fruits -->
+          <path d="M 50 26 Q 50 50 50 78" stroke="#6d4528" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+          <path d="M 50 56 Q 38 48 32 46" stroke="#6d4528" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+          <path d="M 50 56 Q 62 48 68 46" stroke="#6d4528" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+
+          <!-- Two big oval leaves on top -->
+          <path d="M 50 24 Q 36 18 30 12 L 34 8 Q 42 14 48 24 Z" fill="url(#leaf_pi_pa)" stroke="#2e5613" stroke-width="0.5"/>
+          <path d="M 50 24 Q 64 18 70 12 L 66 8 Q 58 14 52 24 Z" fill="url(#leaf_pi_pa)" stroke="#2e5613" stroke-width="0.5"/>
+          <path d="M 50 26 L 50 14" stroke="#2e5613" stroke-width="0.4" fill="none" opacity="0.5"/>
+
+          <!-- 5 loquat fruits cluster (golden) -->
+          <circle cx="32" cy="48" r="7" fill="url(#fruit_pi_pa)" stroke="#8b6500" stroke-width="0.6"/>
+          <circle cx="68" cy="48" r="7" fill="url(#fruit_pi_pa)" stroke="#8b6500" stroke-width="0.6"/>
+          <circle cx="40" cy="64" r="7" fill="url(#fruit_pi_pa)" stroke="#8b6500" stroke-width="0.6"/>
+          <circle cx="60" cy="64" r="7" fill="url(#fruit_pi_pa)" stroke="#8b6500" stroke-width="0.6"/>
+          <circle cx="50" cy="78" r="7.5" fill="url(#fruit_pi_pa)" stroke="#8b6500" stroke-width="0.6"/>
+
+          <!-- Tiny "navel" mark at bottom of each fruit -->
+          <g fill="#6b5000" opacity="0.55">
+            <circle cx="32" cy="53" r="0.6"/><circle cx="68" cy="53" r="0.6"/>
+            <circle cx="40" cy="69" r="0.6"/><circle cx="60" cy="69" r="0.6"/>
+            <circle cx="50" cy="84" r="0.6"/>
+          </g>
         </g>
+        <!-- Highlights -->
+        <g fill="#fff" opacity="0.65">
+          <ellipse cx="30" cy="45" r="1.5"/><ellipse cx="66" cy="45" r="1.5"/>
+          <ellipse cx="38" cy="61" r="1.5"/><ellipse cx="58" cy="61" r="1.5"/>
+          <ellipse cx="47" cy="74" r="1.8"/>
+        </g>
+        <ellipse cx="50" cy="88" rx="16" ry="1.4" fill="#000" opacity="0.25"/>
       `;
     },
 
@@ -2223,112 +2424,309 @@
         <ellipse cx="50" cy="88" rx="13" ry="1.4" fill="#000" opacity="0.28"/>
       `;
     },
+    // narcissus — emoji-style. 3 white 6-petal flowers with bright yellow
+    // trumpet centers, rising from green leaf bunch.
     narcissus(c) {
-      const yellow = c || '#fff59d';
       return `
-        <ellipse cx="50" cy="84" rx="22" ry="4" fill="#9a7647"/>
-        <path d="M 30 84 L 34 92 L 66 92 L 70 84 Z" fill="#8b6a3f" stroke="#6d4528" stroke-width="0.8"/>
-        <path d="M 40 84 Q 35 60 32 32" stroke="#6ab04c" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-        <path d="M 50 84 Q 50 55 50 24" stroke="#558b2f" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-        <path d="M 60 84 Q 65 60 68 32" stroke="#6ab04c" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-        <g transform="translate(32 32)">
-          <circle r="6" fill="#fff" stroke="#d8c8a0" stroke-width="0.7"/>
-          <circle r="2.5" fill="${yellow}" stroke="#e6b800" stroke-width="0.5"/>
+        <defs>
+          <filter id="ds_narcissus" x="-15%" y="-15%" width="130%" height="130%">
+            <feGaussianBlur in="SourceAlpha" stdDeviation="1.3"/>
+            <feOffset dy="1.6" result="off"/>
+            <feComponentTransfer><feFuncA type="linear" slope="0.38"/></feComponentTransfer>
+            <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <radialGradient id="trumpet_narcissus" cx="50%" cy="40%" r="60%">
+            <stop offset="0%" stop-color="#fffde7"/>
+            <stop offset="55%" stop-color="#ffd54f"/>
+            <stop offset="100%" stop-color="#bf8700"/>
+          </radialGradient>
+        </defs>
+        <ellipse cx="50" cy="92" rx="22" ry="3" fill="#000" opacity="0.25"/>
+        <g filter="url(#ds_narcissus)">
+          <!-- 3 green leaves rising up -->
+          <path d="M 38 88 Q 32 60 28 28 L 32 26 Q 36 56 42 86 Z" fill="#558b2f" stroke="#2e5613" stroke-width="0.5"/>
+          <path d="M 50 88 Q 50 56 50 18 L 53 18 Q 53 56 52 86 Z" fill="#7cb342" stroke="#2e5613" stroke-width="0.5"/>
+          <path d="M 62 88 Q 68 60 72 28 L 68 26 Q 64 56 58 86 Z" fill="#558b2f" stroke="#2e5613" stroke-width="0.5"/>
+
+          <!-- 3 flowers with 6 petals each -->
+          <!-- Left flower -->
+          <g transform="translate(32 36)">
+            <g fill="#ffffff" stroke="#cfb992" stroke-width="0.6">
+              <ellipse cx="0" cy="-7" rx="3" ry="5"/>
+              <ellipse cx="6" cy="-3" rx="3" ry="5" transform="rotate(60)"/>
+              <ellipse cx="6" cy="3" rx="3" ry="5" transform="rotate(120)"/>
+              <ellipse cx="0" cy="7" rx="3" ry="5"/>
+              <ellipse cx="-6" cy="3" rx="3" ry="5" transform="rotate(60)"/>
+              <ellipse cx="-6" cy="-3" rx="3" ry="5" transform="rotate(120)"/>
+            </g>
+            <circle r="3" fill="url(#trumpet_narcissus)" stroke="#e6b800" stroke-width="0.5"/>
+            <circle r="1.2" fill="#bf8700"/>
+          </g>
+          <!-- Center flower (largest) -->
+          <g transform="translate(50 22)">
+            <g fill="#ffffff" stroke="#cfb992" stroke-width="0.6">
+              <ellipse cx="0" cy="-8" rx="3.5" ry="6"/>
+              <ellipse cx="7" cy="-4" rx="3.5" ry="6" transform="rotate(60)"/>
+              <ellipse cx="7" cy="4" rx="3.5" ry="6" transform="rotate(120)"/>
+              <ellipse cx="0" cy="8" rx="3.5" ry="6"/>
+              <ellipse cx="-7" cy="4" rx="3.5" ry="6" transform="rotate(60)"/>
+              <ellipse cx="-7" cy="-4" rx="3.5" ry="6" transform="rotate(120)"/>
+            </g>
+            <circle r="3.8" fill="url(#trumpet_narcissus)" stroke="#e6b800" stroke-width="0.5"/>
+            <circle r="1.5" fill="#bf8700"/>
+          </g>
+          <!-- Right flower -->
+          <g transform="translate(68 36)">
+            <g fill="#ffffff" stroke="#cfb992" stroke-width="0.6">
+              <ellipse cx="0" cy="-7" rx="3" ry="5"/>
+              <ellipse cx="6" cy="-3" rx="3" ry="5" transform="rotate(60)"/>
+              <ellipse cx="6" cy="3" rx="3" ry="5" transform="rotate(120)"/>
+              <ellipse cx="0" cy="7" rx="3" ry="5"/>
+              <ellipse cx="-6" cy="3" rx="3" ry="5" transform="rotate(60)"/>
+              <ellipse cx="-6" cy="-3" rx="3" ry="5" transform="rotate(120)"/>
+            </g>
+            <circle r="3" fill="url(#trumpet_narcissus)" stroke="#e6b800" stroke-width="0.5"/>
+            <circle r="1.2" fill="#bf8700"/>
+          </g>
         </g>
-        <g transform="translate(50 24)">
-          <circle r="7" fill="#fff" stroke="#d8c8a0" stroke-width="0.7"/>
-          <circle r="3" fill="${yellow}" stroke="#e6b800" stroke-width="0.5"/>
-        </g>
-        <g transform="translate(68 32)">
-          <circle r="6" fill="#fff" stroke="#d8c8a0" stroke-width="0.7"/>
-          <circle r="2.5" fill="${yellow}" stroke="#e6b800" stroke-width="0.5"/>
-        </g>
+        <!-- Trumpet hot spots -->
+        <ellipse cx="49" cy="20" rx="1.2" ry="1.5" fill="#fff" opacity="0.8"/>
+        <ellipse cx="31" cy="34" rx="0.8" ry="1" fill="#fff" opacity="0.7"/>
+        <ellipse cx="67" cy="34" rx="0.8" ry="1" fill="#fff" opacity="0.7"/>
+        <ellipse cx="50" cy="88" rx="14" ry="1.4" fill="#000" opacity="0.25"/>
       `;
     },
+    // kumquat — emoji-style. Mini orange-tree shape: dome of green foliage
+    // dotted with multiple small orange kumquats.
     kumquat(c) {
-      const orange = c || '#ffa726';
-      const dark = darken(orange, 0.18);
       return `
-        <path d="M 50 88 Q 48 70 36 50" stroke="#6d4528" stroke-width="2" fill="none" stroke-linecap="round"/>
-        <path d="M 50 88 Q 52 70 64 50" stroke="#6d4528" stroke-width="2" fill="none" stroke-linecap="round"/>
-        <path d="M 50 68 Q 50 50 50 30" stroke="#6d4528" stroke-width="1.5" fill="none" stroke-linecap="round"/>
-        <ellipse cx="28" cy="46" rx="5" ry="3" fill="#3a7d2c" transform="rotate(-30 28 46)"/>
-        <ellipse cx="72" cy="46" rx="5" ry="3" fill="#3a7d2c" transform="rotate(30 72 46)"/>
-        <ellipse cx="42" cy="28" rx="5" ry="3" fill="#558b2f" transform="rotate(-25 42 28)"/>
-        <ellipse cx="58" cy="28" rx="5" ry="3" fill="#558b2f" transform="rotate(25 58 28)"/>
-        <circle cx="36" cy="55" r="7" fill="${orange}" stroke="${dark}" stroke-width="1"/>
-        <circle cx="34" cy="53" r="2" fill="#fff" opacity="0.45"/>
-        <circle cx="64" cy="55" r="7" fill="${orange}" stroke="${dark}" stroke-width="1"/>
-        <circle cx="62" cy="53" r="2" fill="#fff" opacity="0.45"/>
-        <circle cx="50" cy="42" r="8" fill="${orange}" stroke="${dark}" stroke-width="1"/>
-        <circle cx="48" cy="40" r="2.5" fill="#fff" opacity="0.45"/>
-        <circle cx="44" cy="70" r="5" fill="${orange}" stroke="${dark}" stroke-width="1"/>
-        <circle cx="56" cy="70" r="5" fill="${orange}" stroke="${dark}" stroke-width="1"/>
+        <defs>
+          <filter id="ds_kumquat" x="-15%" y="-15%" width="130%" height="130%">
+            <feGaussianBlur in="SourceAlpha" stdDeviation="1.3"/>
+            <feOffset dy="1.6" result="off"/>
+            <feComponentTransfer><feFuncA type="linear" slope="0.38"/></feComponentTransfer>
+            <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <radialGradient id="foliage_kumquat" cx="40%" cy="30%" r="80%">
+            <stop offset="0%" stop-color="#aed581"/>
+            <stop offset="55%" stop-color="#558b2f"/>
+            <stop offset="100%" stop-color="#2e5613"/>
+          </radialGradient>
+          <radialGradient id="fruit_kumquat" cx="35%" cy="30%" r="80%">
+            <stop offset="0%" stop-color="#ffd180"/>
+            <stop offset="55%" stop-color="#ff9800"/>
+            <stop offset="100%" stop-color="#a04500"/>
+          </radialGradient>
+        </defs>
+        <ellipse cx="50" cy="92" rx="24" ry="3" fill="#000" opacity="0.25"/>
+        <g filter="url(#ds_kumquat)">
+          <!-- Brown pot -->
+          <path d="M 32 86 L 36 76 L 64 76 L 68 86 Z" fill="#8b5a2b" stroke="#5d3a1a" stroke-width="0.7"/>
+          <rect x="30" y="74" width="40" height="4" rx="2" fill="#a0673b" stroke="#5d3a1a" stroke-width="0.6"/>
+
+          <!-- Brown trunk -->
+          <path d="M 48 76 L 48 56 L 52 56 L 52 76 Z" fill="#6d4528" stroke="#3d2614" stroke-width="0.5"/>
+
+          <!-- Green foliage dome -->
+          <ellipse cx="50" cy="42" rx="28" ry="22" fill="url(#foliage_kumquat)" stroke="#1f4d10" stroke-width="0.7"/>
+          <!-- foliage texture clusters -->
+          <circle cx="32" cy="42" r="9" fill="#558b2f" opacity="0.7"/>
+          <circle cx="50" cy="32" r="10" fill="#7cb342" opacity="0.65"/>
+          <circle cx="68" cy="42" r="9" fill="#558b2f" opacity="0.7"/>
+          <circle cx="42" cy="50" r="8" fill="#6ab041" opacity="0.6"/>
+          <circle cx="58" cy="50" r="8" fill="#6ab041" opacity="0.6"/>
+
+          <!-- 6 little kumquats dotted across foliage -->
+          <circle cx="36" cy="36" r="3.5" fill="url(#fruit_kumquat)" stroke="#8b3a00" stroke-width="0.5"/>
+          <circle cx="50" cy="28" r="4" fill="url(#fruit_kumquat)" stroke="#8b3a00" stroke-width="0.5"/>
+          <circle cx="62" cy="36" r="3.5" fill="url(#fruit_kumquat)" stroke="#8b3a00" stroke-width="0.5"/>
+          <circle cx="40" cy="50" r="3.5" fill="url(#fruit_kumquat)" stroke="#8b3a00" stroke-width="0.5"/>
+          <circle cx="58" cy="50" r="3.5" fill="url(#fruit_kumquat)" stroke="#8b3a00" stroke-width="0.5"/>
+          <circle cx="50" cy="48" r="3" fill="url(#fruit_kumquat)" stroke="#8b3a00" stroke-width="0.5"/>
+        </g>
+        <!-- kumquat highlights -->
+        <g fill="#fff" opacity="0.7">
+          <circle cx="35" cy="35" r="0.8"/><circle cx="49" cy="27" r="1"/><circle cx="61" cy="35" r="0.8"/>
+          <circle cx="39" cy="49" r="0.8"/><circle cx="57" cy="49" r="0.8"/>
+        </g>
+        <ellipse cx="50" cy="86" rx="14" ry="1.4" fill="#000" opacity="0.25"/>
       `;
     },
+    // taro — emoji-style. Purple-brown rounded oval root with horizontal
+    // RING TEXTURE (the iconic taro skin pattern) and 3 heart-shaped leaves
+    // sprouting from the top.
     taro(c) {
-      const purple = c || '#b39ddb';
-      const dark = darken(purple, 0.25);
       return `
-        <path d="M 50 88 Q 28 80 26 60 Q 28 44 40 40 Q 50 36 60 40 Q 72 44 74 62 Q 72 82 50 88 Z" fill="${purple}" stroke="${dark}" stroke-width="1.5"/>
-        <path d="M 30 54 Q 50 58 70 54" stroke="${dark}" stroke-width="0.8" fill="none" opacity="0.55"/>
-        <path d="M 28 64 Q 50 68 72 64" stroke="${dark}" stroke-width="0.8" fill="none" opacity="0.55"/>
-        <path d="M 30 74 Q 50 78 70 74" stroke="${dark}" stroke-width="0.8" fill="none" opacity="0.55"/>
-        <ellipse cx="38" cy="55" rx="5" ry="8" fill="#fff" opacity="0.3"/>
-        <path d="M 42 40 L 38 22 M 50 38 L 50 14 M 58 40 L 62 22" stroke="#3a7d2c" stroke-width="2" stroke-linecap="round" fill="none"/>
-        <ellipse cx="38" cy="22" rx="7" ry="10" fill="#6ab04c" stroke="#3a7d2c" stroke-width="0.8" transform="rotate(-15 38 22)"/>
-        <ellipse cx="50" cy="14" rx="7" ry="11" fill="#558b2f" stroke="#3a7d2c" stroke-width="0.8"/>
-        <ellipse cx="62" cy="22" rx="7" ry="10" fill="#6ab04c" stroke="#3a7d2c" stroke-width="0.8" transform="rotate(15 62 22)"/>
+        <defs>
+          <filter id="ds_taro" x="-15%" y="-15%" width="130%" height="130%">
+            <feGaussianBlur in="SourceAlpha" stdDeviation="1.3"/>
+            <feOffset dy="1.8" result="off"/>
+            <feComponentTransfer><feFuncA type="linear" slope="0.4"/></feComponentTransfer>
+            <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <radialGradient id="body_taro" cx="35%" cy="30%" r="80%">
+            <stop offset="0%" stop-color="#d1c4e9"/>
+            <stop offset="55%" stop-color="#8d6e8b"/>
+            <stop offset="100%" stop-color="#4a2c4a"/>
+          </radialGradient>
+          <radialGradient id="leaf_taro" cx="40%" cy="30%" r="80%">
+            <stop offset="0%" stop-color="#aed581"/>
+            <stop offset="55%" stop-color="#558b2f"/>
+            <stop offset="100%" stop-color="#2e5613"/>
+          </radialGradient>
+        </defs>
+        <ellipse cx="50" cy="92" rx="22" ry="3" fill="#000" opacity="0.25"/>
+        <g filter="url(#ds_taro)">
+          <!-- Taro body, oval -->
+          <ellipse cx="50" cy="64" rx="24" ry="22" fill="url(#body_taro)" stroke="#2a1530" stroke-width="0.8"/>
+
+          <!-- Horizontal ring lines (iconic taro skin texture) -->
+          <path d="M 28 56 Q 50 58 72 56" stroke="#2a1530" stroke-width="0.7" fill="none" opacity="0.75"/>
+          <path d="M 26 66 Q 50 68 74 66" stroke="#2a1530" stroke-width="0.7" fill="none" opacity="0.75"/>
+          <path d="M 28 76 Q 50 78 72 76" stroke="#2a1530" stroke-width="0.7" fill="none" opacity="0.65"/>
+
+          <!-- 3 heart-shaped leaves sprouting on top -->
+          <path d="M 50 44 Q 32 36 30 18 Q 38 8 50 14 Q 62 8 70 18 Q 68 36 50 44 Z"
+                fill="url(#leaf_taro)" stroke="#1f4d10" stroke-width="0.6"/>
+          <!-- Heart shape with cleft -->
+          <path d="M 50 14 Q 46 18 50 22 Q 54 18 50 14 Z" fill="#3a6e1a" opacity="0.5"/>
+          <!-- Leaf vein -->
+          <path d="M 50 44 Q 50 30 50 16" stroke="#2e5613" stroke-width="0.6" fill="none" opacity="0.65"/>
+          <path d="M 50 30 Q 38 26 32 20" stroke="#2e5613" stroke-width="0.4" fill="none" opacity="0.5"/>
+          <path d="M 50 30 Q 62 26 68 20" stroke="#2e5613" stroke-width="0.4" fill="none" opacity="0.5"/>
+        </g>
+        <!-- Highlights -->
+        <ellipse cx="40" cy="56" rx="5" ry="8" fill="#fff" opacity="0.35"/>
+        <ellipse cx="38" cy="52" rx="2" ry="3" fill="#fff" opacity="0.7"/>
+        <ellipse cx="42" cy="22" rx="2" ry="3" fill="#fff" opacity="0.55"/>
+        <ellipse cx="50" cy="88" rx="14" ry="1.4" fill="#000" opacity="0.25"/>
       `;
     },
+    // pomelo — emoji-style. Large pear-shaped fruit (slightly elongated
+    // top, rounded bottom) in pale yellow-green with skin texture dots.
     pomelo(c) {
-      const yellow = c || '#dce775';
-      const dark = darken(yellow, 0.18);
       return `
-        <path d="M 50 22 Q 80 28 82 60 Q 80 86 50 90 Q 20 86 18 60 Q 20 28 50 22 Z" fill="${yellow}" stroke="${dark}" stroke-width="1.5"/>
-        <g fill="${dark}" opacity="0.35">
-          <circle cx="35" cy="45" r="0.9"/><circle cx="42" cy="40" r="0.9"/><circle cx="55" cy="35" r="0.9"/>
-          <circle cx="65" cy="42" r="0.9"/><circle cx="68" cy="55" r="0.9"/><circle cx="62" cy="68" r="0.9"/>
-          <circle cx="45" cy="72" r="0.9"/><circle cx="32" cy="60" r="0.9"/><circle cx="52" cy="52" r="0.9"/>
-          <circle cx="38" cy="55" r="0.9"/><circle cx="55" cy="60" r="0.9"/><circle cx="40" cy="78" r="0.9"/>
-          <circle cx="60" cy="78" r="0.9"/><circle cx="28" cy="70" r="0.9"/>
+        <defs>
+          <filter id="ds_pomelo" x="-15%" y="-15%" width="130%" height="130%">
+            <feGaussianBlur in="SourceAlpha" stdDeviation="1.4"/>
+            <feOffset dy="1.8" result="off"/>
+            <feComponentTransfer><feFuncA type="linear" slope="0.4"/></feComponentTransfer>
+            <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <radialGradient id="body_pomelo" cx="35%" cy="30%" r="80%">
+            <stop offset="0%" stop-color="#f5fbb8"/>
+            <stop offset="55%" stop-color="#dce775"/>
+            <stop offset="100%" stop-color="#7a9b1e"/>
+          </radialGradient>
+        </defs>
+        <ellipse cx="50" cy="92" rx="28" ry="3.5" fill="#000" opacity="0.28"/>
+        <g filter="url(#ds_pomelo)">
+          <!-- Large pear-shaped pomelo body (rounded bottom, slightly tapered top) -->
+          <path d="M 50 22
+                   Q 80 28 84 56
+                   Q 82 84 50 88
+                   Q 18 84 16 56
+                   Q 20 28 50 22 Z"
+                fill="url(#body_pomelo)" stroke="#5a7515" stroke-width="0.8"/>
+
+          <!-- Skin texture dots (pomelo's signature pitted surface) -->
+          <g fill="#5a7515" opacity="0.4">
+            <circle cx="32" cy="44" r="0.9"/><circle cx="42" cy="38" r="0.9"/><circle cx="55" cy="34" r="0.9"/>
+            <circle cx="65" cy="40" r="0.9"/><circle cx="70" cy="54" r="0.9"/><circle cx="64" cy="68" r="0.9"/>
+            <circle cx="48" cy="74" r="0.9"/><circle cx="34" cy="64" r="0.9"/><circle cx="54" cy="54" r="0.9"/>
+            <circle cx="40" cy="56" r="0.9"/><circle cx="58" cy="62" r="0.9"/><circle cx="42" cy="78" r="0.9"/>
+            <circle cx="60" cy="78" r="0.9"/><circle cx="28" cy="72" r="0.9"/><circle cx="48" cy="46" r="0.9"/>
+          </g>
+
+          <!-- Green leaves + stem on top -->
+          <path d="M 50 24 L 50 12" stroke="#6d4528" stroke-width="2.2" stroke-linecap="round"/>
+          <ellipse cx="42" cy="18" rx="6" ry="3.5" fill="#558b2f" stroke="#2e5613" stroke-width="0.5" transform="rotate(-30 42 18)"/>
+          <ellipse cx="58" cy="18" rx="6" ry="3.5" fill="#558b2f" stroke="#2e5613" stroke-width="0.5" transform="rotate(30 58 18)"/>
         </g>
-        <ellipse cx="36" cy="40" rx="10" ry="14" fill="#fff" opacity="0.32"/>
-        <ellipse cx="42" cy="22" rx="6" ry="4" fill="#558b2f" transform="rotate(-30 42 22)"/>
-        <ellipse cx="58" cy="22" rx="6" ry="4" fill="#558b2f" transform="rotate(30 58 22)"/>
-        <path d="M 50 24 L 50 14" stroke="#6d4528" stroke-width="2" stroke-linecap="round"/>
+        <!-- Glossy highlight (top-left) -->
+        <ellipse cx="34" cy="40" rx="8" ry="12" fill="#fff" opacity="0.4"/>
+        <ellipse cx="32" cy="34" rx="3" ry="4" fill="#fff" opacity="0.75"/>
+        <ellipse cx="50" cy="88" rx="22" ry="1.4" fill="#000" opacity="0.28"/>
       `;
     },
+    // osmanthus (桂花) — emoji-style. Green branch with paired oval leaves
+    // and clusters of TINY golden-yellow 4-petal flowers in the leaf axils.
     osmanthus(c) {
-      const yellow = c || '#fff59d';
       return `
-        <path d="M 50 90 Q 50 65 36 45 Q 30 38 26 28" stroke="#6d4528" stroke-width="2" fill="none" stroke-linecap="round"/>
-        <path d="M 50 60 Q 60 50 72 36" stroke="#6d4528" stroke-width="1.5" fill="none" stroke-linecap="round"/>
-        <path d="M 50 76 Q 38 78 30 80" stroke="#6d4528" stroke-width="1.2" fill="none" stroke-linecap="round"/>
-        <ellipse cx="38" cy="56" rx="6" ry="3" fill="#3a7d2c" stroke="#2a5c34" stroke-width="0.5" transform="rotate(-50 38 56)"/>
-        <ellipse cx="60" cy="56" rx="6" ry="3" fill="#3a7d2c" stroke="#2a5c34" stroke-width="0.5" transform="rotate(50 60 56)"/>
-        <ellipse cx="40" cy="38" rx="6" ry="3" fill="#558b2f" stroke="#3a7d2c" stroke-width="0.5" transform="rotate(-40 40 38)"/>
-        <ellipse cx="62" cy="44" rx="6" ry="3" fill="#558b2f" stroke="#3a7d2c" stroke-width="0.5" transform="rotate(50 62 44)"/>
-        <g fill="${yellow}" stroke="#e6b800" stroke-width="0.4">
-          <g transform="translate(26 28)">
-            <circle cx="-2" cy="-1" r="1.8"/><circle cx="2" cy="-1" r="1.8"/>
-            <circle cx="-2" cy="2" r="1.8"/><circle cx="2" cy="2" r="1.8"/>
-            <circle cx="0" cy="0" r="1.1" fill="#ffa726" stroke="none"/>
-          </g>
-          <g transform="translate(72 36)">
-            <circle cx="-2" cy="-1" r="1.8"/><circle cx="2" cy="-1" r="1.8"/>
-            <circle cx="-2" cy="2" r="1.8"/><circle cx="2" cy="2" r="1.8"/>
-            <circle cx="0" cy="0" r="1.1" fill="#ffa726" stroke="none"/>
-          </g>
-          <g transform="translate(30 80)">
-            <circle cx="-2" cy="-1" r="1.6"/><circle cx="2" cy="-1" r="1.6"/>
-            <circle cx="-2" cy="2" r="1.6"/><circle cx="2" cy="2" r="1.6"/>
-          </g>
-          <g transform="translate(50 50)">
-            <circle cx="-2" cy="-1" r="1.5"/><circle cx="2" cy="-1" r="1.5"/>
-            <circle cx="-2" cy="2" r="1.5"/><circle cx="2" cy="2" r="1.5"/>
+        <defs>
+          <filter id="ds_osmanthus" x="-15%" y="-15%" width="130%" height="130%">
+            <feGaussianBlur in="SourceAlpha" stdDeviation="1.2"/>
+            <feOffset dy="1.6" result="off"/>
+            <feComponentTransfer><feFuncA type="linear" slope="0.38"/></feComponentTransfer>
+            <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <radialGradient id="leaf_osmanthus" cx="40%" cy="30%" r="80%">
+            <stop offset="0%" stop-color="#aed581"/>
+            <stop offset="55%" stop-color="#558b2f"/>
+            <stop offset="100%" stop-color="#2e5613"/>
+          </radialGradient>
+          <radialGradient id="flower_osmanthus" cx="40%" cy="30%" r="80%">
+            <stop offset="0%" stop-color="#fffde7"/>
+            <stop offset="55%" stop-color="#ffd54f"/>
+            <stop offset="100%" stop-color="#f57f17"/>
+          </radialGradient>
+        </defs>
+        <ellipse cx="50" cy="92" rx="22" ry="3" fill="#000" opacity="0.25"/>
+        <g filter="url(#ds_osmanthus)">
+          <!-- Central branch (curved, going up) -->
+          <path d="M 50 88 Q 48 60 50 30 Q 52 18 56 10" stroke="#6d4528" stroke-width="2" fill="none" stroke-linecap="round"/>
+          <!-- Side branches -->
+          <path d="M 50 60 Q 38 56 28 50" stroke="#6d4528" stroke-width="1.4" fill="none" stroke-linecap="round"/>
+          <path d="M 50 40 Q 62 36 72 32" stroke="#6d4528" stroke-width="1.4" fill="none" stroke-linecap="round"/>
+
+          <!-- Pairs of oval leaves attached to branch -->
+          <!-- Top pair -->
+          <ellipse cx="42" cy="22" rx="7" ry="3.5" fill="url(#leaf_osmanthus)" stroke="#1f4d10" stroke-width="0.5" transform="rotate(-30 42 22)"/>
+          <ellipse cx="58" cy="22" rx="7" ry="3.5" fill="url(#leaf_osmanthus)" stroke="#1f4d10" stroke-width="0.5" transform="rotate(30 58 22)"/>
+          <!-- Mid-left pair -->
+          <ellipse cx="32" cy="44" rx="7" ry="3.5" fill="url(#leaf_osmanthus)" stroke="#1f4d10" stroke-width="0.5" transform="rotate(-50 32 44)"/>
+          <ellipse cx="40" cy="50" rx="6" ry="3" fill="url(#leaf_osmanthus)" stroke="#1f4d10" stroke-width="0.5" transform="rotate(15 40 50)"/>
+          <!-- Mid-right pair -->
+          <ellipse cx="68" cy="38" rx="7" ry="3.5" fill="url(#leaf_osmanthus)" stroke="#1f4d10" stroke-width="0.5" transform="rotate(50 68 38)"/>
+          <ellipse cx="60" cy="44" rx="6" ry="3" fill="url(#leaf_osmanthus)" stroke="#1f4d10" stroke-width="0.5" transform="rotate(-15 60 44)"/>
+          <!-- Lower pair -->
+          <ellipse cx="38" cy="68" rx="7" ry="3.5" fill="url(#leaf_osmanthus)" stroke="#1f4d10" stroke-width="0.5" transform="rotate(-45 38 68)"/>
+          <ellipse cx="62" cy="68" rx="7" ry="3.5" fill="url(#leaf_osmanthus)" stroke="#1f4d10" stroke-width="0.5" transform="rotate(45 62 68)"/>
+
+          <!-- TINY 4-petal golden flowers in dense clusters (5 clusters) -->
+          <g fill="url(#flower_osmanthus)" stroke="#bf8700" stroke-width="0.3">
+            <!-- Top branch cluster -->
+            <g transform="translate(50 18)">
+              <circle cx="-1.5" cy="-1" r="1"/><circle cx="1.5" cy="-1" r="1"/>
+              <circle cx="-1.5" cy="1.5" r="1"/><circle cx="1.5" cy="1.5" r="1"/>
+              <circle cx="-3" cy="0" r="0.9"/><circle cx="3" cy="0" r="0.9"/>
+              <circle cx="0" cy="-2.5" r="0.8"/>
+            </g>
+            <!-- Mid-left cluster -->
+            <g transform="translate(36 56)">
+              <circle cx="-1.4" cy="-0.8" r="0.9"/><circle cx="1.4" cy="-0.8" r="0.9"/>
+              <circle cx="-1.4" cy="1.2" r="0.9"/><circle cx="1.4" cy="1.2" r="0.9"/>
+              <circle cx="0" cy="-2" r="0.8"/>
+            </g>
+            <!-- Mid-right cluster -->
+            <g transform="translate(64 50)">
+              <circle cx="-1.4" cy="-0.8" r="0.9"/><circle cx="1.4" cy="-0.8" r="0.9"/>
+              <circle cx="-1.4" cy="1.2" r="0.9"/><circle cx="1.4" cy="1.2" r="0.9"/>
+              <circle cx="0" cy="-2" r="0.8"/>
+            </g>
+            <!-- Lower-left cluster -->
+            <g transform="translate(46 74)">
+              <circle cx="-1.4" cy="-0.8" r="0.9"/><circle cx="1.4" cy="-0.8" r="0.9"/>
+              <circle cx="-1.4" cy="1.2" r="0.9"/><circle cx="1.4" cy="1.2" r="0.9"/>
+            </g>
+            <!-- Lower-right cluster -->
+            <g transform="translate(54 76)">
+              <circle cx="-1.4" cy="-0.8" r="0.9"/><circle cx="1.4" cy="-0.8" r="0.9"/>
+              <circle cx="-1.4" cy="1.2" r="0.9"/><circle cx="1.4" cy="1.2" r="0.9"/>
+            </g>
           </g>
         </g>
+        <ellipse cx="50" cy="88" rx="14" ry="1.4" fill="#000" opacity="0.25"/>
       `;
     },
   };
