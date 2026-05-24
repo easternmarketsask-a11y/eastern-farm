@@ -226,7 +226,10 @@
       if (result.levelInfo && result.levelInfo.leveledUp) {
         setTimeout(() => {
           Farm.ui.toast('🎉 Lv ' + result.levelInfo.newLevel + ' ' + Farm.i18n.t('toast_level_up'), 3500);
-          Farm.state.addEastPoints(5);
+          Farm.state.addEastPoints(5, {
+            source: 'level_up',
+            description: 'Level ' + result.levelInfo.oldLevel + ' → ' + result.levelInfo.newLevel,
+          });
           Farm.ui.refreshHUD();
           this.renderGrid();  // unlock new plots
           if (Farm.audio) Farm.audio.play('levelUp');

@@ -290,7 +290,10 @@
       if (this.data.coins < coinAmt) return { ok: false, reason: 'insufficient_coins' };
       this.data.coins -= coinAmt;
       const epAmount = coinAmt / 10;
-      const result = this.addEastPoints(epAmount);
+      const result = this.addEastPoints(epAmount, {
+        source: 'coin_exchange',
+        description: 'Exchange ' + coinAmt + ' farm coins → ' + epAmount + ' EP',
+      });
       this.save();
       return { ok: true, coinsSpent: coinAmt, epGained: epAmount, ...result };
     },

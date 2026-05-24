@@ -92,7 +92,12 @@
         if (data.completedAchievements.includes(ach.id)) return;
         if (this.evaluate(ach)) {
           data.completedAchievements.push(ach.id);
-          if (ach.reward_points) Farm.state.addEastPoints(ach.reward_points);
+          if (ach.reward_points) {
+            Farm.state.addEastPoints(ach.reward_points, {
+              source: 'achievement:' + ach.id,
+              description: 'Achievement unlock: ' + (ach.name_zh || ach.name_en || ach.id),
+            });
+          }
           newlyUnlocked.push(ach);
         }
       });

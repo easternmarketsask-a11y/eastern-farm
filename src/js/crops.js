@@ -110,50 +110,64 @@
       const festForCounter = (def.festival_only && def.festival_only === activeFest) ? activeFest : null;
       Farm.state.recordHarvest(cropId, festForCounter);
 
-      // ============ Variable EP rewards (V1.1) ============
-      // Layer 1: base random chance (1% chance of +5 instead of old 5% +1)
-      let bonusPoints = 0;
+      // ============ Variable EP rewards (V1.2 — nerfed for sustainability) ============
+      // Each layer fires its OWN /me/earn call so StockWise can enforce
+      // per-source caps (e.g., first_harvest_of_day max 1 per 22h).
       const bonusReasons = [];   // for farm.js to render celebratory toasts
+
+      const dayOfWeek = new Date().getDay();  // 0=Sun, 6=Sat
+      const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
+      // Weekend multiplier applies to small/medium rewards but NOT to jackpot
+      // (otherwise a 100 EP jackpot on Sat = 200 EP, too easy a big drop)
+      const weekMul = isWeekend ? 2 : 1;
+
+      // Layer 1: random lucky drop (3% chance × +5 base, ×2 weekend → +10 max)
       if (Math.random() < 0.03) {
-        bonusPoints += 5;
-        bonusReasons.push({ kind: 'lucky', amount: 5 });
+        const amt = 5 * weekMul;
+        Farm.state.addEastPoints(amt, {
+          source: isWeekend ? 'harvest_weekend_lucky' : 'harvest_lucky',
+          description: 'Lucky drop on harvesting ' + cropId,
+        });
+        bonusReasons.push({ kind: 'lucky', amount: amt });
       }
 
-      // Layer 2: festival crop fixed bonus
+      // Layer 2: festival crop fixed bonus (small, ×2 on weekends)
       if (def.east_points_bonus) {
-        bonusPoints += def.east_points_bonus;
-        bonusReasons.push({ kind: 'festival', amount: def.east_points_bonus });
+        const amt = def.east_points_bonus * weekMul;
+        Farm.state.addEastPoints(amt, {
+          source: isWeekend ? 'harvest_weekend_festival' : 'harvest_festival_bonus',
+          description: 'Festival crop ' + cropId + ' bonus',
+        });
+        bonusReasons.push({ kind: 'festival', amount: amt });
       }
 
-      // Layer 3: 1% gold-nugget jackpot: +50~500 EP burst (log-uniform random)
-      if (Math.random() < 0.01) {
-        const jackpot = 50 + Math.floor(Math.pow(Math.random(), 2) * 450);  // weighted toward smaller
-        bonusPoints += jackpot;
+      // Layer 3: gold-nugget jackpot — NERFED from 1% × 50-500 → 0.5% × 20-100
+      // (weekend multiplier does NOT apply to jackpot, per design)
+      if (Math.random() < 0.005) {
+        const jackpot = 20 + Math.floor(Math.pow(Math.random(), 2) * 80);  // 20-100, weighted small
+        Farm.state.addEastPoints(jackpot, {
+          source: 'harvest_jackpot',
+          description: 'Golden nugget on ' + cropId,
+        });
         bonusReasons.push({ kind: 'jackpot', amount: jackpot });
       }
 
-      // Layer 4: first harvest of the day → +10 EP welcome bonus
+      // Layer 4: first harvest of the day — NERFED from +10 → +5 (×2 weekend)
+      // (separate /me/earn call: server enforces "max once per 22h per user")
       if (Farm.state.markFirstHarvest()) {
-        bonusPoints += 10;
-        bonusReasons.push({ kind: 'first_harvest', amount: 10 });
+        const amt = 5 * weekMul;
+        Farm.state.addEastPoints(amt, {
+          source: 'first_harvest_of_day',
+          description: 'First harvest of the day' + (isWeekend ? ' (weekend ×2)' : ''),
+        });
+        bonusReasons.push({ kind: 'first_harvest', amount: amt });
       }
 
-      // Layer 5: weekend meteor shower → multiplier on all earned EP
-      const dayOfWeek = new Date().getDay();  // 0=Sun, 6=Sat
-      const weekendMultiplier = (dayOfWeek === 0 || dayOfWeek === 6) ? 2 : 1;
-      if (weekendMultiplier > 1 && bonusPoints > 0) {
-        const extra = bonusPoints * (weekendMultiplier - 1);
-        bonusPoints += extra;
-        bonusReasons.push({ kind: 'weekend', amount: extra });
-      }
-
-      // Credit (respects daily cap; overflow queues for tomorrow)
-      let epCredited = 0, epQueued = 0;
-      if (bonusPoints > 0) {
-        const r = Farm.state.addEastPoints(bonusPoints);
-        epCredited = r.credited;
-        epQueued = r.queued;
-      }
+      // Sum for the return value + toast rendering
+      let bonusPoints = bonusReasons.reduce(function (s, r) { return s + r.amount; }, 0);
+      let epCredited = bonusPoints;
+      let epQueued = 0;
+      const weekendMultiplier = weekMul;  // kept for backwards compat with farm.js toast logic
 
       if (plot.harvestsLeft > 0) {
         // Multi-harvest crop: restart from regrow time

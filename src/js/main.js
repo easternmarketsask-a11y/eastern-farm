@@ -102,7 +102,10 @@
     const coins = 10 * multiplier;
     const points = 1 * multiplier;
     Farm.state.addCoins(coins);
-    Farm.state.addEastPoints(points);
+    Farm.state.addEastPoints(points, {
+      source: 'daily_login',
+      description: '每日登录第 ' + data.loginStreak + ' 天 (×' + multiplier + ')',
+    });
     Farm.ui.refreshHUD();
 
     setTimeout(() => {

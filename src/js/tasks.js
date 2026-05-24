@@ -79,7 +79,12 @@
           // Auto-claim
           t.claimed = true;
           Farm.state.addCoins(t.reward_coins);
-          if (t.reward_points > 0) Farm.state.addEastPoints(t.reward_points);
+          if (t.reward_points > 0) {
+            Farm.state.addEastPoints(t.reward_points, {
+              source: 'task_completion',
+              description: 'Daily task: ' + (t.templateId || t.id),
+            });
+          }
           Farm.state.recordTaskClaim();
           anyComplete = true;
           setTimeout(() => {

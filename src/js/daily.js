@@ -149,7 +149,10 @@
       const readBtn = $('dailyReadNews');
       if (readBtn) readBtn.onclick = () => {
         if (Farm.state.claimDailyNews()) {
-          Farm.state.addEastPoints(2);
+          Farm.state.addEastPoints(2, {
+            source: 'news_read',
+            description: '今日新闻已读',
+          });
           Farm.ui.refreshHUD();
           Farm.ui.toast(lang === 'en' ? '📰 +2 EP' : '📰 +2 积分', 1800);
           if (Farm.audio) Farm.audio.play('coin');
@@ -206,7 +209,10 @@
       spinBtn.onclick = () => {
         const cost2 = Farm.state.data.dailyClaims.lotterySpunFree ? 20 : 0;
         if (cost2 > 0) {
-          if (!Farm.state.spendEastPoints(cost2)) {
+          if (!Farm.state.spendEastPoints(cost2, {
+            source: 'lottery_wheel_spend',
+            description: 'Paid lottery wheel spin',
+          })) {
             Farm.ui.toast(Farm.i18n.t('toast_not_enough_points'));
             if (Farm.audio) Farm.audio.play('error');
             return;

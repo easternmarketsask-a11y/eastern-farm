@@ -234,7 +234,10 @@
         const visited = Farm.state.data.dailyClaims.neighborsVisited;
         if (visited.length === 3) {
           // Award the +5 EP
-          Farm.state.addEastPoints(5);
+          Farm.state.addEastPoints(5, {
+            source: 'neighbor_visit_complete',
+            description: 'Visited 3 neighbors today',
+          });
           Farm.ui.refreshHUD();
           setTimeout(() => {
             Farm.ui.toast(lang === 'en' ? '🎉 Visited 3 neighbors! +5 🎫' : '🎉 走访 3 户完成 +5 🎫', 3000);

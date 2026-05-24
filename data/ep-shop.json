@@ -89,11 +89,11 @@
     { "id": "lot_coins_sm", "weight": 25, "kind": "coins", "amount": 100, "label_zh": "+100 农场币", "label_en": "+100 coins", "icon": "🪙" },
     { "id": "lot_coins_md", "weight": 15, "kind": "coins", "amount": 300, "label_zh": "+300 农场币", "label_en": "+300 coins", "icon": "🪙" },
     { "id": "lot_coins_lg", "weight": 5, "kind": "coins", "amount": 1000, "label_zh": "+1000 农场币", "label_en": "+1000 coins", "icon": "💰" },
-    { "id": "lot_ep_sm", "weight": 20, "kind": "ep", "amount": 5, "label_zh": "+5 东方积分", "label_en": "+5 EP", "icon": "🎫" },
-    { "id": "lot_ep_md", "weight": 10, "kind": "ep", "amount": 25, "label_zh": "+25 东方积分", "label_en": "+25 EP", "icon": "🎫" },
-    { "id": "lot_ep_lg", "weight": 3, "kind": "ep", "amount": 100, "label_zh": "+100 东方积分", "label_en": "+100 EP", "icon": "💎" },
+    { "id": "lot_ep_sm", "weight": 20, "kind": "ep", "amount": 3, "label_zh": "+3 东方积分", "label_en": "+3 EP", "icon": "🎫" },
+    { "id": "lot_ep_md", "weight": 10, "kind": "ep", "amount": 15, "label_zh": "+15 东方积分", "label_en": "+15 EP", "icon": "🎫" },
+    { "id": "lot_ep_lg", "weight": 3, "kind": "ep", "amount": 30, "label_zh": "+30 东方积分", "label_en": "+30 EP", "icon": "💎" },
     { "id": "lot_seed_pack", "weight": 12, "kind": "seed_pack", "amount": 3, "label_zh": "随机种子 ×3", "label_en": "3 random seeds", "icon": "🌱" },
     { "id": "lot_acc_ticket", "weight": 8, "kind": "shop_item", "itemId": "acceleration_ticket", "amount": 1, "label_zh": "加速券 ×1", "label_en": "1 Acceleration", "icon": "⚡" },
-    { "id": "lot_jackpot", "weight": 2, "kind": "ep", "amount": 500, "label_zh": "🎉 大奖 +500 EP", "label_en": "🎉 JACKPOT +500 EP", "icon": "🎰" }
+    { "id": "lot_jackpot", "weight": 1, "kind": "ep", "amount": 100, "label_zh": "🎉 大奖 +100 EP", "label_en": "🎉 JACKPOT +100 EP", "icon": "🎰" }
   ]
 }

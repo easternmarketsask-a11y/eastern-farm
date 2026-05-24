@@ -111,7 +111,10 @@
           Farm.state.addCoins(picked.amount);
           break;
         case 'ep':
-          Farm.state.addEastPoints(picked.amount);
+          Farm.state.addEastPoints(picked.amount, {
+            source: 'lottery_wheel_prize',
+            description: 'Lottery wheel EP prize: ' + picked.id,
+          });
           break;
         case 'seed_pack':
           // Random unlocked-crop seeds
