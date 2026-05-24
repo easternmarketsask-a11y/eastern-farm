@@ -1781,22 +1781,72 @@
       `;
     },
 
+    // jing_cong (Peking Leek) — emoji-style. Much THICKER and TALLER than
+    // xiao_cong. Big white cylindrical bulb base + 3 fan-spread green
+    // leaves at top.
     jing_cong(c) {
-      const green = c || '#9ccc65';
-      const dark = darken(green, 0.22);
-      const white = '#fff8e7';
       return `
-        <ellipse cx="50" cy="88" rx="12" ry="3" fill="#a86c44"/>
-        <path d="M 44 88 L 42 50 Q 42 40 50 40 Q 58 40 58 50 L 56 88 Z" fill="${white}" stroke="#c9b890" stroke-width="1"/>
-        <path d="M 47 86 L 47 44" stroke="#c9b890" stroke-width="0.5" opacity="0.7"/>
-        <path d="M 50 86 L 50 42" stroke="#c9b890" stroke-width="0.5" opacity="0.7"/>
-        <path d="M 53 86 L 53 44" stroke="#c9b890" stroke-width="0.5" opacity="0.7"/>
-        <path d="M 42 50 Q 38 30 42 12" stroke="${dark}" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-        <path d="M 42 50 Q 38 30 42 12" stroke="${green}" stroke-width="2" fill="none" stroke-linecap="round"/>
-        <path d="M 50 40 Q 50 20 52 6" stroke="${dark}" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-        <path d="M 50 40 Q 50 20 52 6" stroke="${lighten(green, 0.15)}" stroke-width="2" fill="none" stroke-linecap="round"/>
-        <path d="M 58 50 Q 62 30 58 14" stroke="${dark}" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-        <path d="M 58 50 Q 62 30 58 14" stroke="${green}" stroke-width="2" fill="none" stroke-linecap="round"/>
+        <defs>
+          <filter id="ds_jing_cong" x="-15%" y="-15%" width="130%" height="130%">
+            <feGaussianBlur in="SourceAlpha" stdDeviation="1.3"/>
+            <feOffset dy="1.8" result="off"/>
+            <feComponentTransfer><feFuncA type="linear" slope="0.4"/></feComponentTransfer>
+            <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <linearGradient id="bulb_jing_cong" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#c9b890"/>
+            <stop offset="35%" stop-color="#fff8e1"/>
+            <stop offset="65%" stop-color="#fff8e1"/>
+            <stop offset="100%" stop-color="#b9a570"/>
+          </linearGradient>
+          <linearGradient id="leaf_jing_cong" x1="0%" y1="100%" x2="0%" y2="0%">
+            <stop offset="0%" stop-color="#2e6b1d"/>
+            <stop offset="50%" stop-color="#7cb342"/>
+            <stop offset="100%" stop-color="#c5e1a5"/>
+          </linearGradient>
+        </defs>
+        <ellipse cx="50" cy="92" rx="14" ry="2.5" fill="#000" opacity="0.22"/>
+
+        <g filter="url(#ds_jing_cong)">
+          <!-- Thick white-cream bulb base (much larger than xiao_cong's stems) -->
+          <path d="M 38 88
+                   Q 35 70 36 50
+                   Q 40 44 50 44
+                   Q 60 44 64 50
+                   Q 65 70 62 88
+                   Z"
+                fill="url(#bulb_jing_cong)" stroke="#a89466" stroke-width="0.8"/>
+
+          <!-- Vertical fiber lines on bulb -->
+          <path d="M 41 86 Q 40 70 42 50" stroke="#a89466" stroke-width="0.5" fill="none" opacity="0.7"/>
+          <path d="M 47 87 Q 46 70 47 48" stroke="#a89466" stroke-width="0.6" fill="none" opacity="0.7"/>
+          <path d="M 53 87 Q 54 70 53 48" stroke="#a89466" stroke-width="0.6" fill="none" opacity="0.7"/>
+          <path d="M 59 86 Q 60 70 58 50" stroke="#a89466" stroke-width="0.5" fill="none" opacity="0.7"/>
+
+          <!-- 3 thick green leaves spreading from top of bulb -->
+          <path d="M 36 50 Q 28 36 22 14
+                   Q 26 12 30 16
+                   Q 32 30 40 48 Z"
+                fill="url(#leaf_jing_cong)" stroke="#1a3b0c" stroke-width="0.5"/>
+          <path d="M 50 44 Q 48 28 48 6
+                   Q 52 6 52 8
+                   Q 52 28 50 44 Z"
+                fill="url(#leaf_jing_cong)" stroke="#1a3b0c" stroke-width="0.5"/>
+          <path d="M 64 50 Q 72 36 78 14
+                   Q 74 12 70 16
+                   Q 68 30 60 48 Z"
+                fill="url(#leaf_jing_cong)" stroke="#1a3b0c" stroke-width="0.5"/>
+        </g>
+
+        <!-- Glossy highlight on bulb left side -->
+        <ellipse cx="42" cy="64" rx="2.5" ry="14" fill="#fff" opacity="0.45" transform="rotate(-3 42 64)"/>
+        <ellipse cx="44" cy="50" rx="2" ry="3" fill="#fff" opacity="0.65"/>
+        <!-- Leaf hot spots -->
+        <ellipse cx="48" cy="14" rx="1.2" ry="2" fill="#fff" opacity="0.55"/>
+        <ellipse cx="26" cy="22" rx="1.2" ry="2" fill="#fff" opacity="0.45"/>
+
+        <!-- Base shadow -->
+        <ellipse cx="50" cy="88" rx="11" ry="1.4" fill="#000" opacity="0.28"/>
       `;
     },
 
@@ -2060,39 +2110,117 @@
       `;
     },
 
+    // shan_yao (Chinese Yam) — emoji-style. Long brown cylindrical stick
+    // root, slight knobby texture, slight bend, fibrous roots at bottom.
     shan_yao(c) {
-      const tan = c || '#d7ccc8';
-      const dark = '#a89070';
       return `
-        <g transform="rotate(8 50 60)">
-          <path d="M 38 24 Q 36 50 40 78 Q 46 90 50 92 Q 54 90 60 78 Q 64 50 62 24 Q 56 18 50 18 Q 44 18 38 24 Z" fill="${tan}" stroke="${dark}" stroke-width="1.2"/>
-          <path d="M 42 28 L 42 84" stroke="${dark}" stroke-width="0.5" opacity="0.5"/>
-          <path d="M 50 26 L 50 92" stroke="${dark}" stroke-width="0.5" opacity="0.5"/>
-          <path d="M 58 28 L 58 84" stroke="${dark}" stroke-width="0.5" opacity="0.5"/>
-          <ellipse cx="44" cy="42" rx="3" ry="14" fill="#fff" opacity="0.4"/>
-          <g fill="${dark}" opacity="0.6">
-            <circle cx="45" cy="36" r="0.8"/><circle cx="52" cy="44" r="0.8"/>
-            <circle cx="48" cy="58" r="0.8"/><circle cx="54" cy="68" r="0.8"/>
+        <defs>
+          <filter id="ds_shan_yao" x="-15%" y="-15%" width="130%" height="130%">
+            <feGaussianBlur in="SourceAlpha" stdDeviation="1.3"/>
+            <feOffset dy="1.8" result="off"/>
+            <feComponentTransfer><feFuncA type="linear" slope="0.4"/></feComponentTransfer>
+            <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <linearGradient id="body_shan_yao" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#6d4d28"/>
+            <stop offset="35%" stop-color="#a67c4b"/>
+            <stop offset="65%" stop-color="#d2a877"/>
+            <stop offset="100%" stop-color="#7d5a30"/>
+          </linearGradient>
+        </defs>
+        <ellipse cx="50" cy="94" rx="13" ry="2" fill="#000" opacity="0.22"/>
+
+        <g filter="url(#ds_shan_yao)" transform="rotate(6 50 50)">
+          <!-- Long cylindrical yam root, gently curved -->
+          <path d="M 42 8
+                   Q 40 30 41 50
+                   Q 42 70 44 88
+                   Q 50 92 56 88
+                   Q 58 70 59 50
+                   Q 60 30 58 8
+                   Q 50 4 42 8
+                   Z"
+                fill="url(#body_shan_yao)" stroke="#3d2614" stroke-width="0.7"/>
+
+          <!-- Horizontal texture lines (skin marks) -->
+          <path d="M 42 22 Q 50 24 58 22" stroke="#3d2614" stroke-width="0.4" fill="none" opacity="0.5"/>
+          <path d="M 42 38 Q 50 40 58 38" stroke="#3d2614" stroke-width="0.4" fill="none" opacity="0.45"/>
+          <path d="M 42 54 Q 50 56 58 54" stroke="#3d2614" stroke-width="0.4" fill="none" opacity="0.45"/>
+          <path d="M 42 70 Q 50 72 58 70" stroke="#3d2614" stroke-width="0.4" fill="none" opacity="0.45"/>
+          <path d="M 43 82 Q 50 84 57 82" stroke="#3d2614" stroke-width="0.4" fill="none" opacity="0.4"/>
+
+          <!-- Tiny root hairs at bottom -->
+          <path d="M 46 90 L 44 96 M 50 90 L 50 96 M 54 90 L 56 96" stroke="#3d2614" stroke-width="0.6" stroke-linecap="round" opacity="0.7"/>
+
+          <!-- Knobby spots (dark patches indicating skin texture) -->
+          <g fill="#3d2614" opacity="0.55">
+            <circle cx="44" cy="30" r="0.9"/>
+            <circle cx="52" cy="48" r="1"/>
+            <circle cx="46" cy="62" r="0.9"/>
+            <circle cx="54" cy="78" r="0.9"/>
+            <circle cx="48" cy="20" r="0.7"/>
           </g>
         </g>
+
+        <!-- Glossy highlight stripe on left -->
+        <ellipse cx="45" cy="50" rx="2" ry="32" fill="#fff" opacity="0.35" transform="rotate(4 45 50)"/>
+        <ellipse cx="46" cy="32" rx="1.5" ry="3" fill="#fff" opacity="0.55"/>
+
+        <!-- Base shadow -->
+        <ellipse cx="50" cy="92" rx="8" ry="1.3" fill="#000" opacity="0.25"/>
       `;
     },
 
+    // chun_sun (spring bamboo shoot) — emoji-style. Triangular cone shape,
+    // BROAD base tapering to POINTED top, multiple horizontal husk-layer
+    // rings (tan/brown gradient). Tiny leaf sprouting from very top.
     chun_sun(c) {
-      const cream = c || '#dcedc8';
-      const dark = '#7a8a4a';
-      const green = '#558b2f';
       return `
-        <ellipse cx="50" cy="88" rx="16" ry="3" fill="#a86c44" opacity="0.5"/>
-        <path d="M 34 88 Q 32 70 38 50 Q 42 30 50 14 Q 58 30 62 50 Q 68 70 66 88 Z" fill="${cream}" stroke="${dark}" stroke-width="1.5"/>
-        <path d="M 36 80 Q 42 82 50 80 Q 58 82 64 80" stroke="${dark}" stroke-width="1" fill="none" opacity="0.6"/>
-        <path d="M 36 66 Q 42 68 50 66 Q 58 68 64 66" stroke="${dark}" stroke-width="1" fill="none" opacity="0.6"/>
-        <path d="M 38 52 Q 44 54 50 52 Q 56 54 62 52" stroke="${dark}" stroke-width="1" fill="none" opacity="0.6"/>
-        <path d="M 40 38 Q 44 40 50 38 Q 56 40 60 38" stroke="${dark}" stroke-width="1" fill="none" opacity="0.6"/>
-        <path d="M 43 26 Q 47 28 50 26 Q 53 28 57 26" stroke="${dark}" stroke-width="1" fill="none" opacity="0.6"/>
-        <ellipse cx="42" cy="55" rx="3" ry="20" fill="#fff" opacity="0.3"/>
-        <path d="M 48 14 Q 45 8 42 6 Q 44 12 47 14 Z" fill="${green}" stroke="#3a7d2c" stroke-width="0.6"/>
-        <path d="M 52 14 Q 55 8 58 6 Q 56 12 53 14 Z" fill="${green}" stroke="#3a7d2c" stroke-width="0.6"/>
+        <defs>
+          <filter id="ds_chun_sun" x="-15%" y="-15%" width="130%" height="130%">
+            <feGaussianBlur in="SourceAlpha" stdDeviation="1.3"/>
+            <feOffset dy="1.8" result="off"/>
+            <feComponentTransfer><feFuncA type="linear" slope="0.4"/></feComponentTransfer>
+            <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <linearGradient id="husk_chun_sun" x1="0%" y1="100%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#8b7a3f"/>
+            <stop offset="35%" stop-color="#d8c473"/>
+            <stop offset="65%" stop-color="#f0e2a8"/>
+            <stop offset="100%" stop-color="#a89455"/>
+          </linearGradient>
+        </defs>
+        <ellipse cx="50" cy="92" rx="18" ry="2.5" fill="#000" opacity="0.22"/>
+
+        <g filter="url(#ds_chun_sun)">
+          <!-- Big triangular cone, broad base + pointed top -->
+          <path d="M 30 88
+                   Q 28 70 34 48
+                   Q 40 26 50 12
+                   Q 60 26 66 48
+                   Q 72 70 70 88
+                   Z"
+                fill="url(#husk_chun_sun)" stroke="#5d4f24" stroke-width="0.8"/>
+
+          <!-- Horizontal husk-layer rings (the iconic bamboo-shoot texture) -->
+          <path d="M 32 78 Q 50 80 68 78" stroke="#5d4f24" stroke-width="0.9" fill="none" opacity="0.75"/>
+          <path d="M 34 66 Q 50 68 66 66" stroke="#5d4f24" stroke-width="0.8" fill="none" opacity="0.75"/>
+          <path d="M 36 54 Q 50 56 64 54" stroke="#5d4f24" stroke-width="0.7" fill="none" opacity="0.7"/>
+          <path d="M 39 42 Q 50 44 61 42" stroke="#5d4f24" stroke-width="0.7" fill="none" opacity="0.7"/>
+          <path d="M 42 30 Q 50 32 58 30" stroke="#5d4f24" stroke-width="0.6" fill="none" opacity="0.65"/>
+          <path d="M 46 20 Q 50 22 54 20" stroke="#5d4f24" stroke-width="0.5" fill="none" opacity="0.6"/>
+
+          <!-- Small green leaf sprouting at the very tip -->
+          <path d="M 50 14 Q 46 6 42 4 Q 48 8 50 12 Z" fill="#7cb342" stroke="#3a6e1a" stroke-width="0.5"/>
+          <path d="M 50 14 Q 54 6 58 4 Q 52 8 50 12 Z" fill="#7cb342" stroke="#3a6e1a" stroke-width="0.5"/>
+        </g>
+
+        <!-- Glossy highlight stripe on left side -->
+        <path d="M 38 80 Q 38 50 46 22" stroke="#fff" stroke-width="2" fill="none" opacity="0.4" stroke-linecap="round"/>
+        <ellipse cx="40" cy="48" rx="2" ry="3" fill="#fff" opacity="0.6"/>
+
+        <!-- Base shadow -->
+        <ellipse cx="50" cy="88" rx="13" ry="1.4" fill="#000" opacity="0.28"/>
       `;
     },
     narcissus(c) {
