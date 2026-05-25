@@ -20,6 +20,7 @@
       }
 
       const specialId = Farm.daily ? Farm.daily.getSpecialSeedId() : null;
+      const coin = '<span class="coin-icon"></span>';  // styled gold disc, replaces 🪙
       const html = `
         <h2 class="modal-title">🛒 ${Farm.i18n.t('shop_title')}</h2>
         <p class="modal-subtitle">${Farm.i18n.t('shop_subtitle')}</p>
@@ -30,21 +31,29 @@
             const isSpecial = !locked && c.id === specialId;
             const price = isSpecial ? Farm.daily.discountedSeedCost(c.id) : c.seed_cost;
             const priceCell = isSpecial
-              ? `<div class="seed-cost"><s style="color:#bbb;">🪙 ${c.seed_cost}</s> <strong style="color:var(--barn-red);">🪙 ${price}</strong></div>`
-              : `<div class="seed-cost">🪙 ${c.seed_cost}</div>`;
+              ? `<span class="seed-cost"><s style="color:#bbb;">${coin}${c.seed_cost}</s> <strong style="color:var(--barn-red);">${coin}${price}</strong></span>`
+              : `<span class="seed-cost">${coin}${c.seed_cost}</span>`;
+            // NEW: show sell price (what player gets back when crop matures).
+            // Profit margin = sell_price - seed_cost, also informs buying choice.
+            const sellCell = `<span class="seed-sell">→${coin}${c.sell_price}</span>`;
             const specialBadge = isSpecial
               ? '<div class="seed-special-badge">⭐ ' + (lang === 'en' ? 'TODAY -50%' : '今日 -50%') + '</div>'
               : '';
+            const statusCell = locked
+              ? `<span style="color:#999;">Lv ${c.unlock_level}</span>`
+              : `<span class="seed-owned">${lang === 'en' ? '×' : '×'} ${owned}</span>`;
             return `
               <div class="seed-card ${locked ? 'locked' : ''} ${isSpecial ? 'special' : ''}" data-crop-id="${c.id}" data-action="buy">
                 ${specialBadge}
                 <span class="seed-icon">${c.icon}</span>
-                <div class="seed-name">${c[nameKey]}</div>
-                ${priceCell}
-                <div class="seed-time">⏱ ${formatMinutes(c.grow_minutes)}</div>
-                ${locked
-                  ? `<div style="font-size:10px;color:#999;margin-top:4px;">Lv ${c.unlock_level}</div>`
-                  : `<div style="font-size:10px;color:var(--leaf-dark);margin-top:4px;">${lang === 'en' ? 'Own' : '已有'} ${owned}</div>`}
+                <div>
+                  <div class="seed-name">${c[nameKey]}</div>
+                  <div class="seed-meta">
+                    ${priceCell}${sellCell}
+                    <span class="seed-time">⏱${formatMinutes(c.grow_minutes)}</span>
+                    ${statusCell}
+                  </div>
+                </div>
               </div>
             `;
           }).join('')}
@@ -98,6 +107,7 @@
         return;
       }
 
+      const coin = '<span class="coin-icon"></span>';
       const html = `
         <h2 class="modal-title">${Farm.i18n.t('btn_plant')}</h2>
         <p class="modal-subtitle">${lang === 'en' ? 'Choose a seed to plant' : '选择要种的种子'}</p>
@@ -107,12 +117,19 @@
             if (!c) return '';
             const locked = c.unlock_level > playerLevel;
             const owned = seeds[id] || 0;
+            // Show sell price so player can pick the most profitable crop
+            // that fits in their available time window.
             return `
               <div class="seed-card ${locked ? 'locked' : ''}" data-crop-id="${id}" data-action="plant">
                 <span class="seed-icon">${c.icon}</span>
-                <div class="seed-name">${c[nameKey]}</div>
-                <div class="seed-time">⏱ ${formatMinutes(c.grow_minutes)}</div>
-                <div style="font-size:11px;color:var(--leaf-dark);margin-top:4px;font-weight:600;">×${owned}</div>
+                <div>
+                  <div class="seed-name">${c[nameKey]}</div>
+                  <div class="seed-meta">
+                    <span class="seed-sell">${coin}${c.sell_price}</span>
+                    <span class="seed-time">⏱${formatMinutes(c.grow_minutes)}</span>
+                    <span class="seed-owned">× ${owned}</span>
+                  </div>
+                </div>
               </div>
             `;
           }).join('')}

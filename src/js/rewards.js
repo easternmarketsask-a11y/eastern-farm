@@ -64,19 +64,19 @@
         <h3 class="rewards-section">${lang === 'en' ? '🔄 Exchange (10 ⇄ 1)' : '🔄 兑换 (10 ⇄ 1)'}</h3>
         <div class="exchange-row">
           <div class="exchange-side">
-            <label>🪙 ${lang === 'en' ? 'Coins → EP' : '农场币 → 积分'}</label>
+            <label><span class="coin-icon"></span> ${lang === 'en' ? 'Coins → EP' : '农场币 → 积分'}</label>
             <div class="exchange-input-group">
               <input type="number" id="exCoinAmt" min="10" step="10" value="100" placeholder="10x" />
               <span class="exchange-arrow">→ <span id="exCoinPreview">10</span> 🎫</span>
             </div>
-            <div class="exchange-balance">${lang === 'en' ? 'Have' : '有'} 🪙 ${coins.toLocaleString()}</div>
+            <div class="exchange-balance">${lang === 'en' ? 'Have' : '有'} <span class="coin-icon"></span> ${coins.toLocaleString()}</div>
             <button class="btn exchange-btn" id="exCoinBtn">${lang === 'en' ? 'Exchange' : '兑换'}</button>
           </div>
           <div class="exchange-side">
             <label>🎫 ${lang === 'en' ? 'EP → Coins' : '积分 → 农场币'}</label>
             <div class="exchange-input-group">
               <input type="number" id="exEpAmt" min="1" step="1" value="10" />
-              <span class="exchange-arrow">→ <span id="exEpPreview">100</span> 🪙</span>
+              <span class="exchange-arrow">→ <span id="exEpPreview">100</span> <span class="coin-icon"></span></span>
             </div>
             <div class="exchange-balance">${lang === 'en' ? 'Have' : '有'} 🎫 ${ep.toLocaleString()}</div>
             <button class="btn exchange-btn" id="exEpBtn">${lang === 'en' ? 'Exchange' : '兑换'}</button>
@@ -185,7 +185,7 @@
         }
         Farm.ui.refreshHUD();
         if (Farm.audio) Farm.audio.play('coin');
-        Farm.ui.toast(`🔄 +${r.coinsGained} 🪙`, 2200);
+        Farm.ui.toast(`🔄 +${r.coinsGained} <span class="coin-icon"></span>`, 2200);
         setTimeout(() => this.open(), 600);
       };
       document.getElementById('openEpShopBtn').onclick = () => {

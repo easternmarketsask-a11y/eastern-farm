@@ -90,7 +90,7 @@
           setTimeout(() => {
             const lang = Farm.state.data.language;
             const title = lang === 'en' ? t.title_en : t.title_zh;
-            Farm.ui.toast('✅ ' + title + ' +' + t.reward_coins + '🪙' +
+            Farm.ui.toast('✅ ' + title + ' +' + t.reward_coins + '<span class="coin-icon"></span>' +
               (t.reward_points ? ' +' + t.reward_points + '🎫' : ''), 3000);
             Farm.ui.refreshHUD();
             this.updateBadge();
@@ -126,7 +126,7 @@
                   </div>
                 </div>
                 <div class="task-reward">
-                  +${t.reward_coins}🪙${t.reward_points ? '<br>+' + t.reward_points + '🎫' : ''}
+                  +${t.reward_coins}<span class="coin-icon"></span>${t.reward_points ? '<br>+' + t.reward_points + '🎫' : ''}
                 </div>
               </div>
             `;

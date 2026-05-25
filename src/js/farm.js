@@ -194,7 +194,7 @@
       // Floating +N coins
       if (evt && evt.target) {
         const rect = evt.target.getBoundingClientRect();
-        Farm.ui.floatText('+' + result.coins + ' 🪙',
+        Farm.ui.floatText('+' + result.coins + ' <span class="coin-icon"></span>',
           rect.left + rect.width/2 - 15, rect.top);
         if (result.eastPoints > 0) {
           setTimeout(() => {

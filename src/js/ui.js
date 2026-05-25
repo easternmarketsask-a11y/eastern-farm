@@ -60,7 +60,9 @@
     toast(text, duration) {
       duration = duration || 2500;
       const el = document.getElementById('toast');
-      el.textContent = text;
+      // Support inline HTML (for the styled coin-icon span). Callers pass
+      // author-controlled strings only — no XSS risk in this code base.
+      el.innerHTML = text;
       el.classList.remove('hidden');
       // Restart animation
       el.style.animation = 'none';
@@ -75,7 +77,9 @@
     floatText(text, x, y, color) {
       const el = document.createElement('div');
       el.className = 'float-coin';
-      el.textContent = text;
+      // Support inline HTML so the floating "+5 [coin]" can use the styled
+      // coin-icon span instead of the inconsistent 🪙 emoji.
+      el.innerHTML = text;
       el.style.left = x + 'px';
       el.style.top = y + 'px';
       if (color) el.style.color = color;
@@ -149,7 +153,7 @@
         unlockedItems.push('🎫 +' + epAwarded + (lang === 'en' ? ' EP' : ' 东方积分'));
       }
       // Always include a coin bonus mention to make level-up feel rewarding
-      unlockedItems.push('🪙 +' + (50 * (newLevel - oldLevel)) + (lang === 'en' ? ' coins' : ' 农场币'));
+      unlockedItems.push('<span class="coin-icon"></span> +' + (50 * (newLevel - oldLevel)) + (lang === 'en' ? ' coins' : ' 农场币'));
 
       const titleZhEn = (t) => lang === 'en' ? t.en : t.zh;
 

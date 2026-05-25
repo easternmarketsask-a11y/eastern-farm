@@ -100,8 +100,8 @@
             <div style="flex:1;">
               <div style="font-weight:700;">${specialCrop[nameKey]}</div>
               <div style="font-size:12px;color:var(--warm-text-soft);">
-                <s>🪙 ${specialCrop.seed_cost}</s>
-                <strong style="color:var(--barn-red);font-size:14px;margin-left:6px;">🪙 ${specialPrice}</strong>
+                <s><span class="coin-icon"></span> ${specialCrop.seed_cost}</s>
+                <strong style="color:var(--barn-red);font-size:14px;margin-left:6px;"><span class="coin-icon"></span> ${specialPrice}</strong>
                 <span style="background:var(--barn-red);color:white;font-size:10px;padding:1px 5px;border-radius:6px;margin-left:6px;">-50%</span>
               </div>
             </div>
