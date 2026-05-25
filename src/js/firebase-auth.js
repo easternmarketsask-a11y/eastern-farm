@@ -1,23 +1,43 @@
 /**
- * firebase-auth.js — Member login + auth state for the game.
+ * firebase-auth.js — Member login for the game.
  *
- * Registration is NOT supported in the game. Members must register at
- * the Eastern Market store (in-person via phone number) and on the main
- * easternmarket.ca site first. The game only signs them in.
+ * Same Firebase project as the main store (eastern-market-members), so:
+ * - The phone number you registered at the store IS your login.
+ * - Email-and-password login still works for legacy members.
+ * - Points balance + tier badge sync automatically across game + main site.
  *
- * Same Firebase Auth project as the main store, so credentials work in
- * both places. Each origin has its own browser-side persistence — so
- * users do log in once per origin (game + main store separately), but
- * after that, both sites remember them.
+ * Phone login flow (mirrors easternmarket.ca/login):
+ *   1. User enters phone (auto-formatted "(306) 123-4567")
+ *   2. Visible reCAPTCHA ("I'm not a robot") — iOS Safari requirement
+ *   3. Tap "发送验证码" → membership lookup + SMS sent in parallel
+ *      (signInWithPhoneNumber MUST be sync in the click handler — any
+ *      `await` before it kills the iOS gesture and the reCAPTCHA
+ *      iframe hangs silently)
+ *   4. Non-member → friendly "register at store" panel, NO SMS sent
+ *   5. Member → 6 boxes for OTP code (auto-focus next, auto-submit on 6th)
+ *   6. Verify → Firebase Auth user created/linked → members.firebase_uid
+ *      updated if missing → welcome toast
  *
- * Topbar shows "登录 / Sign in" when not logged in, member name + tier
- * badge when logged in. Tap toggles login modal or logout confirmation.
+ * UX optimizations:
+ *   - Phone tab default; email tab hidden behind "其他登录方式" link
+ *   - "+1" prefix shown so users don't add country code by mistake
+ *   - Last phone remembered in localStorage, prefilled on next open
+ *   - 6 separate digit boxes (mobile UX standard) instead of one input
+ *   - Auto-submit when 6 digits typed/pasted
+ *   - Splash screen has direct "登录" button (no need to enter game first)
+ *   - Welcome toast on success with tier badge
  */
-(function() {
+(function () {
+  const REMEMBER_KEY = 'eastern_farm_last_phone';
+
   const auth = {
-    currentUser: null,         // Firebase user object (or null)
-    memberDoc: null,           // Member doc from members/{uid}
-    listeners: [],             // subscribers to auth-state changes
+    currentUser: null,
+    memberDoc: null,
+    listeners: [],
+    _confirmation: null,     // Firebase ConfirmationResult during OTP flow
+    _recaptcha: null,        // RecaptchaVerifier instance
+    _activeTab: 'phone',     // 'phone' | 'email'
+    _phoneStep: 1,           // 1 = enter phone, 2 = enter OTP
 
     init() {
       if (!Farm.fb || !Farm.fb.available) {
@@ -30,18 +50,13 @@
           await this._loadMemberDoc(user.uid);
           this._notify();
           this._renderTopbar();
-          // First-login backfill (delegates to Farm.fbPoints if loaded)
           if (Farm.fbPoints && Farm.fbPoints.firstLoginBackfill) {
             Farm.fbPoints.firstLoginBackfill(user);
           }
-          // Flush any queued unsynced events
           if (Farm.fbQueue && Farm.fbQueue.flush) Farm.fbQueue.flush();
         } else {
           this.currentUser = null;
           this.memberDoc = null;
-          // On signout: drop any cached server balance from state.eastPoints
-          // so the next viewer doesn't see (or spend!) the previous user's EP.
-          // Local-earned guest EP (unsyncedEp) is still safe.
           if (Farm.state && Farm.state.data) {
             Farm.state.data.eastPoints = Farm.state.data.unsyncedEp || 0;
             Farm.state.save();
@@ -53,32 +68,18 @@
       });
     },
 
-    isLoggedIn() {
-      return !!this.currentUser;
-    },
-
-    uid() {
-      return this.currentUser ? this.currentUser.uid : null;
-    },
-
-    onChange(cb) {
-      this.listeners.push(cb);
-    },
-
-    _notify() {
-      this.listeners.forEach(cb => { try { cb(this.currentUser, this.memberDoc); } catch (e) {} });
-    },
+    isLoggedIn() { return !!this.currentUser; },
+    uid() { return this.currentUser ? this.currentUser.uid : null; },
+    onChange(cb) { this.listeners.push(cb); },
+    _notify() { this.listeners.forEach(cb => { try { cb(this.currentUser, this.memberDoc); } catch (e) {} }); },
 
     async _loadMemberDoc(uid) {
       try {
-        // Try direct doc first (matches main store pattern)
         const direct = await Farm.fb.db.collection('members').doc(uid).get();
         if (direct.exists) {
           this.memberDoc = { id: direct.id, ...direct.data() };
         } else {
-          // Fallback: query by firebase_uid field (for legacy ru_ docs)
-          const q = await Farm.fb.db.collection('members')
-            .where('firebase_uid', '==', uid).limit(1).get();
+          const q = await Farm.fb.db.collection('members').where('firebase_uid', '==', uid).limit(1).get();
           if (!q.empty) {
             const d = q.docs[0];
             this.memberDoc = { id: d.id, ...d.data() };
@@ -93,9 +94,6 @@
       this._syncLocalBalance();
     },
 
-    // Mirror the real member-account balance into state.eastPoints so the
-    // game's display + spend logic sees the unified number. Game EP and
-    // store EP are the same currency (1:1) — they MUST stay in lockstep.
     _syncLocalBalance() {
       if (!this.memberDoc || this.memberDoc.totalPoints == null) return;
       if (!Farm.state || !Farm.state.data) return;
@@ -107,7 +105,7 @@
       }
     },
 
-    // ============ UI: topbar button ============
+    // ============ Topbar pill ============
     _renderTopbar() {
       const slot = document.getElementById('memberButton');
       if (!slot) return;
@@ -121,12 +119,11 @@
       if (this.currentUser) {
         const name = (this.memberDoc && (this.memberDoc.name || this.memberDoc.username))
           || this.currentUser.displayName
-          || (this.currentUser.email ? this.currentUser.email.split('@')[0] : '')
           || (lang === 'en' ? 'Member' : '会员');
         const tier = this.memberDoc && this.memberDoc.tier ? this.memberDoc.tier : 'bronze';
         const tierEmoji = tier === 'gold' ? '🥇' : tier === 'silver' ? '🥈' : '🥉';
-        const tierTitle = lang === 'en' ? 'Member: ' + name : '会员: ' + name;
-        slot.innerHTML = `<button class="member-btn member-btn--in" id="memberBtnInner" title="${tierTitle}">${tierEmoji}<span class="member-name">${name}</span></button>`;
+        const safeName = String(name).replace(/[<>"&]/g, '');
+        slot.innerHTML = `<button class="member-btn member-btn--in" id="memberBtnInner" title="${lang === 'en' ? 'Member: ' : '会员: '}${safeName}">${tierEmoji}<span class="member-name">${safeName}</span></button>`;
         document.getElementById('memberBtnInner').onclick = () => this.openMenu();
       } else {
         const title = lang === 'en' ? 'Sign in' : '登录';
@@ -138,109 +135,446 @@
     // ============ Login modal ============
     openLoginModal() {
       if (!Farm.fb || !Farm.fb.available) {
-        Farm.ui.toast(Farm.state.data.language === 'en'
-          ? 'Login unavailable — offline'
-          : '当前无法登录 — 离线');
+        Farm.ui.toast(Farm.state.data.language === 'en' ? 'Login unavailable — offline' : '当前无法登录 — 离线');
         return;
       }
+      this._phoneStep = 1;
+      this._activeTab = 'phone';
+      this._confirmation = null;
+      this._renderLoginModal();
+    },
+
+    _renderLoginModal() {
       const lang = Farm.state.data.language;
+      const remembered = localStorage.getItem(REMEMBER_KEY) || '';
+
+      const phoneTab = this._activeTab === 'phone';
+      const tabBar = `
+        <div class="auth-tab-bar">
+          <button class="auth-tab ${phoneTab ? 'active' : ''}" data-auth-tab="phone">
+            📱 ${lang === 'en' ? 'Phone' : '手机号'}
+          </button>
+          <button class="auth-tab ${!phoneTab ? 'active' : ''}" data-auth-tab="email">
+            ✉️ ${lang === 'en' ? 'Email' : '邮箱'}
+          </button>
+        </div>
+      `;
+
+      const body = phoneTab
+        ? (this._phoneStep === 1 ? this._renderPhoneStep1(lang, remembered) : this._renderPhoneStep2(lang))
+        : this._renderEmailTab(lang);
+
       const html = `
         <h2 class="modal-title">👤 ${lang === 'en' ? 'Member Sign In' : '会员登录'}</h2>
-        <p style="text-align:center;color:var(--warm-text-soft);font-size:12px;margin-bottom:16px;">
-          ${lang === 'en'
-            ? 'Sign in with your Eastern Market member account.'
-            : '使用您的东方超市会员账户登录'}
-        </p>
-        <div style="margin-bottom:10px;">
-          <label style="font-size:12px;color:var(--warm-text-soft);">${lang === 'en' ? 'Email' : '邮箱'}</label>
-          <input type="email" id="memberEmail" class="member-input" autocomplete="email" />
-        </div>
-        <div style="margin-bottom:10px;">
-          <label style="font-size:12px;color:var(--warm-text-soft);">${lang === 'en' ? 'Password' : '密码'}</label>
-          <input type="password" id="memberPassword" class="member-input" autocomplete="current-password" />
-        </div>
-        <div id="memberLoginError" style="color:var(--barn-red);font-size:11px;min-height:14px;margin-bottom:10px;"></div>
-        <div class="btn-row">
-          <button class="btn secondary" onclick="Farm.ui.hideModal()">${Farm.i18n.t('btn_cancel')}</button>
-          <button class="btn" id="memberLoginBtn">${lang === 'en' ? 'Sign in' : '登录'}</button>
-        </div>
-        <p style="text-align:center;font-size:11px;color:var(--warm-text-soft);margin-top:16px;line-height:1.5;">
-          ${lang === 'en'
-            ? 'Not a member yet? Register in-store at 133-412 Willowgrove Square, Saskatoon.'
-            : '还不是会员？到 133-412 Willowgrove Square 店内办理。'}
-        </p>
+        ${tabBar}
+        <div id="authError" class="auth-error"></div>
+        ${body}
+        <p class="auth-footnote">${lang === 'en'
+          ? 'Not a member? Sign up free at 133-412 Willowgrove Square, Saskatoon.'
+          : '还不是会员？到 133-412 Willowgrove Square 店内免费办理。'}</p>
       `;
       Farm.ui.showModal(html);
-      setTimeout(() => {
-        const emailEl = document.getElementById('memberEmail');
-        if (emailEl) emailEl.focus();
-      }, 100);
-      document.getElementById('memberLoginBtn').onclick = () => this._tryLogin();
-      // Enter key submits
-      ['memberEmail', 'memberPassword'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.addEventListener('keydown', (e) => {
-          if (e.key === 'Enter') this._tryLogin();
+      this._wireLoginModal();
+    },
+
+    _renderPhoneStep1(lang, remembered) {
+      return `
+        <div class="auth-field">
+          <label class="auth-label">${lang === 'en' ? 'Phone number' : '手机号码'}</label>
+          <div class="auth-phone-input">
+            <span class="auth-phone-prefix">+1</span>
+            <input type="tel" id="authPhone" class="auth-input auth-input-phone"
+                   inputmode="numeric" autocomplete="tel-national" maxlength="14"
+                   value="${remembered}" placeholder="(306) 123-4567"/>
+          </div>
+          <div class="auth-hint">${lang === 'en' ? 'Use the phone you registered at the store' : '请使用您在店内留过的手机号'}</div>
+        </div>
+        <div class="auth-recaptcha-wrap">
+          <div id="authRecaptcha"></div>
+        </div>
+        <div class="btn-row">
+          <button class="btn secondary" onclick="Farm.ui.hideModal()">${Farm.i18n.t('btn_cancel')}</button>
+          <button class="btn" id="authSendBtn">${lang === 'en' ? 'Send Code' : '发送验证码'}</button>
+        </div>
+      `;
+    },
+
+    _renderPhoneStep2(lang) {
+      return `
+        <div class="auth-field">
+          <label class="auth-label">${lang === 'en' ? 'Verification code' : '验证码'}</label>
+          <div class="auth-otp-grid" id="authOtpGrid">
+            ${[0, 1, 2, 3, 4, 5].map(i =>
+              `<input type="tel" inputmode="numeric" maxlength="1" class="auth-otp-box" data-otp-idx="${i}" autocomplete="one-time-code"/>`
+            ).join('')}
+          </div>
+          <div class="auth-hint">
+            <span id="authResendArea"></span>
+          </div>
+        </div>
+        <div class="btn-row">
+          <button class="btn secondary" id="authBackBtn">${lang === 'en' ? 'Back' : '返回'}</button>
+          <button class="btn" id="authVerifyBtn" disabled>${lang === 'en' ? 'Verify' : '验证登录'}</button>
+        </div>
+      `;
+    },
+
+    _renderEmailTab(lang) {
+      return `
+        <div class="auth-field">
+          <label class="auth-label">${lang === 'en' ? 'Email' : '邮箱'}</label>
+          <input type="email" id="authEmail" class="auth-input" autocomplete="email"/>
+        </div>
+        <div class="auth-field">
+          <label class="auth-label">${lang === 'en' ? 'Password' : '密码'}</label>
+          <input type="password" id="authPassword" class="auth-input" autocomplete="current-password"/>
+        </div>
+        <div class="btn-row">
+          <button class="btn secondary" onclick="Farm.ui.hideModal()">${Farm.i18n.t('btn_cancel')}</button>
+          <button class="btn" id="authEmailBtn">${lang === 'en' ? 'Sign in' : '登录'}</button>
+        </div>
+      `;
+    },
+
+    _wireLoginModal() {
+      // Tab switching
+      document.querySelectorAll('.auth-tab[data-auth-tab]').forEach(btn => {
+        btn.onclick = () => {
+          this._activeTab = btn.dataset.authTab;
+          this._phoneStep = 1;
+          this._renderLoginModal();
+        };
+      });
+
+      if (this._activeTab === 'phone' && this._phoneStep === 1) {
+        // Pre-render visible reCAPTCHA. Must use 'normal' size (visible
+        // checkbox) — invisible reCAPTCHA hangs on iOS Safari.
+        try {
+          if (this._recaptcha) { try { this._recaptcha.clear(); } catch (e) {} }
+          this._recaptcha = new firebase.auth.RecaptchaVerifier('authRecaptcha', { size: 'normal' });
+          this._recaptcha.render().catch(e => console.warn('reCAPTCHA render failed', e));
+        } catch (e) {
+          console.warn('reCAPTCHA init failed', e);
+        }
+
+        // Auto-focus + format-as-you-type
+        const phoneEl = document.getElementById('authPhone');
+        if (phoneEl) {
+          setTimeout(() => phoneEl.focus(), 100);
+          phoneEl.oninput = (e) => {
+            const formatted = this._formatPhone(e.target.value);
+            e.target.value = formatted;
+          };
+          phoneEl.onkeydown = (e) => { if (e.key === 'Enter') this._sendCode(); };
+        }
+        const sendBtn = document.getElementById('authSendBtn');
+        if (sendBtn) sendBtn.onclick = () => this._sendCode();
+
+      } else if (this._activeTab === 'phone' && this._phoneStep === 2) {
+        this._wireOtpBoxes();
+        document.getElementById('authBackBtn').onclick = () => {
+          this._phoneStep = 1;
+          this._renderLoginModal();
+        };
+        document.getElementById('authVerifyBtn').onclick = () => this._verifyOtp();
+        this._startResendCountdown(60);
+
+      } else if (this._activeTab === 'email') {
+        const emailEl = document.getElementById('authEmail');
+        if (emailEl) setTimeout(() => emailEl.focus(), 100);
+        const btn = document.getElementById('authEmailBtn');
+        if (btn) btn.onclick = () => this._emailLogin();
+        ['authEmail', 'authPassword'].forEach(id => {
+          const el = document.getElementById(id);
+          if (el) el.onkeydown = (e) => { if (e.key === 'Enter') this._emailLogin(); };
+        });
+      }
+    },
+
+    _wireOtpBoxes() {
+      const boxes = document.querySelectorAll('.auth-otp-box');
+      boxes.forEach((box, idx) => {
+        box.oninput = (e) => {
+          // Only keep digits
+          const v = e.target.value.replace(/\D/g, '');
+          e.target.value = v.slice(0, 1);
+          // Advance to next box
+          if (v && idx < boxes.length - 1) {
+            boxes[idx + 1].focus();
+          }
+          this._updateOtpVerifyBtn();
+          // Auto-submit when all 6 digits typed
+          if (this._collectOtp().length === 6) {
+            setTimeout(() => this._verifyOtp(), 100);
+          }
+        };
+        box.onkeydown = (e) => {
+          if (e.key === 'Backspace' && !box.value && idx > 0) {
+            boxes[idx - 1].focus();
+          } else if (e.key === 'ArrowLeft' && idx > 0) {
+            boxes[idx - 1].focus();
+          } else if (e.key === 'ArrowRight' && idx < boxes.length - 1) {
+            boxes[idx + 1].focus();
+          }
+        };
+        // Paste handling — distribute pasted digits across boxes
+        box.onpaste = (e) => {
+          e.preventDefault();
+          const pasted = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '');
+          for (let i = 0; i < boxes.length; i++) {
+            boxes[i].value = pasted[i] || '';
+          }
+          if (pasted.length >= boxes.length) {
+            boxes[boxes.length - 1].focus();
+            setTimeout(() => this._verifyOtp(), 100);
+          } else if (pasted.length > 0) {
+            boxes[Math.min(pasted.length, boxes.length - 1)].focus();
+          }
+          this._updateOtpVerifyBtn();
+        };
+      });
+      setTimeout(() => boxes[0] && boxes[0].focus(), 100);
+    },
+
+    _collectOtp() {
+      return Array.from(document.querySelectorAll('.auth-otp-box')).map(b => b.value).join('');
+    },
+
+    _updateOtpVerifyBtn() {
+      const btn = document.getElementById('authVerifyBtn');
+      if (btn) btn.disabled = this._collectOtp().length !== 6;
+    },
+
+    _startResendCountdown(secs) {
+      const area = document.getElementById('authResendArea');
+      if (!area) return;
+      const lang = Farm.state.data.language;
+      let remaining = secs;
+      const tick = () => {
+        if (remaining <= 0) {
+          area.innerHTML = `<button class="auth-resend-link" id="authResendBtn">${lang === 'en' ? 'Resend code' : '重新发送验证码'}</button>`;
+          const btn = document.getElementById('authResendBtn');
+          if (btn) btn.onclick = () => {
+            this._phoneStep = 1;
+            this._renderLoginModal();
+          };
+          return;
+        }
+        area.textContent = lang === 'en' ? `Resend in ${remaining}s` : `${remaining} 秒后可重新发送`;
+        remaining--;
+        setTimeout(tick, 1000);
+      };
+      tick();
+    },
+
+    _formatPhone(v) {
+      const d = v.replace(/\D/g, '').slice(0, 10);
+      if (d.length <= 3) return d;
+      if (d.length <= 6) return `(${d.slice(0, 3)}) ${d.slice(3)}`;
+      return `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6, 10)}`;
+    },
+
+    _showError(msg) {
+      const el = document.getElementById('authError');
+      if (el) {
+        el.textContent = msg;
+        el.style.display = msg ? 'block' : 'none';
+      }
+    },
+
+    // ============ Phone login: Step 1 — send SMS ============
+    _sendCode() {
+      // CRITICAL: this function must NOT contain `await` before
+      // signInWithPhoneNumber is called. iOS Safari consumes the user
+      // gesture if we await first, then Firebase's reCAPTCHA iframe
+      // hangs silently forever. We run the membership check IN PARALLEL.
+      const lang = Farm.state.data.language;
+      this._showError('');
+      const phoneEl = document.getElementById('authPhone');
+      const phoneRaw = (phoneEl && phoneEl.value) || '';
+      const digits = phoneRaw.replace(/\D/g, '');
+      if (digits.length !== 10) {
+        this._showError(lang === 'en' ? 'Please enter a 10-digit phone number.' : '请输入 10 位手机号码。');
+        return;
+      }
+      if (!this._recaptcha) {
+        this._showError(lang === 'en' ? 'reCAPTCHA not ready — refresh.' : '验证未就绪，刷新页面重试。');
+        return;
+      }
+      const e164 = '+1' + digits;
+      const sendBtn = document.getElementById('authSendBtn');
+      if (sendBtn) {
+        sendBtn.disabled = true;
+        sendBtn.textContent = lang === 'en' ? 'Sending…' : '发送中…';
+      }
+
+      // Race: SMS send + membership lookup. Started SYNCHRONOUSLY.
+      const smsP = Promise.race([
+        Farm.fb.auth.signInWithPhoneNumber(e164, this._recaptcha),
+        new Promise((_, rej) => setTimeout(() => rej(new Error('RECAPTCHA_TIMEOUT')), 20000)),
+      ]);
+      const memberP = Farm.fb.db.collection('members')
+        .where('phone', '==', e164).limit(1).get().catch(() => null);
+
+      memberP.then(snap => {
+        if (!snap || snap.empty) {
+          // Non-member: clean up orphan auth user (1 SMS is unfortunately spent
+          // due to iOS sync constraint — unavoidable trade-off)
+          if (Farm.fb.auth.currentUser) {
+            Farm.fb.auth.currentUser.delete().catch(() => {});
+          }
+          smsP.catch(() => {});
+          this._showError(lang === 'en'
+            ? 'This phone is not registered at our store.\nPlease visit 133-412 Willowgrove Square to sign up (free).\nMon–Sat 10am–6:30pm · (306) 244-5522'
+            : '此手机号未在店内登记。\n请光临本店免费办理：\n📍 133-412 Willowgrove Square\n🕐 周一至周六 10am–6:30pm\n☎️ (306) 244-5522');
+          if (sendBtn) {
+            sendBtn.disabled = false;
+            sendBtn.textContent = lang === 'en' ? 'Send Code' : '发送验证码';
+          }
+          return;
+        }
+        // Member found → wait for SMS to actually send
+        smsP.then(result => {
+          this._confirmation = result;
+          // Remember phone for next time
+          localStorage.setItem(REMEMBER_KEY, phoneRaw);
+          this._phoneStep = 2;
+          this._renderLoginModal();
+        }).catch(e => {
+          this._handleSmsError(e, lang, sendBtn);
         });
       });
     },
 
-    async _tryLogin() {
-      const lang = Farm.state.data.language;
-      const email = document.getElementById('memberEmail').value.trim();
-      const password = document.getElementById('memberPassword').value;
-      const errEl = document.getElementById('memberLoginError');
-      const btn = document.getElementById('memberLoginBtn');
-      if (!email || !password) {
-        errEl.textContent = lang === 'en' ? 'Email and password required.' : '请输入邮箱和密码。';
-        return;
+    _handleSmsError(e, lang, sendBtn) {
+      console.warn('SMS send error', e);
+      let msg;
+      if (e && e.message === 'RECAPTCHA_TIMEOUT') {
+        msg = lang === 'en' ? 'Verification timed out. Tick "I\'m not a robot" first.' : '验证超时，请先勾选"我不是机器人"再点发送';
+        try { this._recaptcha.clear(); } catch (_) {}
+        this._recaptcha = null;
+        try {
+          this._recaptcha = new firebase.auth.RecaptchaVerifier('authRecaptcha', { size: 'normal' });
+          this._recaptcha.render().catch(() => {});
+        } catch (_) {}
+      } else if (e && e.code === 'auth/too-many-requests') {
+        msg = lang === 'en' ? 'Too many attempts. Try again later.' : '尝试次数过多，请稍后再试。';
+      } else if (e && (e.code === 'auth/captcha-check-failed' || e.code === 'auth/invalid-app-credential')) {
+        msg = lang === 'en' ? 'Bot check failed. Refresh and try again.' : '机器人验证失败，请刷新页面后重试。';
+      } else {
+        msg = lang === 'en' ? 'Failed to send code. Please try again.' : '发送失败，请稍后再试。';
       }
-      btn.disabled = true;
-      btn.textContent = lang === 'en' ? 'Signing in…' : '登录中…';
-      try {
-        await Farm.fb.auth.signInWithEmailAndPassword(email, password);
-        Farm.ui.hideModal();
-        if (Farm.audio) Farm.audio.play('achievement');
-        Farm.ui.toast(lang === 'en' ? '✅ Signed in' : '✅ 登录成功', 2200);
-      } catch (e) {
-        btn.disabled = false;
-        btn.textContent = lang === 'en' ? 'Sign in' : '登录';
-        errEl.textContent = this._friendlyError(e, lang);
+      this._showError(msg);
+      if (sendBtn) {
+        sendBtn.disabled = false;
+        sendBtn.textContent = lang === 'en' ? 'Send Code' : '发送验证码';
       }
     },
 
-    _friendlyError(e, lang) {
-      const c = e.code || '';
-      if (c === 'auth/unauthorized-domain') {
-        return lang === 'en'
-          ? 'Login not yet enabled for this site. (Admin: add farm.easternmarket.ca to Firebase authorized domains.)'
-          : '此站点尚未启用登录功能。（管理员：到 Firebase 添加 farm.easternmarket.ca 授权域）';
+    // ============ Phone login: Step 2 — verify OTP ============
+    async _verifyOtp() {
+      const lang = Farm.state.data.language;
+      this._showError('');
+      const code = this._collectOtp();
+      if (code.length !== 6) {
+        this._showError(lang === 'en' ? 'Please enter the 6-digit code.' : '请输入 6 位验证码。');
+        return;
       }
-      if (c === 'auth/user-not-found' || c === 'auth/invalid-credential' || c === 'auth/wrong-password') {
-        return lang === 'en' ? 'Email or password incorrect.' : '邮箱或密码不正确。';
+      if (!this._confirmation) {
+        this._showError(lang === 'en' ? 'Session expired. Resend code.' : '会话已过期，请重新发送验证码。');
+        return;
       }
-      if (c === 'auth/too-many-requests') {
-        return lang === 'en' ? 'Too many attempts. Try later.' : '尝试次数过多，稍后再试。';
+      const btn = document.getElementById('authVerifyBtn');
+      if (btn) { btn.disabled = true; btn.textContent = lang === 'en' ? 'Verifying…' : '验证中…'; }
+      try {
+        const credential = await this._confirmation.confirm(code);
+        const user = credential.user;
+        // Link firebase_uid to members doc if not already set
+        const e164 = '+1' + (document.getElementById('authPhone') || { value: '' }).value.replace(/\D/g, '') || '';
+        try {
+          const snap = await Farm.fb.db.collection('members').where('phone', '==', e164).limit(1).get();
+          if (!snap.empty) {
+            const docRef = snap.docs[0].ref;
+            const md = snap.docs[0].data();
+            if (md.firebase_uid !== user.uid) {
+              await docRef.update({
+                firebase_uid: user.uid,
+                updatedAt: Farm.fb.serverTimestamp(),
+              });
+            }
+          }
+        } catch (e) { /* non-fatal */ }
+        this._onLoginSuccess(lang);
+      } catch (e) {
+        console.warn('OTP verify failed', e);
+        this._showError(lang === 'en' ? 'Incorrect verification code.' : '验证码不正确。');
+        if (btn) { btn.disabled = false; btn.textContent = lang === 'en' ? 'Verify' : '验证登录'; }
       }
-      if (c === 'auth/network-request-failed') {
-        return lang === 'en' ? 'Network error. Check your connection.' : '网络错误，检查连接。';
+    },
+
+    // ============ Email login (legacy) ============
+    async _emailLogin() {
+      const lang = Farm.state.data.language;
+      this._showError('');
+      const email = document.getElementById('authEmail').value.trim();
+      const password = document.getElementById('authPassword').value;
+      if (!email || !password) {
+        this._showError(lang === 'en' ? 'Email and password required.' : '请输入邮箱和密码。');
+        return;
       }
-      return e.message || (lang === 'en' ? 'Sign-in failed.' : '登录失败。');
+      const btn = document.getElementById('authEmailBtn');
+      if (btn) { btn.disabled = true; btn.textContent = lang === 'en' ? 'Signing in…' : '登录中…'; }
+      try {
+        await Farm.fb.auth.signInWithEmailAndPassword(email, password);
+        this._onLoginSuccess(lang);
+      } catch (e) {
+        if (btn) { btn.disabled = false; btn.textContent = lang === 'en' ? 'Sign in' : '登录'; }
+        const c = e.code || '';
+        let msg;
+        if (c === 'auth/unauthorized-domain') {
+          msg = lang === 'en' ? 'Login not enabled for this site.' : '此站点尚未启用登录。';
+        } else if (c === 'auth/user-not-found' || c === 'auth/invalid-credential' || c === 'auth/wrong-password') {
+          msg = lang === 'en' ? 'Email or password incorrect.' : '邮箱或密码不正确。';
+        } else {
+          msg = lang === 'en' ? 'Sign-in failed.' : '登录失败。';
+        }
+        this._showError(msg);
+      }
+    },
+
+    _onLoginSuccess(lang) {
+      Farm.ui.hideModal();
+      if (Farm.audio) Farm.audio.play('achievement');
+      // Welcome toast — uses memberDoc loaded by onAuthStateChanged handler.
+      // Wait one tick for that to populate.
+      setTimeout(() => {
+        const name = (this.memberDoc && (this.memberDoc.name || this.memberDoc.username))
+          || (this.currentUser && this.currentUser.displayName)
+          || (lang === 'en' ? 'Member' : '会员');
+        const tier = this.memberDoc && this.memberDoc.tier ? this.memberDoc.tier : 'bronze';
+        const tierEmoji = tier === 'gold' ? '🥇' : tier === 'silver' ? '🥈' : '🥉';
+        const safeName = String(name).replace(/[<>"&]/g, '');
+        const msg = lang === 'en'
+          ? `${tierEmoji} Welcome back, ${safeName} 🎉`
+          : `${tierEmoji} 欢迎回来，${safeName} 🎉`;
+        Farm.ui.toast(msg, 3000);
+      }, 400);
     },
 
     // ============ Logout / menu ============
     openMenu() {
       const lang = Farm.state.data.language;
       const m = this.memberDoc || {};
-      const name = m.name || this.currentUser.displayName || this.currentUser.email;
+      const name = m.name || this.currentUser.displayName || (lang === 'en' ? 'Member' : '会员');
       const tier = m.tier || 'bronze';
       const tierLabel = { gold: '🥇 ' + (lang === 'en' ? 'Gold' : '金卡'),
                           silver: '🥈 ' + (lang === 'en' ? 'Silver' : '银卡'),
                           bronze: '🥉 ' + (lang === 'en' ? 'Bronze' : '铜卡') }[tier];
       const totalPoints = m.totalPoints || 0;
       const lifetimePoints = m.lifetimePoints || 0;
+      const safeName = String(name).replace(/[<>"&]/g, '');
       const html = `
-        <h2 class="modal-title">👤 ${name}</h2>
+        <h2 class="modal-title">👤 ${safeName}</h2>
         <div style="text-align:center;margin:12px 0;">
           <div style="font-size:14px;">${tierLabel}</div>
           <div style="font-size:24px;font-weight:700;color:var(--purple-points);margin-top:6px;"><span class="points-icon"></span> ${totalPoints.toLocaleString()}</div>

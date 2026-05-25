@@ -139,6 +139,7 @@
   function wireSplash(onDismiss) {
     const splash = document.getElementById('splash');
     const startBtn = document.getElementById('splashStart');
+    const loginBtn = document.getElementById('splashLogin');
     if (!splash || !startBtn) { if (onDismiss) onDismiss(); return; }
     let fired = false;
     const dismiss = () => {
@@ -146,14 +147,21 @@
       fired = true;
       splash.classList.add('dismissed');
       if (Farm.audio) Farm.audio.play('plant');
-      // Hand off to caller (daily login + retroactive achievements) after the
-      // fade-out completes, so the toasts pop on a clean game screen.
       setTimeout(() => {
         splash.remove();
         if (onDismiss) onDismiss();
       }, 600);
     };
     startBtn.onclick = dismiss;
+    // Splash login shortcut: dismiss splash + open login modal directly
+    if (loginBtn) {
+      loginBtn.onclick = () => {
+        dismiss();
+        setTimeout(() => {
+          if (Farm.fbAuth && Farm.fbAuth.openLoginModal) Farm.fbAuth.openLoginModal();
+        }, 700);
+      };
+    }
     document.addEventListener('keydown', (e) => {
       if (splash.parentNode && (e.key === 'Enter' || e.key === ' ')) {
         e.preventDefault();
