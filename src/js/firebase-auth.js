@@ -54,6 +54,23 @@
             Farm.fbPoints.firstLoginBackfill(user);
           }
           if (Farm.fbQueue && Farm.fbQueue.flush) Farm.fbQueue.flush();
+          // Neighbor likes received — reconcile + notify
+          if (Farm.fbGameSync && Farm.fbGameSync.reconcileReceivedLikes) {
+            setTimeout(async () => {
+              const r = await Farm.fbGameSync.reconcileReceivedLikes();
+              if (r && r.newLikes > 0) {
+                const lang = (Farm.state && Farm.state.data && Farm.state.data.language) || 'zh';
+                const msg = r.epAwarded > 0
+                  ? (lang === 'en'
+                    ? `❤️ ${r.newLikes} new likes received! +${r.epAwarded} <span class="points-icon"></span>`
+                    : `❤️ 收到 ${r.newLikes} 个赞！+${r.epAwarded} <span class="points-icon"></span>`)
+                  : (lang === 'en'
+                    ? `❤️ ${r.newLikes} new likes received! (daily EP cap reached)`
+                    : `❤️ 收到 ${r.newLikes} 个赞！（今日积分上限已满）`);
+                Farm.ui.toast(msg, 4000);
+              }
+            }, 1500);
+          }
         } else {
           this.currentUser = null;
           this.memberDoc = null;

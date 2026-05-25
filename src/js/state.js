@@ -90,6 +90,9 @@
     // ============ Neighbor system (Phase 1 — 2026-05-24) ============
     nickname: null,             // user-set in settings (else derived "{firstChar}邻居")
     visibleToNeighbors: true,   // privacy toggle (settings)
+    lastLikesSeen: 0,           // count of likes the user has already acknowledged
+    lastLikesSeenAt: 0,         // epoch ms, used for daily caps
+    likesAckedToday: 0,         // EP bonus claimed today from likes-received (cap 5)
 
     // ============ Display preferences (settings) ============
     decorationsHidden: false,   // hide pets/balloons/static decor from farm view

@@ -151,12 +151,11 @@
     },
 
     // Send a like. Caps at DAILY_LIKE_CAP per sender per day. Sender
-    // earns +1 EP via Farm.state.addEastPoints. Receiver gets an atomic
-    // counter increment (no EP credit — that would require StockWise
-    // sync per recipient which is overkill for V1).
+    // earns +1 EP. Receiver gets an atomic counter increment + their
+    // UID is added to the sender's `likedBy` array (so we can detect
+    // mutual likes if they reciprocate later).
     async sendLike(toUid) {
       const lang = Farm.state.data.language || 'zh';
-      // Sender daily cap
       const claims = Farm.state.data.dailyClaims;
       const givenToday = claims.likesSentToday || [];
       if (givenToday.length >= DAILY_LIKE_CAP) {
@@ -169,26 +168,98 @@
           ? 'You already liked this neighbor today.'
           : '今天给这位邻居点过赞了。' };
       }
-      // Atomic counter increment on receiver
-      if (Farm.fb && Farm.fb.available && Farm.fb.increment) {
+      // Mutual-like check: is recipient ALREADY in my likedBy list?
+      // (Meaning: did they like ME at some point before now?) If yes,
+      // this is a return-like — both get a bonus.
+      let isMutual = false;
+      try {
+        const myUid = Farm.fbAuth && Farm.fbAuth.uid();
+        if (myUid) {
+          const me = await Farm.fb.db.collection('members').doc(myUid).get();
+          const mine = (me.exists && me.data().gameStats) || {};
+          if (Array.isArray(mine.likedBy) && mine.likedBy.includes(toUid)) {
+            isMutual = true;
+          }
+        }
+      } catch (_) {}
+
+      // Recipient atomic updates: counter + likedBy arrayUnion
+      if (Farm.fb && Farm.fb.available) {
         try {
-          await Farm.fb.db.collection('members').doc(toUid).set(
-            { gameStats: { likesReceived: Farm.fb.increment(1) } },
-            { merge: true }
-          );
+          const myUid = Farm.fbAuth && Farm.fbAuth.uid();
+          const payload = {
+            gameStats: {
+              likesReceived: Farm.fb.increment(1),
+              likedBy: firebase.firestore.FieldValue.arrayUnion(myUid),
+            },
+          };
+          await Farm.fb.db.collection('members').doc(toUid).set(payload, { merge: true });
         } catch (e) {
-          console.warn('[gameSync] like increment failed', e);
-          // We still grant the sender's EP — the offline like is "spent"
+          console.warn('[gameSync] like update failed', e);
         }
       }
-      // Sender gets +1 EP + log locally
+      // Sender bookkeeping
       claims.likesSentToday = givenToday.concat([toUid]);
       Farm.state.save();
-      Farm.state.addEastPoints(1, {
-        source: 'neighbor_like_sent',
-        description: 'Liked a neighbor',
+      const baseBonus = 1;
+      const mutualBonus = isMutual ? 2 : 0;
+      Farm.state.addEastPoints(baseBonus + mutualBonus, {
+        source: isMutual ? 'neighbor_like_mutual' : 'neighbor_like_sent',
+        description: isMutual ? 'Mutual like with a neighbor' : 'Liked a neighbor',
       });
-      return { ok: true, remaining: DAILY_LIKE_CAP - claims.likesSentToday.length };
+      return {
+        ok: true,
+        remaining: DAILY_LIKE_CAP - claims.likesSentToday.length,
+        mutual: isMutual,
+        epEarned: baseBonus + mutualBonus,
+      };
+    },
+
+    // Check if receiver has new likes since last check. Returns
+    // { newLikes, capped, epAwarded }. Called at boot when auth lands.
+    // Awards up to DAILY_LIKE_CAP EP per day for received likes.
+    async reconcileReceivedLikes() {
+      if (!Farm.fb || !Farm.fb.available || !Farm.fbAuth || !Farm.fbAuth.isLoggedIn()) return null;
+      const uid = Farm.fbAuth.uid();
+      if (!uid) return null;
+      try {
+        const snap = await Farm.fb.db.collection('members').doc(uid).get();
+        if (!snap.exists) return null;
+        const stats = (snap.data().gameStats) || {};
+        const cur = stats.likesReceived || 0;
+        const last = Farm.state.data.lastLikesSeen || 0;
+        const newLikes = Math.max(0, cur - last);
+        if (newLikes === 0) {
+          Farm.state.data.lastLikesSeen = cur;
+          Farm.state.save();
+          return { newLikes: 0, capped: 0, epAwarded: 0 };
+        }
+        // Daily cap on EP from received-likes (mirrors send cap)
+        const today = Farm.state.getDateString();
+        const lastAt = Farm.state.data.lastLikesSeenAt || 0;
+        const lastDay = lastAt ? new Date(lastAt).toDateString() : '';
+        const todayDay = new Date().toDateString();
+        if (lastDay !== todayDay) {
+          Farm.state.data.likesAckedToday = 0;
+        }
+        const headroom = Math.max(0, DAILY_LIKE_CAP - (Farm.state.data.likesAckedToday || 0));
+        const epAward = Math.min(newLikes, headroom);
+        const capped = newLikes - epAward;
+        Farm.state.data.lastLikesSeen = cur;
+        Farm.state.data.lastLikesSeenAt = Date.now();
+        Farm.state.data.likesAckedToday = (Farm.state.data.likesAckedToday || 0) + epAward;
+        Farm.state.save();
+        if (epAward > 0) {
+          Farm.state.addEastPoints(epAward, {
+            source: 'neighbor_likes_received',
+            description: 'Received ' + epAward + ' new likes',
+          });
+        }
+        return { newLikes, capped, epAwarded: epAward };
+      } catch (e) {
+        console.warn('[gameSync] reconcileReceivedLikes failed', e);
+        return null;
+      }
     },
 
     // Daily quota indicator helper
@@ -197,12 +268,20 @@
       return Math.max(0, DAILY_LIKE_CAP - given);
     },
 
-    // Weekly leaderboard (V1: by level only, top 10)
-    async fetchLeaderboard(topN = 10) {
+    // Leaderboard by metric: 'level' | 'harvests' | 'deliveries'
+    async fetchLeaderboard(metric, topN) {
+      metric = metric || 'level';
+      topN = topN || 10;
       if (!Farm.fb || !Farm.fb.available) return [];
+      const fieldMap = {
+        level: 'gameStats.level',
+        harvests: 'gameStats.totalHarvests',
+        deliveries: 'gameStats.totalDeliveries',
+      };
+      const field = fieldMap[metric] || fieldMap.level;
       try {
         const q = await Farm.fb.db.collection('members')
-          .orderBy('gameStats.level', 'desc')
+          .orderBy(field, 'desc')
           .limit(topN)
           .get();
         const list = [];
@@ -211,13 +290,69 @@
           const stats = data.gameStats || {};
           if (stats.visibleToNeighbors === false) return;
           if (!stats.level) return;
-          list.push({ uid: d.id, doc: data, level: stats.level });
+          const value = metric === 'level' ? (stats.level || 0)
+                      : metric === 'harvests' ? (stats.totalHarvests || 0)
+                      : (stats.totalDeliveries || 0);
+          list.push({ uid: d.id, doc: data, level: stats.level || 1, value });
         });
         return list;
       } catch (e) {
         console.warn('[gameSync] fetchLeaderboard failed', e);
         return [];
       }
+    },
+
+    // Find self's rank by counting members with a higher metric value.
+    // Returns { rank, total } or null if not logged in / not synced yet.
+    // Note: this is an APPROXIMATION since we only count up to 100
+    // members above us (Firestore can't do a true server-side rank).
+    async fetchSelfRank(metric) {
+      metric = metric || 'level';
+      if (!Farm.fb || !Farm.fb.available || !Farm.fbAuth || !Farm.fbAuth.isLoggedIn()) return null;
+      const uid = Farm.fbAuth.uid();
+      if (!uid) return null;
+      const fieldMap = {
+        level: 'gameStats.level',
+        harvests: 'gameStats.totalHarvests',
+        deliveries: 'gameStats.totalDeliveries',
+      };
+      const field = fieldMap[metric] || fieldMap.level;
+      try {
+        const myDoc = await Farm.fb.db.collection('members').doc(uid).get();
+        const myStats = (myDoc.exists && myDoc.data().gameStats) || {};
+        const myValue = metric === 'level' ? (myStats.level || 1)
+                      : metric === 'harvests' ? (myStats.totalHarvests || 0)
+                      : (myStats.totalDeliveries || 0);
+        // Count members with HIGHER value (those ranked above me)
+        const q = await Farm.fb.db.collection('members')
+          .where(field, '>', myValue)
+          .limit(100)
+          .get();
+        let above = 0;
+        q.forEach(d => {
+          const s = d.data().gameStats || {};
+          if (s.visibleToNeighbors === false) return;
+          above++;
+        });
+        return { rank: above + 1, myValue, capped: above >= 100 };
+      } catch (e) {
+        console.warn('[gameSync] fetchSelfRank failed', e);
+        return null;
+      }
+    },
+
+    // Online indicator helper — returns label/color tier from lastSeenAt
+    onlineStatus(doc) {
+      const stats = (doc && doc.gameStats) || {};
+      const last = stats.lastSeenAt;
+      if (!last) return null;
+      // Firestore Timestamp has .toMillis(); fallback to Date()
+      const ms = typeof last.toMillis === 'function' ? last.toMillis() : new Date(last).getTime();
+      const diff = Date.now() - ms;
+      if (diff < 5 * 60 * 1000) return { tier: 'online', label: '在线', labelEn: 'Online' };
+      if (diff < 30 * 60 * 1000) return { tier: 'recent', label: '刚刚', labelEn: 'Recent' };
+      if (diff < 24 * 60 * 60 * 1000) return { tier: 'today', label: '今天活跃', labelEn: 'Today' };
+      return null;
     },
   };
 

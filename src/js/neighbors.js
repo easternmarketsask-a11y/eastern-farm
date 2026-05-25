@@ -103,6 +103,7 @@
           totalHarvests: (m.doc.gameStats || {}).totalHarvests || 0,
           totalDeliveries: (m.doc.gameStats || {}).totalDeliveries || 0,
           likesReceived: (m.doc.gameStats || {}).likesReceived || 0,
+          _doc: m.doc,
           id: 'real_' + m.uid,
           order,
         }));
@@ -146,20 +147,31 @@
       return this._todayList;
     },
 
-    async _fetchLeaderboard() {
-      if (this._leaderboardList) return this._leaderboardList;
+    _leaderboardMetric: 'level',  // 'level' | 'harvests' | 'deliveries'
+    _selfRank: null,
+
+    async _fetchLeaderboard(metric) {
+      metric = metric || this._leaderboardMetric;
+      // Always refresh when metric changes
+      if (this._leaderboardList && this._leaderboardMetric === metric) return this._leaderboardList;
+      this._leaderboardMetric = metric;
       let list = [];
       if (Farm.fbGameSync) {
         try {
-          const rows = await Farm.fbGameSync.fetchLeaderboard(10);
+          const rows = await Farm.fbGameSync.fetchLeaderboard(metric, 10);
           list = rows.map(r => ({
             uid: r.uid,
             name: Farm.fbGameSync.displayName(r.doc),
             emoji: avatarFor(r.uid),
             level: r.level,
-            totalHarvests: (r.doc.gameStats || {}).totalHarvests || 0,
+            value: r.value,
             isSelf: r.uid === (Farm.fbAuth && Farm.fbAuth.uid()),
+            online: Farm.fbGameSync.onlineStatus(r.doc),
           }));
+          // Self-rank (if not in top 10)
+          if (Farm.fbAuth && Farm.fbAuth.isLoggedIn()) {
+            this._selfRank = await Farm.fbGameSync.fetchSelfRank(metric);
+          }
         } catch (_) {}
       }
       this._leaderboardList = list;
@@ -170,6 +182,7 @@
       // Invalidate cached fetches so a fresh open gets fresh data
       this._todayList = null;
       this._leaderboardList = null;
+      this._selfRank = null;
       this._currentTab = 'today';
       this._render();
     },
@@ -179,6 +192,35 @@
       const tab = this._currentTab;
       const visited = Farm.state.data.dailyClaims.neighborsVisited || [];
       const likesRemaining = Farm.fbGameSync ? Farm.fbGameSync.likesRemaining() : 0;
+
+      // Reciprocal privacy: if user opted out of being visible, they
+      // also can't browse other neighbors (no lurking allowed).
+      if (Farm.state.data.visibleToNeighbors === false) {
+        const title = lang === 'en' ? '🏘 Community' : '🏘 邻居广场';
+        Farm.ui.showModal(`
+          <h2 class="modal-title">${title}</h2>
+          <div style="padding:24px 16px;text-align:center;">
+            <div style="font-size:48px;margin-bottom:12px;">🙈</div>
+            <div style="font-size:14px;font-weight:600;color:var(--warm-text);margin-bottom:8px;">
+              ${lang === 'en' ? "You're hidden from neighbors" : '你目前是隐身状态'}
+            </div>
+            <div style="font-size:12px;color:var(--warm-text-soft);line-height:1.6;margin-bottom:18px;">
+              ${lang === 'en'
+                ? "To browse neighbors + the leaderboard, you need to be visible too — it's only fair. Toggle visibility on in Settings."
+                : '邻居广场是互相看的——你不让别人看到你，自然也看不到别人。要逛邻居 + 看排行榜，请到「设置」打开"显示在邻居列表里"。'}
+            </div>
+            <button class="btn" id="goToSettingsBtn">⚙️ ${lang === 'en' ? 'Open Settings' : '打开设置'}</button>
+          </div>
+        `);
+        const goBtn = document.getElementById('goToSettingsBtn');
+        if (goBtn) goBtn.onclick = () => {
+          Farm.ui.hideModal();
+          // Open settings via the bottom nav button
+          const settingsBtn = document.querySelector('[data-action="settings"]');
+          if (settingsBtn) settingsBtn.click();
+        };
+        return;
+      }
 
       const tabBarHtml = `
         <div class="tab-bar" style="margin-bottom:10px;">
@@ -219,9 +261,14 @@
           const realBadge = n.isReal
             ? '<span class="neighbor-real-badge">✨ ' + (lang === 'en' ? 'real' : '真会员') + '</span>'
             : '';
+          // Online indicator for real members only (fallback profiles have no real lastSeenAt)
+          const online = (n.isReal && n._doc && Farm.fbGameSync)
+            ? Farm.fbGameSync.onlineStatus(n._doc) : null;
+          const onlineDot = (online && online.tier === 'online')
+            ? '<span class="neighbor-online" title="' + (lang === 'en' ? online.labelEn : online.label) + '"></span>' : '';
           return `
             <div class="neighbor-card ${isVisited ? 'visited' : ''}" data-id="${n.id}">
-              <div class="neighbor-avatar">${n.emoji}</div>
+              <div class="neighbor-avatar">${n.emoji}${onlineDot}</div>
               <div class="neighbor-name">${n.name} ${realBadge}</div>
               <div class="neighbor-status">
                 Lv ${n.level} · ${isVisited
@@ -231,13 +278,19 @@
             </div>
           `;
         }).join('');
-        const subtitle = `
-          <p class="modal-subtitle">
-            ${lang === 'en' ? 'Visit all 3 → +5 <span class="points-icon"></span>' : '走访 3 户 → +5 <span class="points-icon"></span>'}
-            (${visited.length}/3) · ${lang === 'en' ? 'Likes left' : '今日剩余赞'}: ❤️${likesRemaining}
-          </p>
+        // Progress bar + counter
+        const visitPct = Math.min(100, visited.length / 3 * 100);
+        const progressHtml = `
+          <div class="neighbor-progress-wrap">
+            <div class="neighbor-progress-text">
+              <span>${lang === 'en' ? 'Visit 3 → +5 <span class="points-icon"></span>' : '走访 3 户 → +5 <span class="points-icon"></span>'}</span>
+              <span class="neighbor-progress-count">${visited.length}/3</span>
+            </div>
+            <div class="neighbor-progress-bar"><div class="neighbor-progress-fill" style="width:${visitPct}%;"></div></div>
+            <div class="neighbor-likes-meta">${lang === 'en' ? 'Likes left today' : '今日剩余赞'}: ❤️ ${likesRemaining}</div>
+          </div>
         `;
-        document.getElementById('neighborBody').innerHTML = subtitle + '<div class="neighbor-list">' + cardsHtml + '</div>';
+        document.getElementById('neighborBody').innerHTML = progressHtml + '<div class="neighbor-list">' + cardsHtml + '</div>';
         document.querySelectorAll('.neighbor-card').forEach(card => {
           card.onclick = () => {
             const id = card.dataset.id;
@@ -246,31 +299,62 @@
           };
         });
       } else if (tab === 'leaderboard') {
-        const list = await this._fetchLeaderboard();
+        const metric = this._leaderboardMetric;
+        const metricLabels = {
+          level:      lang === 'en' ? 'Level'       : '等级',
+          harvests:   lang === 'en' ? 'Harvests'    : '收获数',
+          deliveries: lang === 'en' ? 'Deliveries'  : '卖货次数',
+        };
+        const metricTabs = `
+          <div class="lb-metric-tabs">
+            <button class="lb-metric ${metric === 'level' ? 'active' : ''}" data-lb-metric="level">🏅 ${metricLabels.level}</button>
+            <button class="lb-metric ${metric === 'harvests' ? 'active' : ''}" data-lb-metric="harvests">🌾 ${metricLabels.harvests}</button>
+            <button class="lb-metric ${metric === 'deliveries' ? 'active' : ''}" data-lb-metric="deliveries">🏪 ${metricLabels.deliveries}</button>
+          </div>
+        `;
+        const list = await this._fetchLeaderboard(metric);
+        const selfInTop = list.some(m => m.isSelf);
+        const selfRankHtml = (!selfInTop && this._selfRank)
+          ? `<div class="lb-self-rank">${lang === 'en' ? 'Your rank' : '你的排名'}: <strong>#${this._selfRank.rank}${this._selfRank.capped ? '+' : ''}</strong> · ${metricLabels[metric]}: ${this._selfRank.myValue}</div>`
+          : '';
         if (list.length === 0) {
           document.getElementById('neighborBody').innerHTML = `
+            ${metricTabs}
             <p style="text-align:center;padding:30px 16px;color:var(--warm-text-soft);">
               ${lang === 'en' ? 'No leaderboard data yet. Be the first farmer!' : '排行榜还没人，你来当第一名吧！'}
             </p>
           `;
-          return;
-        }
-        const rowsHtml = list.map((m, i) => {
-          const rank = i + 1;
-          const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : '<span style="display:inline-block;width:18px;text-align:center;color:var(--warm-text-soft);">' + rank + '</span>';
-          return `
-            <div class="leaderboard-row ${m.isSelf ? 'is-self' : ''}">
-              <span class="lb-rank">${medal}</span>
-              <span class="lb-avatar">${m.emoji}</span>
-              <span class="lb-name">${m.name}${m.isSelf ? ' <span class="lb-you">(你)</span>' : ''}</span>
-              <span class="lb-level">Lv ${m.level}</span>
-            </div>
+        } else {
+          const rowsHtml = list.map((m, i) => {
+            const rank = i + 1;
+            const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : '<span style="display:inline-block;width:18px;text-align:center;color:var(--warm-text-soft);">' + rank + '</span>';
+            const onlineDot = m.online && m.online.tier === 'online'
+              ? '<span class="lb-online" title="' + m.online.label + '"></span>'
+              : '';
+            return `
+              <div class="leaderboard-row ${m.isSelf ? 'is-self' : ''}">
+                <span class="lb-rank">${medal}</span>
+                <span class="lb-avatar">${m.emoji}${onlineDot}</span>
+                <span class="lb-name">${m.name}${m.isSelf ? ' <span class="lb-you">(你)</span>' : ''}</span>
+                <span class="lb-level">${m.value}</span>
+              </div>
+            `;
+          }).join('');
+          document.getElementById('neighborBody').innerHTML = `
+            ${metricTabs}
+            <div class="leaderboard-list">${rowsHtml}</div>
+            ${selfRankHtml}
           `;
-        }).join('');
-        document.getElementById('neighborBody').innerHTML = `
-          <p class="modal-subtitle">${lang === 'en' ? 'Top 10 by farm level' : '按农场等级排名 · 每周一刷新'}</p>
-          <div class="leaderboard-list">${rowsHtml}</div>
-        `;
+        }
+        // Wire metric tabs
+        document.querySelectorAll('.lb-metric[data-lb-metric]').forEach(btn => {
+          btn.onclick = () => {
+            this._leaderboardMetric = btn.dataset.lbMetric;
+            this._leaderboardList = null;  // force refetch
+            if (Farm.audio) Farm.audio.play('tap');
+            this._render();
+          };
+        });
       }
     },
 

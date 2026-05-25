@@ -829,6 +829,101 @@ body {
   transform: translateY(-1px);
 }
 
+/* =============== NEIGHBORS PHASE 2 (visit progress, online, self-rank, multi-metric) === */
+.neighbor-progress-wrap {
+  background: var(--cream-bg);
+  border: 1.5px solid var(--border-soft);
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+}
+.neighbor-progress-text {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  color: var(--warm-text);
+  font-weight: 600;
+}
+.neighbor-progress-count {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--leaf-dark);
+}
+.neighbor-progress-bar {
+  height: 8px;
+  background: rgba(0, 0, 0, 0.06);
+  border-radius: 4px;
+  margin-top: 6px;
+  overflow: hidden;
+}
+.neighbor-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #aed581 0%, #4a8a2f 100%);
+  border-radius: 4px;
+  transition: width 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.neighbor-likes-meta {
+  font-size: 11px;
+  color: var(--warm-text-soft);
+  margin-top: 4px;
+}
+.neighbor-online,
+.lb-online {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #4caf50;
+  box-shadow: 0 0 0 2px #fff, 0 0 6px rgba(76, 175, 80, 0.6);
+  position: relative;
+  top: -2px;
+  margin-left: -6px;
+  animation: onlinePulse 2s ease-in-out infinite;
+}
+@keyframes onlinePulse {
+  0%, 100% { box-shadow: 0 0 0 2px #fff, 0 0 0 0 rgba(76, 175, 80, 0.4); }
+  50%      { box-shadow: 0 0 0 2px #fff, 0 0 0 5px rgba(76, 175, 80, 0); }
+}
+
+/* Multi-metric leaderboard tabs */
+.lb-metric-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  background: var(--cream-bg);
+  border-radius: 10px;
+  margin-bottom: 12px;
+}
+.lb-metric {
+  flex: 1;
+  border: none;
+  background: transparent;
+  padding: 6px 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--warm-text-soft);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.lb-metric.active {
+  background: #fff;
+  color: var(--leaf-dark);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+.lb-self-rank {
+  text-align: center;
+  padding: 10px 14px;
+  margin-top: 10px;
+  background: linear-gradient(135deg, #fff8e1, #ffecb3);
+  border: 1.5px dashed #f0c674;
+  border-radius: 10px;
+  font-size: 13px;
+  color: var(--warm-text);
+}
+.lb-self-rank strong { color: var(--barn-red); font-size: 15px; }
+
 /* =============== NEIGHBORS PHASE 1 (real members + likes + lb) ====== */
 .neighbor-real-badge {
   display: inline-block;
