@@ -1598,50 +1598,88 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+/* Card meta row: price block on the left (label stacked above value),
+   time + owned as small chips on the right. Hierarchy makes the price
+   number the visual focal point, label is a small caption. */
 .seed-card .seed-meta {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 10.5px;
-  color: var(--warm-text-soft);
-  margin-top: 2px;
-  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 6px;
+  margin-top: 4px;
+  min-width: 0;
+  flex-wrap: wrap;  /* on narrow cards, time+owned wrap below price */
 }
-.seed-card .seed-cost {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  font-size: 11.5px;
-  color: #b8860b;
-  font-weight: 700;
+/* Card itself must not overflow its grid cell, otherwise it pushes
+   the right-column card off-screen on narrow viewports. */
+.seed-card {
+  min-width: 0;
+  overflow: hidden;
 }
+.seed-card > div { min-width: 0; }
+.seed-card .seed-cost,
 .seed-card .seed-sell {
   display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  font-size: 11.5px;
-  color: #4a8a2f;
-  font-weight: 700;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  padding: 3px 8px 4px;
+  border-radius: 7px;
+  line-height: 1.1;
+  flex: 1 1 auto;
+  min-width: 0;
 }
-/* Small contextual label prefix ("种子价格" / "市场收购价" / "Seed price"
-   / "Market price") — lighter weight, smaller, distinguishes the
-   meaning of the number that follows. */
+.seed-card .seed-cost {
+  background: rgba(232, 174, 38, 0.12);
+  border-left: 2.5px solid #c9a23a;
+}
+.seed-card .seed-sell {
+  background: rgba(106, 176, 76, 0.13);
+  border-left: 2.5px solid #6ab04c;
+}
+/* Caption label ("种子价格" / "市场收购价" / "Seed price" / "Market price")
+   — small uppercase-style, light grey, sits ABOVE the number for a
+   clean two-tier hierarchy instead of running inline. */
 .seed-card .seed-label {
   font-size: 9.5px;
   font-weight: 500;
   color: var(--warm-text-soft);
-  letter-spacing: 0.2px;
+  letter-spacing: 0.4px;
+  white-space: nowrap;
+  margin: 0;
 }
-.seed-card .seed-time {
+.seed-card .seed-value {
   display: inline-flex;
   align-items: center;
+  gap: 2px;
+  font-size: 13.5px;
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+}
+.seed-card .seed-cost .seed-value { color: #8a6308; }
+.seed-card .seed-sell .seed-value { color: #2e6b1d; }
+
+/* Right-side chips: time + owned */
+.seed-card .seed-time,
+.seed-card .seed-owned {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   font-size: 10.5px;
+  font-weight: 600;
+  padding: 0 6px;
+  border-radius: 6px;
+  min-width: 32px;
+  white-space: nowrap;
+  align-self: center;
+}
+.seed-card .seed-time {
   color: var(--warm-text-soft);
+  background: rgba(0, 0, 0, 0.04);
 }
 .seed-card .seed-owned {
-  font-size: 10.5px;
   color: var(--leaf-dark);
-  font-weight: 600;
+  background: rgba(106, 176, 76, 0.12);
 }
 
 /* Task list */

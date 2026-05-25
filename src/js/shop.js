@@ -35,8 +35,8 @@
             // belongs on the plant-picker card instead — different context,
             // different number to highlight (Chris's UX direction).
             const priceCell = isSpecial
-              ? `<span class="seed-cost"><span class="seed-label">${seedPriceLabel}</span> <s style="color:#bbb;">${coin}${c.seed_cost}</s> <strong style="color:var(--barn-red);">${coin}${price}</strong></span>`
-              : `<span class="seed-cost"><span class="seed-label">${seedPriceLabel}</span> ${coin}${c.seed_cost}</span>`;
+              ? `<span class="seed-cost"><span class="seed-label">${seedPriceLabel}</span><span class="seed-value"><s style="color:#bbb;font-weight:400;">${coin}${c.seed_cost}</s> <strong style="color:var(--barn-red);">${coin}${price}</strong></span></span>`
+              : `<span class="seed-cost"><span class="seed-label">${seedPriceLabel}</span><span class="seed-value">${coin}${c.seed_cost}</span></span>`;
             const specialBadge = isSpecial
               ? '<div class="seed-special-badge">⭐ ' + (lang === 'en' ? 'TODAY -50%' : '今日 -50%') + '</div>'
               : '';
@@ -128,7 +128,7 @@
                 <div>
                   <div class="seed-name">${c[nameKey]}</div>
                   <div class="seed-meta">
-                    <span class="seed-sell"><span class="seed-label">${marketPriceLabel}</span> ${coin}${c.sell_price}</span>
+                    <span class="seed-sell"><span class="seed-label">${marketPriceLabel}</span><span class="seed-value">${coin}${c.sell_price}</span></span>
                     <span class="seed-time">⏱${formatMinutes(c.grow_minutes)}</span>
                     <span class="seed-owned">× ${owned}</span>
                   </div>
