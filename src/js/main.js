@@ -47,6 +47,9 @@
     // 3. Language
     Farm.i18n.setLanguage(Farm.state.data.language || 'zh');
 
+    // 3b. Live Saskatoon weather chip in the brandbar (cached 30 min)
+    if (Farm.weather && Farm.weather.init) Farm.weather.init();
+
     // 4. Daily tasks
     Farm.tasks.initDaily();
     Farm.tasks.updateBadge();
