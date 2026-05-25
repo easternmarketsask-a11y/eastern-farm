@@ -79,15 +79,22 @@
 
       const deliverBtn = count === 0
         ? ''
-        : `<button class="btn wh-deliver-btn" id="whDeliverBtn">🚚 ${lang === 'en' ? 'Deliver to Eastern Market' : '送货到东方超市'}</button>`;
+        : `<button class="btn wh-deliver-btn" id="whDeliverBtn">🏪 ${lang === 'en' ? 'Sell to Eastern Market' : '卖给东方超市'}</button>`;
+
+      // Expand-warehouse button — always available (not just when full)
+      // so eager players can pre-buy capacity.
+      const tier = Farm.state.warehouseExpansionTier();
+      const expandBtn = tier.atMax
+        ? ''
+        : `<button class="btn wh-expand-btn" id="whExpandBtn">🏗 ${lang === 'en' ? 'Expand silo to ' : '扩建到 '}${tier.nextCapacity} · ${coin}${tier.cost}</button>`;
 
       const html = `
         <h2 class="modal-title">${lang === 'en' ? titleEn : titleZh}</h2>
         ${body}
         <div class="btn-row" style="margin-top:14px;">
-          <button class="btn secondary" onclick="Farm.ui.hideModal()">${Farm.i18n.t('btn_close')}</button>
-          ${deliverBtn}
+          ${deliverBtn || `<button class="btn secondary" onclick="Farm.ui.hideModal()">${Farm.i18n.t('btn_close')}</button>`}
         </div>
+        ${expandBtn ? `<div style="margin-top:8px;text-align:center;">${expandBtn}</div>` : ''}
       `;
       Farm.ui.showModal(html);
 
@@ -95,6 +102,72 @@
       if (deliverEl) {
         deliverEl.onclick = () => this.deliver();
       }
+      const expandEl = document.getElementById('whExpandBtn');
+      if (expandEl) {
+        expandEl.onclick = () => this._tryExpand();
+      }
+    },
+
+    // Special dialog shown when player tries to harvest but warehouse is
+    // full. Offers 2 explicit choices instead of just a toast: sell now
+    // (clear silo) OR expand capacity (spend coins).
+    openFullDialog() {
+      const lang = Farm.state.data.language;
+      const coin = '<span class="coin-icon"></span>';
+      const tier = Farm.state.warehouseExpansionTier();
+      const value = Farm.state.getWarehouseValue();
+      const cap = Farm.state.data.warehouseCapacity || 20;
+
+      const sellBtn = `
+        <button class="btn wh-full-choice wh-full-sell" id="whFullSell">
+          <div class="wh-full-choice-title">🏪 ${lang === 'en' ? 'Sell to Eastern Market' : '卖给东方超市'}</div>
+          <div class="wh-full-choice-sub">${lang === 'en' ? 'Get' : '得到'} ${coin}${value}${lang === 'en' ? ' now + free silo space' : '，仓库立刻清空'}</div>
+        </button>`;
+
+      const expandBtn = tier.atMax
+        ? `<div class="wh-full-maxed">🏆 ${lang === 'en' ? 'Silo is already maxed out' : '仓库已是最大容量'}</div>`
+        : `<button class="btn wh-full-choice wh-full-expand" id="whFullExpand">
+            <div class="wh-full-choice-title">🏗 ${lang === 'en' ? 'Expand silo' : '扩建仓库'}</div>
+            <div class="wh-full-choice-sub">${cap} → ${tier.nextCapacity} ${lang === 'en' ? '· cost' : '· 花费'} ${coin}${tier.cost}</div>
+          </button>`;
+
+      const html = `
+        <h2 class="modal-title">📦 ${lang === 'en' ? 'Silo is full!' : '仓库满了！'}</h2>
+        <p class="modal-subtitle">${lang === 'en'
+          ? 'Pick one to keep harvesting:'
+          : '挑一个继续收割:'}</p>
+        <div class="wh-full-choices">
+          ${sellBtn}
+          ${expandBtn}
+        </div>
+      `;
+      Farm.ui.showModal(html);
+
+      const sellEl = document.getElementById('whFullSell');
+      if (sellEl) sellEl.onclick = () => this.deliver();
+      const expandEl = document.getElementById('whFullExpand');
+      if (expandEl) expandEl.onclick = () => this._tryExpand();
+    },
+
+    _tryExpand() {
+      const lang = Farm.state.data.language;
+      const result = Farm.state.expandWarehouse();
+      if (!result.ok) {
+        if (result.reason === 'insufficient_coins') {
+          Farm.ui.toast(lang === 'en' ? '🪙 Not enough farm coins' : '🪙 农场币不够', 2200);
+        } else if (result.reason === 'at_max') {
+          Farm.ui.toast(lang === 'en' ? '🏆 Silo is already max' : '🏆 已是最大容量', 2200);
+        }
+        if (Farm.audio) Farm.audio.play('error');
+        return;
+      }
+      Farm.ui.hideModal();
+      Farm.ui.refreshHUD();
+      this.refreshBadge();
+      if (Farm.audio) Farm.audio.play('achievement');
+      Farm.ui.toast(lang === 'en'
+        ? `🏗 Silo expanded to ${result.newCapacity}! -<span class="coin-icon"></span>${result.cost}`
+        : `🏗 仓库扩到 ${result.newCapacity} 件！-<span class="coin-icon"></span>${result.cost}`, 2800);
     },
 
     // Execute the delivery: credit coins + animate + close modal.
@@ -114,12 +187,12 @@
       let msg;
       if (result.firstOfDay && result.bonusCoins > 0) {
         msg = (lang === 'en'
-          ? `🚚 Delivered ${result.itemCount} items! +${coin}${result.totalCoins} (incl. 🌅+${coin}${result.bonusCoins} daily bonus)`
-          : `🚚 送货 ${result.itemCount} 件！+${coin}${result.totalCoins}（含 🌅 今日首单 +${coin}${result.bonusCoins}）`);
+          ? `🏪 Sold ${result.itemCount} items to Eastern Market! +${coin}${result.totalCoins} (incl. 🌅+${coin}${result.bonusCoins} daily bonus)`
+          : `🏪 卖给东方超市 ${result.itemCount} 件！+${coin}${result.totalCoins}（含 🌅 今日首单 +${coin}${result.bonusCoins}）`);
       } else {
         msg = (lang === 'en'
-          ? `🚚 Delivered ${result.itemCount} items! +${coin}${result.totalCoins}`
-          : `🚚 送货 ${result.itemCount} 件！+${coin}${result.totalCoins}`);
+          ? `🏪 Sold ${result.itemCount} items to Eastern Market! +${coin}${result.totalCoins}`
+          : `🏪 卖给东方超市 ${result.itemCount} 件！+${coin}${result.totalCoins}`);
       }
       Farm.ui.toast(msg, 3200);
 

@@ -1024,6 +1024,67 @@ body {
   font-weight: 700 !important;
   font-size: 14px !important;
 }
+.wh-expand-btn {
+  background: #fff !important;
+  color: var(--leaf-dark) !important;
+  border: 1.5px solid var(--leaf-green) !important;
+  font-size: 12.5px !important;
+  font-weight: 600 !important;
+}
+
+/* "Silo full" 2-choice dialog */
+.wh-full-choices {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 14px 0 6px;
+}
+.wh-full-choice {
+  display: block;
+  text-align: left;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 2px solid var(--border-soft);
+  background: var(--cream-bg);
+  cursor: pointer;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+.wh-full-choice:active { transform: scale(0.98); }
+.wh-full-choice.wh-full-sell {
+  background: linear-gradient(135deg, #e8f5d4 0%, #c8e6a0 100%);
+  border-color: var(--leaf-green);
+}
+.wh-full-choice.wh-full-expand {
+  background: linear-gradient(135deg, #fff8e1 0%, #ffe0a8 100%);
+  border-color: #d4a857;
+}
+.wh-full-choice-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--warm-text);
+  margin-bottom: 3px;
+}
+.wh-full-choice-sub {
+  font-size: 12px;
+  color: var(--warm-text-soft);
+  font-weight: 500;
+}
+.wh-full-choice .coin-icon {
+  width: 14px;
+  height: 14px;
+  font-size: 9px;
+  margin-right: 0;
+  vertical-align: middle;
+}
+.wh-full-maxed {
+  text-align: center;
+  padding: 16px;
+  background: var(--cream-bg);
+  border: 2px dashed var(--border-soft);
+  border-radius: 14px;
+  color: var(--warm-text-soft);
+  font-size: 13px;
+}
 .wh-list .coin-icon {
   width: 14px;
   height: 14px;

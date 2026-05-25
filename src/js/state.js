@@ -485,6 +485,34 @@
       return total;
     },
 
+    // Warehouse expansion: tiered pricing in coins. Returns the next-tier
+    // info { nextCapacity, cost, atMax } so the warehouse modal can show
+    // an "expand" button when warehouse is full / nearly full.
+    warehouseExpansionTier() {
+      const cur = this.data.warehouseCapacity || 20;
+      const tiers = [
+        { atCapacity: 20, nextCapacity: 25, cost: 50 },
+        { atCapacity: 25, nextCapacity: 30, cost: 100 },
+        { atCapacity: 30, nextCapacity: 40, cost: 200 },
+        { atCapacity: 40, nextCapacity: 50, cost: 400 },
+        { atCapacity: 50, nextCapacity: 60, cost: 800 },
+      ];
+      const t = tiers.find(x => x.atCapacity === cur);
+      if (!t) return { nextCapacity: cur, cost: 0, atMax: true };
+      return { nextCapacity: t.nextCapacity, cost: t.cost, atMax: false };
+    },
+
+    // Buy a warehouse expansion. Deducts coins, bumps capacity.
+    expandWarehouse() {
+      const tier = this.warehouseExpansionTier();
+      if (tier.atMax) return { ok: false, reason: 'at_max' };
+      if (this.data.coins < tier.cost) return { ok: false, reason: 'insufficient_coins' };
+      this.data.coins -= tier.cost;
+      this.data.warehouseCapacity = tier.nextCapacity;
+      this.save();
+      return { ok: true, newCapacity: tier.nextCapacity, cost: tier.cost };
+    },
+
     // Sell all warehouse contents to Eastern Market, credit coins
     // (with daily-first-delivery bonus if applicable), and clear the
     // warehouse. Returns { totalCoins, bonusCoins, itemCount, firstOfDay }.

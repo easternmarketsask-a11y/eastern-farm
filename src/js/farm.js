@@ -188,11 +188,10 @@
         // (other reasons like "not_mature" / "unknown" can't be triggered
         // by a normal click flow).
         if (result.reason === 'warehouse_full') {
-          const lang = Farm.state.data.language;
-          Farm.ui.toast(lang === 'en'
-            ? '📦 Warehouse is full! Deliver to Eastern Market first.'
-            : '📦 仓库满了！先去送货到东方超市', 3000);
           if (Farm.audio) Farm.audio.play('error');
+          if (Farm.warehouse && Farm.warehouse.openFullDialog) {
+            Farm.warehouse.openFullDialog();
+          }
         }
         return;
       }
