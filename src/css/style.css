@@ -286,15 +286,88 @@ body {
   text-align: center;
   padding: 8px 4px 0;
 }
-.lvup-confetti {
-  font-size: 56px;
+/* Bouncier entrance for level-up: starts smaller, springs past 100% */
+.lvup-burst { animation: lvupBurst 0.7s cubic-bezier(0.34, 1.7, 0.64, 1) both; }
+@keyframes lvupBurst {
+  0%   { transform: scale(0.4); opacity: 0; }
+  60%  { transform: scale(1.08); opacity: 1; }
+  100% { transform: scale(1); }
+}
+.lvup-emoji-row {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  font-size: 38px;
   line-height: 1;
-  margin-bottom: 6px;
-  animation: lvupBounce 1.2s ease-in-out infinite;
+}
+.lvup-emoji {
+  display: inline-block;
+  animation: lvupEmojiBounce 1.3s ease-in-out infinite;
+}
+.lvup-emoji:nth-child(1) { animation-delay: 0s; }
+.lvup-emoji:nth-child(2) { animation-delay: 0.12s; }
+.lvup-emoji:nth-child(3) { animation-delay: 0.24s; }
+.lvup-emoji:nth-child(4) { animation-delay: 0.36s; }
+.lvup-emoji:nth-child(5) { animation-delay: 0.48s; }
+@keyframes lvupEmojiBounce {
+  0%, 100% { transform: translateY(0) rotate(-6deg); }
+  50%      { transform: translateY(-8px) rotate(8deg); }
 }
 @keyframes lvupBounce {
   0%, 100% { transform: scale(1) rotate(-3deg); }
   50%      { transform: scale(1.12) rotate(3deg); }
+}
+
+/* Full-screen confetti shower spawned via Farm.ui.showConfetti() */
+.confetti-layer {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 200;
+  overflow: hidden;
+}
+.confetti-piece {
+  position: absolute;
+  top: -40px;
+  font-size: 18px;
+  line-height: 1;
+  animation-name: confettiFall;
+  animation-timing-function: cubic-bezier(0.22, 0.61, 0.36, 1);
+  animation-fill-mode: forwards;
+  opacity: 0.95;
+  will-change: transform, opacity;
+}
+.confetti-square {
+  width: 10px;
+  height: 14px;
+  border-radius: 2px;
+  display: inline-block;
+}
+@keyframes confettiFall {
+  0% {
+    transform: translate3d(0, -10vh, 0) rotate(0deg);
+    opacity: 1;
+  }
+  85% { opacity: 1; }
+  100% {
+    transform: translate3d(var(--end-x, 0), 110vh, 0) rotate(var(--end-rot, 360deg));
+    opacity: 0;
+  }
+}
+
+/* Title shimmer effect on the "new title" badge */
+.lvup-title-new {
+  background: linear-gradient(110deg,
+    rgba(106, 176, 76, 0.14) 0%,
+    rgba(247, 201, 72, 0.45) 50%,
+    rgba(106, 176, 76, 0.14) 100%);
+  background-size: 200% 100%;
+  animation: lvupTitleShimmer 2.2s ease-in-out infinite;
+}
+@keyframes lvupTitleShimmer {
+  0%   { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
 }
 .lvup-label {
   font-family: var(--font-display);

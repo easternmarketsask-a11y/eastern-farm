@@ -208,13 +208,19 @@
       );
 
       const html = `
-        <div class="lvup-modal">
-          <div class="lvup-confetti">🎉</div>
+        <div class="lvup-modal lvup-burst">
+          <div class="lvup-emoji-row">
+            <span class="lvup-emoji">🎉</span>
+            <span class="lvup-emoji">✨</span>
+            <span class="lvup-emoji">🎊</span>
+            <span class="lvup-emoji">⭐</span>
+            <span class="lvup-emoji">🎉</span>
+          </div>
           <div class="lvup-label">${lang === 'en' ? 'Level Up!' : '升级了！'}</div>
           <div class="lvup-jump">
             <span class="lvup-old">Lv ${oldLevel}</span>
             <span class="lvup-arrow">▶</span>
-            <span class="lvup-new">Lv ${newLevel}</span>
+            <span class="lvup-new" id="lvupNewNum" data-from="${oldLevel}" data-to="${newLevel}">Lv ${oldLevel}</span>
           </div>
           ${titleChipHTML}
           <div class="lvup-unlocked">
@@ -229,6 +235,63 @@
       this.showModal(html);
       document.getElementById('lvupOkBtn').onclick = () => this.hideModal();
       if (Farm.audio) Farm.audio.play('levelUp');
+      // Big confetti shower over the whole screen
+      this.showConfetti(36, 2600);
+      // Count-up animation on the new level number
+      this._animateLevelCount(oldLevel, newLevel);
+      // Optional haptic feedback on mobile
+      if (navigator.vibrate) { try { navigator.vibrate([20, 40, 20]); } catch (_) {} }
+    },
+
+    // Spawn N falling confetti pieces across the screen for `duration` ms.
+    // Used by level-up + other big celebrations. Pieces are absolutely
+    // positioned, randomly colored, fall + rotate + fade.
+    showConfetti(count, duration) {
+      count = count || 30;
+      duration = duration || 2200;
+      const layer = document.createElement('div');
+      layer.className = 'confetti-layer';
+      document.body.appendChild(layer);
+      const colors = ['#ff7043', '#ffd54f', '#aed581', '#4fc3f7', '#ba68c8', '#f06292', '#fff176'];
+      const shapes = ['🎉', '✨', '🎊', '⭐', '🌟', '💫', '🎁'];
+      for (let i = 0; i < count; i++) {
+        const piece = document.createElement('span');
+        piece.className = 'confetti-piece';
+        // 70% emoji, 30% colored squares for variety
+        if (Math.random() < 0.7) {
+          piece.textContent = shapes[Math.floor(Math.random() * shapes.length)];
+          piece.style.fontSize = (14 + Math.floor(Math.random() * 12)) + 'px';
+        } else {
+          piece.classList.add('confetti-square');
+          piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+        }
+        piece.style.left = (Math.random() * 100) + '%';
+        piece.style.animationDuration = (1.4 + Math.random() * 1.8) + 's';
+        piece.style.animationDelay = (Math.random() * 0.5) + 's';
+        piece.style.setProperty('--end-rot', (Math.random() * 720 - 360) + 'deg');
+        piece.style.setProperty('--end-x', (Math.random() * 80 - 40) + 'px');
+        layer.appendChild(piece);
+      }
+      setTimeout(() => layer.remove(), duration + 800);
+    },
+
+    // Animate the level number from old → new over ~700ms (eases nicely
+    // because the user is reading the modal at the same time).
+    _animateLevelCount(from, to) {
+      const el = document.getElementById('lvupNewNum');
+      if (!el) return;
+      if (to === from) { el.textContent = 'Lv ' + to; return; }
+      const start = performance.now();
+      const dur = 700;
+      const step = (now) => {
+        const t = Math.min(1, (now - start) / dur);
+        // Ease-out cubic
+        const ease = 1 - Math.pow(1 - t, 3);
+        const cur = Math.round(from + (to - from) * ease);
+        el.textContent = 'Lv ' + cur;
+        if (t < 1) requestAnimationFrame(step);
+      };
+      requestAnimationFrame(step);
     },
   };
 
