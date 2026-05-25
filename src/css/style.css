@@ -47,6 +47,13 @@ html, body {
   user-select: none;
   -webkit-user-select: none;
   -webkit-tap-highlight-color: transparent;
+  /* Bug fix: on iOS Safari the address bar shrink/grow could make body
+     taller than #app (100dvh) and the whole shell scrolled together
+     with the inner farm grid. Locking outer scroll keeps top/bottom
+     chrome fixed; only #farm scrolls. */
+  overflow: hidden;
+  position: fixed;
+  width: 100%;
 }
 
 body {
@@ -650,55 +657,64 @@ body {
 .leaderboard-row .lb-level { color: var(--leaf-dark); font-weight: 700; font-size: 13px; }
 .btn.disabled, .btn[disabled] { opacity: 0.55; cursor: not-allowed; }
 
-/* =============== WAREHOUSE (V2 — silo + delivery system) ============ */
-/* Floating barn button on the farm view — Hay Day's silo lives in the
-   corner of the farm, not the topbar. Tap to open delivery modal. */
+/* =============== WAREHOUSE (V2.1 — barn building below grid) ======== */
+/* Was a floating circle in the top-right corner; redesigned per Chris
+   feedback as a barn-shaped element placed BELOW the farm grid. Bigger
+   + obviously a building, so players see "this is where my crops go". */
 .warehouse-btn {
-  position: fixed;
-  top: 92px;
-  right: 12px;
-  width: 56px;
-  height: 56px;
-  border: none;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #f5e6c8 0%, #c9a675 100%);
-  box-shadow:
-    inset 0 -2px 3px rgba(120, 80, 30, 0.4),
-    inset 0 2px 2px rgba(255, 245, 220, 0.55),
-    0 3px 8px rgba(0, 0, 0, 0.25);
-  cursor: pointer;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  z-index: 20;
+  background: transparent;
+  border: none;
+  cursor: pointer;
   padding: 0;
-  transition: transform 0.15s ease;
+  margin: 18px auto 12px;
+  position: relative;
+  width: 180px;
+  max-width: 70%;
+  transition: transform 0.18s ease;
 }
-.warehouse-btn:active { transform: scale(0.92); }
-.warehouse-btn .warehouse-icon {
-  font-size: 26px;
-  line-height: 1;
-  margin-top: 4px;
+.warehouse-btn:active { transform: translateY(2px) scale(0.97); }
+.warehouse-btn .warehouse-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.25));
+}
+.warehouse-btn .warehouse-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--warm-text);
+  letter-spacing: 0.3px;
+  margin-top: 2px;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6);
 }
 .warehouse-btn .warehouse-badge {
-  font-size: 10px;
-  font-weight: 700;
+  position: absolute;
+  top: -6px;
+  right: -10px;
+  min-width: 44px;
+  font-size: 13px;
+  font-weight: 800;
   color: #6b4a08;
-  background: rgba(255, 255, 255, 0.7);
-  padding: 1px 6px;
-  border-radius: 8px;
-  margin-top: 2px;
+  background: linear-gradient(135deg, #fff8c2 0%, #ffd54f 60%, #d68f00 100%);
+  padding: 4px 9px;
+  border-radius: 14px;
   letter-spacing: 0.3px;
+  border: 2px solid #b8860b;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.25);
+  text-align: center;
 }
 .warehouse-btn .warehouse-badge.full {
-  background: var(--barn-red);
+  background: linear-gradient(135deg, #ff8a65 0%, #e8522a 60%, #b53a1a 100%);
   color: #fff;
+  border-color: #8b2a14;
   animation: warehouseFullPulse 1.2s ease-in-out infinite;
 }
 @keyframes warehouseFullPulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(232, 82, 42, 0.4); }
-  50%      { box-shadow: 0 0 0 6px rgba(232, 82, 42, 0); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(232, 82, 42, 0.5), 0 2px 4px rgba(0, 0, 0, 0.25); }
+  50%      { box-shadow: 0 0 0 8px rgba(232, 82, 42, 0), 0 2px 4px rgba(0, 0, 0, 0.25); }
 }
 
 /* Warehouse modal contents */
