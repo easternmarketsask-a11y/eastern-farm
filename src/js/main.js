@@ -406,6 +406,22 @@
       </div>
 
       <div style="margin:16px 0;padding:12px;background:var(--cream-bg);border-radius:var(--radius-md);">
+        <div style="font-weight:600;margin-bottom:8px;">🏘 ${lang === 'en' ? 'Neighbor settings' : '邻居设置'}</div>
+        <div style="font-size:11px;color:var(--warm-text-soft);margin-bottom:8px;">
+          ${lang === 'en' ? 'How other members see you in the neighbor list.' : '其他会员在邻居列表里看到你的样子。'}
+        </div>
+        <label style="display:block;font-size:12px;font-weight:600;margin-bottom:4px;">${lang === 'en' ? 'Nickname' : '我的昵称'}</label>
+        <input id="nicknameInput" type="text" maxlength="12" placeholder="${lang === 'en' ? 'e.g., Sask Mom' : '例如：萨城宝妈'}"
+               value="${(Farm.state.data.nickname || '').replace(/"/g, '&quot;')}"
+               style="width:100%;padding:8px 10px;font-size:13px;border:1.5px solid var(--border-soft);border-radius:8px;background:#fff;margin-bottom:10px;box-sizing:border-box;"/>
+        <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;">
+          <input id="visibleToggle" type="checkbox" ${Farm.state.data.visibleToNeighbors !== false ? 'checked' : ''}
+                 style="width:16px;height:16px;cursor:pointer;"/>
+          <span>${lang === 'en' ? 'Show me in neighbor list' : '显示在邻居列表里'}</span>
+        </label>
+      </div>
+
+      <div style="margin:16px 0;padding:12px;background:var(--cream-bg);border-radius:var(--radius-md);">
         <div style="font-weight:600;margin-bottom:4px;">${Farm.i18n.t('settings_about')}</div>
         <div style="font-size:12px;color:var(--warm-text-soft);line-height:1.6;">
           ${Farm.i18n.t('about_made_by')}<br>
@@ -455,6 +471,24 @@
       if (Farm.audio) Farm.audio.setMuted(true);
       openSettings();
     };
+    // Neighbor settings: save nickname on blur, visibility on change
+    const nickEl = document.getElementById('nicknameInput');
+    if (nickEl) {
+      nickEl.onblur = () => {
+        const v = nickEl.value.trim().slice(0, 12);
+        Farm.state.data.nickname = v || null;
+        Farm.state.save();
+        if (Farm.fbGameSync) Farm.fbGameSync.push();
+      };
+    }
+    const visEl = document.getElementById('visibleToggle');
+    if (visEl) {
+      visEl.onchange = () => {
+        Farm.state.data.visibleToNeighbors = visEl.checked;
+        Farm.state.save();
+        if (Farm.fbGameSync) Farm.fbGameSync.push();
+      };
+    }
     document.getElementById('resetBtn').onclick = () => {
       if (confirm(Farm.i18n.t('settings_reset_confirm'))) {
         Farm.state.reset();

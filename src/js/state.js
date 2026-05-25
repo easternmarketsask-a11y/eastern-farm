@@ -69,6 +69,7 @@
       newsRead: false,
       firstHarvestDone: false,  // first harvest of day bonus claimed?
       firstDeliveryDone: false, // first warehouse→market delivery of day (+20%)
+      likesSentToday: [],       // recipient UIDs liked today (cap 5)
     },
     activeEffects: {            // toggleable consumable effects
       accelerationCharges: 0,   // # of 加速券 in inventory (consumed on use)
@@ -84,8 +85,11 @@
     // +20% bonus as a soft "play often" incentive.
     warehouse: [],              // Array of { cropId, addedAt } items
     warehouseCapacity: 20,      // Soft cap; harvest blocked when full
-    // firstDeliveryDone moves from dailyClaims into general state below
-    // so the +20% logic can read/write cleanly with the rest of sell flow.
+    totalDeliveries: 0,         // Lifetime count of warehouse→Eastern Market deliveries
+
+    // ============ Neighbor system (Phase 1 — 2026-05-24) ============
+    nickname: null,             // user-set in settings (else derived "{firstChar}邻居")
+    visibleToNeighbors: true,   // privacy toggle (settings)
 
     // ============ Member sync (v1.2) ============
     // unsyncedEp accumulates EP earned while NOT logged into a member account.
@@ -217,6 +221,7 @@
               newsRead: false,
               firstHarvestDone: false,
               firstDeliveryDone: false,
+              likesSentToday: [],
             };
           }
         } catch (e) {
@@ -239,6 +244,11 @@
         localStorage.setItem(SAVE_KEY, JSON.stringify(this.data));
       } catch (e) {
         console.error('Save failed', e);
+      }
+      // Phase-1 neighbor sync: piggyback on save() so any stat change
+      // eventually reaches Firestore. Debounced to 60s in fbGameSync.
+      if (window.Farm && Farm.fbGameSync && Farm.fbGameSync.pushStatsDebounced) {
+        Farm.fbGameSync.pushStatsDebounced();
       }
     },
 
@@ -486,6 +496,7 @@
       this.data.coins += total;
       this.data.sessionStats.coinsEarned += total;
       this.data.warehouse = [];
+      this.data.totalDeliveries = (this.data.totalDeliveries || 0) + 1;
       if (isFirstOfDay) this.data.dailyClaims.firstDeliveryDone = true;
       this.save();
       return { ok: true, totalCoins: total, bonusCoins: bonus, baseCoins: baseValue, itemCount, firstOfDay: isFirstOfDay };

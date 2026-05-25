@@ -607,6 +607,49 @@ body {
   50% { opacity: 0.5; transform: scale(1.2); }
 }
 
+/* =============== NEIGHBORS PHASE 1 (real members + likes + lb) ====== */
+.neighbor-real-badge {
+  display: inline-block;
+  font-size: 9.5px;
+  color: #4a8a2f;
+  background: #e8f5d4;
+  border: 1px solid #aed581;
+  padding: 0 5px;
+  border-radius: 6px;
+  margin-left: 4px;
+  font-weight: 600;
+  vertical-align: 1px;
+}
+.leaderboard-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 380px;
+  overflow-y: auto;
+}
+.leaderboard-row {
+  display: grid;
+  grid-template-columns: 28px 32px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  background: var(--cream-bg);
+  border: 1.5px solid var(--border-soft);
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-size: 13px;
+}
+.leaderboard-row.is-self {
+  background: linear-gradient(135deg, #fff8e1, #ffecb3);
+  border-color: #f0c674;
+  font-weight: 700;
+}
+.leaderboard-row .lb-rank { font-size: 18px; text-align: center; line-height: 1; }
+.leaderboard-row .lb-avatar { font-size: 22px; line-height: 1; text-align: center; }
+.leaderboard-row .lb-name { color: var(--warm-text); font-weight: 600; }
+.leaderboard-row .lb-you { color: var(--barn-red); font-size: 11px; font-weight: 700; }
+.leaderboard-row .lb-level { color: var(--leaf-dark); font-weight: 700; font-size: 13px; }
+.btn.disabled, .btn[disabled] { opacity: 0.55; cursor: not-allowed; }
+
 /* =============== WAREHOUSE (V2 — silo + delivery system) ============ */
 /* Floating barn button on the farm view — Hay Day's silo lives in the
    corner of the farm, not the topbar. Tap to open delivery modal. */
