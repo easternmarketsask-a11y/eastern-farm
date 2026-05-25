@@ -17,6 +17,8 @@
       const layer = document.getElementById('farmDecorations');
       if (!layer) return;
       layer.innerHTML = '';
+      // Settings toggle: hide pets + balloons + other animated decor
+      if (Farm.state.data.decorationsHidden) return;
       if (!Farm.epShop || !Farm.epShop.items.length) return;
       const decos = Farm.state.data.decorations || [];
       // Find pets (animated) vs static decorations

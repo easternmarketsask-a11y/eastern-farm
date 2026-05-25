@@ -1,86 +1,150 @@
 {
-  "_comment": "Daily rotating news tips. Pick deterministic by date hash. Each item shown roughly once every N days. Mix store-promo, recipe tip, festival reminder, local Saskatoon flavor, farm-game tip.",
-  "_schema_version": 1,
+  "_comment": "Daily rotating 'today' news. Deterministic by date hash so all players see the same item on the same day. Mix store-promo, recipe tip, festival reminder, game tip, feature reminder. Items must use ACCURATE info: real game features, real Eastern Market produce in our catalog, no hardcoded weather (live weather is in the brandbar) or hardcoded prices.",
+  "_schema_version": 2,
   "items": [
     {
-      "id": "weekly_bok_choy",
-      "category": "store",
-      "title_zh": "🥬 本周特价：上海青",
-      "title_en": "🥬 This week: Bok Choy on sale",
-      "body_zh": "新鲜上海青本周到货充足，店里 $1.49/lb，比平时便宜 30%。游戏里也能种它哦。",
-      "body_en": "Fresh bok choy is in stock this week at $1.49/lb, 30% off. You can also grow it in the game!"
+      "id": "tip_warehouse",
+      "category": "tip",
+      "title_zh": "📦 新功能：仓库 + 送货",
+      "title_en": "📦 New: warehouse + delivery",
+      "body_zh": "收获的菜先进仓库，要点谷仓送到东方超市才能换金币。今日首单 +20% 奖励！",
+      "body_en": "Harvested crops go to the silo. Tap the barn to deliver to Eastern Market for coins — first delivery of the day gets +20% bonus!"
     },
     {
-      "id": "recipe_garlic_bok",
-      "category": "recipe",
-      "title_zh": "🍳 今日食谱：蒜蓉上海青",
-      "title_en": "🍳 Today's recipe: Garlic Bok Choy",
-      "body_zh": "热锅冷油下蒜末爆香，下上海青大火快炒 90 秒，几滴生抽，出锅。",
-      "body_en": "Heat oil, sizzle garlic, toss in bok choy on high heat for 90 seconds, splash of soy sauce, done."
-    },
-    {
-      "id": "saskatoon_winter",
-      "category": "local",
-      "title_zh": "❄️ 萨斯卡通天气",
-      "title_en": "❄️ Saskatoon weather",
-      "body_zh": "今天 -25°C 别忘了多穿，店里有热豆浆和煲汤料包，回家煲一锅暖身。",
-      "body_en": "It's -25°C today — bundle up. The store has hot soy milk and soup base kits to warm up at home."
+      "id": "tip_warehouse_cap",
+      "category": "tip",
+      "title_zh": "💡 仓库装满了怎么办",
+      "title_en": "💡 Silo full?",
+      "body_zh": "仓库默认装 20 件，满了就不能再收。先点谷仓送货清空，再继续收割。",
+      "body_en": "Default capacity is 20. When full, harvest is blocked — tap the barn and deliver first, then continue harvesting."
     },
     {
       "id": "tip_chive",
       "category": "tip",
-      "title_zh": "💡 游戏小贴士：韭菜",
-      "title_en": "💡 Game tip: Chives",
-      "body_zh": "韭菜种一次能割 3 次！每次再长只要 1 小时，超划算。",
-      "body_en": "Chinese chives can be harvested 3 times from one planting — regrow only 1 hour each. Best deal!"
+      "title_zh": "💡 韭菜种一次割三次",
+      "title_en": "💡 Chinese chives — 3 harvests per planting",
+      "body_zh": "韭菜成熟后割掉，茬子会再长出新韭菜，能割 3 次。性价比超高。",
+      "body_en": "Chinese chives regrow after each cut — 3 harvests per planting. Best value/time ratio in the catalog."
+    },
+    {
+      "id": "tip_shanghai_miao",
+      "category": "tip",
+      "title_zh": "💡 新手最适合：上海苗",
+      "title_en": "💡 Best for beginners: Shanghai Bok Choy Sprout",
+      "body_zh": "上海苗只要 5 分钟就熟。新手用它快速升级最划算。",
+      "body_en": "Shanghai bok choy sprout takes only 5 minutes — fastest way for new players to level up."
+    },
+    {
+      "id": "tip_lotus_root",
+      "category": "tip",
+      "title_zh": "💡 长线投资：莲藕",
+      "title_en": "💡 Long game: Lotus Root",
+      "body_zh": "莲藕要长 5 小时，但卖价 C400。睡前种一棵，醒来就能收。",
+      "body_en": "Lotus root takes 5 hours but sells for C400. Plant before bed, harvest in the morning."
+    },
+    {
+      "id": "feature_neighbors",
+      "category": "feature",
+      "title_zh": "🏘 新功能：邻居广场",
+      "title_en": "🏘 New: Community plaza",
+      "body_zh": "每天系统挑 3 位真会员当今日邻居，给他们点个赞自己也得 1 积分。",
+      "body_en": "Three real Eastern Market members are picked daily as today's neighbors. Like them — you each earn +1 point."
+    },
+    {
+      "id": "feature_leaderboard",
+      "category": "feature",
+      "title_zh": "🏆 周排行榜",
+      "title_en": "🏆 Weekly leaderboard",
+      "body_zh": "Top 10 农场按等级排名，每周一刷新。多种菜往上爬。",
+      "body_en": "Top 10 farms by level, resets every Monday. Plant + level up to climb the ranks."
+    },
+    {
+      "id": "store_celtuce",
+      "category": "store",
+      "title_zh": "🥬 店里热销：莴笋",
+      "title_en": "🥬 Top seller in store: Celtuce",
+      "body_zh": "莴笋是东方超市 90 天销量第一。游戏里也能种它哦。",
+      "body_en": "Celtuce is Eastern Market's #1 vegetable over the past 90 days. You can grow it in the game too!"
+    },
+    {
+      "id": "store_papa_tangerine",
+      "category": "store",
+      "title_zh": "🍊 店里水果：耙耙柑",
+      "title_en": "🍊 In-store fruit: Papa Tangerine",
+      "body_zh": "耙耙柑是店里水果销量第一，皮软、汁多、超甜。冬春当季。",
+      "body_en": "Papa tangerine is our top-selling fruit — soft skin, juicy, super sweet. Peak season winter-spring."
+    },
+    {
+      "id": "recipe_celtuce_garlic",
+      "category": "recipe",
+      "title_zh": "🍳 蒜蓉莴笋",
+      "title_en": "🍳 Garlic Celtuce",
+      "body_zh": "莴笋削皮切丝，热油下蒜末，大火快炒 60 秒，加生抽和糖少许。",
+      "body_en": "Peel + julienne celtuce. Sizzle minced garlic, toss celtuce on high heat for 60 seconds, splash soy + pinch of sugar."
+    },
+    {
+      "id": "recipe_garlic_bok",
+      "category": "recipe",
+      "title_zh": "🍳 蒜蓉上海青",
+      "title_en": "🍳 Garlic Bok Choy",
+      "body_zh": "热锅冷油下蒜末爆香，下上海青大火快炒 90 秒，几滴生抽，出锅。",
+      "body_en": "Heat oil, sizzle garlic, toss in bok choy on high heat for 90 seconds, splash of soy sauce, done."
+    },
+    {
+      "id": "recipe_chive_egg",
+      "category": "recipe",
+      "title_zh": "🍳 韭菜炒蛋",
+      "title_en": "🍳 Chive & Egg Stir-fry",
+      "body_zh": "韭菜切寸段 + 鸡蛋打散，热油先炒蛋盛出，再炒韭菜，合炒 20 秒出锅。",
+      "body_en": "Cut chives into 1-inch pieces, beat eggs. Scramble eggs first + set aside. Stir-fry chives, combine for 20 sec, done."
+    },
+    {
+      "id": "feature_ep_shop",
+      "category": "feature",
+      "title_zh": "🛍️ 积分商城",
+      "title_en": "🛍️ EP Shop",
+      "body_zh": "用积分换加速券、装饰品、扩展地块，让农场更丰富。",
+      "body_en": "Spend EP on acceleration tickets, decorations, and plot expansions — make your farm your own."
+    },
+    {
+      "id": "feature_login_phone",
+      "category": "feature",
+      "title_zh": "📱 手机号登录",
+      "title_en": "📱 Phone number sign-in",
+      "body_zh": "游戏会员登录现在用手机号 + 短信验证码，和店里会员卡同一个账户。",
+      "body_en": "Game sign-in now uses phone + SMS code — same account as your Eastern Market membership."
     },
     {
       "id": "festival_spring_coming",
       "category": "festival",
-      "title_zh": "🏮 春节将至",
-      "title_en": "🏮 Spring Festival is coming",
-      "body_zh": "节日窗口开放时，水仙花、年橘等限定作物会出现在种子店。",
-      "body_en": "When the festival window opens, limited crops like narcissus and kumquat will show up in the shop."
+      "title_zh": "🏮 春节限定作物",
+      "title_en": "🏮 Spring Festival crops",
+      "body_zh": "春节窗口开放时，水仙花、年橘等限定作物会出现在种子店。",
+      "body_en": "When the Spring Festival window opens, limited crops like narcissus + kumquat appear in the shop."
     },
     {
-      "id": "tip_jackpot",
-      "category": "tip",
-      "title_zh": "🎰 收获时小心金疙瘩",
-      "title_en": "🎰 Watch for the Golden Nugget!",
-      "body_zh": "每次收获有 1% 概率掉落金疙瘩，最高 +500 东方积分。",
-      "body_en": "Every harvest has a 1% chance to drop a Golden Nugget, up to +500 EP!"
+      "id": "festival_mid_autumn",
+      "category": "festival",
+      "title_zh": "🌕 中秋限定作物",
+      "title_en": "🌕 Mid-Autumn crops",
+      "body_zh": "中秋窗口开放时，芋头、柚子、桂花等限定作物上架。",
+      "body_en": "When Mid-Autumn opens, taro + pomelo + osmanthus become plantable."
     },
     {
-      "id": "weekend_meteor",
-      "category": "tip",
-      "title_zh": "☄️ 周末流星雨",
-      "title_en": "☄️ Weekend Meteor Shower",
-      "body_zh": "每周六周日积分双倍！集中在周末收获能拿更多。",
-      "body_en": "Every Saturday and Sunday, EP rewards are doubled! Stockpile harvests for the weekend."
-    },
-    {
-      "id": "ep_shop_open",
-      "category": "feature",
-      "title_zh": "🛍️ 积分商城上线",
-      "title_en": "🛍️ EP Shop is open",
-      "body_zh": "用东方积分换加速券、装饰品、扩展地块，让农场更丰富。",
-      "body_en": "Spend EP on acceleration tickets, decorations, and plot expansions — make your farm yours."
-    },
-    {
-      "id": "recipe_tomato_egg",
-      "category": "recipe",
-      "title_zh": "🍳 番茄炒蛋",
-      "title_en": "🍳 Tomato & Egg Stir-fry",
-      "body_zh": "番茄切块 + 鸡蛋打散，先炒蛋盛出，再炒番茄，最后合炒。出锅前撒葱花。",
-      "body_en": "Cube tomatoes, beat eggs. Scramble eggs first, set aside. Stir-fry tomatoes, combine, garnish with scallion."
-    },
-    {
-      "id": "store_address",
+      "id": "store_hours",
       "category": "store",
       "title_zh": "🏪 我们的店",
-      "title_en": "🏪 Visit us",
-      "body_zh": "133-412 Willowgrove Square, Saskatoon. 周一至周六 10am-6:30pm。",
-      "body_en": "133-412 Willowgrove Square, Saskatoon. Mon-Sat 10am-6:30pm."
+      "title_en": "🏪 Visit Eastern Market",
+      "body_zh": "133-412 Willowgrove Square, Saskatoon。周一至周六 10am-6:30pm，周日休息。",
+      "body_en": "133-412 Willowgrove Square, Saskatoon. Mon-Sat 10am-6:30pm. Closed Sunday."
+    },
+    {
+      "id": "store_2000",
+      "category": "store",
+      "title_zh": "🛒 店里 2000+ 种亚洲食材",
+      "title_en": "🛒 2,000+ Asian groceries in store",
+      "body_zh": "新鲜蔬菜、调味料、冷冻食品、零食、中药材，2000+ 种应有尽有。",
+      "body_en": "Fresh produce, sauces, frozen, snacks, herbs — 2,000+ items, everything you need."
     }
   ]
 }

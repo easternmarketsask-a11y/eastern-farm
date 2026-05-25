@@ -417,6 +417,17 @@
       </div>
 
       <div style="margin:16px 0;padding:12px;background:var(--cream-bg);border-radius:var(--radius-md);">
+        <div style="font-weight:600;margin-bottom:8px;">🌻 ${lang === 'en' ? 'Farm display' : '农场显示'}</div>
+        <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;">
+          <input id="decoToggle" type="checkbox" ${Farm.state.data.decorationsHidden ? '' : 'checked'}
+                 style="width:16px;height:16px;cursor:pointer;"/>
+          <span>${lang === 'en'
+            ? 'Show pets + decorations on the farm'
+            : '在农场上显示宠物 + 装饰品（小狗、气球等）'}</span>
+        </label>
+      </div>
+
+      <div style="margin:16px 0;padding:12px;background:var(--cream-bg);border-radius:var(--radius-md);">
         <div style="font-weight:600;margin-bottom:8px;">🏘 ${lang === 'en' ? 'Neighbor settings' : '邻居设置'}</div>
         <div style="font-size:11px;color:var(--warm-text-soft);margin-bottom:8px;">
           ${lang === 'en' ? 'How other members see you in the neighbor list.' : '其他会员在邻居列表里看到你的样子。'}
@@ -482,6 +493,15 @@
       if (Farm.audio) Farm.audio.setMuted(true);
       openSettings();
     };
+    // Farm display: decoration visibility toggle
+    const decoEl = document.getElementById('decoToggle');
+    if (decoEl) {
+      decoEl.onchange = () => {
+        Farm.state.data.decorationsHidden = !decoEl.checked;
+        Farm.state.save();
+        if (Farm.farm && Farm.farm.renderDecorations) Farm.farm.renderDecorations();
+      };
+    }
     // Neighbor settings: save nickname on blur, visibility on change
     const nickEl = document.getElementById('nicknameInput');
     if (nickEl) {

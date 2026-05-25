@@ -91,6 +91,9 @@
     nickname: null,             // user-set in settings (else derived "{firstChar}邻居")
     visibleToNeighbors: true,   // privacy toggle (settings)
 
+    // ============ Display preferences (settings) ============
+    decorationsHidden: false,   // hide pets/balloons/static decor from farm view
+
     // ============ Member sync (v1.2) ============
     // unsyncedEp accumulates EP earned while NOT logged into a member account.
     // On first successful login, up to BACKFILL_CAP gets one-shot credited to
