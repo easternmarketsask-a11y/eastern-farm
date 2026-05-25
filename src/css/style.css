@@ -828,6 +828,17 @@ body {
   letter-spacing: 0.3px;
   transform: translateY(-1px);
 }
+/* Logged-in welcome variant: warmer gold gradient + tier emoji */
+.splash-login.splash-login--logged-in {
+  background: linear-gradient(135deg, #fff8e1 0%, #ffd54f 100%);
+  border-color: #d68f00;
+  color: #6b4a08;
+}
+.splash-login.splash-login--logged-in:hover {
+  box-shadow:
+    0 4px 12px rgba(214, 143, 0, 0.32),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
 
 /* =============== NEIGHBORS PHASE 2 (visit progress, online, self-rank, multi-metric) === */
 .neighbor-progress-wrap {

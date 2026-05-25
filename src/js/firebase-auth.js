@@ -50,6 +50,7 @@
           await this._loadMemberDoc(user.uid);
           this._notify();
           this._renderTopbar();
+          this._renderSplash();
           if (Farm.fbPoints && Farm.fbPoints.firstLoginBackfill) {
             Farm.fbPoints.firstLoginBackfill(user);
           }
@@ -81,8 +82,39 @@
           }
           this._notify();
           this._renderTopbar();
+          this._renderSplash();
         }
       });
+    },
+
+    // Update the splash login button: if already signed in, replace
+    // the "登录" CTA with a friendly welcome chip showing nickname/tier.
+    _renderSplash() {
+      const loginBtn = document.getElementById('splashLogin');
+      if (!loginBtn) return;  // splash already dismissed
+      const lang = (Farm.state && Farm.state.data && Farm.state.data.language) || 'zh';
+      if (this.currentUser) {
+        // Resolve display name (nickname > store name > generic)
+        const stats = (this.memberDoc && this.memberDoc.gameStats) || {};
+        const realName = (this.memberDoc && (this.memberDoc.name || this.memberDoc.username)) || '';
+        const nickname = stats.nickname || (realName ? (realName.charAt(0) + '邻居') : (lang === 'en' ? 'Member' : '会员'));
+        const tier = (this.memberDoc && this.memberDoc.tier) || 'bronze';
+        const tierEmoji = tier === 'gold' ? '🥇' : tier === 'silver' ? '🥈' : '🥉';
+        const safeName = String(nickname).replace(/[<>"&]/g, '');
+        loginBtn.innerHTML = `
+          <span class="icon">${tierEmoji}</span>
+          <span>${lang === 'en' ? 'Welcome, ' : '欢迎回来，'}${safeName}</span>
+        `;
+        loginBtn.classList.add('splash-login--logged-in');
+        // Clicking on the welcome chip jumps straight into the game
+        loginBtn.onclick = () => {
+          const startBtn = document.getElementById('splashStart');
+          if (startBtn) startBtn.click();
+        };
+      } else {
+        // Default state already set in HTML; just ensure class is clean
+        loginBtn.classList.remove('splash-login--logged-in');
+      }
     },
 
     isLoggedIn() { return !!this.currentUser; },
@@ -222,7 +254,13 @@
           <label class="auth-label">${lang === 'en' ? 'Verification code' : '验证码'}</label>
           <div class="auth-otp-grid" id="authOtpGrid">
             ${[0, 1, 2, 3, 4, 5].map(i =>
-              `<input type="tel" inputmode="numeric" maxlength="1" class="auth-otp-box" data-otp-idx="${i}" autocomplete="one-time-code"/>`
+              // Only the FIRST box gets one-time-code autocomplete; iOS only
+              // looks at the focused field, and we now distribute multi-digit
+              // input across all 6 (see _wireOtpBoxes). Other boxes get
+              // autocomplete=off to suppress weird keyboard suggestions.
+              i === 0
+                ? `<input type="tel" inputmode="numeric" maxlength="6" class="auth-otp-box" data-otp-idx="0" autocomplete="one-time-code"/>`
+                : `<input type="tel" inputmode="numeric" maxlength="1" class="auth-otp-box" data-otp-idx="${i}" autocomplete="off"/>`
             ).join('')}
           </div>
           <div class="auth-hint">
@@ -310,17 +348,39 @@
 
     _wireOtpBoxes() {
       const boxes = document.querySelectorAll('.auth-otp-box');
+      // Distribute a multi-digit string across boxes — handles iOS Safari
+      // SMS auto-fill (whole 6-digit code drops into the focused box) AND
+      // user paste. Previously we sliced to 1 digit and threw away the
+      // other 5 — Chris's "OTP input bug" root cause.
+      const distribute = (digits) => {
+        for (let i = 0; i < boxes.length; i++) {
+          boxes[i].value = digits[i] || '';
+        }
+        if (digits.length >= boxes.length) {
+          boxes[boxes.length - 1].focus();
+          this._updateOtpVerifyBtn();
+          setTimeout(() => this._verifyOtp(), 100);
+        } else if (digits.length > 0) {
+          boxes[digits.length].focus();
+          this._updateOtpVerifyBtn();
+        } else {
+          this._updateOtpVerifyBtn();
+        }
+      };
       boxes.forEach((box, idx) => {
         box.oninput = (e) => {
-          // Only keep digits
-          const v = e.target.value.replace(/\D/g, '');
-          e.target.value = v.slice(0, 1);
-          // Advance to next box
+          const v = (e.target.value || '').replace(/\D/g, '');
+          // Multi-digit value (autofill / paste / suggestion bar)
+          if (v.length > 1) {
+            distribute(v);
+            return;
+          }
+          // Single-digit normal input
+          e.target.value = v;
           if (v && idx < boxes.length - 1) {
             boxes[idx + 1].focus();
           }
           this._updateOtpVerifyBtn();
-          // Auto-submit when all 6 digits typed
           if (this._collectOtp().length === 6) {
             setTimeout(() => this._verifyOtp(), 100);
           }
@@ -334,20 +394,11 @@
             boxes[idx + 1].focus();
           }
         };
-        // Paste handling — distribute pasted digits across boxes
+        // Paste handler — covers desktop Ctrl/Cmd+V, mobile long-press paste
         box.onpaste = (e) => {
           e.preventDefault();
-          const pasted = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '');
-          for (let i = 0; i < boxes.length; i++) {
-            boxes[i].value = pasted[i] || '';
-          }
-          if (pasted.length >= boxes.length) {
-            boxes[boxes.length - 1].focus();
-            setTimeout(() => this._verifyOtp(), 100);
-          } else if (pasted.length > 0) {
-            boxes[Math.min(pasted.length, boxes.length - 1)].focus();
-          }
-          this._updateOtpVerifyBtn();
+          const raw = (e.clipboardData || window.clipboardData).getData('text');
+          distribute(raw.replace(/\D/g, ''));
         };
       });
       setTimeout(() => boxes[0] && boxes[0].focus(), 100);
@@ -453,7 +504,9 @@
         // Member found → wait for SMS to actually send
         smsP.then(result => {
           this._confirmation = result;
-          // Remember phone for next time
+          // Remember phone for next time AND retain for verify step
+          // (the authPhone input is gone by step 2)
+          this._currentPhoneE164 = e164;
           localStorage.setItem(REMEMBER_KEY, phoneRaw);
           this._phoneStep = 2;
           this._renderLoginModal();
@@ -506,9 +559,12 @@
       try {
         const credential = await this._confirmation.confirm(code);
         const user = credential.user;
-        // Link firebase_uid to members doc if not already set
-        const e164 = '+1' + (document.getElementById('authPhone') || { value: '' }).value.replace(/\D/g, '') || '';
+        // Link firebase_uid to members doc if not already set. Use the
+        // phone we stored in step 1 — authPhone input no longer exists
+        // by step 2 so reading it back from the DOM would return ''.
+        const e164 = this._currentPhoneE164 || '';
         try {
+          if (!e164) throw new Error('no phone');
           const snap = await Farm.fb.db.collection('members').where('phone', '==', e164).limit(1).get();
           if (!snap.empty) {
             const docRef = snap.docs[0].ref;
