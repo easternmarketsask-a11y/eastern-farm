@@ -20,7 +20,8 @@
       }
 
       const specialId = Farm.daily ? Farm.daily.getSpecialSeedId() : null;
-      const coin = '<span class="coin-icon"></span>';  // styled gold disc, replaces 🪙
+      const coin = '<span class="coin-icon"></span>';
+      const seedPriceLabel = lang === 'en' ? 'Seed price' : '种子价格';
       const html = `
         <h2 class="modal-title">🛒 ${Farm.i18n.t('shop_title')}</h2>
         <p class="modal-subtitle">${Farm.i18n.t('shop_subtitle')}</p>
@@ -30,18 +31,18 @@
             const owned = Farm.state.data.seeds[c.id] || 0;
             const isSpecial = !locked && c.id === specialId;
             const price = isSpecial ? Farm.daily.discountedSeedCost(c.id) : c.seed_cost;
+            // Shop card shows ONLY seed price (what player pays). Sell price
+            // belongs on the plant-picker card instead — different context,
+            // different number to highlight (Chris's UX direction).
             const priceCell = isSpecial
-              ? `<span class="seed-cost"><s style="color:#bbb;">${coin}${c.seed_cost}</s> <strong style="color:var(--barn-red);">${coin}${price}</strong></span>`
-              : `<span class="seed-cost">${coin}${c.seed_cost}</span>`;
-            // NEW: show sell price (what player gets back when crop matures).
-            // Profit margin = sell_price - seed_cost, also informs buying choice.
-            const sellCell = `<span class="seed-sell">→${coin}${c.sell_price}</span>`;
+              ? `<span class="seed-cost"><span class="seed-label">${seedPriceLabel}</span> <s style="color:#bbb;">${coin}${c.seed_cost}</s> <strong style="color:var(--barn-red);">${coin}${price}</strong></span>`
+              : `<span class="seed-cost"><span class="seed-label">${seedPriceLabel}</span> ${coin}${c.seed_cost}</span>`;
             const specialBadge = isSpecial
               ? '<div class="seed-special-badge">⭐ ' + (lang === 'en' ? 'TODAY -50%' : '今日 -50%') + '</div>'
               : '';
             const statusCell = locked
               ? `<span style="color:#999;">Lv ${c.unlock_level}</span>`
-              : `<span class="seed-owned">${lang === 'en' ? '×' : '×'} ${owned}</span>`;
+              : `<span class="seed-owned">× ${owned}</span>`;
             return `
               <div class="seed-card ${locked ? 'locked' : ''} ${isSpecial ? 'special' : ''}" data-crop-id="${c.id}" data-action="buy">
                 ${specialBadge}
@@ -49,7 +50,7 @@
                 <div>
                   <div class="seed-name">${c[nameKey]}</div>
                   <div class="seed-meta">
-                    ${priceCell}${sellCell}
+                    ${priceCell}
                     <span class="seed-time">⏱${formatMinutes(c.grow_minutes)}</span>
                     ${statusCell}
                   </div>
@@ -108,6 +109,10 @@
       }
 
       const coin = '<span class="coin-icon"></span>';
+      // Plant picker — different context, different label. Show ONLY the
+      // market purchase price (what Eastern Market will pay for the
+      // harvested crop), reinforcing the brand connection too.
+      const marketPriceLabel = lang === 'en' ? 'Market price' : '市场收购价';
       const html = `
         <h2 class="modal-title">${Farm.i18n.t('btn_plant')}</h2>
         <p class="modal-subtitle">${lang === 'en' ? 'Choose a seed to plant' : '选择要种的种子'}</p>
@@ -117,15 +122,13 @@
             if (!c) return '';
             const locked = c.unlock_level > playerLevel;
             const owned = seeds[id] || 0;
-            // Show sell price so player can pick the most profitable crop
-            // that fits in their available time window.
             return `
               <div class="seed-card ${locked ? 'locked' : ''}" data-crop-id="${id}" data-action="plant">
                 <span class="seed-icon">${c.icon}</span>
                 <div>
                   <div class="seed-name">${c[nameKey]}</div>
                   <div class="seed-meta">
-                    <span class="seed-sell">${coin}${c.sell_price}</span>
+                    <span class="seed-sell"><span class="seed-label">${marketPriceLabel}</span> ${coin}${c.sell_price}</span>
                     <span class="seed-time">⏱${formatMinutes(c.grow_minutes)}</span>
                     <span class="seed-owned">× ${owned}</span>
                   </div>
