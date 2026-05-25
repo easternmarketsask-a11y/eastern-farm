@@ -84,7 +84,15 @@
     },
 
     setStorekeeperLine(text) {
-      document.getElementById('storekeeperBubble').textContent = text;
+      const bubble = document.getElementById('storekeeperBubble');
+      if (!bubble) return;
+      // Polish: re-trigger the storekeeperPop CSS animation by toggling
+      // the .refresh class off → reflow → on. Without the reflow the
+      // browser coalesces the class change and skips the restart.
+      bubble.textContent = text;
+      bubble.classList.remove('refresh');
+      void bubble.offsetWidth;
+      bubble.classList.add('refresh');
     },
 
     setFestivalBanner(text) {

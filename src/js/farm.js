@@ -70,6 +70,13 @@
 
       if (!plot.crop) {
         el.classList.add('empty');
+        // Tutorial hint: pulse the FIRST empty unlocked plot for brand-new
+        // players who have never grown anything. Drops the moment they
+        // plant + harvest their first crop (cropsEverGrown becomes non-empty).
+        const noHarvestsYet = (Farm.state.data.cropsEverGrown || []).length === 0;
+        const isFirstEmpty = Farm.state.data.plots
+          .slice(0, idx).every(p => !p.unlocked || p.crop);
+        if (noHarvestsYet && isFirstEmpty) el.classList.add('tutorial-hint');
         el.onclick = () => Farm.shop.openSeedPickerForPlot(idx);
         return el;
       }
@@ -178,6 +185,12 @@
 
       if (Farm.audio) Farm.audio.play('harvest');
 
+      // Polish: play the "pop" animation BEFORE the grid re-render wipes
+      // this plot. The crop scales up + fades out so picking feels alive.
+      // Deferred renderGrid by 350ms (matches harvestPop duration).
+      const harvestedEl = document.querySelector('.plot[data-plot-id="' + plotIdx + '"]');
+      if (harvestedEl) harvestedEl.classList.add('harvesting');
+
       // Floating +N coins
       if (evt && evt.target) {
         const rect = evt.target.getBoundingClientRect();
@@ -241,8 +254,11 @@
         }, 500);
       }
 
-      // Refresh grid (clear plot)
-      this.renderGrid();
+      // Refresh grid (clear plot) — deferred to let the harvest-pop animation
+      // finish (350ms). If the plot is a multi-harvest crop, render
+      // immediately so the next-harvest timer starts visible.
+      const renderDelay = (plot.harvestsLeft > 0) ? 0 : 350;
+      setTimeout(() => this.renderGrid(), renderDelay);
 
       // Notify tasks system
       if (Farm.tasks) Farm.tasks.onEvent('harvest', { cropId: result.cropId, coins: result.coins });
