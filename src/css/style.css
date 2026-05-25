@@ -795,7 +795,7 @@ body {
   margin-right: 0.18em;
   font-family: system-ui, -apple-system, sans-serif;
 }
-.coin-icon::before { content: '¥'; }
+.coin-icon::before { content: '$'; }
 /* Topbar variant — bigger inline coin in the currency strip */
 .currency.coins .icon.coin-icon {
   font-size: 18px;
