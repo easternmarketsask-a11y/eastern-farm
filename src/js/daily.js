@@ -89,7 +89,7 @@
         <div class="daily-card daily-news">
           <div class="daily-card-title">${news[titleKey]}</div>
           <div class="daily-card-body">${news[bodyKey]}</div>
-          ${claims.newsRead ? '' : `<button class="daily-claim" id="dailyReadNews">📰 ${lang === 'en' ? 'Mark read +2🎫' : '已读 +2🎫'}</button>`}
+          ${claims.newsRead ? '' : `<button class="daily-claim" id="dailyReadNews">📰 ${lang === 'en' ? 'Mark read +2<span class="points-icon"></span>' : '已读 +2<span class="points-icon"></span>'}</button>`}
         </div>` : '';
 
       const specialHTML = specialCrop ? `
@@ -115,16 +115,16 @@
           <div class="daily-card-body">
             ${freeSpin
               ? (lang === 'en' ? 'Free spin available!' : '今日免费转一次！')
-              : (lang === 'en' ? 'Free spin used. 20 🎫 per extra spin.' : '免费机会已用，再转 20 🎫/次')}
+              : (lang === 'en' ? 'Free spin used. 20 <span class="points-icon"></span> per extra spin.' : '免费机会已用，再转 20 <span class="points-icon"></span>/次')}
           </div>
-          <button class="daily-claim" id="dailyOpenWheel">${freeSpin ? '🎁 ' + (lang === 'en' ? 'Free Spin' : '免费转一次') : '🎫 ' + (lang === 'en' ? 'Pay & Spin' : '付费转一次')}</button>
+          <button class="daily-claim" id="dailyOpenWheel">${freeSpin ? '🎁 ' + (lang === 'en' ? 'Free Spin' : '免费转一次') : '<span class="points-icon"></span> ' + (lang === 'en' ? 'Pay & Spin' : '付费转一次')}</button>
         </div>`;
 
       const neighborHTML = `
         <div class="daily-card daily-neighbor">
           <div class="daily-card-title">🏘 ${lang === 'en' ? 'Visit Neighbors' : '邻居走访'}</div>
           <div class="daily-card-body">
-            ${lang === 'en' ? `Visit 3 neighbors today (${visited}/3) → +5 🎫` : `今日走访 3 户邻居 (${visited}/3) → +5 🎫`}
+            ${lang === 'en' ? `Visit 3 neighbors today (${visited}/3) → +5 <span class="points-icon"></span>` : `今日走访 3 户邻居 (${visited}/3) → +5 <span class="points-icon"></span>`}
           </div>
           <button class="daily-claim" id="dailyOpenNeighbors">
             ${visitedComplete ? '✅ ' + (lang === 'en' ? 'Done' : '已完成') : '🚪 ' + (lang === 'en' ? 'Visit' : '去走访')}
@@ -197,7 +197,7 @@
         <div class="btn-row">
           <button class="btn secondary" onclick="Farm.ui.hideModal()">${Farm.i18n.t('btn_close')}</button>
           <button class="btn" id="spinBtn">
-            ${cost > 0 ? '🎫 ' + cost + ' · ' : ''}${lang === 'en' ? 'Spin!' : '开转！'}
+            ${cost > 0 ? '<span class="points-icon"></span> ' + cost + ' · ' : ''}${lang === 'en' ? 'Spin!' : '开转！'}
           </button>
         </div>
       `;
@@ -240,7 +240,7 @@
           spinBtn.disabled = false;
           // Re-render button with possibly-different label
           const freeNow = !Farm.state.data.dailyClaims.lotterySpunFree;
-          spinBtn.innerHTML = (freeNow ? '' : '🎫 20 · ') + (lang === 'en' ? 'Spin again' : '再来一次');
+          spinBtn.innerHTML = (freeNow ? '' : '<span class="points-icon"></span> 20 · ') + (lang === 'en' ? 'Spin again' : '再来一次');
         }, 3300);
       };
     },

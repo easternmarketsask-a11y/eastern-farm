@@ -145,7 +145,7 @@
       const html = `
         <h2 class="modal-title">🏘 ${lang === 'en' ? "Today's Neighbors" : '今日邻居'}</h2>
         <p class="modal-subtitle">
-          ${lang === 'en' ? 'Visit all 3 → +5 🎫' : '走访 3 户 → +5 🎫'}
+          ${lang === 'en' ? 'Visit all 3 → +5 <span class="points-icon"></span>' : '走访 3 户 → +5 <span class="points-icon"></span>'}
           (${visited.length}/3)
         </p>
         <div class="neighbor-list">
@@ -240,7 +240,7 @@
           });
           Farm.ui.refreshHUD();
           setTimeout(() => {
-            Farm.ui.toast(lang === 'en' ? '🎉 Visited 3 neighbors! +5 🎫' : '🎉 走访 3 户完成 +5 🎫', 3000);
+            Farm.ui.toast(lang === 'en' ? '🎉 Visited 3 neighbors! +5 <span class="points-icon"></span>' : '🎉 走访 3 户完成 +5 <span class="points-icon"></span>', 3000);
             if (Farm.audio) Farm.audio.play('achievement');
           }, 400);
         }

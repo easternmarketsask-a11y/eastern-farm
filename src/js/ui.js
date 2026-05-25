@@ -150,7 +150,7 @@
           : '🏞 新解锁 ' + plotsUnlocked + ' 块地'));
       }
       if (epAwarded > 0) {
-        unlockedItems.push('🎫 +' + epAwarded + (lang === 'en' ? ' EP' : ' 东方积分'));
+        unlockedItems.push('<span class="points-icon"></span> +' + epAwarded + (lang === 'en' ? ' EP' : ' 东方积分'));
       }
       // Always include a coin bonus mention to make level-up feel rewarding
       unlockedItems.push('<span class="coin-icon"></span> +' + (50 * (newLevel - oldLevel)) + (lang === 'en' ? ' coins' : ' 农场币'));

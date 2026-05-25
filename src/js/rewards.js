@@ -41,7 +41,7 @@
         <div class="ep-overview">
           <div class="ep-overview-balance">
             <div class="ep-overview-label">${lang === 'en' ? 'Your Eastern Points' : '您的东方积分'}</div>
-            <div class="ep-overview-value">🎫 ${ep.toLocaleString()}</div>
+            <div class="ep-overview-value"><span class="points-icon"></span> ${ep.toLocaleString()}</div>
             <div class="ep-overview-note">
               ${lang === 'en'
                 ? 'Equivalent to your Eastern Market member points'
@@ -54,8 +54,8 @@
             </div>
           </div>
           <div class="ep-cap-row">
-            <div>${lang === 'en' ? 'Today:' : '今日入账:'} <strong>${earnedToday}</strong> / ${cap} 🎫</div>
-            ${pending > 0 ? `<div class="ep-cap-pending">⏳ ${lang === 'en' ? 'Queued for tomorrow:' : '排队明日入账:'} ${pending} 🎫</div>` : ''}
+            <div>${lang === 'en' ? 'Today:' : '今日入账:'} <strong>${earnedToday}</strong> / ${cap} <span class="points-icon"></span></div>
+            ${pending > 0 ? `<div class="ep-cap-pending">⏳ ${lang === 'en' ? 'Queued for tomorrow:' : '排队明日入账:'} ${pending} <span class="points-icon"></span></div>` : ''}
           </div>
         </div>
       `;
@@ -67,18 +67,18 @@
             <label><span class="coin-icon"></span> ${lang === 'en' ? 'Coins → EP' : '农场币 → 积分'}</label>
             <div class="exchange-input-group">
               <input type="number" id="exCoinAmt" min="10" step="10" value="100" placeholder="10x" />
-              <span class="exchange-arrow">→ <span id="exCoinPreview">10</span> 🎫</span>
+              <span class="exchange-arrow">→ <span id="exCoinPreview">10</span> <span class="points-icon"></span></span>
             </div>
             <div class="exchange-balance">${lang === 'en' ? 'Have' : '有'} <span class="coin-icon"></span> ${coins.toLocaleString()}</div>
             <button class="btn exchange-btn" id="exCoinBtn">${lang === 'en' ? 'Exchange' : '兑换'}</button>
           </div>
           <div class="exchange-side">
-            <label>🎫 ${lang === 'en' ? 'EP → Coins' : '积分 → 农场币'}</label>
+            <label><span class="points-icon"></span> ${lang === 'en' ? 'EP → Coins' : '积分 → 农场币'}</label>
             <div class="exchange-input-group">
               <input type="number" id="exEpAmt" min="1" step="1" value="10" />
               <span class="exchange-arrow">→ <span id="exEpPreview">100</span> <span class="coin-icon"></span></span>
             </div>
-            <div class="exchange-balance">${lang === 'en' ? 'Have' : '有'} 🎫 ${ep.toLocaleString()}</div>
+            <div class="exchange-balance">${lang === 'en' ? 'Have' : '有'} <span class="points-icon"></span> ${ep.toLocaleString()}</div>
             <button class="btn exchange-btn" id="exEpBtn">${lang === 'en' ? 'Exchange' : '兑换'}</button>
           </div>
         </div>
@@ -129,7 +129,7 @@
       `;
 
       const html = `
-        <h2 class="modal-title">🎫 ${lang === 'en' ? 'Eastern Points' : '东方积分'}</h2>
+        <h2 class="modal-title"><span class="points-icon"></span> ${lang === 'en' ? 'Eastern Points' : '东方积分'}</h2>
         ${balanceHTML}
         ${exchangeHTML}
         ${shopHTML}
@@ -166,7 +166,7 @@
         }
         Farm.ui.refreshHUD();
         if (Farm.audio) Farm.audio.play('coin');
-        let msg = `🔄 +${r.epGained} 🎫`;
+        let msg = `🔄 +${r.epGained} <span class="points-icon"></span>`;
         if (r.queued > 0) {
           msg += lang === 'en'
             ? ` (${r.queued} queued for tomorrow)`

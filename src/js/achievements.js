@@ -113,7 +113,7 @@
       list.forEach((ach, i) => {
         const name = lang === 'en' ? ach.name_en : ach.name_zh;
         setTimeout(() => {
-          Farm.ui.toast('🏆 ' + name + '  +' + (ach.reward_points || 0) + '🎫', 3200);
+          Farm.ui.toast('🏆 ' + name + '  +' + (ach.reward_points || 0) + '<span class="points-icon"></span>', 3200);
           if (Farm.audio) Farm.audio.play('achievement');
         }, 250 + i * 900);
       });
@@ -150,7 +150,7 @@
               <div class="ach-desc">${desc}</div>
               ${progRow}
             </div>
-            <div class="ach-reward">+${ach.reward_points || 0}🎫</div>
+            <div class="ach-reward">+${ach.reward_points || 0}<span class="points-icon"></span></div>
           </div>
         `;
       }).join('') + '</div>';

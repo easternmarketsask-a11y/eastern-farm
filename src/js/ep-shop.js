@@ -172,7 +172,7 @@
           ? `<div class="ep-shop-owned">×${owned}</div>` : '';
         const disabled = !can.ok ? 'disabled' : '';
         const buttonLabel = can.ok
-          ? `${it.cost_ep} 🎫`
+          ? `${it.cost_ep} <span class="points-icon"></span>`
           : (can.reason === 'max_owned' ? (lang === 'en' ? 'MAX' : '已满')
                                          : (lang === 'en' ? 'Not enough' : '积分不足'));
         return `
@@ -203,7 +203,7 @@
       const html = `
         <h2 class="modal-title">🛍️ ${lang === 'en' ? 'EP Shop' : '积分商城'}</h2>
         <div class="ep-shop-balance">
-          ${lang === 'en' ? 'Your balance' : '余额'}: <strong>🎫 ${balance}</strong>
+          ${lang === 'en' ? 'Your balance' : '余额'}: <strong><span class="points-icon"></span> ${balance}</strong>
         </div>
         ${body}
         <div class="btn-row">

@@ -198,7 +198,7 @@
           rect.left + rect.width/2 - 15, rect.top);
         if (result.eastPoints > 0) {
           setTimeout(() => {
-            Farm.ui.floatText('+' + result.eastPoints + ' 🎫',
+            Farm.ui.floatText('+' + result.eastPoints + ' <span class="points-icon"></span>',
               rect.left + rect.width/2 - 15, rect.top, '#9b59b6');
           }, 300);
         }
@@ -209,11 +209,11 @@
       (result.bonusReasons || []).forEach((br, i) => {
         let msg = '';
         if (br.kind === 'jackpot') {
-          msg = (lang === 'en' ? '🎰 Golden Nugget! +' : '🎰 金疙瘩！+') + br.amount + ' 🎫';
+          msg = (lang === 'en' ? '🎰 Golden Nugget! +' : '🎰 金疙瘩！+') + br.amount + ' <span class="points-icon"></span>';
         } else if (br.kind === 'first_harvest') {
-          msg = (lang === 'en' ? '🌅 First harvest of the day +' : '🌅 今日首收 +') + br.amount + ' 🎫';
+          msg = (lang === 'en' ? '🌅 First harvest of the day +' : '🌅 今日首收 +') + br.amount + ' <span class="points-icon"></span>';
         } else if (br.kind === 'weekend') {
-          msg = (lang === 'en' ? '☄️ Weekend Meteor 2× +' : '☄️ 周末流星雨 ×2 +') + br.amount + ' 🎫';
+          msg = (lang === 'en' ? '☄️ Weekend Meteor 2× +' : '☄️ 周末流星雨 ×2 +') + br.amount + ' <span class="points-icon"></span>';
         }
         if (msg) {
           setTimeout(() => {

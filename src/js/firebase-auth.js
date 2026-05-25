@@ -243,7 +243,7 @@
         <h2 class="modal-title">👤 ${name}</h2>
         <div style="text-align:center;margin:12px 0;">
           <div style="font-size:14px;">${tierLabel}</div>
-          <div style="font-size:24px;font-weight:700;color:var(--purple-points);margin-top:6px;">🎫 ${totalPoints.toLocaleString()}</div>
+          <div style="font-size:24px;font-weight:700;color:var(--purple-points);margin-top:6px;"><span class="points-icon"></span> ${totalPoints.toLocaleString()}</div>
           <div style="font-size:11px;color:var(--warm-text-soft);">
             ${lang === 'en' ? 'Lifetime: ' : '累积: '}${lifetimePoints.toLocaleString()}
           </div>
