@@ -58,6 +58,11 @@
     Farm.ui.refreshHUD();
     Farm.farm.renderGrid();
 
+    // 6b. Install the floating warehouse button on the farm view
+    if (Farm.warehouse && Farm.warehouse.installButton) {
+      Farm.warehouse.installButton();
+    }
+
     // 7. Storekeeper
     Farm.storekeeper.refresh();
 

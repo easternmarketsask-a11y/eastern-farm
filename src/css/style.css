@@ -607,6 +607,165 @@ body {
   50% { opacity: 0.5; transform: scale(1.2); }
 }
 
+/* =============== WAREHOUSE (V2 — silo + delivery system) ============ */
+/* Floating barn button on the farm view — Hay Day's silo lives in the
+   corner of the farm, not the topbar. Tap to open delivery modal. */
+.warehouse-btn {
+  position: fixed;
+  top: 92px;
+  right: 12px;
+  width: 56px;
+  height: 56px;
+  border: none;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #f5e6c8 0%, #c9a675 100%);
+  box-shadow:
+    inset 0 -2px 3px rgba(120, 80, 30, 0.4),
+    inset 0 2px 2px rgba(255, 245, 220, 0.55),
+    0 3px 8px rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 20;
+  padding: 0;
+  transition: transform 0.15s ease;
+}
+.warehouse-btn:active { transform: scale(0.92); }
+.warehouse-btn .warehouse-icon {
+  font-size: 26px;
+  line-height: 1;
+  margin-top: 4px;
+}
+.warehouse-btn .warehouse-badge {
+  font-size: 10px;
+  font-weight: 700;
+  color: #6b4a08;
+  background: rgba(255, 255, 255, 0.7);
+  padding: 1px 6px;
+  border-radius: 8px;
+  margin-top: 2px;
+  letter-spacing: 0.3px;
+}
+.warehouse-btn .warehouse-badge.full {
+  background: var(--barn-red);
+  color: #fff;
+  animation: warehouseFullPulse 1.2s ease-in-out infinite;
+}
+@keyframes warehouseFullPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(232, 82, 42, 0.4); }
+  50%      { box-shadow: 0 0 0 6px rgba(232, 82, 42, 0); }
+}
+
+/* Warehouse modal contents */
+.wh-cap {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  color: var(--warm-text-soft);
+  padding: 0 4px 10px;
+  border-bottom: 1px dashed var(--border-soft);
+  margin-bottom: 10px;
+}
+.wh-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 280px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+.wh-row {
+  display: grid;
+  grid-template-columns: 34px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  background: var(--cream-bg);
+  border: 1.5px solid var(--border-soft);
+  border-radius: 10px;
+  padding: 6px 10px;
+}
+.wh-row .wh-icon { font-size: 22px; line-height: 1; text-align: center; }
+.wh-row .wh-name { font-size: 13px; font-weight: 600; color: var(--warm-text); }
+.wh-row .wh-sub { font-size: 10.5px; color: var(--warm-text-soft); margin-top: 1px; display: inline-flex; align-items: center; gap: 3px; }
+.wh-row .wh-line-value {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #b8860b;
+}
+.wh-bonus-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 12px;
+  padding: 8px 12px;
+  background: linear-gradient(135deg, #fff8e1, #ffe0a8);
+  border: 1.5px solid #f0c674;
+  border-radius: 10px;
+}
+.wh-bonus-badge {
+  font-size: 12px;
+  font-weight: 700;
+  color: #8b5a00;
+}
+.wh-bonus-value {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #4a8a2f;
+}
+.wh-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 10px;
+  padding: 10px 12px;
+  background: var(--cream-card);
+  border: 2px solid var(--leaf-green);
+  border-radius: 12px;
+}
+.wh-total-label {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--warm-text);
+}
+.wh-total-value {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--leaf-dark);
+}
+.wh-deliver-btn {
+  background: linear-gradient(135deg, var(--leaf-green) 0%, var(--leaf-dark) 100%) !important;
+  color: #fff !important;
+  font-weight: 700 !important;
+  font-size: 14px !important;
+}
+.wh-list .coin-icon {
+  width: 14px;
+  height: 14px;
+  font-size: 9px;
+  margin-right: 0;
+  vertical-align: middle;
+}
+.wh-total .coin-icon,
+.wh-bonus-value .coin-icon {
+  width: 18px;
+  height: 18px;
+  font-size: 11px;
+  margin-right: 0;
+  vertical-align: middle;
+}
+
 /* Polish round 2 (2026-05-24): micro-interaction animations */
 
 /* Harvest pop — crop scales up + fades out when picked.

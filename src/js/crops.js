@@ -97,13 +97,21 @@
       const def = this.get(plot.crop);
       if (!def) return { ok: false, reason: 'unknown' };
 
+      // V2: harvested crops go into warehouse instead of converting
+      // directly to coins. Player must deliver to Eastern Market.
+      // Block harvest if warehouse is full — otherwise the mature crop
+      // would just vanish with nowhere to put it.
+      if (Farm.state.isWarehouseFull()) {
+        return { ok: false, reason: 'warehouse_full' };
+      }
+
       const cropId = plot.crop;
-      const sellPrice = def.sell_price;
+      const sellPrice = def.sell_price;  // kept in return for display purposes
       const xp = def.xp_reward;
 
       // Multi-harvest: deduct one harvest, reset growth timer
       plot.harvestsLeft -= 1;
-      Farm.state.addCoins(sellPrice);
+      Farm.state.addToWarehouse(cropId);
       const levelInfo = Farm.state.addXp(xp);
       const activeFest = Farm.events && Farm.events.getActiveFestivalId();
       // Only credit festival-harvest counter when the crop itself is a festival-only crop

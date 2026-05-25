@@ -68,11 +68,24 @@
       neighborsVisited: [],     // neighbor IDs visited today
       newsRead: false,
       firstHarvestDone: false,  // first harvest of day bonus claimed?
+      firstDeliveryDone: false, // first warehouse→market delivery of day (+20%)
     },
     activeEffects: {            // toggleable consumable effects
       accelerationCharges: 0,   // # of 加速券 in inventory (consumed on use)
       freshnessCharges: 0,      // # of 保鲜券 in inventory
     },
+
+    // ============ Warehouse (V2 — 2026-05-24) ============
+    // Harvested crops go HERE instead of converting to coins. Player must
+    // explicitly deliver to Eastern Market to earn coins (mirrors the
+    // real-life supplier→supermarket flow). No spoilage — Eastern Market
+    // only buys quality produce, so we can't have wilted veg in the model.
+    // Capacity-limited (forces selling). First delivery of the day gets
+    // +20% bonus as a soft "play often" incentive.
+    warehouse: [],              // Array of { cropId, addedAt } items
+    warehouseCapacity: 20,      // Soft cap; harvest blocked when full
+    // firstDeliveryDone moves from dailyClaims into general state below
+    // so the +20% logic can read/write cleanly with the rest of sell flow.
 
     // ============ Member sync (v1.2) ============
     // unsyncedEp accumulates EP earned while NOT logged into a member account.
@@ -203,6 +216,7 @@
               neighborsVisited: [],
               newsRead: false,
               firstHarvestDone: false,
+              firstDeliveryDone: false,
             };
           }
         } catch (e) {
@@ -412,6 +426,69 @@
     setTheme(themeId) {
       this.data.theme = themeId;
       this.save();
+    },
+
+    // ============ Warehouse helpers ============
+    // Push a harvested crop into the warehouse. Returns { ok, full } —
+    // caller should check `full` to surface the "warehouse full" toast
+    // BEFORE calling Farm.crops.harvest() (which would otherwise lose
+    // the mature crop with nowhere to put it).
+    addToWarehouse(cropId) {
+      this.data.warehouse = this.data.warehouse || [];
+      if (this.data.warehouse.length >= (this.data.warehouseCapacity || 20)) {
+        return { ok: false, full: true };
+      }
+      this.data.warehouse.push({ cropId, addedAt: Date.now() });
+      this.save();
+      return { ok: true, count: this.data.warehouse.length };
+    },
+
+    // Quick capacity check without mutating — used to block harvest
+    // when warehouse is full.
+    isWarehouseFull() {
+      const wh = this.data.warehouse || [];
+      return wh.length >= (this.data.warehouseCapacity || 20);
+    },
+
+    // Aggregate the warehouse into { cropId: count } so the UI can
+    // render a compact list instead of N rows for N items.
+    getWarehouseSummary() {
+      const wh = this.data.warehouse || [];
+      const counts = {};
+      wh.forEach(it => { counts[it.cropId] = (counts[it.cropId] || 0) + 1; });
+      return counts;
+    },
+
+    // Compute total coin value of warehouse contents BEFORE any
+    // daily bonus. The +20% first-delivery bonus is applied at the
+    // deliverWarehouse() call site, not here, so this fn stays pure.
+    getWarehouseValue() {
+      const wh = this.data.warehouse || [];
+      let total = 0;
+      wh.forEach(it => {
+        const def = Farm.crops && Farm.crops.get(it.cropId);
+        if (def) total += def.sell_price;
+      });
+      return total;
+    },
+
+    // Sell all warehouse contents to Eastern Market, credit coins
+    // (with daily-first-delivery bonus if applicable), and clear the
+    // warehouse. Returns { totalCoins, bonusCoins, itemCount, firstOfDay }.
+    deliverWarehouse() {
+      const wh = this.data.warehouse || [];
+      if (wh.length === 0) return { ok: false, reason: 'empty' };
+      const baseValue = this.getWarehouseValue();
+      const isFirstOfDay = !this.data.dailyClaims.firstDeliveryDone;
+      const bonus = isFirstOfDay ? Math.round(baseValue * 0.2) : 0;
+      const total = baseValue + bonus;
+      const itemCount = wh.length;
+      this.data.coins += total;
+      this.data.sessionStats.coinsEarned += total;
+      this.data.warehouse = [];
+      if (isFirstOfDay) this.data.dailyClaims.firstDeliveryDone = true;
+      this.save();
+      return { ok: true, totalCoins: total, bonusCoins: bonus, baseCoins: baseValue, itemCount, firstOfDay: isFirstOfDay };
     },
 
     // ============ Daily claim helpers ============

@@ -181,7 +181,19 @@
     harvestPlot(plotIdx, evt) {
       const plot = Farm.state.data.plots[plotIdx];
       const result = Farm.crops.harvest(plot);
-      if (!result.ok) return;
+      if (!result.ok) {
+        // Warehouse-full is the only user-facing failure we surface
+        // (other reasons like "not_mature" / "unknown" can't be triggered
+        // by a normal click flow).
+        if (result.reason === 'warehouse_full') {
+          const lang = Farm.state.data.language;
+          Farm.ui.toast(lang === 'en'
+            ? '📦 Warehouse is full! Deliver to Eastern Market first.'
+            : '📦 仓库满了！先去送货到东方超市', 3000);
+          if (Farm.audio) Farm.audio.play('error');
+        }
+        return;
+      }
 
       if (Farm.audio) Farm.audio.play('harvest');
 
@@ -191,11 +203,17 @@
       const harvestedEl = document.querySelector('.plot[data-plot-id="' + plotIdx + '"]');
       if (harvestedEl) harvestedEl.classList.add('harvesting');
 
-      // Floating +N coins
+      // Update warehouse badge with new count
+      if (Farm.warehouse && Farm.warehouse.refreshBadge) Farm.warehouse.refreshBadge();
+
+      // V2: floating "📦 +1" feedback since coins aren't credited until
+      // delivery. EP bonuses (jackpot etc.) still float separately because
+      // those ARE credited immediately on harvest.
       if (evt && evt.target) {
         const rect = evt.target.getBoundingClientRect();
-        Farm.ui.floatText('+' + result.coins + ' <span class="coin-icon"></span>',
-          rect.left + rect.width/2 - 15, rect.top);
+        const lang = Farm.state.data.language;
+        Farm.ui.floatText('📦 +1 ' + (lang === 'en' ? 'silo' : '入库'),
+          rect.left + rect.width/2 - 20, rect.top);
         if (result.eastPoints > 0) {
           setTimeout(() => {
             Farm.ui.floatText('+' + result.eastPoints + ' <span class="points-icon"></span>',
