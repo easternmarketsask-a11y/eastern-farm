@@ -47,14 +47,30 @@
     showModal(html) {
       const modal = document.getElementById('modal');
       const content = document.getElementById('modalContent');
-      content.innerHTML = html;
+      // Auto-inject a floating ✕ button at the top-right of every modal.
+      // Was previously only a bottom "Close" button which required scrolling
+      // on long modals (warehouse, shop, leaderboard). The ✕ is always
+      // reachable without scroll, matches universal close-affordance.
+      content.innerHTML = '<button class="modal-close-x" aria-label="关闭 Close">✕</button>' + html;
       modal.classList.remove('hidden');
       // Click backdrop to close
       modal.querySelector('.modal-backdrop').onclick = () => this.hideModal();
+      // ✕ button click
+      const xBtn = content.querySelector('.modal-close-x');
+      if (xBtn) xBtn.onclick = () => this.hideModal();
+      // Escape key support (desktop)
+      this._escHandler = (e) => {
+        if (e.key === 'Escape') this.hideModal();
+      };
+      document.addEventListener('keydown', this._escHandler);
     },
 
     hideModal() {
       document.getElementById('modal').classList.add('hidden');
+      if (this._escHandler) {
+        document.removeEventListener('keydown', this._escHandler);
+        this._escHandler = null;
+      }
     },
 
     toast(text, duration) {

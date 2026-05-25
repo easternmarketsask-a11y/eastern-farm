@@ -1198,6 +1198,43 @@ body {
   box-shadow: 0 12px 40px rgba(0,0,0,0.3);
   animation: modalIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
+
+/* Auto-injected floating close button — top-right of every modal.
+   Sits OUTSIDE the scroll flow (position:sticky/absolute) so it's
+   reachable without scrolling on long modals. */
+.modal-close-x {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.06);
+  color: var(--warm-text-soft);
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  transition: background 0.15s ease, transform 0.15s ease;
+  padding: 0;
+}
+.modal-close-x:hover {
+  background: rgba(0, 0, 0, 0.12);
+  color: var(--warm-text);
+}
+.modal-close-x:active {
+  transform: scale(0.92);
+  background: rgba(232, 82, 42, 0.15);
+  color: var(--barn-red);
+}
+
+/* Subtle "tap outside to close" hint cursor */
+.modal-backdrop { cursor: pointer; }
 @keyframes modalIn {
   from { transform: scale(0.85) translateY(20px); opacity: 0; }
   to { transform: scale(1) translateY(0); opacity: 1; }
