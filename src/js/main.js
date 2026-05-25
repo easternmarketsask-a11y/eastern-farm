@@ -86,12 +86,15 @@
   function checkDailyLogin() {
     const data = Farm.state.data;
     const today = Farm.state.getDateString();
-    const lastStr = data.lastLogin ? new Date(data.lastLogin).toISOString().slice(0, 10) : '';
+    // Bug fix: previously used toISOString() which is UTC, so the daily-login
+    // date for a Saskatoon player at 9pm local would jump to tomorrow's UTC
+    // date and double-claim. getDateString uses local time consistently.
+    const lastStr = data.lastLogin ? Farm.state.getDateString(new Date(data.lastLogin)) : '';
 
     if (lastStr === today) return;  // already counted today
 
     // Streak: increment if yesterday, otherwise reset
-    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+    const yesterday = Farm.state.getDateString(new Date(Date.now() - 86400000));
     if (lastStr === yesterday) {
       data.loginStreak = (data.loginStreak || 0) + 1;
     } else {

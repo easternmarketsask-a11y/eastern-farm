@@ -163,6 +163,10 @@
       if (saved) {
         try {
           const parsed = JSON.parse(saved);
+          // Guard: parsed could be null if saved is the literal string "null"
+          // or non-object (corrupted save). Without this check, Object.assign
+          // would silently produce a state object missing nested defaults.
+          if (!parsed || typeof parsed !== 'object') throw new Error('save not an object');
           // Object.assign auto-fills any new STARTER fields missing from old saves.
           this.data = Object.assign({}, STARTER_STATE, parsed);
           // Deep-fill nested objects added in later versions

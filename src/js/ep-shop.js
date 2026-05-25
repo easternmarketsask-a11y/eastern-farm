@@ -46,10 +46,15 @@
       const can = this.canBuy(item);
       if (!can.ok) return can;
 
-      Farm.state.spendEastPoints(item.cost_ep, {
+      // Guard: spendEastPoints can return false if balance was concurrently
+      // reduced (e.g. by Firebase pull updating state.eastPoints between
+      // canBuy and spend). Without this check, the effect would still apply
+      // and the player gets a free item. defense-in-depth.
+      const spent = Farm.state.spendEastPoints(item.cost_ep, {
         source: 'ep_shop:' + item.id,
         description: '积分商城: ' + (item.name_zh || item.id),
       });
+      if (!spent) return { ok: false, reason: 'insufficient_ep' };
       const effect = this._apply(item, opts);
       Farm.ui.refreshHUD();
       if (Farm.audio) Farm.audio.play('coin');
