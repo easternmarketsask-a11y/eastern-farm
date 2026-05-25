@@ -152,7 +152,7 @@
     { min: 75,  zh: '田园智者',   en: 'Pastoral Sage' },
     { min: 100, zh: '自然之灵',   en: 'Spirit of Nature' },
     { min: 150, zh: '田园传奇',   en: 'Pastoral Legend' },
-    { min: 200, zh: '萨城田神',   en: 'Saskatoon Harvest Deity' },
+    { min: 200, zh: '萨城田园之光', en: 'Light of Saskatoon Farms' },
   ];
   function levelTitle(level) {
     let title = LEVEL_TITLES[0];
