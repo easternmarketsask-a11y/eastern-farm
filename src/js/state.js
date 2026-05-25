@@ -134,22 +134,25 @@
     150: 1, 200: 1, 300: 1, 500: 1,                  // → 24 plots by Lv 500
   };
 
-  // Title tiers — purely cosmetic but signal long-haul progression.
+  // Title tiers — purely cosmetic. Rewritten 2026-05-25: previous
+  // titles (新手/小工/学徒/农夫) sounded like a hierarchy of menial
+  // labor. Farming is aspirational, not entry-level grunt work.
+  // Every tier is now a positive, evocative pastoral name.
   const LEVEL_TITLES = [
-    { min: 1,   zh: '新手',       en: 'Newbie' },
-    { min: 3,   zh: '小工',       en: 'Helper' },
-    { min: 5,   zh: '学徒',       en: 'Apprentice' },
-    { min: 10,  zh: '农夫',       en: 'Farmer' },
-    { min: 15,  zh: '老农',       en: 'Veteran' },
-    { min: 20,  zh: '田园',       en: 'Field Master' },
-    { min: 25,  zh: '农场主',     en: 'Farm Owner' },
-    { min: 30,  zh: '庄园主',     en: 'Estate Owner' },
-    { min: 40,  zh: '农神',       en: 'Harvest Spirit' },
-    { min: 50,  zh: '田神',       en: 'Field God' },
-    { min: 75,  zh: '农圣',       en: 'Land Sage' },
-    { min: 100, zh: '传奇',       en: 'Legend' },
-    { min: 150, zh: '神话',       en: 'Myth' },
-    { min: 200, zh: '萨城传说',   en: 'Saskatoon Legend' },
+    { min: 1,   zh: '嫩芽',       en: 'Sprouting Soul' },
+    { min: 3,   zh: '田园新友',   en: 'Garden Friend' },
+    { min: 5,   zh: '园丁',       en: 'Gardener' },
+    { min: 10,  zh: '农艺人',     en: 'Farm Artisan' },
+    { min: 15,  zh: '收获家',     en: 'Harvest Bringer' },
+    { min: 20,  zh: '田园诗人',   en: 'Pastoral Poet' },
+    { min: 25,  zh: '庄园主',     en: 'Estate Owner' },
+    { min: 30,  zh: '农艺大师',   en: 'Master Gardener' },
+    { min: 40,  zh: '大地之友',   en: 'Friend of the Earth' },
+    { min: 50,  zh: '丰收使者',   en: 'Harvest Envoy' },
+    { min: 75,  zh: '田园智者',   en: 'Pastoral Sage' },
+    { min: 100, zh: '自然之灵',   en: 'Spirit of Nature' },
+    { min: 150, zh: '田园传奇',   en: 'Pastoral Legend' },
+    { min: 200, zh: '萨城田神',   en: 'Saskatoon Harvest Deity' },
   ];
   function levelTitle(level) {
     let title = LEVEL_TITLES[0];

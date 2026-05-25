@@ -88,31 +88,34 @@
     },
 
     // Update the splash login button: if already signed in, replace
-    // the "登录" CTA with a friendly welcome chip showing nickname/tier.
+    // the "登录" CTA with a friendly welcome chip showing nickname.
+    // Uses the game's own level title (新手/学徒/...) rather than the
+    // fake store tier (every member is "bronze" by default — tiering
+    // isn't really implemented in the store side).
     _renderSplash() {
       const loginBtn = document.getElementById('splashLogin');
-      if (!loginBtn) return;  // splash already dismissed
+      if (!loginBtn) return;
       const lang = (Farm.state && Farm.state.data && Farm.state.data.language) || 'zh';
       if (this.currentUser) {
-        // Resolve display name (nickname > store name > generic)
         const stats = (this.memberDoc && this.memberDoc.gameStats) || {};
         const realName = (this.memberDoc && (this.memberDoc.name || this.memberDoc.username)) || '';
         const nickname = stats.nickname || (realName ? (realName.charAt(0) + '邻居') : (lang === 'en' ? 'Member' : '会员'));
-        const tier = (this.memberDoc && this.memberDoc.tier) || 'bronze';
-        const tierEmoji = tier === 'gold' ? '🥇' : tier === 'silver' ? '🥈' : '🥉';
         const safeName = String(nickname).replace(/[<>"&]/g, '');
+        // Game level title (e.g. "Lv 5 学徒") — real because it's based
+        // on actual XP earned in-game.
+        const gameLv = (Farm.state && Farm.state.data && Farm.state.data.level) || 1;
+        const titleObj = Farm.state && Farm.state.levelTitle ? Farm.state.levelTitle(gameLv) : null;
+        const titleStr = titleObj ? (lang === 'en' ? titleObj.en : titleObj.zh) : '';
         loginBtn.innerHTML = `
-          <span class="icon">${tierEmoji}</span>
-          <span>${lang === 'en' ? 'Welcome, ' : '欢迎回来，'}${safeName}</span>
+          <span class="icon">🌱</span>
+          <span>${lang === 'en' ? 'Welcome, ' : '欢迎回来，'}${safeName}${titleStr ? ' · Lv ' + gameLv + ' ' + titleStr : ''}</span>
         `;
         loginBtn.classList.add('splash-login--logged-in');
-        // Clicking on the welcome chip jumps straight into the game
         loginBtn.onclick = () => {
           const startBtn = document.getElementById('splashStart');
           if (startBtn) startBtn.click();
         };
       } else {
-        // Default state already set in HTML; just ensure class is clean
         loginBtn.classList.remove('splash-login--logged-in');
       }
     },
@@ -169,10 +172,12 @@
         const name = (this.memberDoc && (this.memberDoc.name || this.memberDoc.username))
           || this.currentUser.displayName
           || (lang === 'en' ? 'Member' : '会员');
-        const tier = this.memberDoc && this.memberDoc.tier ? this.memberDoc.tier : 'bronze';
-        const tierEmoji = tier === 'gold' ? '🥇' : tier === 'silver' ? '🥈' : '🥉';
+        // Removed gold/silver/bronze tier emoji — Eastern Market doesn't
+        // actually implement membership tiers (every member doc has tier=
+        // 'bronze' as a placeholder default). Use the game's own level
+        // emoji which IS real (computed from XP earned).
         const safeName = String(name).replace(/[<>"&]/g, '');
-        slot.innerHTML = `<button class="member-btn member-btn--in" id="memberBtnInner" title="${lang === 'en' ? 'Member: ' : '会员: '}${safeName}">${tierEmoji}<span class="member-name">${safeName}</span></button>`;
+        slot.innerHTML = `<button class="member-btn member-btn--in" id="memberBtnInner" title="${lang === 'en' ? 'Member: ' : '会员: '}${safeName}">🌱<span class="member-name">${safeName}</span></button>`;
         document.getElementById('memberBtnInner').onclick = () => this.openMenu();
       } else {
         const title = lang === 'en' ? 'Sign in' : '登录';
@@ -618,18 +623,14 @@
     _onLoginSuccess(lang) {
       Farm.ui.hideModal();
       if (Farm.audio) Farm.audio.play('achievement');
-      // Welcome toast — uses memberDoc loaded by onAuthStateChanged handler.
-      // Wait one tick for that to populate.
       setTimeout(() => {
         const name = (this.memberDoc && (this.memberDoc.name || this.memberDoc.username))
           || (this.currentUser && this.currentUser.displayName)
           || (lang === 'en' ? 'Member' : '会员');
-        const tier = this.memberDoc && this.memberDoc.tier ? this.memberDoc.tier : 'bronze';
-        const tierEmoji = tier === 'gold' ? '🥇' : tier === 'silver' ? '🥈' : '🥉';
         const safeName = String(name).replace(/[<>"&]/g, '');
         const msg = lang === 'en'
-          ? `${tierEmoji} Welcome back, ${safeName} 🎉`
-          : `${tierEmoji} 欢迎回来，${safeName} 🎉`;
+          ? `🌱 Welcome back, ${safeName} 🎉`
+          : `🌱 欢迎回来，${safeName} 🎉`;
         Farm.ui.toast(msg, 3000);
       }, 400);
     },
@@ -639,17 +640,17 @@
       const lang = Farm.state.data.language;
       const m = this.memberDoc || {};
       const name = m.name || this.currentUser.displayName || (lang === 'en' ? 'Member' : '会员');
-      const tier = m.tier || 'bronze';
-      const tierLabel = { gold: '🥇 ' + (lang === 'en' ? 'Gold' : '金卡'),
-                          silver: '🥈 ' + (lang === 'en' ? 'Silver' : '银卡'),
-                          bronze: '🥉 ' + (lang === 'en' ? 'Bronze' : '铜卡') }[tier];
       const totalPoints = m.totalPoints || 0;
       const lifetimePoints = m.lifetimePoints || 0;
+      // Game-side level + title — replaces the fake store tier
+      const gameLv = (Farm.state && Farm.state.data && Farm.state.data.level) || 1;
+      const titleObj = Farm.state && Farm.state.levelTitle ? Farm.state.levelTitle(gameLv) : null;
+      const titleStr = titleObj ? (lang === 'en' ? titleObj.en : titleObj.zh) : '';
       const safeName = String(name).replace(/[<>"&]/g, '');
       const html = `
         <h2 class="modal-title">👤 ${safeName}</h2>
         <div style="text-align:center;margin:12px 0;">
-          <div style="font-size:14px;">${tierLabel}</div>
+          <div style="font-size:14px;color:var(--leaf-dark);font-weight:600;">🌱 ${lang === 'en' ? 'Lv ' : 'Lv '}${gameLv}${titleStr ? ' · ' + titleStr : ''}</div>
           <div style="font-size:24px;font-weight:700;color:var(--purple-points);margin-top:6px;"><span class="points-icon"></span> ${totalPoints.toLocaleString()}</div>
           <div style="font-size:11px;color:var(--warm-text-soft);">
             ${lang === 'en' ? 'Lifetime: ' : '累积: '}${lifetimePoints.toLocaleString()}
