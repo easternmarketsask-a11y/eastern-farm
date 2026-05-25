@@ -18,12 +18,40 @@
         const fest = Farm.events.activeFestival.id;
         const festLines = {
           spring_festival: {
-            zh: ['新年快乐！种一盆年橘讨吉利吧。', '春节到，东方超市的年货已经备好。', '腊月二十三小年到，记得吃饺子。'],
-            en: ["Happy Lunar New Year! Plant a kumquat for fortune.", "Spring Festival shelves are stocked at Eastern Market.", "Don't forget the dumplings!"]
+            zh: [
+              '新年快乐！种一盆年橘讨吉利吧。',
+              '春节限定作物上架：水仙、年橘、水仙——只在这周能种。',
+              '东方超市春节年货已经备齐：年糕、汤圆、对联、糖果都有。',
+              '腊月二十三小年到，记得吃饺子。',
+              '春节期间收获作物送积分翻倍——多种几棵年橘讨彩头。',
+              '来店里逛年货：133-412 Willowgrove Square。',
+            ],
+            en: [
+              "Happy Lunar New Year! Plant a kumquat for fortune.",
+              "Festival-only crops are unlocked this week: narcissus + kumquat.",
+              "Eastern Market is stocked for New Year — rice cakes, tangyuan, couplets, candies.",
+              "Plant kumquats — they're the festival good-luck crop.",
+              "Bonus EP this week for festival harvests!",
+              "Come visit the store: 133-412 Willowgrove Square.",
+            ],
           },
           mid_autumn: {
-            zh: ['中秋节快乐！今晚月亮特别圆。', '芋头 + 柚子 + 桂花，一盘中秋的家。', '东方超市月饼到货——双黄莲蓉、抹茶豆沙。'],
-            en: ["Happy Mid-Autumn! The moon is full tonight.", "Taro + pomelo + osmanthus — a plate of home.", "Mooncakes are in at Eastern Market!"]
+            zh: [
+              '中秋节快乐！今晚月亮特别圆。',
+              '中秋限定作物：芋头、柚子、桂花——这周才能种。',
+              '东方超市月饼到货——双黄莲蓉、抹茶豆沙、五仁、冰皮多种口味。',
+              '芋头 + 柚子 + 桂花，一盘中秋的家。',
+              '中秋这周送积分翻倍，记得多种节日作物。',
+              '萨城晚上看月亮：南萨斯卡通河岸最美。',
+            ],
+            en: [
+              "Happy Mid-Autumn! The moon is full tonight.",
+              "Festival-only crops this week: taro, pomelo, osmanthus.",
+              "Mooncakes are in at Eastern Market — lotus, matcha, mixed nut, snow-skin.",
+              "Taro + pomelo + osmanthus — a plate of home.",
+              "Bonus EP all week for festival harvests!",
+              "Best moon-viewing in Saskatoon: along the South Sask River.",
+            ],
           },
         };
         const pool = festLines[fest];
