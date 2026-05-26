@@ -72,6 +72,32 @@
               }
             }, 1500);
           }
+          // Friend gifts received — claim from server + notify
+          if (Farm.fbGameSync && Farm.fbGameSync.reconcileGifts) {
+            setTimeout(async () => {
+              const gifts = await Farm.fbGameSync.reconcileGifts();
+              if (!gifts || gifts.length === 0) return;
+              const lang = (Farm.state && Farm.state.data && Farm.state.data.language) || 'zh';
+              // Show 1 toast per gift, staggered
+              gifts.forEach((g, i) => {
+                setTimeout(() => {
+                  let what;
+                  if (g.kind === 'seed' && g.payload && g.payload.cropId) {
+                    const def = Farm.crops.get(g.payload.cropId);
+                    what = def ? ((lang === 'en' ? def.name_en : def.name_zh) + ' ' + (lang === 'en' ? 'seed' : '种子')) : (lang === 'en' ? 'a seed' : '一棵种子');
+                  } else if (g.kind === 'ep' && g.payload && g.payload.amount) {
+                    what = '+' + g.payload.amount + ' <span class="points-icon"></span>';
+                  } else {
+                    what = lang === 'en' ? 'a gift' : '一份礼物';
+                  }
+                  const safeFrom = String(g.fromName || '').replace(/[<>"&]/g, '') || (lang === 'en' ? 'A friend' : '一位朋友');
+                  Farm.ui.toast('🎁 ' + safeFrom + (lang === 'en' ? ' sent you ' : ' 送你 ') + what, 3800);
+                  if (Farm.audio) Farm.audio.play('coin');
+                  if (Farm.ui && Farm.ui.refreshHUD) Farm.ui.refreshHUD();
+                }, 2500 + i * 1400);
+              });
+            }, 2000);
+          }
         } else {
           this.currentUser = null;
           this.memberDoc = null;

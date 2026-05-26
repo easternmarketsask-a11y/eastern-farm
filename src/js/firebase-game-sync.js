@@ -341,6 +341,183 @@
       }
     },
 
+    // ============ Friends (Phase 3) ============
+    // Phone-based friend lookup. Returns { found, member } where member
+    // is { uid, doc } if exists + visible, else null. Doesn't add the
+    // friend — caller handles that to keep this fn pure.
+    async findMemberByPhone(phoneE164) {
+      if (!Farm.fb || !Farm.fb.available) return { found: false };
+      try {
+        const snap = await Farm.fb.db.collection('members')
+          .where('phone', '==', phoneE164).limit(1).get();
+        if (snap.empty) return { found: false, reason: 'not_member' };
+        const doc = snap.docs[0];
+        const data = doc.data();
+        const stats = data.gameStats || {};
+        // Block adding members who opted out of visibility
+        if (stats.visibleToNeighbors === false) {
+          return { found: false, reason: 'hidden' };
+        }
+        // Block adding members who haven't started the game yet
+        if (!stats.level) return { found: false, reason: 'not_playing' };
+        // Block adding yourself
+        const myUid = Farm.fbAuth && Farm.fbAuth.uid();
+        if (doc.id === myUid) return { found: false, reason: 'self' };
+        return { found: true, member: { uid: doc.id, doc: data } };
+      } catch (e) {
+        console.warn('[gameSync] findMemberByPhone failed', e);
+        return { found: false, reason: 'error' };
+      }
+    },
+
+    // Add a UID to local friends array + sync to Firestore. One-sided
+    // follow (no mutual request needed — these are real-life friends).
+    async addFriend(uid) {
+      const list = Farm.state.data.friends || [];
+      if (list.includes(uid)) return { ok: false, reason: 'already_friend' };
+      list.push(uid);
+      Farm.state.data.friends = list;
+      Farm.state.save();
+      // Also write to server (in case the user wants to access from another device)
+      try {
+        const myUid = Farm.fbAuth && Farm.fbAuth.uid();
+        if (myUid) {
+          await Farm.fb.db.collection('members').doc(myUid).set(
+            { gameStats: { friends: firebase.firestore.FieldValue.arrayUnion(uid) } },
+            { merge: true }
+          );
+        }
+      } catch (_) {}
+      return { ok: true, count: list.length };
+    },
+
+    async removeFriend(uid) {
+      const list = (Farm.state.data.friends || []).filter(x => x !== uid);
+      Farm.state.data.friends = list;
+      Farm.state.save();
+      try {
+        const myUid = Farm.fbAuth && Farm.fbAuth.uid();
+        if (myUid) {
+          await Farm.fb.db.collection('members').doc(myUid).set(
+            { gameStats: { friends: firebase.firestore.FieldValue.arrayRemove(uid) } },
+            { merge: true }
+          );
+        }
+      } catch (_) {}
+      return { ok: true, count: list.length };
+    },
+
+    // Fetch full docs for all friend UIDs. Limited to 30 to avoid
+    // hammering Firestore — players unlikely to have 30+ real friends.
+    async fetchFriendDocs() {
+      const uids = Farm.state.data.friends || [];
+      if (uids.length === 0 || !Farm.fb || !Farm.fb.available) return [];
+      const out = [];
+      for (const uid of uids.slice(0, 30)) {
+        try {
+          const snap = await Farm.fb.db.collection('members').doc(uid).get();
+          if (snap.exists) out.push({ uid, doc: snap.data() });
+        } catch (_) {}
+      }
+      return out;
+    },
+
+    // ============ Gifts (Phase 3) ============
+    // Send a gift to a friend. kind: 'seed' | 'ep'. Daily cap = 1
+    // gift sent per day. Recipient gets it in their pendingGifts
+    // inbox on the server, reconciled on their next session.
+    async sendGift(toUid, kind, options) {
+      options = options || {};
+      const lang = Farm.state.data.language || 'zh';
+      const today = Farm.state.getDateString();
+      const lastSent = Farm.state.data.lastGiftSentDate || '';
+      if (lastSent === today) {
+        return { ok: false, reason: 'daily_cap', message: lang === 'en'
+          ? 'You already sent a gift today. Try again tomorrow!'
+          : '今天的免费礼物已送，明天再来吧！' };
+      }
+      const myUid = Farm.fbAuth && Farm.fbAuth.uid();
+      if (!myUid) return { ok: false, reason: 'not_logged_in' };
+      const fromName = (Farm.fbAuth.memberDoc &&
+        (Farm.fbAuth.memberDoc.gameStats && Farm.fbAuth.memberDoc.gameStats.nickname
+          || Farm.fbAuth.memberDoc.name)) || '匿名邻居';
+      const giftId = myUid + '_' + Date.now();
+      // Build payload by kind
+      let payload;
+      if (kind === 'seed') {
+        // Pick a random Lv 1-3 seed (everyone has those unlocked)
+        const easy = (Farm.crops && Farm.crops.all() || [])
+          .filter(c => c.unlock_level <= 3);
+        if (easy.length === 0) return { ok: false, reason: 'no_seeds' };
+        const c = easy[Math.floor(Math.random() * easy.length)];
+        payload = { cropId: c.id };
+      } else if (kind === 'ep') {
+        payload = { amount: 5 };
+      } else {
+        return { ok: false, reason: 'unknown_kind' };
+      }
+      // Atomic write to recipient's pendingGifts array
+      try {
+        const gift = {
+          id: giftId, fromUid: myUid, fromName, kind, payload,
+          sentAt: Date.now(),
+        };
+        await Farm.fb.db.collection('members').doc(toUid).set(
+          { gameStats: { pendingGifts: firebase.firestore.FieldValue.arrayUnion(gift) } },
+          { merge: true }
+        );
+      } catch (e) {
+        console.warn('[gameSync] sendGift write failed', e);
+        return { ok: false, reason: 'write_failed' };
+      }
+      // Mark sent locally
+      Farm.state.data.lastGiftSentDate = today;
+      Farm.state.save();
+      return { ok: true, kind, payload };
+    },
+
+    // Reconcile inbox: claim any pendingGifts on the server, apply to
+    // local state, clear the server-side queue. Called at boot after
+    // auth lands. Returns array of claimed gifts for UI feedback.
+    async reconcileGifts() {
+      if (!Farm.fb || !Farm.fb.available || !Farm.fbAuth || !Farm.fbAuth.isLoggedIn()) return [];
+      const uid = Farm.fbAuth.uid();
+      if (!uid) return [];
+      try {
+        const snap = await Farm.fb.db.collection('members').doc(uid).get();
+        if (!snap.exists) return [];
+        const stats = (snap.data().gameStats) || {};
+        const gifts = stats.pendingGifts || [];
+        if (gifts.length === 0) return [];
+        // Apply each gift to local state
+        for (const g of gifts) {
+          if (g.kind === 'seed' && g.payload && g.payload.cropId) {
+            Farm.state.addSeed(g.payload.cropId, 1);
+          } else if (g.kind === 'ep' && g.payload && g.payload.amount) {
+            Farm.state.addEastPoints(g.payload.amount, {
+              source: 'friend_gift',
+              description: 'Gift from friend',
+            });
+          }
+        }
+        // Clear server-side queue
+        await Farm.fb.db.collection('members').doc(uid).set(
+          { gameStats: { pendingGifts: [] } },
+          { merge: true }
+        );
+        return gifts;
+      } catch (e) {
+        console.warn('[gameSync] reconcileGifts failed', e);
+        return [];
+      }
+    },
+
+    // Check if user can send a gift today (1 per day cap)
+    canSendGiftToday() {
+      const today = Farm.state.getDateString();
+      return Farm.state.data.lastGiftSentDate !== today;
+    },
+
     // Online indicator helper — returns label/color tier from lastSeenAt
     onlineStatus(doc) {
       const stats = (doc && doc.gameStats) || {};

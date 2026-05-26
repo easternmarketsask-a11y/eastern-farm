@@ -222,13 +222,17 @@
         return;
       }
 
+      const friendCount = (Farm.state.data.friends || []).length;
       const tabBarHtml = `
         <div class="tab-bar" style="margin-bottom:10px;">
           <button class="tab-btn ${tab === 'today' ? 'active' : ''}" data-tab="today">
-            🏘 ${lang === 'en' ? "Today's Neighbors" : '今日邻居'}
+            🏘 ${lang === 'en' ? 'Today' : '今日'}
+          </button>
+          <button class="tab-btn ${tab === 'friends' ? 'active' : ''}" data-tab="friends">
+            💚 ${lang === 'en' ? 'Friends' : '好友'}${friendCount > 0 ? ' (' + friendCount + ')' : ''}
           </button>
           <button class="tab-btn ${tab === 'leaderboard' ? 'active' : ''}" data-tab="leaderboard">
-            🏆 ${lang === 'en' ? 'Leaderboard' : '周排行榜'}
+            🏆 ${lang === 'en' ? 'Leaderboard' : '排行榜'}
           </button>
         </div>
       `;
@@ -298,6 +302,8 @@
             if (found) this.viewFarm(found);
           };
         });
+      } else if (tab === 'friends') {
+        await this._renderFriendsTab(lang);
       } else if (tab === 'leaderboard') {
         const metric = this._leaderboardMetric;
         const metricLabels = {
@@ -455,6 +461,218 @@
             : `❤️ 点赞成功！+1 <span class="points-icon"></span>（今日还剩 ${result.remaining}）`, 2200);
         };
       }
+    },
+
+    // ============ Friends tab ============
+    async _renderFriendsTab(lang) {
+      const friendUids = Farm.state.data.friends || [];
+      const isLoggedIn = Farm.fbAuth && Farm.fbAuth.isLoggedIn();
+      const body = document.getElementById('neighborBody');
+      if (!isLoggedIn) {
+        body.innerHTML = `
+          <p style="text-align:center;padding:30px 16px;color:var(--warm-text-soft);">
+            ${lang === 'en' ? 'Sign in to add friends.' : '登录后才能添加好友。'}
+          </p>`;
+        return;
+      }
+      // "Add friend" button always at top
+      const addBtnHtml = `
+        <button class="btn friend-add-btn" id="friendAddBtn">➕ ${lang === 'en' ? 'Add friend by phone' : '按手机号加好友'}</button>
+      `;
+      if (friendUids.length === 0) {
+        body.innerHTML = `
+          ${addBtnHtml}
+          <p style="text-align:center;padding:24px 16px;color:var(--warm-text-soft);font-size:13px;line-height:1.6;">
+            ${lang === 'en' ? 'No friends yet. Add the phone numbers of people you know from Eastern Market — see their farms anytime and send daily gifts.' : '还没好友。把你认识的东方超市会员手机号加进来——随时看他们的农场、每天送 1 份礼物。'}
+          </p>`;
+        const addBtn = document.getElementById('friendAddBtn');
+        if (addBtn) addBtn.onclick = () => this._openAddFriendModal();
+        return;
+      }
+      // Loading placeholder while fetching
+      body.innerHTML = `${addBtnHtml}<div style="text-align:center;padding:20px;color:var(--warm-text-soft);">⏳</div>`;
+      const addBtn = document.getElementById('friendAddBtn');
+      if (addBtn) addBtn.onclick = () => this._openAddFriendModal();
+      // Fetch friend docs
+      const docs = await Farm.fbGameSync.fetchFriendDocs();
+      const giftAvailable = Farm.fbGameSync.canSendGiftToday();
+      const cardsHtml = docs.map(m => {
+        const name = Farm.fbGameSync.displayName(m.doc);
+        const stats = m.doc.gameStats || {};
+        const level = stats.level || 1;
+        const harvests = stats.totalHarvests || 0;
+        const emoji = avatarFor(m.uid);
+        const online = Farm.fbGameSync.onlineStatus(m.doc);
+        const onlineDot = (online && online.tier === 'online')
+          ? '<span class="neighbor-online"></span>' : '';
+        return `
+          <div class="friend-card" data-friend-uid="${m.uid}">
+            <div class="friend-avatar">${emoji}${onlineDot}</div>
+            <div class="friend-info">
+              <div class="friend-name">${name}</div>
+              <div class="friend-meta">Lv ${level} · ${lang === 'en' ? 'Harvests' : '收获'} ${harvests}</div>
+            </div>
+            <div class="friend-actions">
+              <button class="friend-action-btn friend-visit-btn" data-action="visit" data-uid="${m.uid}" title="${lang === 'en' ? 'Visit' : '看农场'}">🏘</button>
+              <button class="friend-action-btn friend-gift-btn ${giftAvailable ? '' : 'disabled'}" data-action="gift" data-uid="${m.uid}" ${giftAvailable ? '' : 'disabled'} title="${lang === 'en' ? 'Send gift' : '送礼物'}">🎁</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+      const giftHintHtml = giftAvailable
+        ? `<p class="friend-gift-hint">🎁 ${lang === 'en' ? "Today's free gift available (1 per day)" : '今日还有 1 份免费礼物可送'}</p>`
+        : `<p class="friend-gift-hint friend-gift-hint--used">🎁 ${lang === 'en' ? "Today's gift already sent. Come back tomorrow!" : '今日礼物已送出，明天再来吧'}</p>`;
+      body.innerHTML = `
+        ${addBtnHtml}
+        ${giftHintHtml}
+        <div class="friend-list">${cardsHtml}</div>
+      `;
+      const addBtn2 = document.getElementById('friendAddBtn');
+      if (addBtn2) addBtn2.onclick = () => this._openAddFriendModal();
+      // Wire visit + gift action buttons
+      document.querySelectorAll('.friend-action-btn').forEach(b => {
+        b.onclick = (e) => {
+          e.stopPropagation();
+          const uid = b.dataset.uid;
+          const action = b.dataset.action;
+          const friendDoc = docs.find(d => d.uid === uid);
+          if (!friendDoc) return;
+          if (action === 'visit') {
+            this.viewFarm({
+              id: 'friend_' + uid,
+              uid,
+              name: Farm.fbGameSync.displayName(friendDoc.doc),
+              emoji: avatarFor(uid),
+              level: (friendDoc.doc.gameStats || {}).level || 1,
+              totalHarvests: (friendDoc.doc.gameStats || {}).totalHarvests || 0,
+              totalDeliveries: (friendDoc.doc.gameStats || {}).totalDeliveries || 0,
+              likesReceived: (friendDoc.doc.gameStats || {}).likesReceived || 0,
+              isReal: true,
+            });
+          } else if (action === 'gift') {
+            this._openGiftModal(uid, Farm.fbGameSync.displayName(friendDoc.doc));
+          }
+        };
+      });
+    },
+
+    _openAddFriendModal() {
+      const lang = Farm.state.data.language;
+      const html = `
+        <h2 class="modal-title">➕ ${lang === 'en' ? 'Add friend' : '加好友'}</h2>
+        <p class="modal-subtitle">${lang === 'en'
+          ? "Enter their Eastern Market phone number"
+          : '输入对方在东方超市留的手机号'}</p>
+        <div class="auth-field">
+          <div class="auth-phone-input">
+            <span class="auth-phone-prefix">+1</span>
+            <input type="tel" id="friendPhone" class="auth-input auth-input-phone"
+                   inputmode="numeric" maxlength="14" placeholder="(306) 123-4567"/>
+          </div>
+        </div>
+        <div id="friendAddError" class="auth-error"></div>
+        <div class="btn-row">
+          <button class="btn secondary" onclick="Farm.ui.hideModal()">${Farm.i18n.t('btn_cancel')}</button>
+          <button class="btn" id="friendAddSubmit">${lang === 'en' ? 'Add' : '添加'}</button>
+        </div>
+      `;
+      Farm.ui.showModal(html);
+      const input = document.getElementById('friendPhone');
+      const errEl = document.getElementById('friendAddError');
+      const submitBtn = document.getElementById('friendAddSubmit');
+      if (input) {
+        setTimeout(() => input.focus(), 100);
+        input.oninput = (e) => {
+          const d = e.target.value.replace(/\D/g, '').slice(0, 10);
+          e.target.value = d.length <= 3 ? d
+            : d.length <= 6 ? `(${d.slice(0,3)}) ${d.slice(3)}`
+            : `(${d.slice(0,3)}) ${d.slice(3,6)}-${d.slice(6,10)}`;
+        };
+        input.onkeydown = (e) => { if (e.key === 'Enter') submitBtn.click(); };
+      }
+      submitBtn.onclick = async () => {
+        const digits = (input.value || '').replace(/\D/g, '');
+        if (digits.length !== 10) {
+          errEl.textContent = lang === 'en' ? 'Please enter a 10-digit phone number.' : '请输入 10 位手机号';
+          return;
+        }
+        submitBtn.disabled = true;
+        submitBtn.textContent = lang === 'en' ? 'Looking up…' : '查询中…';
+        const e164 = '+1' + digits;
+        const res = await Farm.fbGameSync.findMemberByPhone(e164);
+        if (!res.found) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = lang === 'en' ? 'Add' : '添加';
+          const msgs = {
+            self:        lang === 'en' ? "That's your own phone!" : '这是你自己的手机号',
+            hidden:      lang === 'en' ? 'This member is hidden from neighbors.' : '此会员已隐身',
+            not_member:  lang === 'en' ? "Phone not registered at our store. Ask them to sign up at Eastern Market." : '此号码未注册东方超市会员',
+            not_playing: lang === 'en' ? "This member hasn't started playing the game yet." : '此会员还没玩这个游戏',
+            error:       lang === 'en' ? 'Lookup failed. Try again.' : '查询失败，请重试',
+          };
+          errEl.textContent = msgs[res.reason] || (lang === 'en' ? 'Not found.' : '未找到');
+          return;
+        }
+        // Add friend locally + sync
+        const add = await Farm.fbGameSync.addFriend(res.member.uid);
+        if (!add.ok && add.reason === 'already_friend') {
+          errEl.textContent = lang === 'en' ? 'Already your friend.' : '已经是好友了';
+          submitBtn.disabled = false;
+          submitBtn.textContent = lang === 'en' ? 'Add' : '添加';
+          return;
+        }
+        Farm.ui.hideModal();
+        if (Farm.audio) Farm.audio.play('achievement');
+        const name = Farm.fbGameSync.displayName(res.member.doc);
+        Farm.ui.toast(lang === 'en'
+          ? `💚 Added ${name} as a friend!`
+          : `💚 已加好友：${name}`, 2400);
+        // Refresh friends tab
+        this._currentTab = 'friends';
+        this._render();
+      };
+    },
+
+    _openGiftModal(toUid, toName) {
+      const lang = Farm.state.data.language;
+      const safeName = String(toName).replace(/[<>"&]/g, '');
+      const html = `
+        <h2 class="modal-title">🎁 ${lang === 'en' ? 'Send gift to ' : '送礼物给 '}${safeName}</h2>
+        <p class="modal-subtitle">${lang === 'en'
+          ? 'Pick one (1 free gift per day):'
+          : '挑一个（每天 1 份免费）：'}</p>
+        <div class="gift-choices">
+          <button class="btn gift-choice" data-gift-kind="seed">
+            <div class="gift-choice-title">🌱 ${lang === 'en' ? 'Random seed' : '随机种子'}</div>
+            <div class="gift-choice-sub">${lang === 'en' ? 'A surprise easy-tier seed' : '一棵初级蔬菜种子'}</div>
+          </button>
+          <button class="btn gift-choice" data-gift-kind="ep">
+            <div class="gift-choice-title">🎫 ${lang === 'en' ? '+5 Eastern Points' : '+5 东方积分'}</div>
+            <div class="gift-choice-sub">${lang === 'en' ? 'A little EP for their account' : '送给对方一点积分鼓励'}</div>
+          </button>
+        </div>
+      `;
+      Farm.ui.showModal(html);
+      document.querySelectorAll('.gift-choice').forEach(btn => {
+        btn.onclick = async () => {
+          const kind = btn.dataset.giftKind;
+          btn.disabled = true;
+          const res = await Farm.fbGameSync.sendGift(toUid, kind);
+          if (!res.ok) {
+            Farm.ui.toast(res.message || (lang === 'en' ? '❌ Failed to send' : '❌ 发送失败'), 2400);
+            btn.disabled = false;
+            return;
+          }
+          Farm.ui.hideModal();
+          if (Farm.audio) Farm.audio.play('coin');
+          Farm.ui.toast(lang === 'en'
+            ? `🎁 Gift sent to ${safeName}!`
+            : `🎁 礼物已送给 ${safeName}！`, 2600);
+          // Refresh tab so gift hint updates
+          this._currentTab = 'friends';
+          this._render();
+        };
+      });
     },
   };
 

@@ -97,6 +97,11 @@
     // ============ Display preferences (settings) ============
     decorationsHidden: false,   // hide pets/balloons/static decor from farm view
 
+    // ============ Friends + gifts (Phase 3 — 2026-05-25) ============
+    friends: [],                // array of friend UIDs (members the user added)
+    lastGiftSentDate: '',       // YYYY-MM-DD; daily cap = 1 gift sent per day
+    pendingGifts: [],           // [{fromUid, fromName, kind, payload, sentAt, id}] inbox
+
     // ============ Member sync (v1.2) ============
     // unsyncedEp accumulates EP earned while NOT logged into a member account.
     // On first successful login, up to BACKFILL_CAP gets one-shot credited to
