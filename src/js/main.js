@@ -78,6 +78,11 @@
       checkDailyLogin();
       Farm.achievements.checkAll();
       refreshTodayBadge();
+      // First-time welcome overlay (3-step). Defer past the daily-login toast
+      // so it lands on a clean screen, not under another notification.
+      if (Farm.tutorial && Farm.tutorial.maybeShow) {
+        setTimeout(() => Farm.tutorial.maybeShow(), 700);
+      }
     });
 
     // Refresh the today badge whenever the modal closes

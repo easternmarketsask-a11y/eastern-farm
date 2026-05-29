@@ -182,6 +182,9 @@
 
     harvestPlot(plotIdx, evt) {
       const plot = Farm.state.data.plots[plotIdx];
+      // First-harvest celebration: capture flag BEFORE the harvest mutates
+      // totalHarvests, so we know whether this is the inaugural pick.
+      const isFirstHarvestEver = !Farm.state.data.firstHarvestCelebrated;
       const result = Farm.crops.harvest(plot);
       if (!result.ok) {
         // Warehouse-full is the only user-facing failure we surface
@@ -253,6 +256,18 @@
 
       // Update HUD
       Farm.ui.refreshHUD();
+
+      // First-harvest celebration: confetti + a hint pointing to the silo
+      // (so the player knows the crop didn't just disappear — they need to
+      // deliver to Eastern Market next).
+      if (isFirstHarvestEver) {
+        Farm.state.data.firstHarvestCelebrated = true;
+        Farm.state.save();
+        if (Farm.ui && Farm.ui.showConfetti) Farm.ui.showConfetti(28, 2400);
+        setTimeout(() => {
+          Farm.ui.toast(Farm.i18n.t('toast_first_harvest'), 3600);
+        }, 900);
+      }
 
       // Level up?
       if (result.levelInfo && result.levelInfo.leveledUp) {

@@ -82,7 +82,20 @@
     "settings_reset_confirm": { "zh": "确定要重置吗? 进度无法恢复.", "en": "Reset progress? This cannot be undone." },
 
     "about_made_by": { "zh": "本游戏由东方超市制作", "en": "Made by Eastern Market" },
-    "about_visit_us": { "zh": "欢迎光临 Saskatoon 东方超市", "en": "Visit us at Eastern Market, Saskatoon" }
+    "about_visit_us": { "zh": "欢迎光临 Saskatoon 东方超市", "en": "Visit us at Eastern Market, Saskatoon" },
+
+    "tutorial_title": { "zh": "欢迎来到东方农场 🌱", "en": "Welcome to Eastern Farm 🌱" },
+    "tutorial_subtitle": { "zh": "三步上手，今天就能收菜", "en": "Three steps. You'll harvest today." },
+    "tutorial_step1_title": { "zh": "1. 点土地种菜", "en": "1. Tap soil to plant" },
+    "tutorial_step1_body": { "zh": "棕色地块就是你的菜地。已经给你 3 种种子，点一下就能种。", "en": "Brown squares are your plots. You start with 3 seed types — tap to plant." },
+    "tutorial_step2_title": { "zh": "2. 等一会儿", "en": "2. Wait a bit" },
+    "tutorial_step2_body": { "zh": "种子会自己长大（小白菜约 30 秒）。出门买菜、做饭、回来收都行。", "en": "Crops grow on their own (bok choy ~30 sec). Come back anytime to pick." },
+    "tutorial_step3_title": { "zh": "3. 卖给东方超市", "en": "3. Sell to Eastern Market" },
+    "tutorial_step3_body": { "zh": "收的菜先进仓库，攒一批后送到东方超市，换农场币和积分。", "en": "Harvested crops go to the silo. Deliver to Eastern Market for coins + East Points." },
+    "tutorial_btn_start": { "zh": "开始种菜 →", "en": "Start farming →" },
+
+    "toast_first_plant": { "zh": "🌱 种下第一棵菜！开张大吉 +10 农场币", "en": "🌱 Your first seed! +10 coins to start" },
+    "toast_first_harvest": { "zh": "🎉 第一次收获！进仓库的菜可以送去东方超市", "en": "🎉 First harvest! Deliver from the silo to Eastern Market" }
   },
 
   "_storekeeper_pool_default_zh": [

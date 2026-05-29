@@ -108,6 +108,17 @@
     // the real member balance; remainder discarded (per anti-abuse policy).
     unsyncedEp: 0,
     backfillDone: false,
+
+    // ============ First-time experience (2026-05-29) ============
+    // Gates the one-time welcome overlay (3-step "tap soil → plant → sell
+    // to Eastern Market"). Set true on first dismissal so returning players
+    // never see it again, even if they reset their farm. The cropsEverGrown
+    // === 0 check stays as a secondary guard.
+    tutorialV1Done: false,
+    // First-plant / first-harvest celebration flags. Persist across sessions
+    // so the bonus + confetti only fires once per save.
+    firstPlantCelebrated: false,
+    firstHarvestCelebrated: false,
   };
 
   function getDateString(d) {

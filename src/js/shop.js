@@ -151,6 +151,9 @@
         card.onclick = () => {
           const cropId = card.dataset.cropId;
           const plot = Farm.state.data.plots[plotIdx];
+          // First-plant bonus: gate on a persistent flag, not the
+          // cropsEverGrown array, so resetting seeds can't re-trigger.
+          const isFirstPlantEver = !Farm.state.data.firstPlantCelebrated;
           const result = Farm.crops.plant(plot, cropId);
           if (!result.ok) {
             Farm.ui.toast(Farm.i18n.t('toast_not_enough_seeds'));
@@ -160,9 +163,18 @@
           Farm.ui.hideModal();
           Farm.farm.renderGrid();
           const def = Farm.crops.get(cropId);
-          Farm.ui.toast('🌱 ' + def[Farm.state.data.language === 'en' ? 'name_en' : 'name_zh']);
           if (Farm.audio) Farm.audio.play('plant');
           if (Farm.tasks) Farm.tasks.onEvent('plant', { cropId });
+
+          if (isFirstPlantEver) {
+            Farm.state.data.firstPlantCelebrated = true;
+            Farm.state.addCoins(10);
+            Farm.ui.refreshHUD();
+            // Replace the usual "已种下" toast with a louder first-time one
+            Farm.ui.toast(Farm.i18n.t('toast_first_plant'), 3200);
+          } else {
+            Farm.ui.toast('🌱 ' + def[Farm.state.data.language === 'en' ? 'name_en' : 'name_zh']);
+          }
         };
       });
     },
