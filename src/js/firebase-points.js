@@ -34,6 +34,14 @@
   const STOCKWISE_BASE = 'https://stockwise-app-873982544406.us-central1.run.app';
   const BACKFILL_CAP = 100;
 
+  // Limited-time "Welcome to the game" bonus for store members on their
+  // FIRST login to the farm. Awarded as 3,000 farm coins (equivalent to
+  // 300 EP via the 10:1 exchange, ≈ $0.30 real cost). Member-doc-scoped
+  // flag (gameSignupBonusGivenAt) prevents re-claim across devices and
+  // localStorage wipes.
+  const GAME_SIGNUP_BONUS_COINS = 3000;
+  const GAME_SIGNUP_BONUS_END = '2026-08-31';
+
   function uuid() {
     if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
@@ -183,6 +191,100 @@
         }, 800);
       }
       // If failed, backfillDone stays false; retried on next login or queue flush.
+    },
+
+    /**
+     * Limited-time first-login bonus for confirmed store members: grants
+     * GAME_SIGNUP_BONUS_COINS to the in-game wallet. Idempotent via a
+     * Firestore transaction on members/{uid}.gameSignupBonusGivenAt, so
+     * clearing localStorage or switching devices can't re-claim it.
+     *
+     * Silent no-op when:
+     *   - Firebase unavailable
+     *   - Past the promo end date
+     *   - Member doc missing (phone authed but not a real store member)
+     *   - Already claimed on a previous login
+     */
+    async firstLoginGameSignupBonus(user) {
+      if (!Farm.fb || !Farm.fb.available || !Farm.fb.db) return;
+      if (!user || !user.uid) return;
+
+      // Promo window check (Saskatoon local date)
+      const today = Farm.state.getDateString();
+      if (today > GAME_SIGNUP_BONUS_END) return;
+
+      const memberRef = Farm.fb.db.collection('members').doc(user.uid);
+      let granted = false;
+      try {
+        granted = await Farm.fb.db.runTransaction(async (tx) => {
+          const snap = await tx.get(memberRef);
+          if (!snap.exists) return false;
+          const data = snap.data();
+          if (data.gameSignupBonusGivenAt) return false;
+          tx.update(memberRef, {
+            gameSignupBonusGivenAt: firebase.firestore.FieldValue.serverTimestamp(),
+            gameSignupBonusCoins: GAME_SIGNUP_BONUS_COINS,
+          });
+          return true;
+        });
+      } catch (e) {
+        console.warn('[fb-points] signup bonus transaction failed:', e.message || e);
+        return;
+      }
+      if (!granted) return;
+
+      // Credit locally + refresh HUD
+      Farm.state.addCoins(GAME_SIGNUP_BONUS_COINS);
+      if (Farm.ui && Farm.ui.refreshHUD) Farm.ui.refreshHUD();
+
+      // Short delay so any login modal closes first
+      setTimeout(() => this._showSignupBonusModal(GAME_SIGNUP_BONUS_COINS), 400);
+    },
+
+    _showSignupBonusModal(amount) {
+      const lang = (Farm.state && Farm.state.data && Farm.state.data.language) || 'zh';
+      const isEn = lang === 'en';
+      const ep = Math.floor(amount / 10);
+      const html = `
+        <div style="text-align:center;padding:6px 4px;">
+          <div style="font-size:54px;line-height:1;margin-bottom:6px;">🎁</div>
+          <h2 class="modal-title" style="margin-bottom:4px;">
+            ${isEn ? 'Welcome Gift' : '会员开张礼'}
+          </h2>
+          <p class="modal-subtitle" style="margin-top:0;">
+            ${isEn ? 'Limited time · Members only' : '限时活动 · 会员专享'}
+          </p>
+          <div style="margin:18px 0;padding:20px 16px;background:linear-gradient(135deg,#fff8e7,#fef3d6);border-radius:16px;border:1px solid rgba(58,140,80,0.15);">
+            <div style="font-size:42px;font-weight:800;color:#3a8c50;line-height:1;letter-spacing:-1px;">
+              +${amount.toLocaleString()}
+            </div>
+            <div style="font-size:13px;color:#6b5840;margin-top:6px;font-weight:600;">
+              ${isEn ? 'farm coins' : '农场币'}
+            </div>
+            <div style="font-size:11px;color:#9b8870;margin-top:10px;">
+              ${isEn ? 'Equivalent to ' + ep + ' Eastern Market Points' : '等同 ' + ep + ' 超市积分'}
+            </div>
+          </div>
+          <p style="font-size:13px;color:#6b5840;margin:12px 0 4px;">
+            ${isEn ? 'Plant, harvest, grow your stash 🌱' : '种菜攒积分，越玩越有钱 🌱'}
+          </p>
+          <p style="font-size:11px;color:#9b8870;margin:0 0 18px;">
+            ${isEn ? 'Promotion ends ' + GAME_SIGNUP_BONUS_END : '活动至 ' + GAME_SIGNUP_BONUS_END + ' 截止'}
+          </p>
+          <button class="btn" id="signupGiftOk" style="width:100%;padding:14px;font-size:15px;">
+            ${isEn ? 'Start farming →' : '收下，开始种菜 →'}
+          </button>
+        </div>
+      `;
+      Farm.ui.showModal(html);
+      const btn = document.getElementById('signupGiftOk');
+      if (btn) btn.onclick = () => {
+        Farm.ui.hideModal();
+        if (Farm.audio) Farm.audio.play('coin');
+      };
+      if (Farm.ui && Farm.ui.showConfetti) Farm.ui.showConfetti(40, 2800);
+      if (Farm.audio) Farm.audio.play('achievement');
+      if (navigator.vibrate) { try { navigator.vibrate([20, 50, 20]); } catch (_) {} }
     },
   };
 

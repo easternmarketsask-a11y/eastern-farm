@@ -54,6 +54,10 @@
           if (Farm.fbPoints && Farm.fbPoints.firstLoginBackfill) {
             Farm.fbPoints.firstLoginBackfill(user);
           }
+          // Limited-time welcome gift for store members (one-shot, member-doc-scoped)
+          if (Farm.fbPoints && Farm.fbPoints.firstLoginGameSignupBonus) {
+            Farm.fbPoints.firstLoginGameSignupBonus(user);
+          }
           if (Farm.fbQueue && Farm.fbQueue.flush) Farm.fbQueue.flush();
           // Neighbor likes received — reconcile + notify
           if (Farm.fbGameSync && Farm.fbGameSync.reconcileReceivedLikes) {
