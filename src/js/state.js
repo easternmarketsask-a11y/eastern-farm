@@ -76,6 +76,16 @@
       freshnessCharges: 0,      // # of 保鲜券 in inventory
     },
 
+    // ============ 7-day sign-in calendar (login-calendar.js) ============
+    // Replaces the old flat daily-login coin/EP reward with an escalating
+    // 7-day cycle. dayIndex = 0 means "not yet signed today" (next sign-in
+    // claims day 1). A gap of ≥1 missed day resets the cycle to day 1.
+    loginCalendar: {
+      cycleStartDate: '',   // YYYY-MM-DD when the current 7-day cycle began
+      lastSignDate: '',     // YYYY-MM-DD of the last successful sign-in
+      dayIndex: 0,          // 0-7; how many days of THIS cycle have been claimed
+    },
+
     // ============ Warehouse (V2 — 2026-05-24) ============
     // Harvested crops go HERE instead of converting to coins. Player must
     // explicitly deliver to Eastern Market to earn coins (mirrors the
@@ -214,6 +224,7 @@
           // Deep-fill nested objects added in later versions
           this.data.dailyClaims = Object.assign({}, STARTER_STATE.dailyClaims, this.data.dailyClaims || {});
           this.data.activeEffects = Object.assign({}, STARTER_STATE.activeEffects, this.data.activeEffects || {});
+          this.data.loginCalendar = Object.assign({}, STARTER_STATE.loginCalendar, this.data.loginCalendar || {});
           this.data.ownedShopItems = this.data.ownedShopItems || {};
           this.data.decorations = this.data.decorations || [];
           // Reset session stats daily
@@ -680,6 +691,39 @@
         this.data.maxStreak = streak;
         this.save();
       }
+    },
+
+    // Sign in to today's slot of the 7-day calendar. Handles the
+    // today/yesterday/gap bookkeeping and persists. Does NOT grant the
+    // reward itself (that's login-calendar.js's job, via addCoins/addSeed/
+    // addEastPoints) — this just advances the cycle pointer.
+    //
+    // Returns { dayIndex, reset } where dayIndex is 1-7 (the day just
+    // claimed) and reset is true if a missed day started a fresh cycle.
+    signTodayCalendar() {
+      const today = getDateString();
+      const cal = this.data.loginCalendar;
+      if (cal.lastSignDate === today) {
+        // Already signed today — return current state, no-op.
+        return { dayIndex: cal.dayIndex, reset: false };
+      }
+      const yesterday = getDateString(new Date(Date.now() - 86400000));
+      let reset = false;
+      if (cal.lastSignDate === yesterday && cal.dayIndex >= 1 && cal.dayIndex < 7) {
+        cal.dayIndex += 1;
+      } else if (cal.lastSignDate === yesterday && cal.dayIndex >= 7) {
+        // Completed a full cycle yesterday — start a fresh one today.
+        cal.dayIndex = 1;
+        cal.cycleStartDate = today;
+      } else {
+        // First sign-in ever, or a gap of ≥1 missed day.
+        reset = (cal.lastSignDate !== '' && cal.lastSignDate !== yesterday);
+        cal.dayIndex = 1;
+        cal.cycleStartDate = today;
+      }
+      cal.lastSignDate = today;
+      this.save();
+      return { dayIndex: cal.dayIndex, reset };
     },
 
     getDateString,

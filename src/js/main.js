@@ -105,41 +105,28 @@
     // date and double-claim. getDateString uses local time consistently.
     const lastStr = data.lastLogin ? Farm.state.getDateString(new Date(data.lastLogin)) : '';
 
-    if (lastStr === today) return;  // already counted today
-
-    // Streak: increment if yesterday, otherwise reset
-    const yesterday = Farm.state.getDateString(new Date(Date.now() - 86400000));
-    if (lastStr === yesterday) {
-      data.loginStreak = (data.loginStreak || 0) + 1;
-    } else {
-      data.loginStreak = 1;
+    if (lastStr !== today) {
+      // Streak bookkeeping ONLY. The daily-login reward is no longer paid here —
+      // it moved to the 7-day sign-in calendar (login-calendar.js) so players
+      // aren't paid twice. We still maintain loginStreak/maxStreak because
+      // achievements depend on them.
+      const yesterday = Farm.state.getDateString(new Date(Date.now() - 86400000));
+      if (lastStr === yesterday) {
+        data.loginStreak = (data.loginStreak || 0) + 1;
+      } else {
+        data.loginStreak = 1;
+      }
+      data.lastLogin = Date.now();
+      Farm.state.recordStreak(data.loginStreak);
+      Farm.state.save();
+      if (Farm.achievements) Farm.achievements.checkAll();
     }
-    data.lastLogin = Date.now();
-    Farm.state.recordStreak(data.loginStreak);
 
-    // Reward: 10 coins + 1 East Point, multiplied by streak milestones
-    let multiplier = 1;
-    if (data.loginStreak >= 14) multiplier = 3;
-    else if (data.loginStreak >= 7) multiplier = 2;
-
-    const coins = 10 * multiplier;
-    const points = 1 * multiplier;
-    Farm.state.addCoins(coins);
-    Farm.state.addEastPoints(points, {
-      source: 'daily_login',
-      description: '每日登录第 ' + data.loginStreak + ' 天 (×' + multiplier + ')',
-    });
-    Farm.ui.refreshHUD();
-
-    setTimeout(() => {
-      const lang = data.language;
-      const title = Farm.i18n.t('daily_login_title');
-      const streakText = Farm.i18n.t('daily_login_streak', { n: data.loginStreak });
-      const rewardText = Farm.i18n.t('daily_login_reward', { coins, points });
-      Farm.ui.toast(title + ' · ' + streakText + ' · ' + rewardText, 4000);
-    }, 500);
-
-    if (Farm.achievements) Farm.achievements.checkAll();
+    // The 7-day sign-in calendar delivers the actual reward + celebration UI.
+    // It auto-opens only if the player hasn't signed in today (checked inside).
+    if (Farm.loginCalendar && Farm.loginCalendar.maybeAutoOpen) {
+      Farm.loginCalendar.maybeAutoOpen();
+    }
   }
 
   function wireSplash(onDismiss) {

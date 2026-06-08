@@ -131,9 +131,25 @@
           </button>
         </div>`;
 
+      const cal = Farm.state.data.loginCalendar || { lastSignDate: '', dayIndex: 0 };
+      const signedToday = cal.lastSignDate === this.todayStr();
+      const signinHTML = `
+        <div class="daily-card daily-signin">
+          <div class="daily-card-title">📅 ${lang === 'en' ? '7-Day Sign-in' : '七日签到'}</div>
+          <div class="daily-card-body">
+            ${signedToday
+              ? (lang === 'en' ? `Signed in (day ${cal.dayIndex}/7) — see you tomorrow!` : `今日已签到（第 ${cal.dayIndex}/7 天），明天再来！`)
+              : (lang === 'en' ? 'Sign in today to keep your streak and claim a reward.' : '今天签到领奖，别让连签断掉。')}
+          </div>
+          <button class="daily-claim" id="dailyOpenSignin">
+            ${signedToday ? '✅ ' + (lang === 'en' ? 'View' : '查看') : '🎁 ' + (lang === 'en' ? 'Sign in' : '去签到')}
+          </button>
+        </div>`;
+
       const html = `
         <h2 class="modal-title">🌅 ${lang === 'en' ? 'Today' : '今日'}</h2>
         <div class="daily-list">
+          ${signinHTML}
           ${newsHTML}
           ${specialHTML}
           ${lotteryHTML}
@@ -171,6 +187,10 @@
         Farm.ui.toast('🌱 +1 ' + specialCrop[nameKey]);
         if (Farm.audio) Farm.audio.play('buy');
         setTimeout(() => this.open(), 400);
+      };
+      const signinBtn = $('dailyOpenSignin');
+      if (signinBtn) signinBtn.onclick = () => {
+        if (Farm.loginCalendar) Farm.loginCalendar.open();
       };
       const wheelBtn = $('dailyOpenWheel');
       if (wheelBtn) wheelBtn.onclick = () => this.openWheel();
