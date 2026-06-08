@@ -2,6 +2,12 @@
  * farm.js — Farm grid rendering and plot interactions.
  */
 (function() {
+  // Combo tracking: consecutive harvests within COMBO_WINDOW ms build a combo
+  // count, surfaced as a "🔥 连击 ×N" float for a juicier rapid-harvest feel.
+  let _comboCount = 0;
+  let _comboLast = 0;
+  const COMBO_WINDOW = 1500;
+
   const farm = {
     renderGrid() {
       const grid = document.getElementById('farmGrid');
@@ -215,6 +221,11 @@
       // V2: floating "📦 +1" feedback since coins aren't credited until
       // delivery. EP bonuses (jackpot etc.) still float separately because
       // those ARE credited immediately on harvest.
+      // Combo: rapid consecutive harvests build a streak count.
+      const _now = Date.now();
+      _comboCount = (_now - _comboLast < COMBO_WINDOW) ? _comboCount + 1 : 1;
+      _comboLast = _now;
+
       if (evt && evt.target) {
         const rect = evt.target.getBoundingClientRect();
         const lang = Farm.state.data.language;
@@ -225,6 +236,12 @@
             Farm.ui.floatText('+' + result.eastPoints + ' <span class="points-icon"></span>',
               rect.left + rect.width/2 - 15, rect.top, '#9b59b6');
           }, 300);
+        }
+        // Combo badge floats above the plot once the player chains ≥2 picks.
+        if (_comboCount >= 2) {
+          Farm.ui.floatText('🔥 ' + (lang === 'en' ? 'Combo ×' : '连击 ×') + _comboCount,
+            rect.left + rect.width/2 - 22, rect.top - 24, '#c44536');
+          if (Farm.audio) Farm.audio.play('coin');
         }
       }
 

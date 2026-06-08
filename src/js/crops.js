@@ -83,12 +83,27 @@
 
       if (!Farm.state.useSeed(cropId)) return { ok: false, reason: 'no_seeds' };
 
+      // Capture BEFORE recordPlant adds it — is this a brand-new collection entry?
+      const isNewToCollection = !(Farm.state.data.cropsEverGrown || []).includes(cropId);
+
       plot.crop = cropId;
       plot.plantedAt = Date.now();
       plot.harvestsLeft = def.multi_harvest ? (def.harvest_count || 3) : 1;
       Farm.state.recordPlant(cropId);
       Farm.state.save();
-      return { ok: true, crop: def };
+
+      // Collection-unlock high-light: first time growing this crop is a small
+      // milestone — celebrate it instead of letting it pass silently.
+      if (isNewToCollection && Farm.ui) {
+        const lang = Farm.state.data.language;
+        const name = lang === 'en' ? def.name_en : def.name_zh;
+        setTimeout(() => {
+          Farm.ui.toast('📖 ' + (lang === 'en' ? 'New in collection: ' : '图鉴新增：') + def.icon + ' ' + name, 3000);
+          if (Farm.audio) Farm.audio.play('achievement');
+          if (Farm.ui.showConfetti) Farm.ui.showConfetti(18, 1500);
+        }, 400);
+      }
+      return { ok: true, crop: def, isNewToCollection };
     },
 
     harvest(plot) {

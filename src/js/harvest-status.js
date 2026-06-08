@@ -58,12 +58,20 @@
     // via Farm.crops.harvest()'s warehouse_full result, so nothing is lost.
     harvestAll() {
       const plots = Farm.state.data.plots;
+      let picked = 0;
       for (let idx = 0; idx < plots.length; idx++) {
         const plot = plots[idx];
         if (!plot.unlocked || !plot.crop) continue;
         if (!Farm.crops.isMature(plot)) continue;
         if (Farm.state.isWarehouseFull()) break; // harvestPlot would surface the dialog anyway, but stop the loop cleanly
         Farm.farm.harvestPlot(idx);
+        picked++;
+      }
+      // Bumper-harvest high-light: one summary float for the whole batch.
+      if (picked >= 2) {
+        const lang = Farm.state.data.language;
+        Farm.ui.floatText('🌾 ' + (lang === 'en' ? 'Bumper harvest ×' : '丰收 ×') + picked,
+          window.innerWidth / 2 - 40, 130, '#c44536');
       }
       this.render();
     },

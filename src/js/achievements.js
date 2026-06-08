@@ -115,6 +115,9 @@
         setTimeout(() => {
           Farm.ui.toast('🏆 ' + name + '  +' + (ach.reward_points || 0) + '<span class="points-icon"></span>', 3200);
           if (Farm.audio) Farm.audio.play('achievement');
+          // Completion high-light: a light confetti burst makes unlocking an
+          // achievement feel like a milestone, not just another toast.
+          if (Farm.ui.showConfetti) Farm.ui.showConfetti(24, 1800);
         }, 250 + i * 900);
       });
     },
