@@ -1,0 +1,17 @@
+{
+  "name": "东方超市·快乐农场",
+  "short_name": "快乐农场",
+  "description": "种菜、收获、过节，攒东方点换东方超市优惠券。",
+  "lang": "zh-CN",
+  "start_url": "/src/index.html",
+  "scope": "/src/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#fdf8ee",
+  "theme_color": "#fdf8ee",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

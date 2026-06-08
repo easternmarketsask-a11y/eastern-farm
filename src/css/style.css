@@ -2837,3 +2837,54 @@ body {
   100% { transform: scale(1); opacity: 1; }
 }
 .daily-card.daily-signin { border-left: 3px solid var(--barn-red); }
+
+/* ============ PWA install banner (pwa-install.js) ============ */
+.pwa-install-banner {
+  position: fixed;
+  left: 50%;
+  bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  z-index: 9000;
+  width: calc(100% - 24px);
+  max-width: 460px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--cream-card);
+  border: 1.5px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card-hover);
+  animation: pwa-slide-up 0.35s ease;
+}
+@keyframes pwa-slide-up {
+  from { transform: translate(-50%, 20px); opacity: 0; }
+  to { transform: translate(-50%, 0); opacity: 1; }
+}
+.pwa-install-text {
+  flex: 1;
+  font-size: 13px;
+  line-height: 1.35;
+  color: var(--warm-text);
+}
+.pwa-install-action {
+  flex-shrink: 0;
+  border: none;
+  background: var(--barn-red);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 14px;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+}
+.pwa-install-close {
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  color: var(--warm-text-soft);
+  font-size: 16px;
+  line-height: 1;
+  padding: 4px 6px;
+  cursor: pointer;
+}
