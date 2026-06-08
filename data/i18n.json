@@ -95,7 +95,12 @@
     "tutorial_btn_start": { "zh": "开始种菜 →", "en": "Start farming →" },
 
     "toast_first_plant": { "zh": "🌱 种下第一棵菜！开张大吉 +10 农场币", "en": "🌱 Your first seed! +10 coins to start" },
-    "toast_first_harvest": { "zh": "🎉 第一次收获！进仓库的菜可以送去东方超市", "en": "🎉 First harvest! Deliver from the silo to Eastern Market" }
+    "toast_first_harvest": { "zh": "🎉 第一次收获！进仓库的菜可以送去东方超市", "en": "🎉 First harvest! Deliver from the silo to Eastern Market" },
+
+    "harvest_status_ready": { "zh": "🌾 {n} 棵已熟可收", "en": "🌾 {n} ready to harvest" },
+    "harvest_status_btn_all": { "zh": "全部收获", "en": "Harvest All" },
+    "harvest_status_growing": { "zh": "⏳ 下一批 {time} 后成熟", "en": "⏳ Next batch ready in {time}" },
+    "harvest_status_empty": { "zh": "🌱 地都空着，种点什么吧", "en": "🌱 Your plots are empty — plant something!" }
   },
 
   "_storekeeper_pool_default_zh": [

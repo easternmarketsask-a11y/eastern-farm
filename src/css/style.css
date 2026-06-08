@@ -559,6 +559,28 @@ body {
   color: #8b4513;
 }
 .festival-banner.hidden { display: none; }
+
+/* =============== HARVEST STATUS BAR =============== */
+.harvest-status-bar {
+  background: var(--cream-card);
+  border-radius: 14px;
+  margin: 10px 12px;
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  font-size: 13px;
+  color: var(--warm-text-soft);
+}
+.harvest-status-text { flex: 1; line-height: 1.4; }
+.harvest-status-btn {
+  flex-shrink: 0;
+  padding: 8px 16px;
+  font-size: 13px;
+}
+.harvest-status-btn.hidden { display: none; }
 .festival-icon { font-size: 18px; }
 
 /* =============== FARM GRID =============== */

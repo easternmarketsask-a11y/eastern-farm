@@ -60,6 +60,7 @@
     // 6. Initial render
     Farm.ui.refreshHUD();
     Farm.farm.renderGrid();
+    if (Farm.harvestStatus) Farm.harvestStatus.render();
 
     // 6b. Install the floating warehouse button on the farm view
     if (Farm.warehouse && Farm.warehouse.installButton) {

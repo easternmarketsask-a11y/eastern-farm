@@ -162,6 +162,7 @@
           }
           Farm.ui.hideModal();
           Farm.farm.renderGrid();
+          if (Farm.harvestStatus) Farm.harvestStatus.render();
           const def = Farm.crops.get(cropId);
           if (Farm.audio) Farm.audio.play('plant');
           if (Farm.tasks) Farm.tasks.onEvent('plant', { cropId });

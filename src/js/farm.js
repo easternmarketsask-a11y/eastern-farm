@@ -199,6 +199,8 @@
         return;
       }
 
+      if (Farm.harvestStatus) Farm.harvestStatus.render();
+
       if (Farm.audio) Farm.audio.play('harvest');
 
       // Polish: play the "pop" animation BEFORE the grid re-render wipes
@@ -302,6 +304,7 @@
 
     // Tick — update growth timers visually (called every second)
     tick() {
+      if (Farm.harvestStatus) Farm.harvestStatus.render();
       Farm.state.data.plots.forEach((plot, idx) => {
         if (!plot.unlocked || !plot.crop) return;
         const el = document.querySelector('.plot[data-plot-id="' + idx + '"]');
