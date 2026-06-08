@@ -276,6 +276,10 @@
       // Update HUD
       Farm.ui.refreshHUD();
 
+      // Gentle one-time push-permission pre-prompt (self-throttling: only fires
+      // once, when permission is still 'default' and the player is logged in).
+      if (Farm.push && Farm.push.maybePromptAfterHarvest) Farm.push.maybePromptAfterHarvest();
+
       // First-harvest celebration: confetti + a hint pointing to the silo
       // (so the player knows the crop didn't just disappear — they need to
       // deliver to Eastern Market next).

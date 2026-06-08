@@ -15,6 +15,50 @@
  *  handling via importScripts — keep that integration in THIS worker so we
  *  don't register two competing root-scope service workers.)
  */
+/* ---- Firebase Cloud Messaging (background notifications) ----
+ * Wrapped in try/catch: if importScripts fails (offline / CDN blocked), the
+ * caching logic below still works — only background push init is skipped. We
+ * keep FCM in THIS root worker (not a separate firebase-messaging-sw.js) so we
+ * never register two competing root-scope service workers. */
+try {
+  importScripts(
+    'https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js',
+    'https://www.gstatic.com/firebasejs/10.14.1/firebase-messaging-compat.js'
+  );
+  firebase.initializeApp({
+    apiKey: 'AIzaSyDDhVm_n_TyV2mtp517qUoLU4A9HB1k3No',
+    projectId: 'eastern-market-members',
+    messagingSenderId: '515107029536',
+    appId: '1:515107029536:web:9f6caef22bae67aa5af245',
+  });
+  const messaging = firebase.messaging();
+  messaging.onBackgroundMessage((payload) => {
+    const n = (payload && payload.notification) || {};
+    self.registration.showNotification(n.title || '东方农场', {
+      body: n.body || '',
+      icon: '/src/icons/icon-192.png',
+      badge: '/src/icons/icon-192.png',
+      data: { url: '/src/index.html' },
+    });
+  });
+} catch (e) {
+  // Offline or CDN unavailable — caching still works without FCM.
+}
+
+// Clicking a notification focuses an open game tab, or opens one.
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const target = (event.notification.data && event.notification.data.url) || '/src/index.html';
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
+      for (const c of list) {
+        if (c.url.indexOf('/src/') !== -1 && 'focus' in c) return c.focus();
+      }
+      if (self.clients.openWindow) return self.clients.openWindow(target);
+    })
+  );
+});
+
 const CACHE_VERSION = 'ef-v1';
 const CACHE = 'eastern-farm-' + CACHE_VERSION;
 const PRECACHE = [
