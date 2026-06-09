@@ -626,9 +626,9 @@ body {
 
 .farm-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 10px;
-  max-width: 380px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  max-width: 360px;       /* 3 wider plots (~112px) instead of 4 small ones */
   margin: 0 auto;
 }
 

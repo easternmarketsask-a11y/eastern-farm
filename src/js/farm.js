@@ -113,7 +113,7 @@
       const iconEl = document.createElement('div');
       iconEl.className = 'crop-icon';
       iconEl.dataset.stage = String(stage);
-      const size = isMature ? 64 : 50;
+      const size = isMature ? 80 : 62;
       iconEl.innerHTML = Farm.cropArt.svg(plot.crop, stage, size);
       el.appendChild(iconEl);
 
@@ -363,7 +363,7 @@
           const icon = el.querySelector('.crop-icon');
           if (icon && icon.dataset.stage !== String(currentStage)) {
             icon.dataset.stage = String(currentStage);
-            icon.innerHTML = Farm.cropArt.svg(plot.crop, currentStage, 50);
+            icon.innerHTML = Farm.cropArt.svg(plot.crop, currentStage, currentStage >= 2 ? 80 : 62);
           }
         }
       });
