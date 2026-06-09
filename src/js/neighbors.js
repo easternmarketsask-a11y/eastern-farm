@@ -159,15 +159,22 @@
       if (Farm.fbGameSync) {
         try {
           const rows = await Farm.fbGameSync.fetchLeaderboard(metric, 10);
-          list = rows.map(r => ({
-            uid: r.uid,
-            name: Farm.fbGameSync.displayName(r.doc),
-            emoji: avatarFor(r.uid),
-            level: r.level,
-            value: r.value,
-            isSelf: r.uid === (Farm.fbAuth && Farm.fbAuth.uid()),
-            online: Farm.fbGameSync.onlineStatus(r.doc),
-          }));
+          const myId = Farm.fbAuth && (Farm.fbAuth.memberDocId ? Farm.fbAuth.memberDocId() : Farm.fbAuth.uid());
+          const thisW = Farm.state.getWeekId ? Farm.state.getWeekId() : null;
+          const lastW = Farm.state.getWeekId ? Farm.state.getWeekId(new Date(Date.now() - 7 * 86400000)) : null;
+          list = rows.map(r => {
+            const cw = r.doc && r.doc.gameStats && r.doc.gameStats.championWeek;
+            return {
+              uid: r.uid,
+              name: Farm.fbGameSync.displayName(r.doc),
+              emoji: avatarFor(r.uid),
+              level: r.level,
+              value: r.value,
+              isSelf: r.uid === myId,
+              champion: !!cw && (cw === thisW || cw === lastW),
+              online: Farm.fbGameSync.onlineStatus(r.doc),
+            };
+          });
           // Self-rank (if not in top 10)
           if (Farm.fbAuth && Farm.fbAuth.isLoggedIn()) {
             this._selfRank = await Farm.fbGameSync.fetchSelfRank(metric);
@@ -343,7 +350,7 @@
               <div class="leaderboard-row ${m.isSelf ? 'is-self' : ''}">
                 <span class="lb-rank">${medal}</span>
                 <span class="lb-avatar">${m.emoji}${onlineDot}</span>
-                <span class="lb-name">${m.name}${m.isSelf ? ' <span class="lb-you">(你)</span>' : ''}</span>
+                <span class="lb-name">${m.champion ? '👑 ' : ''}${m.name}${m.isSelf ? ' <span class="lb-you">(你)</span>' : ''}</span>
                 <span class="lb-level">${m.value}</span>
               </div>
             `;
