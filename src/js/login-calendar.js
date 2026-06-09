@@ -31,9 +31,11 @@
 
   function rewardLine(r, lang) {
     const parts = [];
-    if (r.coins) parts.push((lang === 'en' ? '+' : '+') + r.coins + '🪙');
-    if (r.ep) parts.push('+' + r.ep + '🎫');
-    if (r.seeds) parts.push((lang === 'en' ? '+' + r.seeds + ' seeds 🌱' : '+' + r.seeds + ' 种子 🌱'));
+    // Use the project's standard currency icons (same as HUD / toasts /
+    // float text), NOT raw 🪙/🎫 emoji which render inconsistently.
+    if (r.coins) parts.push('+' + r.coins + '<span class="coin-icon"></span>');
+    if (r.ep) parts.push('+' + r.ep + '<span class="points-icon"></span>');
+    if (r.seeds) parts.push('+' + r.seeds + (lang === 'en' ? ' seeds 🌱' : ' 种子 🌱'));
     return parts.join(' ');
   }
 
