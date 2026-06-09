@@ -147,7 +147,7 @@
       return this._todayList;
     },
 
-    _leaderboardMetric: 'level',  // 'level' | 'harvests' | 'deliveries'
+    _leaderboardMetric: 'weekly',  // 'weekly' | 'level' | 'harvests' | 'deliveries'
     _selfRank: null,
 
     async _fetchLeaderboard(metric) {
@@ -307,12 +307,14 @@
       } else if (tab === 'leaderboard') {
         const metric = this._leaderboardMetric;
         const metricLabels = {
+          weekly:     lang === 'en' ? 'This Week'   : '本周',
           level:      lang === 'en' ? 'Level'       : '等级',
           harvests:   lang === 'en' ? 'Harvests'    : '收获数',
           deliveries: lang === 'en' ? 'Deliveries'  : '卖货次数',
         };
         const metricTabs = `
           <div class="lb-metric-tabs">
+            <button class="lb-metric ${metric === 'weekly' ? 'active' : ''}" data-lb-metric="weekly">🔥 ${metricLabels.weekly}</button>
             <button class="lb-metric ${metric === 'level' ? 'active' : ''}" data-lb-metric="level">🏅 ${metricLabels.level}</button>
             <button class="lb-metric ${metric === 'harvests' ? 'active' : ''}" data-lb-metric="harvests">🌾 ${metricLabels.harvests}</button>
             <button class="lb-metric ${metric === 'deliveries' ? 'active' : ''}" data-lb-metric="deliveries">🏪 ${metricLabels.deliveries}</button>

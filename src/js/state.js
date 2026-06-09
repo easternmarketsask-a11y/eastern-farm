@@ -37,6 +37,8 @@
       variety: [],
       coinsSpent: 0,
     },
+    weeklyHarvests: 0,          // harvests in the current week (weekly leaderboard)
+    weekId: '',                 // Monday-date id the weeklyHarvests count belongs to
     dailyTasks: [],  // [{id, type, target, progress, claimed}, ...]
     weeklyTask: null,
     completedAchievements: [],
@@ -135,6 +137,15 @@
   function getDateString(d) {
     d = d || new Date();
     return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  }
+
+  // Week identifier = the local Monday's date string (YYYY-MM-DD). Used by the
+  // weekly leaderboard so a "week" is a clear Mon–Sun bucket.
+  function getWeekId(d) {
+    d = d || new Date();
+    const dow = (d.getDay() + 6) % 7;   // 0=Mon … 6=Sun
+    const monday = new Date(d.getFullYear(), d.getMonth(), d.getDate() - dow);
+    return getDateString(monday);
   }
 
   // ============ Level progression (open-ended) ============
@@ -688,6 +699,10 @@
       const s = this.data.sessionStats;
       s.harvested[cropId] = (s.harvested[cropId] || 0) + 1;
       this.data.totalHarvests = (this.data.totalHarvests || 0) + 1;
+      // Weekly leaderboard counter — reset when the week rolls over.
+      const wid = getWeekId();
+      if (this.data.weekId !== wid) { this.data.weekId = wid; this.data.weeklyHarvests = 0; }
+      this.data.weeklyHarvests = (this.data.weeklyHarvests || 0) + 1;
       if (festivalId) {
         this.data.festivalHarvests = this.data.festivalHarvests || {};
         this.data.festivalHarvests[festivalId] = (this.data.festivalHarvests[festivalId] || 0) + 1;
@@ -744,6 +759,7 @@
     },
 
     getDateString,
+    getWeekId,
   };
 
   window.Farm = window.Farm || {};

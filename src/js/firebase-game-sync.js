@@ -42,6 +42,8 @@
         level: s.level || 1,
         totalHarvests: s.totalHarvests || 0,
         totalDeliveries: s.totalDeliveries || 0,
+        weeklyHarvests: s.weeklyHarvests || 0,
+        weekId: s.weekId || '',
         nickname: s.nickname || null,
         visibleToNeighbors: s.visibleToNeighbors == null
           ? PRIVACY_DEFAULT_VISIBLE
@@ -283,12 +285,16 @@
         level: 'gameStats.level',
         harvests: 'gameStats.totalHarvests',
         deliveries: 'gameStats.totalDeliveries',
+        weekly: 'gameStats.weeklyHarvests',
       };
       const field = fieldMap[metric] || fieldMap.level;
+      const curWeek = (metric === 'weekly' && Farm.state.getWeekId) ? Farm.state.getWeekId() : null;
       try {
+        // Fetch extra rows when weekly so client-side week filtering still
+        // leaves a full top list.
         const q = await Farm.fb.db.collection('members')
           .orderBy(field, 'desc')
-          .limit(topN)
+          .limit(metric === 'weekly' ? topN * 3 : topN)
           .get();
         const list = [];
         q.forEach(d => {
@@ -296,12 +302,18 @@
           const stats = data.gameStats || {};
           if (stats.visibleToNeighbors === false) return;
           if (!stats.level) return;
+          // Weekly board: only count players whose counter is for THIS week.
+          if (metric === 'weekly') {
+            if (stats.weekId !== curWeek) return;
+            if (!(stats.weeklyHarvests > 0)) return;
+          }
           const value = metric === 'level' ? (stats.level || 0)
                       : metric === 'harvests' ? (stats.totalHarvests || 0)
+                      : metric === 'weekly' ? (stats.weeklyHarvests || 0)
                       : (stats.totalDeliveries || 0);
           list.push({ uid: d.id, doc: data, level: stats.level || 1, value });
         });
-        return list;
+        return list.slice(0, topN);
       } catch (e) {
         console.warn('[gameSync] fetchLeaderboard failed', e);
         return [];
@@ -321,13 +333,16 @@
         level: 'gameStats.level',
         harvests: 'gameStats.totalHarvests',
         deliveries: 'gameStats.totalDeliveries',
+        weekly: 'gameStats.weeklyHarvests',
       };
       const field = fieldMap[metric] || fieldMap.level;
+      const curWeek = (metric === 'weekly' && Farm.state.getWeekId) ? Farm.state.getWeekId() : null;
       try {
         const myDoc = await Farm.fb.db.collection('members').doc(uid).get();
         const myStats = (myDoc.exists && myDoc.data().gameStats) || {};
         const myValue = metric === 'level' ? (myStats.level || 1)
                       : metric === 'harvests' ? (myStats.totalHarvests || 0)
+                      : metric === 'weekly' ? (myStats.weeklyHarvests || 0)
                       : (myStats.totalDeliveries || 0);
         // Count members with HIGHER value (those ranked above me)
         const q = await Farm.fb.db.collection('members')
@@ -338,6 +353,7 @@
         q.forEach(d => {
           const s = d.data().gameStats || {};
           if (s.visibleToNeighbors === false) return;
+          if (metric === 'weekly' && s.weekId !== curWeek) return;
           above++;
         });
         return { rank: above + 1, myValue, capped: above >= 100 };
