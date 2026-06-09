@@ -24,6 +24,16 @@
   let _lastSyncAt = 0;
   let _pendingTimer = null;
 
+  // "Me": the REAL member doc id (store-keyed). All game data for the current
+  // player must read/write this doc — NOT doc(authUid), which created the
+  // legacy orphan docs. Other players are addressed by ids from queries, which
+  // are real member doc ids once gameStats live on the real docs.
+  function meId() {
+    if (!(window.Farm && Farm.fbAuth)) return null;
+    if (Farm.fbAuth.memberDocId) return Farm.fbAuth.memberDocId();
+    return Farm.fbAuth.uid ? Farm.fbAuth.uid() : null;
+  }
+
   const gameSync = {
     // Compute the gameStats payload from local state. Pure function.
     _buildPayload() {
@@ -46,7 +56,7 @@
     async push() {
       if (!Farm.fb || !Farm.fb.available) return { ok: false, reason: 'offline' };
       if (!Farm.fbAuth || !Farm.fbAuth.isLoggedIn()) return { ok: false, reason: 'not_logged_in' };
-      const uid = Farm.fbAuth.uid();
+      const uid = meId();
       if (!uid) return { ok: false, reason: 'no_uid' };
       try {
         const payload = this._buildPayload();
@@ -97,7 +107,7 @@
     async fetchVisiblePool(limit = 30) {
       if (!Farm.fb || !Farm.fb.available) return [];
       try {
-        const meUid = Farm.fbAuth && Farm.fbAuth.uid();
+        const meUid = Farm.fbAuth && meId();
         // Note: Firestore can't query for "field exists" + "field is true"
         // in one query without composite index, so we filter visibility
         // client-side. Order by lastSeenAt to surface recently-active players.
@@ -173,7 +183,7 @@
       // this is a return-like — both get a bonus.
       let isMutual = false;
       try {
-        const myUid = Farm.fbAuth && Farm.fbAuth.uid();
+        const myUid = Farm.fbAuth && meId();
         if (myUid) {
           const me = await Farm.fb.db.collection('members').doc(myUid).get();
           const mine = (me.exists && me.data().gameStats) || {};
@@ -186,7 +196,7 @@
       // Recipient atomic updates: counter + likedBy arrayUnion
       if (Farm.fb && Farm.fb.available) {
         try {
-          const myUid = Farm.fbAuth && Farm.fbAuth.uid();
+          const myUid = Farm.fbAuth && meId();
           const payload = {
             gameStats: {
               likesReceived: Farm.fb.increment(1),
@@ -218,7 +228,7 @@
     // Awards up to DAILY_LIKE_CAP EP per day for received likes.
     async reconcileReceivedLikes() {
       if (!Farm.fb || !Farm.fb.available || !Farm.fbAuth || !Farm.fbAuth.isLoggedIn()) return null;
-      const uid = Farm.fbAuth.uid();
+      const uid = meId();
       if (!uid) return null;
       try {
         const snap = await Farm.fb.db.collection('members').doc(uid).get();
@@ -305,7 +315,7 @@
     async fetchSelfRank(metric) {
       metric = metric || 'level';
       if (!Farm.fb || !Farm.fb.available || !Farm.fbAuth || !Farm.fbAuth.isLoggedIn()) return null;
-      const uid = Farm.fbAuth.uid();
+      const uid = meId();
       if (!uid) return null;
       const fieldMap = {
         level: 'gameStats.level',
@@ -357,7 +367,7 @@
         // Block adding members who haven't started the game yet
         if (!stats.level) return { found: false, reason: 'not_playing' };
         // Block adding yourself
-        const myUid = Farm.fbAuth && Farm.fbAuth.uid();
+        const myUid = Farm.fbAuth && meId();
         if (doc.id === myUid) return { found: false, reason: 'self' };
         return { found: true, member: { uid: doc.id, doc: data } };
       } catch (e) {
@@ -376,7 +386,7 @@
       Farm.state.save();
       // Also write to server (in case the user wants to access from another device)
       try {
-        const myUid = Farm.fbAuth && Farm.fbAuth.uid();
+        const myUid = Farm.fbAuth && meId();
         if (myUid) {
           await Farm.fb.db.collection('members').doc(myUid).set(
             { gameStats: { friends: firebase.firestore.FieldValue.arrayUnion(uid) } },
@@ -392,7 +402,7 @@
       Farm.state.data.friends = list;
       Farm.state.save();
       try {
-        const myUid = Farm.fbAuth && Farm.fbAuth.uid();
+        const myUid = Farm.fbAuth && meId();
         if (myUid) {
           await Farm.fb.db.collection('members').doc(myUid).set(
             { gameStats: { friends: firebase.firestore.FieldValue.arrayRemove(uid) } },
@@ -432,7 +442,7 @@
           ? 'You already sent a gift today. Try again tomorrow!'
           : '今天的免费礼物已送，明天再来吧！' };
       }
-      const myUid = Farm.fbAuth && Farm.fbAuth.uid();
+      const myUid = Farm.fbAuth && meId();
       if (!myUid) return { ok: false, reason: 'not_logged_in' };
       const fromName = (Farm.fbAuth.memberDoc &&
         (Farm.fbAuth.memberDoc.gameStats && Farm.fbAuth.memberDoc.gameStats.nickname
@@ -477,7 +487,7 @@
     // auth lands. Returns array of claimed gifts for UI feedback.
     async reconcileGifts() {
       if (!Farm.fb || !Farm.fb.available || !Farm.fbAuth || !Farm.fbAuth.isLoggedIn()) return [];
-      const uid = Farm.fbAuth.uid();
+      const uid = meId();
       if (!uid) return [];
       try {
         const snap = await Farm.fb.db.collection('members').doc(uid).get();

@@ -33,7 +33,11 @@
     try { localStorage.setItem(DISMISS_KEY, '1'); } catch (e) {}
   }
   function uid() {
-    return (window.Farm && Farm.fbAuth && Farm.fbAuth.uid && Farm.fbAuth.uid()) || null;
+    // Real member doc id (store-keyed) so push tokens land on the member doc,
+    // not an orphan doc(authUid). Falls back to auth uid if no member doc.
+    if (!(window.Farm && Farm.fbAuth)) return null;
+    if (Farm.fbAuth.memberDocId) return Farm.fbAuth.memberDocId();
+    return Farm.fbAuth.uid ? Farm.fbAuth.uid() : null;
   }
   function supported() {
     try {

@@ -152,22 +152,26 @@
 
     isLoggedIn() { return !!this.currentUser; },
     uid() { return this.currentUser ? this.currentUser.uid : null; },
+    // Real member doc id (store-keyed; firebase_uid is a FIELD on it). ALL game
+    // data (gameStats, push tokens, social) must be written here — NOT to
+    // doc(uid), which would create an orphan doc with no name/phone. Falls back
+    // to uid only when no member doc resolved (shouldn't happen once logged in).
+    memberDocId() { return (this.memberDoc && this.memberDoc.id) || this.uid(); },
     onChange(cb) { this.listeners.push(cb); },
     _notify() { this.listeners.forEach(cb => { try { cb(this.currentUser, this.memberDoc); } catch (e) {} }); },
 
     async _loadMemberDoc(uid) {
       try {
-        const direct = await Farm.fb.db.collection('members').doc(uid).get();
-        if (direct.exists) {
-          this.memberDoc = { id: direct.id, ...direct.data() };
+        // Prefer the REAL member doc (keyed by store id, with firebase_uid as a
+        // field). We must look this up FIRST — falling back to doc(uid) would
+        // pick up the legacy orphan gameStats doc (no name/phone) instead.
+        const q = await Farm.fb.db.collection('members').where('firebase_uid', '==', uid).limit(1).get();
+        if (!q.empty) {
+          const d = q.docs[0];
+          this.memberDoc = { id: d.id, ...d.data() };
         } else {
-          const q = await Farm.fb.db.collection('members').where('firebase_uid', '==', uid).limit(1).get();
-          if (!q.empty) {
-            const d = q.docs[0];
-            this.memberDoc = { id: d.id, ...d.data() };
-          } else {
-            this.memberDoc = null;
-          }
+          const direct = await Farm.fb.db.collection('members').doc(uid).get();
+          this.memberDoc = direct.exists ? { id: direct.id, ...direct.data() } : null;
         }
       } catch (e) {
         console.warn('member doc load failed', e);
