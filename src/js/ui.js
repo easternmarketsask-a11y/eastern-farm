@@ -275,6 +275,32 @@
       setTimeout(() => layer.remove(), duration + 800);
     },
 
+    // Golden coin rain — harvest payoff celebration. Reuses the confetti
+    // layer/animation but rains coins (and a few sparkles) instead of party
+    // shapes, so the player feels the "I just made money" moment. `intensity`
+    // (1–3) scales how many coins fall.
+    coinBurst(intensity) {
+      intensity = Math.max(1, Math.min(3, intensity || 1));
+      const count = 10 + intensity * 8;
+      const layer = document.createElement('div');
+      layer.className = 'confetti-layer';
+      document.body.appendChild(layer);
+      const glyphs = ['🪙', '🪙', '🪙', '💰', '✨', '🌟'];
+      for (let i = 0; i < count; i++) {
+        const piece = document.createElement('span');
+        piece.className = 'confetti-piece';
+        piece.textContent = glyphs[Math.floor(Math.random() * glyphs.length)];
+        piece.style.fontSize = (16 + Math.floor(Math.random() * 12)) + 'px';
+        piece.style.left = (Math.random() * 100) + '%';
+        piece.style.animationDuration = (1.1 + Math.random() * 1.3) + 's';
+        piece.style.animationDelay = (Math.random() * 0.35) + 's';
+        piece.style.setProperty('--end-rot', (Math.random() * 360 - 180) + 'deg');
+        piece.style.setProperty('--end-x', (Math.random() * 60 - 30) + 'px');
+        layer.appendChild(piece);
+      }
+      setTimeout(() => layer.remove(), 2600);
+    },
+
     // Animate the level number from old → new over ~700ms (eases nicely
     // because the user is reading the modal at the same time).
     _animateLevelCount(from, to) {

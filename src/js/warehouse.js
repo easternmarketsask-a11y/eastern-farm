@@ -164,6 +164,7 @@
       Farm.ui.hideModal();
       Farm.ui.refreshHUD();
       this.refreshBadge();
+      if (Farm.harvestStatus) Farm.harvestStatus.render();
       if (Farm.audio) Farm.audio.play('achievement');
       Farm.ui.toast(lang === 'en'
         ? `🏗 Silo expanded to ${result.newCapacity}! -<span class="coin-icon"></span>${result.cost}`
@@ -198,6 +199,8 @@
 
       // Update the warehouse badge on the topbar / nav
       if (this.refreshBadge) this.refreshBadge();
+      // Silo now has room → clear any "仓库满了" state on the harvest bar.
+      if (Farm.harvestStatus) Farm.harvestStatus.render();
 
       // Fire tasks event so future "deliver N times today" tasks can hook
       if (Farm.tasks && Farm.tasks.onEvent) {
