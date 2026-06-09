@@ -76,6 +76,16 @@
     // so they're not hidden under the splash overlay.
     wireNav();
     wireTodayButton();
+    // Tap the Lv/title status strip to open the growth roadmap (成长之路).
+    const statusbarEl = document.getElementById('statusbar');
+    if (statusbarEl) {
+      statusbarEl.style.cursor = 'pointer';
+      statusbarEl.addEventListener('click', () => {
+        _collectionTab = 'journey';
+        if (Farm.audio) Farm.audio.play('tap');
+        openCollection();
+      });
+    }
     wireSplash(() => {
       checkDailyLogin();
       Farm.achievements.checkAll();
@@ -291,6 +301,17 @@
         kind: 'plot',
         labelZh: '🏞 +' + count + ' 块地',
         labelEn: '🏞 +' + count + ' plot' + (count > 1 ? 's' : ''),
+      });
+    });
+    // Crop-unlock milestones — the strongest "what's next" carrot in the genre.
+    ((Farm.crops && Farm.crops.all && Farm.crops.all()) || []).forEach(function (c) {
+      const lv = c.unlock_level || 1;
+      const icon = c.icon || '🥬';
+      milestones.push({
+        level: lv,
+        kind: 'crop',
+        labelZh: icon + ' 解锁「' + (c.name_zh || c.id) + '」',
+        labelEn: icon + ' Unlock ' + (c.name_en || c.id),
       });
     });
     milestones.sort(function (a, b) {

@@ -229,6 +229,15 @@ body {
   padding: 5px 14px;
   background: linear-gradient(180deg, transparent 0%, #faf0d8 100%);
   border-top: 1px solid var(--border-soft);
+  cursor: pointer;
+}
+/* affordance: tap the strip to open the growth roadmap (成长之路) */
+.statusbar::after {
+  content: '🌱›';
+  margin-left: 2px;
+  font-size: 13px;
+  color: var(--warm-text-soft);
+  flex-shrink: 0;
 }
 .status-level {
   font-family: var(--font-display);
