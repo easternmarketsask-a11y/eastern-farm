@@ -214,9 +214,9 @@
         slot.innerHTML = `<button class="member-btn member-btn--in" id="memberBtnInner" title="${lang === 'en' ? 'Member: ' : '会员: '}${safeName}">🌱<span class="member-name">${safeName}</span></button>`;
         document.getElementById('memberBtnInner').onclick = () => this.openMenu();
       } else {
-        const title = lang === 'en' ? 'Sign in' : '登录';
+        const title = lang === 'en' ? 'Account' : '账户';
         slot.innerHTML = `<button class="member-btn" id="memberBtnInner" title="${title}">👤</button>`;
-        document.getElementById('memberBtnInner').onclick = () => this.openLoginModal();
+        document.getElementById('memberBtnInner').onclick = () => this.openGuestMenu();
       }
     },
 
@@ -693,17 +693,46 @@
             ${lang === 'en' ? 'Synced with Eastern Market account' : '已与东方超市会员账户同步'}
           </div>
         </div>
+        <button class="btn secondary" id="memberSettingsBtn" style="width:100%;margin-bottom:8px;">⚙️ ${Farm.i18n.t('settings_title')}</button>
         <div class="btn-row">
           <button class="btn secondary" onclick="Farm.ui.hideModal()">${Farm.i18n.t('btn_close')}</button>
           <button class="btn" id="memberLogoutBtn" style="background:#999;">${lang === 'en' ? 'Sign out' : '退出登录'}</button>
         </div>
       `;
       Farm.ui.showModal(html);
+      const settingsBtn = document.getElementById('memberSettingsBtn');
+      if (settingsBtn) settingsBtn.onclick = () => {
+        Farm.ui.hideModal();
+        if (Farm.openSettings) Farm.openSettings();
+      };
       document.getElementById('memberLogoutBtn').onclick = async () => {
         await Farm.fb.auth.signOut();
         Farm.ui.hideModal();
         Farm.ui.toast(lang === 'en' ? 'Signed out' : '已退出登录', 1800);
       };
+    },
+
+    // Logged-out tap on the 👤 button: a tiny menu offering Sign in (primary)
+    // + Settings. Settings used to live in the bottom nav; it now hangs off
+    // the account button so logged-out players can still reach language/sound.
+    openGuestMenu() {
+      const lang = Farm.state.data.language;
+      const html = `
+        <h2 class="modal-title">👤 ${lang === 'en' ? 'Account' : '账户'}</h2>
+        <p class="modal-subtitle">${lang === 'en'
+          ? 'Sign in with your Eastern Market membership to save progress & earn points.'
+          : '用东方超市会员登录，存档同步、还能赚超市积分。'}</p>
+        <button class="btn" id="guestSignInBtn" style="width:100%;margin-bottom:8px;">📱 ${lang === 'en' ? 'Sign in' : '会员登录'}</button>
+        <button class="btn secondary" id="guestSettingsBtn" style="width:100%;margin-bottom:8px;">⚙️ ${Farm.i18n.t('settings_title')}</button>
+        <div class="btn-row">
+          <button class="btn secondary" onclick="Farm.ui.hideModal()">${Farm.i18n.t('btn_close')}</button>
+        </div>
+      `;
+      Farm.ui.showModal(html);
+      const signInBtn = document.getElementById('guestSignInBtn');
+      if (signInBtn) signInBtn.onclick = () => { Farm.ui.hideModal(); this.openLoginModal(); };
+      const setBtn = document.getElementById('guestSettingsBtn');
+      if (setBtn) setBtn.onclick = () => { Farm.ui.hideModal(); if (Farm.openSettings) Farm.openSettings(); };
     },
   };
 

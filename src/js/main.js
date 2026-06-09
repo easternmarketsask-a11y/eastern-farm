@@ -214,6 +214,11 @@
     });
   }
 
+  // Settings left the bottom nav (now reached via the 👤 account button, both
+  // logged-in and logged-out). Expose it so firebase-auth.js can open it.
+  window.Farm = window.Farm || {};
+  Farm.openSettings = openSettings;
+
   let _collectionTab = 'crops';  // 'crops' | 'achievements' | 'journey'
 
   function openCollection() {
