@@ -30,9 +30,20 @@
     },
 
     // ============ Purchase flow ============
+    // Items priced with `cost_coins` are bought with 农场币; otherwise `cost_ep`
+    // (超市积分). Returns { amount, currency: 'coins' | 'ep' }.
+    priceOf(item) {
+      if (item.cost_coins != null) return { amount: item.cost_coins, currency: 'coins' };
+      return { amount: item.cost_ep || 0, currency: 'ep' };
+    },
+
     canBuy(item) {
       const data = Farm.state.data;
-      if (data.eastPoints < item.cost_ep) return { ok: false, reason: 'insufficient_ep' };
+      const price = this.priceOf(item);
+      const balance = price.currency === 'coins' ? data.coins : data.eastPoints;
+      if (balance < price.amount) {
+        return { ok: false, reason: price.currency === 'coins' ? 'insufficient_coins' : 'insufficient_ep' };
+      }
       if (item.kind === 'extra_plot' && data.extraPlots >= (item.max_owned || 4)) {
         return { ok: false, reason: 'max_owned' };
       }
@@ -46,15 +57,17 @@
       const can = this.canBuy(item);
       if (!can.ok) return can;
 
-      // Guard: spendEastPoints can return false if balance was concurrently
-      // reduced (e.g. by Firebase pull updating state.eastPoints between
-      // canBuy and spend). Without this check, the effect would still apply
-      // and the player gets a free item. defense-in-depth.
-      const spent = Farm.state.spendEastPoints(item.cost_ep, {
-        source: 'ep_shop:' + item.id,
-        description: '积分商城: ' + (item.name_zh || item.id),
-      });
-      if (!spent) return { ok: false, reason: 'insufficient_ep' };
+      // Guard: spend can return false if the balance was concurrently reduced
+      // (e.g. a Firebase pull updating state between canBuy and spend). Without
+      // this the effect would still apply and the player gets a free item.
+      const price = this.priceOf(item);
+      const spent = price.currency === 'coins'
+        ? Farm.state.spendCoins(price.amount)
+        : Farm.state.spendEastPoints(price.amount, {
+            source: 'ep_shop:' + item.id,
+            description: '商城: ' + (item.name_zh || item.id),
+          });
+      if (!spent) return { ok: false, reason: price.currency === 'coins' ? 'insufficient_coins' : 'insufficient_ep' };
       const effect = this._apply(item, opts);
       Farm.ui.refreshHUD();
       if (Farm.audio) Farm.audio.play('coin');
@@ -151,6 +164,7 @@
       const lang = Farm.state.data.language;
       const nameKey = lang === 'en' ? 'name_en' : 'name_zh';
       const descKey = lang === 'en' ? 'desc_en' : 'desc_zh';
+      const coins = Farm.state.data.coins;
       const balance = Farm.state.data.eastPoints;
 
       const groups = { consumable: [], pet: [], decoration: [], upgrade: [] };
@@ -171,10 +185,12 @@
         const ownedBadge = owned > 0
           ? `<div class="ep-shop-owned">×${owned}</div>` : '';
         const disabled = !can.ok ? 'disabled' : '';
+        const price = this.priceOf(it);
+        const curIcon = price.currency === 'coins' ? 'coin-icon' : 'points-icon';
         const buttonLabel = can.ok
-          ? `${it.cost_ep} <span class="points-icon"></span>`
+          ? `${price.amount} <span class="${curIcon}"></span>`
           : (can.reason === 'max_owned' ? (lang === 'en' ? 'MAX' : '已满')
-                                         : (lang === 'en' ? 'Not enough' : '积分不足'));
+                                         : (lang === 'en' ? 'Not enough' : '不够'));
         return `
           <div class="ep-shop-card ${disabled}" data-id="${it.id}">
             ${ownedBadge}
@@ -201,9 +217,11 @@
       });
 
       const html = `
-        <h2 class="modal-title">🛍️ ${lang === 'en' ? 'EP Shop' : '积分商城'}</h2>
+        <h2 class="modal-title">🛍️ ${lang === 'en' ? 'Shop' : '商城'}</h2>
         <div class="ep-shop-balance">
-          ${lang === 'en' ? 'Your balance' : '余额'}: <strong><span class="points-icon"></span> ${balance}</strong>
+          <strong><span class="coin-icon"></span> ${coins}</strong>
+          &nbsp;&nbsp;
+          <strong><span class="points-icon"></span> ${balance}</strong>
         </div>
         ${body}
         <div class="btn-row">

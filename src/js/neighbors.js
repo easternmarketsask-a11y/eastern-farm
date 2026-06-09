@@ -287,7 +287,7 @@
         const progressHtml = `
           <div class="neighbor-progress-wrap">
             <div class="neighbor-progress-text">
-              <span>${lang === 'en' ? 'Visit 3 → +5 <span class="points-icon"></span>' : '走访 3 户 → +5 <span class="points-icon"></span>'}</span>
+              <span>${lang === 'en' ? 'Visit 3 → +40 <span class="coin-icon"></span>' : '走访 3 户 → +40 <span class="coin-icon"></span>'}</span>
               <span class="neighbor-progress-count">${visited.length}/3</span>
             </div>
             <div class="neighbor-progress-bar"><div class="neighbor-progress-fill" style="width:${visitPct}%;"></div></div>
@@ -427,15 +427,12 @@
       if (wasNew) {
         const visited = Farm.state.data.dailyClaims.neighborsVisited;
         if (visited.length === 3) {
-          Farm.state.addEastPoints(5, {
-            source: 'neighbor_visit_complete',
-            description: 'Visited 3 neighbors today',
-          });
+          Farm.state.addCoins(40);
           Farm.ui.refreshHUD();
           setTimeout(() => {
             Farm.ui.toast(lang === 'en'
-              ? '🎉 Visited 3 neighbors! +5 <span class="points-icon"></span>'
-              : '🎉 走访 3 户完成 +5 <span class="points-icon"></span>', 3000);
+              ? '🎉 Visited 3 neighbors! +40 <span class="coin-icon"></span>'
+              : '🎉 走访 3 户完成 +40 <span class="coin-icon"></span>', 3000);
             if (Farm.audio) Farm.audio.play('achievement');
           }, 400);
         }

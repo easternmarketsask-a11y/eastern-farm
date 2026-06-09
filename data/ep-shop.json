@@ -1,6 +1,6 @@
 {
-  "_comment": "Eastern Point shop catalog. id is save-stable (don't rename). 'kind' drives the purchase effect — see ep-shop.js apply(). 'category' groups in UI.",
-  "_schema_version": 1,
+  "_comment": "Shop catalog. id is save-stable (don't rename). 'kind' drives the purchase effect — see ep-shop.js _apply(). 'category' groups in UI. Price currency: items with 'cost_coins' are bought with 农场币 (farm coins); items with 'cost_ep' are bought with 超市积分 (East Points). Decorations/pets render on the farm via 'decoration_emoji'.",
+  "_schema_version": 2,
   "items": [
     {
       "id": "acceleration_ticket",
@@ -13,6 +13,18 @@
       "stock_key": "accelerationCharges",
       "desc_zh": "瞬间让一块地的作物成熟。用完即消。",
       "desc_en": "Instantly mature one crop. One-shot consumable."
+    },
+    {
+      "id": "fertilizer",
+      "name_zh": "化肥",
+      "name_en": "Fertilizer",
+      "icon": "🌾",
+      "cost_coins": 60,
+      "category": "consumable",
+      "kind": "stack_consumable",
+      "stock_key": "accelerationCharges",
+      "desc_zh": "立即催熟一块地的作物，用农场币买，用完即消。",
+      "desc_en": "Instantly mature one crop. Bought with farm coins, one-shot."
     },
     {
       "id": "lottery_ticket",
@@ -35,6 +47,78 @@
       "kind": "festival_seeds",
       "desc_zh": "5 包随机节日限定种子（水仙/年橘/芋头/柚子/桂花），平时也能种。",
       "desc_en": "5 random festival seeds (narcissus, kumquat, taro, pomelo, osmanthus) — plant any time."
+    },
+    {
+      "id": "deco_sunflower",
+      "name_zh": "向日葵",
+      "name_en": "Sunflower",
+      "icon": "🌻",
+      "decoration_emoji": "🌻",
+      "cost_coins": 120,
+      "category": "decoration",
+      "kind": "decoration",
+      "desc_zh": "永久装饰品。一株朝着太阳的向日葵。",
+      "desc_en": "Permanent decoration. A sunflower turning toward the sun."
+    },
+    {
+      "id": "deco_fence",
+      "name_zh": "木栅栏",
+      "name_en": "Wooden Fence",
+      "icon": "🪵",
+      "decoration_emoji": "🪵",
+      "cost_coins": 150,
+      "category": "decoration",
+      "kind": "decoration",
+      "desc_zh": "永久装饰品。给农场围一圈温馨的木栅栏。",
+      "desc_en": "Permanent decoration. A cozy wooden fence."
+    },
+    {
+      "id": "deco_bamboo",
+      "name_zh": "翠竹",
+      "name_en": "Bamboo",
+      "icon": "🎋",
+      "decoration_emoji": "🎋",
+      "cost_coins": 200,
+      "category": "decoration",
+      "kind": "decoration",
+      "desc_zh": "永久装饰品。一丛清雅的翠竹。",
+      "desc_en": "Permanent decoration. A graceful cluster of bamboo."
+    },
+    {
+      "id": "deco_fountain",
+      "name_zh": "小喷泉",
+      "name_en": "Fountain",
+      "icon": "⛲",
+      "decoration_emoji": "⛲",
+      "cost_coins": 400,
+      "category": "decoration",
+      "kind": "decoration",
+      "desc_zh": "永久装饰品。潺潺水声的小喷泉。",
+      "desc_en": "Permanent decoration. A gently bubbling fountain."
+    },
+    {
+      "id": "deco_cabin",
+      "name_zh": "小木屋",
+      "name_en": "Cabin",
+      "icon": "🛖",
+      "decoration_emoji": "🛖",
+      "cost_coins": 600,
+      "category": "decoration",
+      "kind": "decoration",
+      "desc_zh": "永久装饰品。农场角落的温馨小木屋。",
+      "desc_en": "Permanent decoration. A cozy little cabin in the corner."
+    },
+    {
+      "id": "deco_rainbow",
+      "name_zh": "彩虹拱门",
+      "name_en": "Rainbow Arch",
+      "icon": "🌈",
+      "decoration_emoji": "🌈",
+      "cost_coins": 800,
+      "category": "decoration",
+      "kind": "decoration",
+      "desc_zh": "永久装饰品。雨后挂在农场上的彩虹。",
+      "desc_en": "Permanent decoration. A rainbow arching over your farm."
     },
     {
       "id": "decoration_lantern",
@@ -61,6 +145,42 @@
       "desc_en": "Permanent decoration. A gentle spinning pinwheel."
     },
     {
+      "id": "pet_chick",
+      "name_zh": "小鸡",
+      "name_en": "Chick",
+      "icon": "🐤",
+      "decoration_emoji": "🐤",
+      "cost_coins": 350,
+      "category": "pet",
+      "kind": "decoration",
+      "desc_zh": "永久陪伴。在农场里蹦蹦跳跳的小鸡。",
+      "desc_en": "A permanent companion. A chick hopping around your farm."
+    },
+    {
+      "id": "pet_cat",
+      "name_zh": "小猫",
+      "name_en": "Cat",
+      "icon": "🐱",
+      "decoration_emoji": "🐱",
+      "cost_coins": 500,
+      "category": "pet",
+      "kind": "decoration",
+      "desc_zh": "永久陪伴。慵懒晒太阳的小猫。",
+      "desc_en": "A permanent companion. A cat lazing in the sun."
+    },
+    {
+      "id": "pet_rabbit",
+      "name_zh": "小兔",
+      "name_en": "Rabbit",
+      "icon": "🐰",
+      "decoration_emoji": "🐰",
+      "cost_coins": 600,
+      "category": "pet",
+      "kind": "decoration",
+      "desc_zh": "永久陪伴。在菜地间蹦跶的小兔子。",
+      "desc_en": "A permanent companion. A rabbit hopping among the crops."
+    },
+    {
       "id": "decoration_dog",
       "name_zh": "农场狗狗",
       "name_en": "Farm Dog",
@@ -73,9 +193,21 @@
       "desc_en": "A permanent companion. Wanders around your farm, no utility, pure joy."
     },
     {
+      "id": "extra_plot_coins",
+      "name_zh": "扩展地块（农场币）",
+      "name_en": "Expand Plot (Coins)",
+      "icon": "🏞",
+      "cost_coins": 3000,
+      "category": "upgrade",
+      "kind": "extra_plot",
+      "max_owned": 4,
+      "desc_zh": "永久 +1 块地（最多再加 4 块）。攒农场币也能扩农场。",
+      "desc_en": "Permanently add 1 plot (max +4). Grow your farm with coins too."
+    },
+    {
       "id": "extra_plot",
-      "name_zh": "扩展地块",
-      "name_en": "Expand Plot",
+      "name_zh": "扩展地块（积分）",
+      "name_en": "Expand Plot (Points)",
       "icon": "🏞",
       "cost_ep": 100,
       "category": "upgrade",

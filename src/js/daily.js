@@ -89,7 +89,7 @@
         <div class="daily-card daily-news">
           <div class="daily-card-title">${news[titleKey]}</div>
           <div class="daily-card-body">${news[bodyKey]}</div>
-          ${claims.newsRead ? '' : `<button class="daily-claim" id="dailyReadNews">📰 ${lang === 'en' ? 'Mark read +2<span class="points-icon"></span>' : '已读 +2<span class="points-icon"></span>'}</button>`}
+          ${claims.newsRead ? '' : `<button class="daily-claim" id="dailyReadNews">📰 ${lang === 'en' ? 'Mark read +10<span class="coin-icon"></span>' : '已读 +10<span class="coin-icon"></span>'}</button>`}
         </div>` : '';
 
       const specialHTML = specialCrop ? `
@@ -124,7 +124,7 @@
         <div class="daily-card daily-neighbor">
           <div class="daily-card-title">🏘 ${lang === 'en' ? 'Visit Neighbors' : '邻居走访'}</div>
           <div class="daily-card-body">
-            ${lang === 'en' ? `Visit 3 neighbors today (${visited}/3) → +5 <span class="points-icon"></span>` : `今日走访 3 户邻居 (${visited}/3) → +5 <span class="points-icon"></span>`}
+            ${lang === 'en' ? `Visit 3 neighbors today (${visited}/3) → +40 <span class="coin-icon"></span>` : `今日走访 3 户邻居 (${visited}/3) → +40 <span class="coin-icon"></span>`}
           </div>
           <button class="daily-claim" id="dailyOpenNeighbors">
             ${visitedComplete ? '✅ ' + (lang === 'en' ? 'Done' : '已完成') : '🚪 ' + (lang === 'en' ? 'Visit' : '去走访')}
@@ -165,12 +165,9 @@
       const readBtn = $('dailyReadNews');
       if (readBtn) readBtn.onclick = () => {
         if (Farm.state.claimDailyNews()) {
-          Farm.state.addEastPoints(2, {
-            source: 'news_read',
-            description: '今日新闻已读',
-          });
+          Farm.state.addCoins(10);
           Farm.ui.refreshHUD();
-          Farm.ui.toast(lang === 'en' ? '📰 +2 EP' : '📰 +2 积分', 1800);
+          Farm.ui.toast(lang === 'en' ? '📰 +10 coins' : '📰 +10 农场币', 1800);
           if (Farm.audio) Farm.audio.play('coin');
           setTimeout(() => this.open(), 600);
         }
