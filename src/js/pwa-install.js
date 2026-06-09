@@ -18,6 +18,19 @@
   function isIOS() {
     return /iphone|ipad|ipod/i.test(window.navigator.userAgent) && !window.MSStream;
   }
+  function isIpad() {
+    const ua = window.navigator.userAgent;
+    // iPadOS 13+ reports a desktop (Macintosh) UA but has touch.
+    return /ipad/i.test(ua) || (/Macintosh/i.test(ua) && typeof document !== 'undefined' && 'ontouchend' in document);
+  }
+  // In-app webviews (WeChat etc.) CAN'T add to home screen — players must open
+  // the page in a real browser (Safari/Chrome) first.
+  function isInAppBrowser() {
+    return /MicroMessenger|QQ\/|QQBrowser|Weibo|WeiBo|DingTalk|Quark|UCBrowser|FBAN|FBAV|Instagram|Line\//i.test(window.navigator.userAgent);
+  }
+  function isWeChat() {
+    return /MicroMessenger/i.test(window.navigator.userAgent);
+  }
   function dismissed() {
     try { return localStorage.getItem(DISMISS_KEY) === '1'; } catch (e) { return false; }
   }
@@ -65,18 +78,42 @@
     );
   });
 
-  // iOS: no install event — show a how-to guide instead.
-  function maybeShowIOSGuide() {
-    if (isStandalone() || dismissed() || !isIOS()) return;
+  // Environment-aware "add to home screen" guide (iOS has no install event).
+  function maybeShowGuide() {
+    if (isStandalone() || dismissed()) return;
+
+    // In-app browsers (WeChat/QQ/…) can't add to home screen — guide the user
+    // to open the page in a real browser first. This is the common case since
+    // links are shared in WeChat groups.
+    if (isInAppBrowser()) {
+      showBanner(
+        '<span class="pwa-install-text">' +
+          (en()
+            ? '🌱 To install: open this page in your browser (Safari/Chrome) first — tap the “···” menu → “Open in Browser”.'
+            : (isWeChat()
+                ? '🌱 想加到主屏幕：先点右上角「···」→「在浏览器打开」，再用 Safari 添加到主屏幕。'
+                : '🌱 想加到主屏幕：请先用 Safari/Chrome 打开本页面，再添加到主屏幕。')) +
+        '</span>' +
+        '<button class="pwa-install-close" aria-label="close">✕</button>'
+      );
+      return;
+    }
+
+    if (!isIOS()) return; // Android/desktop use the beforeinstallprompt button
+
+    // On iPhone the Share button is in the bottom toolbar; on iPad it's top.
+    const where = isIpad()
+      ? (en() ? 'the Share button (top bar)' : '顶部「分享」按钮')
+      : (en() ? 'the Share button (bottom bar)' : '底部「分享」按钮');
     showBanner(
       '<span class="pwa-install-text">' +
         (en()
-          ? '🌱 Add to Home Screen: tap Share, then “Add to Home Screen”.'
-          : '🌱 添加到主屏幕：点底部「分享」，选「添加到主屏幕」。') +
+          ? '🌱 Add to Home Screen: tap ' + where + ', then “Add to Home Screen”.'
+          : '🌱 添加到主屏幕：点' + where + '，选「添加到主屏幕」。') +
       '</span>' +
       '<button class="pwa-install-close" aria-label="close">✕</button>'
     );
   }
 
-  window.addEventListener('load', () => { setTimeout(maybeShowIOSGuide, 2500); });
+  window.addEventListener('load', () => { setTimeout(maybeShowGuide, 2500); });
 })();
