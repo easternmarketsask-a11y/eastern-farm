@@ -23,11 +23,10 @@
       const layer = document.getElementById('farmDecorations');
       if (!layer) return;
       layer.innerHTML = '';
-      // Settings toggle: hide pets + balloons + other animated decor
-      if (Farm.state.data.decorationsHidden) return;
+      // Settings toggle: hide pets + static decor from farm view
+      if (Farm.state.data.decorationsHidden) { layer.style.minHeight = '0'; return; }
       if (!Farm.epShop || !Farm.epShop.items.length) return;
       const decos = Farm.state.data.decorations || [];
-      // Find pets (animated) vs static decorations
       const pets = [];
       const statics = [];
       decos.forEach(d => {
@@ -36,25 +35,36 @@
         if (item.category === 'pet') pets.push(item.decoration_emoji);
         else statics.push(item.decoration_emoji);
       });
-      // Static decorations as a row
-      if (statics.length > 0) {
-        const row = document.createElement('div');
-        row.className = 'farm-deco-row';
-        statics.forEach((emoji, i) => {
-          const span = document.createElement('span');
-          span.className = 'farm-deco-static';
-          span.textContent = emoji;
-          span.style.animationDelay = (i * 0.3) + 's';
-          row.appendChild(span);
-        });
-        layer.appendChild(row);
-      }
-      // Pets — each wanders horizontally
+
+      // The decoration layer is a grassy "farmyard" below the fields.
+      // Scatter the static decorations across it at stable (deterministic)
+      // positions so they read like a real, lived-in farm — not a flat row.
+      const hasAny = statics.length > 0 || pets.length > 0;
+      layer.style.minHeight = hasAny ? '150px' : '0';
+
+      statics.forEach((emoji, i) => {
+        const span = document.createElement('span');
+        span.className = 'farm-deco-static';
+        span.textContent = emoji;
+        // Spread horizontally with per-index jitter; stagger over 3 depth tiers
+        // (further-back tier sits higher + slightly smaller = simple depth).
+        const left = 6 + ((i * 31 + (i % 2) * 17) % 80);   // 6%..86%
+        const tier = i % 3;                                 // 0 front .. 2 back
+        span.style.left = left + '%';
+        span.style.bottom = (8 + tier * 40) + 'px';
+        span.style.fontSize = (44 - tier * 6) + 'px';       // 44 / 38 / 32
+        span.style.zIndex = String(10 - tier);
+        span.style.animationDelay = (i * 0.4) + 's';
+        layer.appendChild(span);
+      });
+
+      // Pets wander along the front of the yard.
       pets.forEach((emoji, i) => {
         const pet = document.createElement('div');
         pet.className = 'farm-deco-pet';
         pet.textContent = emoji;
-        pet.style.animationDelay = (i * -2) + 's';
+        pet.style.bottom = (2 + (i % 2) * 34) + 'px';
+        pet.style.animationDelay = (i * -3) + 's';
         layer.appendChild(pet);
       });
     },
