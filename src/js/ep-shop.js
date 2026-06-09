@@ -97,6 +97,9 @@
 
         case 'decoration':
           Farm.state.addDecoration(item.id);
+          // Re-render the decoration layer so the new item shows on the farm
+          // immediately (otherwise it only appears after the next renderGrid).
+          if (Farm.farm && Farm.farm.renderDecorations) Farm.farm.renderDecorations();
           return { kind: 'decoration_placed', itemId: item.id };
 
         case 'extra_plot':
