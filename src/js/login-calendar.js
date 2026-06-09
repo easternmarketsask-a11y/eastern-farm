@@ -55,13 +55,9 @@
   }
 
   function grantReward(r) {
+    // Sign-in gives farm coins (+ seeds), never 超市积分 — keeps points scarce
+    // and avoids an un-whitelisted server source. Don't re-add an ep branch here.
     if (r.coins) Farm.state.addCoins(r.coins);
-    if (r.ep) {
-      Farm.state.addEastPoints(r.ep, {
-        source: 'login_calendar',
-        description: '7天签到 第 ' + r.day + ' 天奖励',
-      });
-    }
     if (r.seeds) {
       randomSeedIds(r.seeds).forEach(id => Farm.state.addSeed(id, 1));
     }

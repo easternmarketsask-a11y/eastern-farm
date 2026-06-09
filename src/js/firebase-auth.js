@@ -65,13 +65,13 @@
               const r = await Farm.fbGameSync.reconcileReceivedLikes();
               if (r && r.newLikes > 0) {
                 const lang = (Farm.state && Farm.state.data && Farm.state.data.language) || 'zh';
-                const msg = r.epAwarded > 0
+                const msg = r.coinsAwarded > 0
                   ? (lang === 'en'
-                    ? `❤️ ${r.newLikes} new likes received! +${r.epAwarded} <span class="points-icon"></span>`
-                    : `❤️ 收到 ${r.newLikes} 个赞！+${r.epAwarded} <span class="points-icon"></span>`)
+                    ? `❤️ ${r.newLikes} new likes received! +${r.coinsAwarded} <span class="coin-icon"></span>`
+                    : `❤️ 收到 ${r.newLikes} 个赞！+${r.coinsAwarded} <span class="coin-icon"></span>`)
                   : (lang === 'en'
-                    ? `❤️ ${r.newLikes} new likes received! (daily points cap reached)`
-                    : `❤️ 收到 ${r.newLikes} 个赞！（今日积分上限已满）`);
+                    ? `❤️ ${r.newLikes} new likes received! (daily limit reached)`
+                    : `❤️ 收到 ${r.newLikes} 个赞！（今日上限已满）`);
                 Farm.ui.toast(msg, 4000);
               }
             }, 1500);
@@ -89,8 +89,8 @@
                   if (g.kind === 'seed' && g.payload && g.payload.cropId) {
                     const def = Farm.crops.get(g.payload.cropId);
                     what = def ? ((lang === 'en' ? def.name_en : def.name_zh) + ' ' + (lang === 'en' ? 'seed' : '种子')) : (lang === 'en' ? 'a seed' : '一棵种子');
-                  } else if (g.kind === 'ep' && g.payload && g.payload.amount) {
-                    what = '+' + g.payload.amount + ' <span class="points-icon"></span>';
+                  } else if ((g.kind === 'coins' || g.kind === 'ep') && g.payload && g.payload.amount) {
+                    what = '+' + g.payload.amount + ' <span class="coin-icon"></span>';
                   } else {
                     what = lang === 'en' ? 'a gift' : '一份礼物';
                   }

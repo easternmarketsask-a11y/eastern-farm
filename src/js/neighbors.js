@@ -454,8 +454,8 @@
           Farm.ui.refreshHUD();
           if (Farm.audio) Farm.audio.play('coin');
           Farm.ui.toast(lang === 'en'
-            ? `❤️ Liked! +1 <span class="points-icon"></span> (${result.remaining} left today)`
-            : `❤️ 点赞成功！+1 <span class="points-icon"></span>（今日还剩 ${result.remaining}）`, 2200);
+            ? `❤️ Liked! +${result.coinsEarned} <span class="coin-icon"></span> (${result.remaining} left today)`
+            : `❤️ 点赞成功！+${result.coinsEarned} <span class="coin-icon"></span>（今日还剩 ${result.remaining}）`, 2200);
         };
       }
     },
@@ -643,9 +643,9 @@
             <div class="gift-choice-title">🌱 ${lang === 'en' ? 'Random seed' : '随机种子'}</div>
             <div class="gift-choice-sub">${lang === 'en' ? 'A surprise easy-tier seed' : '一棵初级蔬菜种子'}</div>
           </button>
-          <button class="btn gift-choice" data-gift-kind="ep">
-            <div class="gift-choice-title">🎫 ${lang === 'en' ? '+5 Store Points' : '+5 超市积分'}</div>
-            <div class="gift-choice-sub">${lang === 'en' ? 'A little points gift for their account' : '送给对方一点超市积分鼓励'}</div>
+          <button class="btn gift-choice" data-gift-kind="coins">
+            <div class="gift-choice-title">🪙 ${lang === 'en' ? '+50 Farm Coins' : '+50 农场币'}</div>
+            <div class="gift-choice-sub">${lang === 'en' ? 'A coin gift for their farm' : '送给对方一点农场币'}</div>
           </button>
         </div>
       `;

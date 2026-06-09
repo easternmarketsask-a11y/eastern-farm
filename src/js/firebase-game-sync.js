@@ -201,17 +201,15 @@
       // Sender bookkeeping
       claims.likesSentToday = givenToday.concat([toUid]);
       Farm.state.save();
-      const baseBonus = 1;
-      const mutualBonus = isMutual ? 2 : 0;
-      Farm.state.addEastPoints(baseBonus + mutualBonus, {
-        source: isMutual ? 'neighbor_like_mutual' : 'neighbor_like_sent',
-        description: isMutual ? 'Mutual like with a neighbor' : 'Liked a neighbor',
-      });
+      // Social rewards are farm coins (per owner): 超市积分 stays scarce.
+      const baseBonus = 5;
+      const mutualBonus = isMutual ? 15 : 0;
+      Farm.state.addCoins(baseBonus + mutualBonus);
       return {
         ok: true,
         remaining: DAILY_LIKE_CAP - claims.likesSentToday.length,
         mutual: isMutual,
-        epEarned: baseBonus + mutualBonus,
+        coinsEarned: baseBonus + mutualBonus,
       };
     },
 
@@ -249,13 +247,11 @@
         Farm.state.data.lastLikesSeenAt = Date.now();
         Farm.state.data.likesAckedToday = (Farm.state.data.likesAckedToday || 0) + epAward;
         Farm.state.save();
-        if (epAward > 0) {
-          Farm.state.addEastPoints(epAward, {
-            source: 'neighbor_likes_received',
-            description: 'Received ' + epAward + ' new likes',
-          });
+        const coinAward = epAward * 10;  // 10 farm coins per received like
+        if (coinAward > 0) {
+          Farm.state.addCoins(coinAward);
         }
-        return { newLikes, capped, epAwarded: epAward };
+        return { newLikes, capped, coinsAwarded: coinAward };
       } catch (e) {
         console.warn('[gameSync] reconcileReceivedLikes failed', e);
         return null;
@@ -451,8 +447,8 @@
         if (easy.length === 0) return { ok: false, reason: 'no_seeds' };
         const c = easy[Math.floor(Math.random() * easy.length)];
         payload = { cropId: c.id };
-      } else if (kind === 'ep') {
-        payload = { amount: 5 };
+      } else if (kind === 'coins') {
+        payload = { amount: 50 };
       } else {
         return { ok: false, reason: 'unknown_kind' };
       }
@@ -493,11 +489,9 @@
         for (const g of gifts) {
           if (g.kind === 'seed' && g.payload && g.payload.cropId) {
             Farm.state.addSeed(g.payload.cropId, 1);
-          } else if (g.kind === 'ep' && g.payload && g.payload.amount) {
-            Farm.state.addEastPoints(g.payload.amount, {
-              source: 'friend_gift',
-              description: 'Gift from friend',
-            });
+          } else if ((g.kind === 'coins' || g.kind === 'ep') && g.payload && g.payload.amount) {
+            // 'ep' kept for any legacy pending gifts; both credited as coins now.
+            Farm.state.addCoins(g.payload.amount);
           }
         }
         // Clear server-side queue
