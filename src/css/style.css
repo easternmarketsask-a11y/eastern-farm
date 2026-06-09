@@ -587,12 +587,19 @@ body {
 #farm {
   flex: 1 1 auto;
   min-height: 0;              /* required so flex item can shrink + scroll */
-  padding: 20px 16px;
+  padding: 44px 16px 28px;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+  /* Cozy farm scene, pure CSS (no art assets): soft sky → grass, a sun, and
+   * a couple of rolling-hill silhouettes at the horizon. The background is
+   * anchored to #farm (doesn't scroll with the plots), so it reads as a
+   * backdrop the farm sits on. Seasonal re-skins can override these later. */
   background:
-    radial-gradient(circle at 50% 0%, #f0e3c1 0%, transparent 50%),
-    var(--cream-bg);
+    radial-gradient(circle at 84% 30px, #ffe9a8 0 19px, rgba(255,233,168,0) 21px),
+    radial-gradient(150% 78px at 24% 120px, #bfe0a0 0 58%, transparent 60%),
+    radial-gradient(150% 66px at 88% 126px, #c9e5a7 0 58%, transparent 60%),
+    linear-gradient(180deg, #bfe5f4 0%, #d9eee2 22%, #cfe8a8 36%, #b3da84 70%, #a4cf76 100%);
+  background-repeat: no-repeat;
 }
 
 .farm-grid {
@@ -605,10 +612,14 @@ body {
 
 .plot {
   aspect-ratio: 1;
-  background: linear-gradient(135deg, #a0734d 0%, var(--soil-brown) 60%, var(--soil-dark) 100%);
-  border-radius: var(--radius-md);
-  border: 2px solid var(--soil-dark);
-  box-shadow: var(--shadow-card), inset 0 -3px 0 rgba(0,0,0,0.15);
+  /* Tilled soil bed: warm soil gradient + fine vertical furrow lines + a
+   * raised-rim look (inset highlight on top, shadow at bottom). */
+  background:
+    repeating-linear-gradient(90deg, rgba(0,0,0,0.07) 0 2px, rgba(0,0,0,0) 2px 13px),
+    linear-gradient(160deg, #b78657 0%, var(--soil-brown) 55%, var(--soil-dark) 100%);
+  border-radius: 14px;
+  border: 2px solid #5e3b22;
+  box-shadow: var(--shadow-card), inset 0 -4px 0 rgba(0,0,0,0.20), inset 0 4px 8px rgba(255,255,255,0.10);
   display: flex;
   flex-direction: column;
   align-items: center;
