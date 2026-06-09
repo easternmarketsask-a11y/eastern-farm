@@ -96,7 +96,7 @@ body {
 }
 .brandbar-logo-link:active { transform: scale(0.94); }
 .brandbar-logo {
-  height: 24px;
+  height: 32px;
   width: auto;
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
 }
@@ -121,7 +121,9 @@ body {
   white-space: nowrap;
   letter-spacing: 0.2px;
 }
-@media (max-width: 379px) {
+/* Very narrow phones: hide weather only if it would crowd the logo+member row.
+   The topbar is roomy now (currencies moved to the band below), so keep it. */
+@media (max-width: 339px) {
   .brandbar-weather { display: none !important; }
 }
 .brandbar-title {
@@ -580,22 +582,34 @@ body {
 
 /* =============== HARVEST STATUS BAR =============== */
 /* Slim pill that hugs its content (no full-width empty card). */
+/* Full-width HUD band: 农场币 (left) · harvest status (center) · 超市积分 (right).
+   Currencies moved down here from the top bar so the logo can stay full-size. */
 .harvest-status-bar {
-  background: rgba(255, 253, 246, 0.85);
-  border-radius: 999px;
-  margin: 6px auto;
-  width: fit-content;
-  max-width: calc(100% - 24px);
-  padding: 5px 14px;
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 10px;
-  box-shadow: 0 1px 4px rgba(139, 90, 60, 0.14);
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 12px;
+  background: linear-gradient(180deg, #fffaeb 0%, #faf0d8 100%);
+  border-bottom: 1px solid var(--border-soft);
   font-size: 12.5px;
   color: var(--warm-text-soft);
 }
-.harvest-status-text { line-height: 1.3; white-space: nowrap; }
+/* The flanking currency pills shouldn't grow; the center takes the slack. */
+.harvest-status-bar .currency { flex-shrink: 0; }
+.harvest-status-center {
+  flex: 1 1 auto;
+  min-width: 0;                 /* allow the text to shrink/wrap, not overflow */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 4px 12px;
+  background: rgba(255, 253, 246, 0.92);
+  border-radius: 999px;
+  box-shadow: 0 1px 3px rgba(139, 90, 60, 0.12);
+}
+.harvest-status-text { line-height: 1.25; text-align: center; }
 .harvest-status-btn {
   flex-shrink: 0;
   padding: 5px 13px;
@@ -2256,6 +2270,14 @@ body {
 }
 .today-button:active { transform: scale(0.94); }
 .today-icon { font-size: 16px; line-height: 1; }
+.today-label {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #7a5a1e;
+  margin-left: 4px;
+  line-height: 1;
+  letter-spacing: 0.3px;
+}
 .today-badge {
   position: absolute;
   top: -5px;

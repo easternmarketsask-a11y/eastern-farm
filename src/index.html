@@ -84,23 +84,10 @@
       <!-- weatherChip injected here by weather.js -->
     </div>
     <div class="topbar-right">
-      <div class="currency coins" title="农场币 Farm Coin">
-        <div class="currency-row">
-          <span class="icon coin-icon"></span>
-          <span class="value" id="coinsValue">100</span>
-        </div>
-        <div class="label">农场币 · Coin</div>
-      </div>
-      <div class="currency points" title="超市积分 Store Points">
-        <div class="currency-row">
-          <span class="icon points-icon"></span>
-          <span class="value" id="pointsValue">0</span>
-        </div>
-        <div class="label">超市积分 · Points</div>
-      </div>
       <div id="memberButton" class="topbar-member-slot"></div>
-      <button id="todayButton" class="today-button" title="今日">
+      <button id="todayButton" class="today-button" title="今日签到 · 活动">
         <span class="today-icon">🌅</span>
+        <span class="today-label">今日</span>
         <span id="todayBadge" class="today-badge"></span>
       </button>
     </div>
@@ -113,10 +100,27 @@
   </div>
 
 
-  <!-- Harvest status bar: "when are my crops ready" at-a-glance -->
+  <!-- Currency + harvest status band: 农场币 on the left, "when are my crops
+       ready" status in the middle, 超市积分 on the right. -->
   <div id="harvestStatusBar" class="harvest-status-bar">
-    <span class="harvest-status-text" id="harvestStatusText"></span>
-    <button class="btn harvest-status-btn hidden" id="harvestStatusBtn"></button>
+    <div class="currency coins" title="农场币 Farm Coin">
+      <div class="currency-row">
+        <span class="icon coin-icon"></span>
+        <span class="value" id="coinsValue">100</span>
+      </div>
+      <div class="label">农场币 · Coin</div>
+    </div>
+    <div class="harvest-status-center">
+      <span class="harvest-status-text" id="harvestStatusText"></span>
+      <button class="btn harvest-status-btn hidden" id="harvestStatusBtn"></button>
+    </div>
+    <div class="currency points" title="超市积分 Store Points">
+      <div class="currency-row">
+        <span class="icon points-icon"></span>
+        <span class="value" id="pointsValue">0</span>
+      </div>
+      <div class="label">超市积分 · Points</div>
+    </div>
   </div>
 
   <!-- Main farm view -->
