@@ -940,6 +940,10 @@
     // pepper, sizable + thin-skinned. Bold red gradient + glossy highlight
     // + small green calyx + stem at top.
     niu_jiao_jiao(c) {
+      // Asymmetric horn-shaped green pepper. Stem at top, body curves
+      // outward (convex outer arc) and sweeps to a pointed tip in the
+      // lower-right. Inspired by real 牛角椒 produce — long, slender,
+      // curved like an actual horn, not a symmetric teardrop.
       return `
         <defs>
           <filter id="ds_niu_jiao_jiao" x="-15%" y="-15%" width="130%" height="130%">
@@ -948,47 +952,50 @@
             <feComponentTransfer><feFuncA type="linear" slope="0.38"/></feComponentTransfer>
             <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
           </filter>
-          <linearGradient id="body_niu_jiao_jiao" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stop-color="#8b1d1d"/>
-            <stop offset="35%" stop-color="#c62828"/>
-            <stop offset="55%" stop-color="#e94d3f"/>
-            <stop offset="100%" stop-color="#ff6f43"/>
+          <linearGradient id="body_niu_jiao_jiao" x1="20%" y1="0%" x2="80%" y2="100%">
+            <stop offset="0%" stop-color="#9bcd5a"/>
+            <stop offset="50%" stop-color="#6ea838"/>
+            <stop offset="100%" stop-color="#4a7522"/>
           </linearGradient>
         </defs>
-        <ellipse cx="50" cy="92" rx="18" ry="2.5" fill="#000" opacity="0.22"/>
+        <!-- Shadow under the tip (offset to the lower-right) -->
+        <ellipse cx="58" cy="94" rx="13" ry="2.3" fill="#000" opacity="0.22"/>
 
         <g filter="url(#ds_niu_jiao_jiao)">
-          <!-- Curved horn-shaped pepper body, bent slightly to the right -->
-          <path d="M 38 22
-                   Q 30 32 30 50
-                   Q 32 70 44 84
-                   Q 56 90 64 80
-                   Q 72 64 70 44
-                   Q 66 28 56 22
-                   Q 48 18 38 22
+          <!-- Asymmetric horn-shaped body: wide rounded shoulders just
+               below stem, body curves down-and-right, tapers to a
+               sharp pointed tip in the lower right. Like a comma. -->
+          <path d="M 48 14
+                   Q 40 14 34 22
+                   Q 26 36 26 52
+                   Q 28 70 36 80
+                   Q 48 90 62 90
+                   L 72 84
+                   Q 66 78 58 72
+                   Q 50 62 48 50
+                   Q 46 34 50 22
+                   Q 52 14 48 14
                    Z"
-                fill="url(#body_niu_jiao_jiao)" stroke="#5c1010" stroke-width="0.6"/>
+                fill="url(#body_niu_jiao_jiao)" stroke="#2f5212" stroke-width="0.6"/>
 
-          <!-- Glossy highlight strip on the upper-left -->
-          <path d="M 38 30 Q 34 44 38 64" stroke="#ffaa90" stroke-width="3.5" fill="none" opacity="0.45" stroke-linecap="round"/>
-          <path d="M 38 30 Q 34 44 38 64" stroke="#ffe0d4" stroke-width="1.5" fill="none" opacity="0.7" stroke-linecap="round"/>
+          <!-- Glossy highlight on the outer (left) shoulder curve -->
+          <path d="M 32 26 Q 26 44 32 60" stroke="#d8f0a8" stroke-width="3" fill="none" opacity="0.55" stroke-linecap="round"/>
+          <path d="M 32 26 Q 26 44 32 60" stroke="#f4fadd" stroke-width="1.2" fill="none" opacity="0.85" stroke-linecap="round"/>
 
-          <!-- Pepper tip subtle shadow ridge -->
-          <path d="M 64 80 Q 56 82 50 80" stroke="#5c1010" stroke-width="0.5" fill="none" opacity="0.4"/>
+          <!-- Subtle body ridge along the curve -->
+          <path d="M 44 22 Q 36 50 54 80" stroke="#2f5212" stroke-width="0.5" fill="none" opacity="0.32"/>
 
-          <!-- Green calyx (5 small leaves at top) -->
-          <path d="M 38 22 Q 40 16 46 14 Q 50 18 48 22 Z" fill="#7cb342" stroke="#3a6e1a" stroke-width="0.5"/>
-          <path d="M 50 16 Q 54 14 58 16 Q 56 22 50 20 Z" fill="#8bc34a" stroke="#3a6e1a" stroke-width="0.5"/>
-          <path d="M 56 22 Q 60 20 62 24 Q 58 26 54 24 Z" fill="#7cb342" stroke="#3a6e1a" stroke-width="0.5"/>
+          <!-- Darker green calyx (3 small leaves at top) — clearly distinct from body green -->
+          <path d="M 42 14 Q 44 8 49 6 Q 53 10 51 14 Z" fill="#3d6c1a" stroke="#26450c" stroke-width="0.5"/>
+          <path d="M 50 8 Q 54 6 58 8 Q 56 14 50 12 Z" fill="#4a7e22" stroke="#26450c" stroke-width="0.5"/>
+          <path d="M 54 14 Q 58 12 60 16 Q 56 18 52 16 Z" fill="#3d6c1a" stroke="#26450c" stroke-width="0.5"/>
 
           <!-- Short stem nub -->
-          <path d="M 50 16 L 50 8" stroke="#5d8a2f" stroke-width="2.2" stroke-linecap="round"/>
+          <path d="M 49 8 L 49 2" stroke="#2f5212" stroke-width="2.2" stroke-linecap="round"/>
         </g>
 
-        <!-- Tiny specular hot spot -->
-        <ellipse cx="40" cy="38" rx="2" ry="3" fill="#fff" opacity="0.6"/>
-        <!-- Base shadow -->
-        <ellipse cx="54" cy="86" rx="10" ry="1.3" fill="#000" opacity="0.25"/>
+        <!-- Tiny specular hot spot on the outer (left) bulge -->
+        <ellipse cx="34" cy="36" rx="2" ry="3" fill="#fff" opacity="0.7"/>
       `;
     },
 
