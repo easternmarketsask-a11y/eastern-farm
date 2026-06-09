@@ -48,6 +48,11 @@
         visibleToNeighbors: s.visibleToNeighbors == null
           ? PRIVACY_DEFAULT_VISIBLE
           : !!s.visibleToNeighbors,
+        // Store-owner flag: when true the account is dropped from EVERYONE
+        // else's neighbor pool + leaderboards + weekly rewards, but the owner
+        // can still browse the community (unlike visibleToNeighbors=false,
+        // which also blinds the owner). Set via the owner toggle in settings.
+        excludeFromRanking: !!s.excludeFromRanking,
         lastSeenAt: Farm.fb && Farm.fb.serverTimestamp
           ? Farm.fb.serverTimestamp()
           : new Date(),
@@ -121,9 +126,10 @@
         q.forEach(d => {
           const data = d.data();
           const stats = data.gameStats || {};
-          // Exclude self + opted-out + members who never played
+          // Exclude self + opted-out + store owner + members who never played
           if (d.id === meUid) return;
           if (stats.visibleToNeighbors === false) return;
+          if (stats.excludeFromRanking === true) return;
           if (!stats.level) return;
           pool.push({ uid: d.id, doc: data });
         });
@@ -301,6 +307,7 @@
           const data = d.data();
           const stats = data.gameStats || {};
           if (stats.visibleToNeighbors === false) return;
+          if (stats.excludeFromRanking === true) return;  // store owner out of rankings
           if (!stats.level) return;
           // Weekly board: only count players whose counter is for THIS week.
           if (metric === 'weekly') {
@@ -353,6 +360,7 @@
         q.forEach(d => {
           const s = d.data().gameStats || {};
           if (s.visibleToNeighbors === false) return;
+          if (s.excludeFromRanking === true) return;  // store owner not counted above me
           if (metric === 'weekly' && s.weekId !== curWeek) return;
           above++;
         });

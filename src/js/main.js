@@ -207,6 +207,7 @@
           case 'shop': Farm.shop.open(); break;
           case 'tasks': Farm.tasks.open(); break;
           case 'rewards': Farm.rewards.open(); break;
+          case 'community': if (Farm.neighbors) Farm.neighbors.open(); break;
           case 'collection': openCollection(); break;
           case 'settings': openSettings(); break;
         }
@@ -461,6 +462,11 @@
                  style="width:16px;height:16px;cursor:pointer;"/>
           <span>${lang === 'en' ? 'Show me in neighbor list' : '显示在邻居列表里'}</span>
         </label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;margin-top:8px;padding-top:8px;border-top:1px dashed var(--border-soft);">
+          <input id="ownerExcludeToggle" type="checkbox" ${Farm.state.data.excludeFromRanking === true ? 'checked' : ''}
+                 style="width:16px;height:16px;cursor:pointer;"/>
+          <span>${lang === 'en' ? '🏪 Store owner — keep me out of all rankings (I can still browse)' : '🏪 我是店主，不参与所有排名（仍可逛社区）'}</span>
+        </label>
       </div>
 
       <div style="margin:16px 0;padding:12px;background:var(--cream-bg);border-radius:var(--radius-md);">
@@ -538,6 +544,17 @@
         Farm.state.data.visibleToNeighbors = visEl.checked;
         Farm.state.save();
         if (Farm.fbGameSync) Farm.fbGameSync.push();
+      };
+    }
+    const ownerEl = document.getElementById('ownerExcludeToggle');
+    if (ownerEl) {
+      ownerEl.onchange = () => {
+        Farm.state.data.excludeFromRanking = ownerEl.checked;
+        Farm.state.save();
+        if (Farm.fbGameSync) Farm.fbGameSync.push();
+        Farm.ui.toast(ownerEl.checked
+          ? (Farm.state.data.language === 'en' ? '🏪 You are now hidden from all rankings' : '🏪 已设为店主，不出现在任何排名中')
+          : (Farm.state.data.language === 'en' ? 'Back in the rankings' : '已重新参与排名'), 2200);
       };
     }
     document.getElementById('resetBtn').onclick = () => {

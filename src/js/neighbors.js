@@ -93,57 +93,22 @@
           real = Farm.fbGameSync.pickDailyThree(pool);
         } catch (_) {}
       }
-      if (real.length === 3) {
-        this._todayList = real.map((m, order) => ({
-          isReal: true,
-          uid: m.uid,
-          name: Farm.fbGameSync.displayName(m.doc),
-          emoji: avatarFor(m.uid),
-          level: (m.doc.gameStats || {}).level || 1,
-          totalHarvests: (m.doc.gameStats || {}).totalHarvests || 0,
-          totalDeliveries: (m.doc.gameStats || {}).totalDeliveries || 0,
-          likesReceived: (m.doc.gameStats || {}).likesReceived || 0,
-          _doc: m.doc,
-          id: 'real_' + m.uid,
-          order,
-        }));
-      } else {
-        // Top up with fallback profiles to ensure 3 cards
-        const today = Farm.state.getDateString();
-        const rng = mulberry32(hashStr(today + ':fallback'));
-        const indices = new Set();
-        while (indices.size < 3 - real.length) {
-          indices.add(Math.floor(rng() * FALLBACK_POOL.length));
-        }
-        const fb = Array.from(indices).map(idx => {
-          const p = FALLBACK_POOL[idx];
-          const seed = 'fb_' + today + '_' + idx;
-          return {
-            isReal: false,
-            uid: seed,
-            name: Farm.state.data.language === 'en' ? p.name_en : p.name_zh,
-            emoji: p.emoji,
-            level: 2 + Math.floor(rng() * 6),
-            totalHarvests: Math.floor(rng() * 100),
-            totalDeliveries: Math.floor(rng() * 20),
-            likesReceived: Math.floor(rng() * 10),
-            id: seed,
-            order: 99,
-          };
-        });
-        this._todayList = real.map((m, order) => ({
-          isReal: true,
-          uid: m.uid,
-          name: Farm.fbGameSync.displayName(m.doc),
-          emoji: avatarFor(m.uid),
-          level: (m.doc.gameStats || {}).level || 1,
-          totalHarvests: (m.doc.gameStats || {}).totalHarvests || 0,
-          totalDeliveries: (m.doc.gameStats || {}).totalDeliveries || 0,
-          likesReceived: (m.doc.gameStats || {}).likesReceived || 0,
-          id: 'real_' + m.uid,
-          order,
-        })).concat(fb).slice(0, 3);
-      }
+      // Real members only — no procedural/fake fill-ins. If fewer than 3 real
+      // neighbors are available we just show fewer cards (and an invite state
+      // when there are none), rather than fabricating fake players.
+      this._todayList = real.map((m, order) => ({
+        isReal: true,
+        uid: m.uid,
+        name: Farm.fbGameSync.displayName(m.doc),
+        emoji: avatarFor(m.uid),
+        level: (m.doc.gameStats || {}).level || 1,
+        totalHarvests: (m.doc.gameStats || {}).totalHarvests || 0,
+        totalDeliveries: (m.doc.gameStats || {}).totalDeliveries || 0,
+        likesReceived: (m.doc.gameStats || {}).likesReceived || 0,
+        _doc: m.doc,
+        id: 'real_' + m.uid,
+        order,
+      }));
       return this._todayList;
     },
 
@@ -222,9 +187,8 @@
         const goBtn = document.getElementById('goToSettingsBtn');
         if (goBtn) goBtn.onclick = () => {
           Farm.ui.hideModal();
-          // Open settings via the bottom nav button
-          const settingsBtn = document.querySelector('[data-action="settings"]');
-          if (settingsBtn) settingsBtn.click();
+          // Settings moved off the bottom nav → open it directly.
+          if (Farm.openSettings) Farm.openSettings();
         };
         return;
       }
@@ -267,6 +231,26 @@
       // Load + render body
       if (tab === 'today') {
         const list = await this._fetchToday();
+        // No real neighbors visible yet → invite state instead of fake people.
+        if (list.length === 0) {
+          document.getElementById('neighborBody').innerHTML = `
+            <div style="padding:22px 16px;text-align:center;">
+              <div style="font-size:46px;margin-bottom:10px;">🌱🏘️</div>
+              <div style="font-size:14px;font-weight:600;color:var(--warm-text);margin-bottom:8px;">
+                ${lang === 'en' ? 'No neighbors around yet' : '现在还没有邻居在线'}
+              </div>
+              <div style="font-size:12px;color:var(--warm-text-soft);line-height:1.6;margin-bottom:16px;">
+                ${lang === 'en'
+                  ? 'As more Eastern Market members start farming, real neighbors show up here. Invite a friend, or add one by phone number.'
+                  : '随着更多东方超市会员开始种菜，真实邻居就会出现在这里。叫上朋友一起玩，或用手机号直接加好友。'}
+              </div>
+              <button class="btn" id="emptyAddFriendBtn">➕ ${lang === 'en' ? 'Add a friend by phone' : '用手机号加好友'}</button>
+            </div>
+          `;
+          const addBtn = document.getElementById('emptyAddFriendBtn');
+          if (addBtn) addBtn.onclick = () => { this._currentTab = 'friends'; this._render(); };
+          return;
+        }
         const cardsHtml = list.map(n => {
           const isVisited = visited.includes(n.id);
           const realBadge = n.isReal
