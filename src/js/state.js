@@ -74,6 +74,7 @@
     activeEffects: {            // toggleable consumable effects
       accelerationCharges: 0,   // # of 加速券 in inventory (consumed on use)
       freshnessCharges: 0,      // # of 保鲜券 in inventory
+      bumperCharges: 0,         // # of 高级化肥 (next harvest yields ×2), consumed on harvest
     },
 
     // ============ 7-day sign-in calendar (login-calendar.js) ============

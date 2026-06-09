@@ -27,6 +27,18 @@
       "desc_en": "Instantly mature one crop. Bought with farm coins, one-shot."
     },
     {
+      "id": "fertilizer_pro",
+      "name_zh": "高级化肥",
+      "name_en": "Premium Fertilizer",
+      "icon": "🌟",
+      "cost_coins": 120,
+      "category": "consumable",
+      "kind": "stack_consumable",
+      "stock_key": "bumperCharges",
+      "desc_zh": "下一次收获产量翻倍（×2），可叠加，收获时自动生效。",
+      "desc_en": "Your next harvest yields double (×2). Stacks; auto-applies on harvest."
+    },
+    {
       "id": "lottery_ticket",
       "name_zh": "抽奖券",
       "name_en": "Lottery Ticket",

@@ -239,8 +239,12 @@
       if (evt && evt.target) {
         const rect = evt.target.getBoundingClientRect();
         const lang = Farm.state.data.language;
-        Farm.ui.floatText('📦 +1 ' + (lang === 'en' ? 'silo' : '入库'),
+        Farm.ui.floatText('📦 ' + (result.bumper ? '+2 ' : '+1 ') + (lang === 'en' ? 'silo' : '入库'),
           rect.left + rect.width/2 - 20, rect.top);
+        if (result.bumper) {
+          Farm.ui.floatText('🌟 ' + (lang === 'en' ? 'Double!' : '双倍收获'),
+            rect.left + rect.width/2 - 22, rect.top - 24, '#e08a00');
+        }
         if (result.eastPoints > 0) {
           setTimeout(() => {
             Farm.ui.floatText('+' + result.eastPoints + ' <span class="points-icon"></span>',

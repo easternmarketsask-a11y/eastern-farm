@@ -127,6 +127,15 @@
       // Multi-harvest: deduct one harvest, reset growth timer
       plot.harvestsLeft -= 1;
       Farm.state.addToWarehouse(cropId);
+      // 高级化肥（双倍收获）: if a bumper charge is active, drop an extra crop
+      // into the warehouse (when there's room) and consume one charge.
+      let bumper = false;
+      const _eff = Farm.state.data.activeEffects || {};
+      if ((_eff.bumperCharges || 0) > 0 && !Farm.state.isWarehouseFull()) {
+        Farm.state.addToWarehouse(cropId);
+        _eff.bumperCharges -= 1;
+        bumper = true;
+      }
       const levelInfo = Farm.state.addXp(xp);
       const activeFest = Farm.events && Farm.events.getActiveFestivalId();
       // Only credit festival-harvest counter when the crop itself is a festival-only crop
@@ -209,6 +218,7 @@
         cropId,
         coins: sellPrice,
         xp,
+        bumper,
         eastPoints: bonusPoints,
         epCredited,
         epQueued,
