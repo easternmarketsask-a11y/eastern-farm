@@ -116,7 +116,7 @@
         // 429 = daily cap, 422 = validation → don't queue (would just fail again)
         if (e.code === 429 || e.code === 422 || e.code === 404) {
           console.warn('[fb-points] earn rejected:', e.code, e.detail);
-          return { synced: false, eventId, rejected: true, reason: e.detail || String(e) };
+          return { synced: false, eventId, rejected: true, code: e.code, reason: e.detail || String(e) };
         }
         // Network / 5xx → queue for retry
         console.warn('[fb-points] earn failed, queuing:', e.code || e.message);
@@ -148,7 +148,7 @@
       } catch (e) {
         if (e.code === 422 || e.code === 404) {
           console.warn('[fb-points] spend rejected:', e.code, e.detail);
-          return { synced: false, eventId, rejected: true, reason: e.detail || String(e) };
+          return { synced: false, eventId, rejected: true, code: e.code, reason: e.detail || String(e) };
         }
         console.warn('[fb-points] spend failed, queuing:', e.code || e.message);
         if (Farm.fbQueue) Farm.fbQueue.enqueue({ kind: 'spend', amount, source, description, eventId });

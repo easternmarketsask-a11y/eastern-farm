@@ -236,18 +236,10 @@
               coinsEarned: 0, seedsBought: 0, coinsSpent: 0,
             };
           }
-          // Roll daily EP cap counter + drain queued EP first thing on a new day
-          if (this.data.epEarnedDate !== today) {
-            this.data.epEarnedDate = today;
-            this.data.epEarnedToday = 0;
-            // Drain pending queue into today's balance, respecting the cap
-            if (this.data.pendingEp > 0) {
-              const drainAmount = Math.min(this.data.pendingEp, this.data.epDailyCap);
-              this.data.eastPoints += drainAmount;
-              this.data.pendingEp -= drainAmount;
-              this.data.epEarnedToday += drainAmount;
-            }
-          }
+          // NOTE: the old client-side daily-EP cap + pendingEp drain was removed.
+          // The server (StockWise /api/rewardup/me/earn) is the single authority
+          // for the daily cap, rate-limit, dedupe and balance — see addEastPoints.
+          // (epDailyCap/epEarnedToday/pendingEp fields are now vestigial.)
           // Reset daily claims
           if (this.data.dailyClaims.date !== today) {
             this.data.dailyClaims = {
@@ -355,45 +347,51 @@
       this.save();
       return true;
     },
-    // Add EP respecting daily cap. Overflow above the cap goes into pendingEp
-    // queue, which gets drained next day in init(). Returns { credited, queued }.
+    // Add supermarket points. The DAILY CAP (and rate-limit, dedupe, one-shot
+    // rules) all live SERVER-SIDE (StockWise /api/rewardup/me/earn, cap = 500/day)
+    // — the client no longer caps. We credit optimistically for instant UI;
+    // the server response then overwrites `eastPoints` with the authoritative
+    // (capped) balance via Farm.fbPoints._applyServerResponseToLocal. If the
+    // server REJECTS the earn (cap/rate-limit/one-shot), we roll the optimistic
+    // credit back so local matches server.
     //
-    // When the player is logged into a member account, credited EP is also
-    // pushed to Firestore (members/{uid}.totalPoints + points_transactions/)
-    // via Farm.fbPoints.syncEpEarn(). When NOT logged in, credited EP stays
-    // local in `eastPoints` AND mirrors into `unsyncedEp` so the first-login
-    // backfill knows how much to credit.
+    // Logged out: no server, so credit locally + mirror into `unsyncedEp` for
+    // the one-shot first-login backfill.
     //
-    // `opts.source` and `opts.description` are passed through for audit.
+    // Returns { credited, sync } where `sync` is the server promise (or null)
+    // so callers like exchangeCoinsToEp can react to a server rejection.
     addEastPoints(n, opts) {
       opts = opts || {};
-      if (n <= 0) { this.save(); return { credited: 0, queued: 0 }; }
-      // Make sure the daily counter is for today
-      const today = getDateString();
-      if (this.data.epEarnedDate !== today) {
-        this.data.epEarnedDate = today;
-        this.data.epEarnedToday = 0;
-      }
-      const headroom = Math.max(0, (this.data.epDailyCap || 1000) - (this.data.epEarnedToday || 0));
-      const credited = Math.min(n, headroom);
-      const queued = n - credited;
-      if (credited > 0) {
-        this.data.eastPoints += credited;
-        this.data.epEarnedToday += credited;
-        // Track unsynced-while-guest so first login can backfill
-        if (!(window.Farm && Farm.fbAuth && Farm.fbAuth.isLoggedIn())) {
-          this.data.unsyncedEp = (this.data.unsyncedEp || 0) + credited;
-        }
-      }
-      if (queued > 0) {
-        this.data.pendingEp = (this.data.pendingEp || 0) + queued;
+      if (n <= 0) { this.save(); return { credited: 0, sync: null }; }
+      const loggedIn = !!(window.Farm && Farm.fbAuth && Farm.fbAuth.isLoggedIn && Farm.fbAuth.isLoggedIn());
+
+      this.data.eastPoints += n;                    // optimistic
+      if (!loggedIn) {
+        this.data.unsyncedEp = (this.data.unsyncedEp || 0) + n;
       }
       this.save();
-      // Fire member-account sync (no-op if logged out — Farm.fbPoints handles that)
-      if (credited > 0 && window.Farm && Farm.fbPoints) {
-        Farm.fbPoints.syncEpEarn(credited, opts.source || 'unknown', opts.description || '');
+
+      let sync = null;
+      if (loggedIn && Farm.fbPoints) {
+        sync = Farm.fbPoints.syncEpEarn(n, opts.source || 'unknown', opts.description || '');
+        if (sync && sync.then) {
+          sync.then((r) => {
+            // success → server response already set eastPoints to the
+            // authoritative capped balance.
+            // 429 (daily cap / rate-limit) → server genuinely didn't credit,
+            //   so undo the optimistic add (this is the jumpiness fix).
+            // 422 (source not yet server-whitelisted) → leave the optimistic
+            //   credit as-is so we don't break those earns before the server
+            //   whitelist catches up; the next successful sync reconciles.
+            if (r && r.rejected && r.code === 429) {
+              this.data.eastPoints = Math.max(0, this.data.eastPoints - n);
+              this.save();
+              if (window.Farm && Farm.ui && Farm.ui.refreshHUD) Farm.ui.refreshHUD();
+            }
+          });
+        }
       }
-      return { credited, queued };
+      return { credited: n, sync };
     },
     // Spend EP. When logged in, state.eastPoints mirrors the real
     // members/{uid}.totalPoints (synced on login + each earn/spend), so
@@ -424,10 +422,27 @@
       const epAmount = coinAmt / 10;
       const result = this.addEastPoints(epAmount, {
         source: 'coin_exchange',
-        description: 'Exchange ' + coinAmt + ' farm coins → ' + epAmount + ' EP',
+        description: 'Exchange ' + coinAmt + ' farm coins → ' + epAmount + ' points',
       });
+      // If the server rejects the points earn (e.g. daily cap reached), refund
+      // the coins so the player isn't charged for points they didn't get.
+      if (result.sync && result.sync.then) {
+        result.sync.then((res) => {
+          if (res && res.rejected && res.code === 429) {
+            this.data.coins += coinAmt;
+            this.save();
+            if (window.Farm && Farm.ui && Farm.ui.refreshHUD) Farm.ui.refreshHUD();
+            const lang = this.data.language;
+            if (window.Farm && Farm.ui) {
+              Farm.ui.toast(lang === 'en'
+                ? 'Daily points cap reached — coins refunded'
+                : '今日积分已达上限，农场币已退回', 3500);
+            }
+          }
+        });
+      }
       this.save();
-      return { ok: true, coinsSpent: coinAmt, epGained: epAmount, ...result };
+      return { ok: true, coinsSpent: coinAmt, epGained: epAmount, credited: result.credited };
     },
     exchangeEpToCoins(epAmt) {
       epAmt = Math.floor(epAmt);

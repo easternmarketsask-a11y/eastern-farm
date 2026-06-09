@@ -18,15 +18,17 @@
  */
 (function() {
   // Reward table, index 0 = Day 1 ... index 6 = Day 7.
-  // kind: 'coins' | 'ep' | 'seeds' | 'mixed'
+  // Sign-in rewards are FARM COINS only (per owner): daily-engagement rewards
+  // give coins; 超市积分 stays scarce and is earned via tasks/harvest/etc.
+  // (grantReward still supports ep/seeds, just unused for coins-only days.)
   const REWARDS = [
     { day: 1, coins: 20 },
-    { day: 2, coins: 30, ep: 1 },
-    { day: 3, coins: 40, seeds: 2 },
-    { day: 4, coins: 60, ep: 3 },
-    { day: 5, coins: 90, seeds: 2 },
-    { day: 6, ep: 6 },
-    { day: 7, coins: 200, ep: 50, seeds: 3, big: true },
+    { day: 2, coins: 40 },
+    { day: 3, coins: 60, seeds: 2 },
+    { day: 4, coins: 90 },
+    { day: 5, coins: 120, seeds: 2 },
+    { day: 6, coins: 150 },
+    { day: 7, coins: 400, seeds: 3, big: true },
   ];
 
   function rewardLine(r, lang) {

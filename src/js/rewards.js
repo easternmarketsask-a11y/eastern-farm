@@ -32,10 +32,6 @@
       const s = Farm.state.data;
       const ep = s.eastPoints;
       const coins = s.coins;
-      const cap = s.epDailyCap || 1000;
-      const earnedToday = s.epEarnedToday || 0;
-      const pending = s.pendingEp || 0;
-      const headroom = Math.max(0, cap - earnedToday);
 
       const balanceHTML = `
         <div class="ep-overview">
@@ -54,8 +50,7 @@
             </div>
           </div>
           <div class="ep-cap-row">
-            <div>${lang === 'en' ? 'Today:' : '今日入账:'} <strong>${earnedToday}</strong> / ${cap} <span class="points-icon"></span></div>
-            ${pending > 0 ? `<div class="ep-cap-pending">⏳ ${lang === 'en' ? 'Queued for tomorrow:' : '排队明日入账:'} ${pending} <span class="points-icon"></span></div>` : ''}
+            <div>${lang === 'en' ? 'Daily limit: 500 points (resets each day)' : '每日上限 500 积分（每天重置）'}</div>
           </div>
         </div>
       `;
