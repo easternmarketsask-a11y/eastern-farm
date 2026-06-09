@@ -101,10 +101,10 @@
     {
       "id": "feature_ep_shop",
       "category": "feature",
-      "title_zh": "🛍️ 积分商城",
-      "title_en": "🛍️ EP Shop",
-      "body_zh": "用积分换加速券、装饰品、扩展地块，让农场更丰富。",
-      "body_en": "Spend EP on acceleration tickets, decorations, and plot expansions — make your farm your own."
+      "title_zh": "🛍️ 商城",
+      "title_en": "🛍️ Shop",
+      "body_zh": "用农场币和超市积分换加速券、装饰品、扩展地块，让农场更丰富。",
+      "body_en": "Spend coins and points on acceleration tickets, decorations, and plot expansions — make your farm your own."
     },
     {
       "id": "feature_login_phone",

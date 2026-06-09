@@ -14,7 +14,7 @@
     "nav_settings": { "zh": "设置", "en": "Settings" },
 
     "currency_coins": { "zh": "金币", "en": "Coins" },
-    "currency_east_points": { "zh": "东方点", "en": "East Points" },
+    "currency_east_points": { "zh": "超市积分", "en": "Store Points" },
     "label_level": { "zh": "等级", "en": "Level" },
     "label_xp": { "zh": "经验", "en": "XP" },
 
@@ -36,12 +36,12 @@
 
     "toast_planted": { "zh": "已种下 {crop}", "en": "Planted {crop}" },
     "toast_harvested": { "zh": "+{coins} 金币", "en": "+{coins} coins" },
-    "toast_harvested_bonus": { "zh": "+{coins} 金币 +1 东方点!", "en": "+{coins} coins +1 East Point!" },
+    "toast_harvested_bonus": { "zh": "+{coins} 金币 +1 超市积分!", "en": "+{coins} coins +1 Store Point!" },
     "toast_level_up": { "zh": "等级提升! 解锁新内容", "en": "Level up! New content unlocked" },
     "toast_task_complete": { "zh": "任务完成! +{coins} +{points}🎫", "en": "Task done! +{coins} +{points}🎫" },
     "toast_not_enough_coins": { "zh": "金币不够", "en": "Not enough coins" },
     "toast_not_enough_seeds": { "zh": "种子不够", "en": "Not enough seeds" },
-    "toast_not_enough_points": { "zh": "东方点不够", "en": "Not enough East Points" },
+    "toast_not_enough_points": { "zh": "超市积分不够", "en": "Not enough points" },
 
     "daily_login_title": { "zh": "🌅 欢迎回来", "en": "🌅 Welcome back" },
     "daily_login_streak": { "zh": "连续登录第 {n} 天", "en": "Day {n} login streak" },
@@ -54,9 +54,9 @@
     "tasks_progress": { "zh": "{done}/{total}", "en": "{done}/{total}" },
     "tasks_all_done": { "zh": "今日任务全部完成! 明天见 ✨", "en": "All done for today! See you tomorrow ✨" },
 
-    "rewards_title": { "zh": "东方点兑换", "en": "East Point Rewards" },
+    "rewards_title": { "zh": "超市积分", "en": "Store Points" },
     "rewards_subtitle": { "zh": "兑换真实的东方超市优惠券", "en": "Exchange for real Eastern Market coupons" },
-    "rewards_confirm_zh": { "zh": "用 {points} 东方点兑换 {value} 优惠券?", "en": "Exchange {points} East Points for {value} coupon?" },
+    "rewards_confirm_zh": { "zh": "用 {points} 超市积分兑换 {value}?", "en": "Exchange {points} Store Points for {value}?" },
     "rewards_code_title": { "zh": "你的优惠码", "en": "Your Coupon Code" },
     "rewards_code_instruction": { "zh": "结账时给收银员看这个码即可", "en": "Show this code at checkout" },
     "rewards_code_valid_until": { "zh": "有效期至 {date}", "en": "Valid until {date}" },
@@ -91,7 +91,7 @@
     "tutorial_step2_title": { "zh": "2. 等一会儿", "en": "2. Wait a bit" },
     "tutorial_step2_body": { "zh": "种子会自己长大（小白菜约 30 秒）。出门买菜、做饭、回来收都行。", "en": "Crops grow on their own (bok choy ~30 sec). Come back anytime to pick." },
     "tutorial_step3_title": { "zh": "3. 卖给东方超市", "en": "3. Sell to Eastern Market" },
-    "tutorial_step3_body": { "zh": "收的菜先进仓库，攒一批后送到东方超市，换农场币和积分。", "en": "Harvested crops go to the silo. Deliver to Eastern Market for coins + East Points." },
+    "tutorial_step3_body": { "zh": "收的菜先进仓库，攒一批后送到东方超市，换农场币和超市积分。", "en": "Harvested crops go to the silo. Deliver to Eastern Market for coins + Store Points." },
     "tutorial_btn_start": { "zh": "开始种菜 →", "en": "Start farming →" },
 
     "toast_first_plant": { "zh": "🌱 种下第一棵菜！开张大吉 +10 农场币", "en": "🌱 Your first seed! +10 coins to start" },
@@ -145,7 +145,7 @@
     "Visit 3 neighbors → +5 points.",
     "Like a neighbor and you get +1 point too. Cap 5/day.",
     "Leaderboard resets every Monday. Grow more to climb up.",
-    "New lanterns in the EP shop. Take a look.",
+    "New lanterns in the shop. Take a look.",
     "Acceleration tickets ripen a crop instantly. Save them for the right moment.",
     "Higher level unlocks more crops. Keep planting!",
     "Close the app and your crops keep growing.",

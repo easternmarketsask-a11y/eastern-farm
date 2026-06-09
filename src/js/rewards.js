@@ -40,7 +40,7 @@
       const balanceHTML = `
         <div class="ep-overview">
           <div class="ep-overview-balance">
-            <div class="ep-overview-label">${lang === 'en' ? 'Your Eastern Points' : '您的东方积分'}</div>
+            <div class="ep-overview-label">${lang === 'en' ? 'Your Store Points' : '您的超市积分'}</div>
             <div class="ep-overview-value"><span class="points-icon"></span> ${ep.toLocaleString()}</div>
             <div class="ep-overview-note">
               ${lang === 'en'
@@ -64,7 +64,7 @@
         <h3 class="rewards-section">${lang === 'en' ? '🔄 Exchange (10 ⇄ 1)' : '🔄 兑换 (10 ⇄ 1)'}</h3>
         <div class="exchange-row">
           <div class="exchange-side">
-            <label><span class="coin-icon"></span> ${lang === 'en' ? 'Coins → EP' : '农场币 → 积分'}</label>
+            <label><span class="coin-icon"></span> ${lang === 'en' ? 'Coins → Points' : '农场币 → 超市积分'}</label>
             <div class="exchange-input-group">
               <input type="number" id="exCoinAmt" min="10" step="10" value="100" placeholder="10x" />
               <span class="exchange-arrow">→ <span id="exCoinPreview">10</span> <span class="points-icon"></span></span>
@@ -73,7 +73,7 @@
             <button class="btn exchange-btn" id="exCoinBtn">${lang === 'en' ? 'Exchange' : '兑换'}</button>
           </div>
           <div class="exchange-side">
-            <label><span class="points-icon"></span> ${lang === 'en' ? 'EP → Coins' : '积分 → 农场币'}</label>
+            <label><span class="points-icon"></span> ${lang === 'en' ? 'Points → Coins' : '超市积分 → 农场币'}</label>
             <div class="exchange-input-group">
               <input type="number" id="exEpAmt" min="1" step="1" value="10" />
               <span class="exchange-arrow">→ <span id="exEpPreview">100</span> <span class="coin-icon"></span></span>
@@ -85,19 +85,17 @@
       `;
 
       const earnList = lang === 'en' ? [
-        { icon: '🌅', text: 'Daily login +1 (7-day streak ×2, 30-day ×3, 90-day ×5)' },
+        { icon: '📅', text: '7-day sign-in: points on day 2/4/6, big bonus on day 7' },
         { icon: '📋', text: 'Complete daily tasks +1 each (3/day)' },
         { icon: '🌽', text: '3% random bonus on harvest +5' },
         { icon: '🎰', text: '1% Golden Nugget chance +50~500' },
         { icon: '🌅', text: 'First harvest of the day +10' },
-        { icon: '☄️', text: 'Saturday/Sunday Meteor Shower 2× all EP' },
+        { icon: '☄️', text: 'Saturday/Sunday Meteor Shower 2× all points' },
         { icon: '🏆', text: 'Achievement unlock +5~+30' },
         { icon: '🎊', text: 'Festival tasks +5~+10' },
-        { icon: '🏘', text: 'Visit 3 neighbors daily +5' },
-        { icon: '📰', text: 'Mark news as read +2' },
         { icon: '🔄', text: 'Convert farm coins 10:1' },
       ] : [
-        { icon: '🌅', text: '每日登录 +1（连 7 天翻倍，30 天 ×3，90 天 ×5）' },
+        { icon: '📅', text: '七日签到：第 2/4/6 天给积分，第 7 天大奖' },
         { icon: '📋', text: '完成每日任务 +1/个（每日 3 个）' },
         { icon: '🌽', text: '收获时 3% 概率 +5' },
         { icon: '🎰', text: '1% 金疙瘩大奖 +50~500' },
@@ -105,13 +103,11 @@
         { icon: '☄️', text: '周末（六/日）流星雨 ×2 全部积分' },
         { icon: '🏆', text: '解锁成就 +5~+30' },
         { icon: '🎊', text: '节日任务 +5~+10' },
-        { icon: '🏘', text: '走访 3 户邻居 +5' },
-        { icon: '📰', text: '读今日新闻 +2' },
         { icon: '🔄', text: '农场币 10:1 兑换' },
       ];
 
       const earnHTML = `
-        <h3 class="rewards-section">${lang === 'en' ? '💡 How to earn EP' : '💡 如何获取积分'}</h3>
+        <h3 class="rewards-section">${lang === 'en' ? '💡 How to earn points' : '💡 如何获取超市积分'}</h3>
         <ul class="earn-list">
           ${earnList.map(e => `<li><span class="earn-icon">${e.icon}</span> ${e.text}</li>`).join('')}
         </ul>
@@ -119,7 +115,7 @@
 
       const shopHTML = `
         <button class="btn ep-shop-link" id="openEpShopBtn">
-          🛍️ ${lang === 'en' ? 'Open EP Shop' : '打开积分商城'}
+          🛍️ ${lang === 'en' ? 'Open Shop' : '打开商城'}
         </button>
         <div style="font-size:11px;color:var(--warm-text-soft);text-align:center;margin-top:8px;line-height:1.5;">
           ${lang === 'en'
@@ -129,7 +125,7 @@
       `;
 
       const html = `
-        <h2 class="modal-title"><span class="points-icon"></span> ${lang === 'en' ? 'Eastern Points' : '东方积分'}</h2>
+        <h2 class="modal-title"><span class="points-icon"></span> ${lang === 'en' ? 'Store Points' : '超市积分'}</h2>
         ${balanceHTML}
         ${exchangeHTML}
         ${shopHTML}

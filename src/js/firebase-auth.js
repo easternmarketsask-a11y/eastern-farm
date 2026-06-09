@@ -70,7 +70,7 @@
                     ? `❤️ ${r.newLikes} new likes received! +${r.epAwarded} <span class="points-icon"></span>`
                     : `❤️ 收到 ${r.newLikes} 个赞！+${r.epAwarded} <span class="points-icon"></span>`)
                   : (lang === 'en'
-                    ? `❤️ ${r.newLikes} new likes received! (daily EP cap reached)`
+                    ? `❤️ ${r.newLikes} new likes received! (daily points cap reached)`
                     : `❤️ 收到 ${r.newLikes} 个赞！（今日积分上限已满）`);
                 Farm.ui.toast(msg, 4000);
               }

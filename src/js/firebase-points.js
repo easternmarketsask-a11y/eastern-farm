@@ -186,8 +186,8 @@
         const lang = data.language;
         setTimeout(() => {
           Farm.ui.toast(lang === 'en'
-            ? '🎁 ' + amount + ' EP backfilled to your member account'
-            : '🎁 ' + amount + ' 积分已回填到您的会员账户', 4000);
+            ? '🎁 ' + amount + ' points backfilled to your member account'
+            : '🎁 ' + amount + ' 超市积分已回填到您的会员账户', 4000);
         }, 800);
       }
       // If failed, backfillDone stays false; retried on next login or queue flush.
@@ -262,7 +262,7 @@
               ${isEn ? 'farm coins' : '农场币'}
             </div>
             <div style="font-size:11px;color:#9b8870;margin-top:10px;">
-              ${isEn ? 'Equivalent to ' + ep + ' Eastern Market Points' : '等同 ' + ep + ' 超市积分'}
+              ${isEn ? 'Equivalent to ' + ep + ' Store Points' : '等同 ' + ep + ' 超市积分'}
             </div>
           </div>
           <p style="font-size:13px;color:#6b5840;margin:12px 0 4px;">

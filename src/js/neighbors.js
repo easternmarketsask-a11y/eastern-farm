@@ -644,8 +644,8 @@
             <div class="gift-choice-sub">${lang === 'en' ? 'A surprise easy-tier seed' : '一棵初级蔬菜种子'}</div>
           </button>
           <button class="btn gift-choice" data-gift-kind="ep">
-            <div class="gift-choice-title">🎫 ${lang === 'en' ? '+5 Eastern Points' : '+5 东方积分'}</div>
-            <div class="gift-choice-sub">${lang === 'en' ? 'A little EP for their account' : '送给对方一点积分鼓励'}</div>
+            <div class="gift-choice-title">🎫 ${lang === 'en' ? '+5 Store Points' : '+5 超市积分'}</div>
+            <div class="gift-choice-sub">${lang === 'en' ? 'A little points gift for their account' : '送给对方一点超市积分鼓励'}</div>
           </button>
         </div>
       `;
