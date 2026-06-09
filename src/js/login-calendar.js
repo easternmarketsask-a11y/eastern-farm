@@ -124,6 +124,9 @@
     _claim() {
       const lang = Farm.state.data.language;
       const result = Farm.state.signTodayCalendar();
+      // Already claimed today (e.g. a rapid double-tap before the modal
+      // re-rendered) — bail so the reward isn't granted twice.
+      if (!result.claimed) return;
       const dayIndex = result.dayIndex;  // 1-7
       const reward = REWARDS[dayIndex - 1];
       this._justClaimed = { dayIndex };

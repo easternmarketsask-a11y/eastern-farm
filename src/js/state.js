@@ -704,8 +704,9 @@
       const today = getDateString();
       const cal = this.data.loginCalendar;
       if (cal.lastSignDate === today) {
-        // Already signed today — return current state, no-op.
-        return { dayIndex: cal.dayIndex, reset: false };
+        // Already signed today — no-op. claimed:false lets the caller skip
+        // re-granting the reward (guards rapid double-tap double-pay).
+        return { dayIndex: cal.dayIndex, reset: false, claimed: false };
       }
       const yesterday = getDateString(new Date(Date.now() - 86400000));
       let reset = false;
@@ -723,7 +724,7 @@
       }
       cal.lastSignDate = today;
       this.save();
-      return { dayIndex: cal.dayIndex, reset };
+      return { dayIndex: cal.dayIndex, reset, claimed: true };
     },
 
     getDateString,

@@ -59,7 +59,7 @@ self.addEventListener('notificationclick', (event) => {
   );
 });
 
-const CACHE_VERSION = 'ef-v1';
+const CACHE_VERSION = 'ef-v2';
 const CACHE = 'eastern-farm-' + CACHE_VERSION;
 const PRECACHE = [
   '/src/index.html',
@@ -96,38 +96,24 @@ self.addEventListener('fetch', (event) => {
   try { url = new URL(req.url); } catch (e) { return; }
   if (url.origin !== self.location.origin) return;  // leave Firebase/CDN alone
 
-  // Game data: network-first so crops/tasks/events/news stay fresh; the cached
-  // copy is only a last-resort offline fallback.
-  if (url.pathname.includes('/data/') && url.pathname.endsWith('.json')) {
-    event.respondWith(
-      fetch(req).then((res) => {
+  // Network-first for ALL same-origin GETs: returning players always get the
+  // latest code/data/styles when online; the cache is purely an offline
+  // fallback. This avoids serving stale JS against a newer save schema after a
+  // deploy (the main risk of stale-while-revalidate for an actively-iterated
+  // game). Each 200 response refreshes the offline copy.
+  event.respondWith(
+    fetch(req).then((res) => {
+      if (res && res.status === 200) {
         const copy = res.clone();
         caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {});
-        return res;
-      }).catch(() => caches.match(req))
-    );
-    return;
-  }
-
-  // Navigations: prefer live network; offline, serve the cached shell.
-  if (req.mode === 'navigate') {
-    event.respondWith(
-      fetch(req).catch(() => caches.match('/src/index.html'))
-    );
-    return;
-  }
-
-  // Static shell assets: stale-while-revalidate.
-  event.respondWith(
-    caches.match(req).then((cached) => {
-      const networked = fetch(req).then((res) => {
-        if (res && res.status === 200) {
-          const copy = res.clone();
-          caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {});
-        }
-        return res;
-      }).catch(() => cached);
-      return cached || networked;
-    })
+      }
+      return res;
+    }).catch(() =>
+      caches.match(req).then((cached) => {
+        if (cached) return cached;
+        if (req.mode === 'navigate') return caches.match('/src/index.html');
+        return Response.error();
+      })
+    )
   );
 });
