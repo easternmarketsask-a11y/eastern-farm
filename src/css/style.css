@@ -2851,6 +2851,61 @@ body {
 }
 .daily-card.daily-signin { border-left: 3px solid var(--barn-red); }
 
+/* ============ Seasonal skins (seasons.js) ============ */
+#farm { position: relative; }   /* anchor the falling-particle overlay */
+
+#farm.season-spring {
+  background:
+    radial-gradient(circle at 84% 30px, #fff3c0 0 19px, rgba(255,243,192,0) 21px),
+    radial-gradient(150% 78px at 24% 120px, #c7e7a0 0 58%, transparent 60%),
+    radial-gradient(150% 66px at 88% 126px, #d6eeb0 0 58%, transparent 60%),
+    linear-gradient(180deg, #d4ecf7 0%, #e8f3e0 24%, #d6ecae 38%, #bfe28a 100%);
+}
+#farm.season-summer {
+  background:
+    radial-gradient(circle at 84% 28px, #ffe07a 0 22px, rgba(255,224,122,0) 24px),
+    radial-gradient(150% 78px at 24% 120px, #b6df8e 0 58%, transparent 60%),
+    radial-gradient(150% 66px at 88% 126px, #c2e69a 0 58%, transparent 60%),
+    linear-gradient(180deg, #a9def5 0%, #cdeede 26%, #b6df8e 40%, #98cf6e 100%);
+}
+#farm.season-autumn {
+  background:
+    radial-gradient(circle at 84% 30px, #ffcf86 0 20px, rgba(255,207,134,0) 22px),
+    radial-gradient(150% 78px at 24% 122px, #d8c06a 0 58%, transparent 60%),
+    radial-gradient(150% 66px at 88% 128px, #e0cd86 0 58%, transparent 60%),
+    linear-gradient(180deg, #e9d8b0 0%, #f0e6c8 26%, #d9c074 42%, #c4a85a 100%);
+}
+#farm.season-winter {
+  background:
+    radial-gradient(circle at 84% 30px, #fdf3d0 0 18px, rgba(253,243,208,0) 20px),
+    radial-gradient(150% 78px at 24% 124px, #e8eef0 0 58%, transparent 60%),
+    radial-gradient(150% 66px at 88% 130px, #eef3f5 0 58%, transparent 60%),
+    linear-gradient(180deg, #d7e6ef 0%, #e6eef2 30%, #e9eeec 50%, #dde6e0 100%);
+}
+
+.season-particles {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 6;
+}
+.season-particle {
+  position: absolute;
+  top: -28px;
+  will-change: transform;
+  opacity: 0.9;
+  animation-name: seasonFall;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  filter: drop-shadow(0 1px 1px rgba(0,0,0,0.12));
+}
+@keyframes seasonFall {
+  0%   { transform: translateY(-28px) translateX(0) rotate(0deg); }
+  50%  { transform: translateY(260px) translateX(16px) rotate(180deg); }
+  100% { transform: translateY(540px) translateX(-6px) rotate(360deg); }
+}
+
 /* ============ PWA install banner (pwa-install.js) ============ */
 .pwa-install-banner {
   position: fixed;
