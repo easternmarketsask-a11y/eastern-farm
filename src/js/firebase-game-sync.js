@@ -35,10 +35,24 @@
   }
 
   const gameSync = {
+    // Safe public display name for THIS player (no real name leaks to others):
+    // nickname if set, else "{firstChar of own real name}邻居", else generic.
+    // Computed for the player's OWN doc only, so reading their own member name
+    // is fine — the derived string is what gets stored publicly.
+    _selfDisplayName() {
+      const s = Farm.state.data;
+      if (s.nickname) return s.nickname;
+      const md = (Farm.fbAuth && Farm.fbAuth.memberDoc) || {};
+      const realName = md.name || md.firstName || '';
+      const fc = (realName + '').trim().charAt(0);
+      return fc ? fc + '邻居' : '萨城邻居';
+    },
+
     // Compute the gameStats payload from local state. Pure function.
     _buildPayload() {
       const s = Farm.state.data;
       return {
+        displayName: this._selfDisplayName(),
         level: s.level || 1,
         totalHarvests: s.totalHarvests || 0,
         totalDeliveries: s.totalDeliveries || 0,
@@ -68,11 +82,25 @@
       try {
         const payload = this._buildPayload();
         // Merge so we never overwrite likesReceived (counter only) or other
-        // server-managed fields.
+        // server-managed fields. members/ keeps the gameStats mirror so the
+        // StockWise admin game-management view (and points context) stay current.
         await Farm.fb.db.collection('members').doc(uid).set(
           { gameStats: payload },
           { merge: true }
         );
+        // Mirror the SAME game-safe stats to the public farm_players/ collection
+        // (zero PII). The app's social reads (leaderboard / neighbors / self-rank)
+        // query this collection, because members/ is locked to list limit<=1 by
+        // security rules. merge() preserves likesReceived/likedBy/pendingGifts that
+        // other players (or the weekly function) write here.
+        try {
+          await Farm.fb.db.collection('farm_players').doc(uid).set(
+            { gameStats: payload },
+            { merge: true }
+          );
+        } catch (e) {
+          console.warn('[gameSync] farm_players mirror failed', e);
+        }
         _lastSyncAt = Date.now();
         return { ok: true };
       } catch (e) {
@@ -102,8 +130,10 @@
     displayName(doc) {
       if (!doc) return '匿名邻居';
       const stats = doc.gameStats || {};
+      // Prefer the safe precomputed name (farm_players docs carry no real name).
+      if (stats.displayName) return stats.displayName;
       if (stats.nickname) return stats.nickname;
-      // Derive from real name first character, fallback to "邻居"
+      // Legacy fallback (member docs): derive from real name first character.
       const realName = doc.name || doc.firstName || '';
       const firstChar = (realName + '').trim().charAt(0);
       return firstChar ? firstChar + '邻居' : '萨城邻居';
@@ -118,7 +148,7 @@
         // Note: Firestore can't query for "field exists" + "field is true"
         // in one query without composite index, so we filter visibility
         // client-side. Order by lastSeenAt to surface recently-active players.
-        const q = await Farm.fb.db.collection('members')
+        const q = await Farm.fb.db.collection('farm_players')
           .orderBy('gameStats.lastSeenAt', 'desc')
           .limit(limit)
           .get();
@@ -193,7 +223,7 @@
       try {
         const myUid = Farm.fbAuth && meId();
         if (myUid) {
-          const me = await Farm.fb.db.collection('members').doc(myUid).get();
+          const me = await Farm.fb.db.collection('farm_players').doc(myUid).get();
           const mine = (me.exists && me.data().gameStats) || {};
           if (Array.isArray(mine.likedBy) && mine.likedBy.includes(toUid)) {
             isMutual = true;
@@ -211,7 +241,7 @@
               likedBy: firebase.firestore.FieldValue.arrayUnion(myUid),
             },
           };
-          await Farm.fb.db.collection('members').doc(toUid).set(payload, { merge: true });
+          await Farm.fb.db.collection('farm_players').doc(toUid).set(payload, { merge: true });
         } catch (e) {
           console.warn('[gameSync] like update failed', e);
         }
@@ -239,7 +269,7 @@
       const uid = meId();
       if (!uid) return null;
       try {
-        const snap = await Farm.fb.db.collection('members').doc(uid).get();
+        const snap = await Farm.fb.db.collection('farm_players').doc(uid).get();
         if (!snap.exists) return null;
         const stats = (snap.data().gameStats) || {};
         const cur = stats.likesReceived || 0;
@@ -298,7 +328,7 @@
       try {
         // Fetch extra rows when weekly so client-side week filtering still
         // leaves a full top list.
-        const q = await Farm.fb.db.collection('members')
+        const q = await Farm.fb.db.collection('farm_players')
           .orderBy(field, 'desc')
           .limit(metric === 'weekly' ? topN * 3 : topN)
           .get();
@@ -345,14 +375,14 @@
       const field = fieldMap[metric] || fieldMap.level;
       const curWeek = (metric === 'weekly' && Farm.state.getWeekId) ? Farm.state.getWeekId() : null;
       try {
-        const myDoc = await Farm.fb.db.collection('members').doc(uid).get();
+        const myDoc = await Farm.fb.db.collection('farm_players').doc(uid).get();
         const myStats = (myDoc.exists && myDoc.data().gameStats) || {};
         const myValue = metric === 'level' ? (myStats.level || 1)
                       : metric === 'harvests' ? (myStats.totalHarvests || 0)
                       : metric === 'weekly' ? (myStats.weeklyHarvests || 0)
                       : (myStats.totalDeliveries || 0);
-        // Count members with HIGHER value (those ranked above me)
-        const q = await Farm.fb.db.collection('members')
+        // Count players with HIGHER value (those ranked above me)
+        const q = await Farm.fb.db.collection('farm_players')
           .where(field, '>', myValue)
           .limit(100)
           .get();
@@ -412,7 +442,7 @@
       try {
         const myUid = Farm.fbAuth && meId();
         if (myUid) {
-          await Farm.fb.db.collection('members').doc(myUid).set(
+          await Farm.fb.db.collection('farm_players').doc(myUid).set(
             { gameStats: { friends: firebase.firestore.FieldValue.arrayUnion(uid) } },
             { merge: true }
           );
@@ -428,7 +458,7 @@
       try {
         const myUid = Farm.fbAuth && meId();
         if (myUid) {
-          await Farm.fb.db.collection('members').doc(myUid).set(
+          await Farm.fb.db.collection('farm_players').doc(myUid).set(
             { gameStats: { friends: firebase.firestore.FieldValue.arrayRemove(uid) } },
             { merge: true }
           );
@@ -445,7 +475,7 @@
       const out = [];
       for (const uid of uids.slice(0, 30)) {
         try {
-          const snap = await Farm.fb.db.collection('members').doc(uid).get();
+          const snap = await Farm.fb.db.collection('farm_players').doc(uid).get();
           if (snap.exists) out.push({ uid, doc: snap.data() });
         } catch (_) {}
       }
@@ -468,9 +498,7 @@
       }
       const myUid = Farm.fbAuth && meId();
       if (!myUid) return { ok: false, reason: 'not_logged_in' };
-      const fromName = (Farm.fbAuth.memberDoc &&
-        (Farm.fbAuth.memberDoc.gameStats && Farm.fbAuth.memberDoc.gameStats.nickname
-          || Farm.fbAuth.memberDoc.name)) || '匿名邻居';
+      const fromName = this._selfDisplayName();
       const giftId = myUid + '_' + Date.now();
       // Build payload by kind
       let payload;
@@ -492,7 +520,7 @@
           id: giftId, fromUid: myUid, fromName, kind, payload,
           sentAt: Date.now(),
         };
-        await Farm.fb.db.collection('members').doc(toUid).set(
+        await Farm.fb.db.collection('farm_players').doc(toUid).set(
           { gameStats: { pendingGifts: firebase.firestore.FieldValue.arrayUnion(gift) } },
           { merge: true }
         );
@@ -514,7 +542,7 @@
       const uid = meId();
       if (!uid) return [];
       try {
-        const snap = await Farm.fb.db.collection('members').doc(uid).get();
+        const snap = await Farm.fb.db.collection('farm_players').doc(uid).get();
         if (!snap.exists) return [];
         const stats = (snap.data().gameStats) || {};
         const gifts = stats.pendingGifts || [];
@@ -529,7 +557,7 @@
           }
         }
         // Clear server-side queue
-        await Farm.fb.db.collection('members').doc(uid).set(
+        await Farm.fb.db.collection('farm_players').doc(uid).set(
           { gameStats: { pendingGifts: [] } },
           { merge: true }
         );

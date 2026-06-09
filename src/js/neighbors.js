@@ -112,7 +112,7 @@
       return this._todayList;
     },
 
-    _leaderboardMetric: 'weekly',  // 'weekly' | 'level' | 'harvests' | 'deliveries'
+    _leaderboardMetric: 'harvests',  // landing tab: all-time harvests (always populated); 'weekly' | 'level' | 'harvests' | 'deliveries'
     _selfRank: null,
 
     async _fetchLeaderboard(metric) {
