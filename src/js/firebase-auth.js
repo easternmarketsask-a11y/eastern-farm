@@ -51,6 +51,12 @@
           this._notify();
           this._renderTopbar();
           this._renderSplash();
+          // Now that the REAL member doc has resolved, push gameStats to the
+          // correct doc (members + farm_players). The push guard skipped any
+          // earlier attempts while memberDoc was still unresolved.
+          if (this.memberDoc && Farm.fbGameSync && Farm.fbGameSync.push) {
+            Farm.fbGameSync.push();
+          }
           if (Farm.fbPoints && Farm.fbPoints.firstLoginBackfill) {
             Farm.fbPoints.firstLoginBackfill(user);
           }
@@ -162,17 +168,36 @@
 
     async _loadMemberDoc(uid) {
       try {
-        // Prefer the REAL member doc (keyed by store id, with firebase_uid as a
-        // field). We must look this up FIRST — falling back to doc(uid) would
-        // pick up the legacy orphan gameStats doc (no name/phone) instead.
+        // 1. Fast path: the REAL member doc linked by firebase_uid.
         const q = await Farm.fb.db.collection('members').where('firebase_uid', '==', uid).limit(1).get();
         if (!q.empty) {
           const d = q.docs[0];
           this.memberDoc = { id: d.id, ...d.data() };
-        } else {
-          const direct = await Farm.fb.db.collection('members').doc(uid).get();
-          this.memberDoc = direct.exists ? { id: direct.id, ...direct.data() } : null;
+          this._syncLocalBalance();
+          return;
         }
+        // 2. Phone bridge: on a FIRST login the firebase_uid link may not be
+        //    written yet (it races with onAuthStateChanged). Resolve the real
+        //    member doc by the auth token's phone number so memberDocId() points
+        //    at the store doc — NOT doc(uid), which would spawn an orphan
+        //    ("匿名") gameStats doc. Best-effort backfill firebase_uid so the
+        //    fast path works next time.
+        const phone = (this.currentUser && this.currentUser.phoneNumber) || null;
+        if (phone) {
+          const pq = await Farm.fb.db.collection('members').where('phone', '==', phone).limit(1).get();
+          if (!pq.empty) {
+            const d = pq.docs[0];
+            this.memberDoc = { id: d.id, ...d.data() };
+            if (d.data().firebase_uid == null) {
+              d.ref.update({ firebase_uid: uid, updatedAt: Farm.fb.serverTimestamp() }).catch(() => {});
+            }
+            this._syncLocalBalance();
+            return;
+          }
+        }
+        // 3. Last resort (legacy orphan keyed by uid, or genuinely nothing).
+        const direct = await Farm.fb.db.collection('members').doc(uid).get();
+        this.memberDoc = direct.exists ? { id: direct.id, ...direct.data() } : null;
       } catch (e) {
         console.warn('member doc load failed', e);
         this.memberDoc = null;

@@ -77,6 +77,14 @@
     async push() {
       if (!Farm.fb || !Farm.fb.available) return { ok: false, reason: 'offline' };
       if (!Farm.fbAuth || !Farm.fbAuth.isLoggedIn()) return { ok: false, reason: 'not_logged_in' };
+      // Anti-orphan guard: never write gameStats until the REAL member doc has
+      // resolved. Without this, meId() falls back to the auth uid and we'd
+      // create an orphan ("匿名") doc + a farm_players write that security
+      // rules reject. memberDoc resolves via _loadMemberDoc (firebase_uid or
+      // phone bridge) right after login; the debounced retry picks it up.
+      if (!Farm.fbAuth.memberDoc || !Farm.fbAuth.memberDoc.id) {
+        return { ok: false, reason: 'member_doc_unresolved' };
+      }
       const uid = meId();
       if (!uid) return { ok: false, reason: 'no_uid' };
       try {
