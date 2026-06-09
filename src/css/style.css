@@ -80,19 +80,12 @@ body {
  * farm grid region gets flex: 1 + overflow-y: auto. */
 #app > * { flex-shrink: 0; }
 
-/* =============== BRAND BAR (above topbar, always visible) =============== */
-.brandbar {
-  display: flex;
+/* =============== BRAND CLUSTER (left side of the merged top bar) =============== */
+.brand-cluster {
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
-  gap: 10px;
-  padding: 8px 16px 6px;
-  background:
-    radial-gradient(circle at 30% 150%, rgba(106, 176, 76, 0.10), transparent 60%),
-    radial-gradient(circle at 70% -50%, rgba(232, 82, 42, 0.10), transparent 60%),
-    linear-gradient(180deg, #ffffff 0%, #fffaeb 100%);
-  border-bottom: 1px solid var(--border-soft);
-  padding-top: calc(8px + env(safe-area-inset-top));
+  gap: 6px;
+  min-width: 0;            /* allow shrink so the right group always fits */
 }
 .brandbar-logo-link {
   display: inline-flex;
@@ -103,28 +96,33 @@ body {
 }
 .brandbar-logo-link:active { transform: scale(0.94); }
 .brandbar-logo {
-  height: 30px;
+  height: 24px;
   width: auto;
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
 }
-.brandbar-divider {
+.brand-sprout {
+  font-size: 16px;
   display: inline-block;
-  width: 1px;
-  height: 22px;
-  background: linear-gradient(180deg, transparent, rgba(0,0,0,0.18), transparent);
+  transform-origin: 50% 90%;
+  animation: brandSproutSway 2.8s ease-in-out infinite;
+  filter: drop-shadow(0 1px 1px rgba(0,0,0,0.15));
 }
-/* Live Saskatoon weather chip — populated by weather.js from Open-Meteo */
+/* Live Saskatoon weather chip — populated by weather.js from Open-Meteo.
+   Hidden on very narrow screens so the currency/member/today group never
+   gets squeezed off the right edge. */
 .brandbar-weather {
-  margin-left: auto;
-  font-size: 11.5px;
+  font-size: 11px;
   font-weight: 600;
   color: #5a4a26;
   background: rgba(255, 248, 230, 0.85);
   border: 1.5px solid rgba(232, 200, 130, 0.6);
-  padding: 3px 9px;
+  padding: 2px 8px;
   border-radius: 12px;
   white-space: nowrap;
   letter-spacing: 0.2px;
+}
+@media (max-width: 379px) {
+  .brandbar-weather { display: none !important; }
 }
 .brandbar-title {
   display: inline-flex;
@@ -177,10 +175,21 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 6px;
-  padding: 10px 10px;
-  background: linear-gradient(180deg, #fffaeb 0%, #faf0d8 100%);
+  gap: 8px;
+  padding: 6px 10px;
+  padding-top: calc(6px + env(safe-area-inset-top));
+  background:
+    radial-gradient(circle at 12% 150%, rgba(106, 176, 76, 0.10), transparent 55%),
+    linear-gradient(180deg, #fffaeb 0%, #faf0d8 100%);
   border-bottom: 2px solid var(--border-soft);
+}
+/* Right-hand group: currencies + member + today, kept together so the brand
+   cluster sits flush left and this group flush right. */
+.topbar-right {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  flex-shrink: 0;
 }
 
 /* Topbar currency pills — 2-row layout: [icon value] on top + small
@@ -1495,13 +1504,13 @@ body {
 /* =============== STOREKEEPER =============== */
 .storekeeper {
   display: flex;
-  align-items: flex-end;
-  padding: 12px 16px;
-  gap: 10px;
+  align-items: center;
+  padding: 7px 14px;
+  gap: 9px;
   background: linear-gradient(180deg, transparent 0%, #f5e9c8 100%);
 }
 .storekeeper-avatar {
-  font-size: 42px;
+  font-size: 34px;
   flex-shrink: 0;
   filter: drop-shadow(0 2px 4px rgba(0,0,0,0.15));
 }
@@ -1509,9 +1518,9 @@ body {
   background: var(--cream-card);
   border: 2px solid var(--border-soft);
   border-radius: var(--radius-md);
-  padding: 10px 14px;
-  font-size: 13px;
-  line-height: 1.5;
+  padding: 8px 13px;
+  font-size: 12.5px;
+  line-height: 1.45;
   color: var(--warm-text);
   flex: 1;
   position: relative;

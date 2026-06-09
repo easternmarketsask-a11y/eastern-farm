@@ -72,42 +72,38 @@
 
 <div id="app">
 
-  <!-- Brand bar (always visible) -->
-  <div id="brandbar" class="brandbar">
-    <a class="brandbar-logo-link" href="https://easternmarket.ca/" title="访问东方超市官网 · Visit Eastern Market">
-      <img class="brandbar-logo" src="assets/images/logo-horizontal.png" alt="东方超市 Eastern Market">
-    </a>
-    <span class="brandbar-divider"></span>
-    <span class="brandbar-title">
-      <span class="brandbar-title-zh-row">
-        <span class="brandbar-title-zh">快乐农场</span>
-        <span class="brandbar-sprout">🌱</span>
-      </span>
-      <span class="brandbar-title-en">Happy Farm</span>
-    </span>
-  </div>
-
-  <!-- Top status bar (4 slots, compact) -->
+  <!-- Combined header: brand logo + weather + currencies + member + today,
+       all in ONE compact bar (was two stacked bands). id="brandbar" kept so
+       weather.js still appends its chip next to the logo. -->
   <header id="topbar">
-    <div id="memberButton" class="topbar-member-slot"></div>
-    <div class="currency coins" title="农场币 Farm Coin">
-      <div class="currency-row">
-        <span class="icon coin-icon"></span>
-        <span class="value" id="coinsValue">100</span>
-      </div>
-      <div class="label">农场币 · Coin</div>
+    <div id="brandbar" class="brand-cluster">
+      <a class="brandbar-logo-link" href="https://easternmarket.ca/" title="访问东方超市官网 · Visit Eastern Market">
+        <img class="brandbar-logo" src="assets/images/logo-horizontal.png" alt="东方超市 Eastern Market">
+      </a>
+      <span class="brand-sprout">🌱</span>
+      <!-- weatherChip injected here by weather.js -->
     </div>
-    <div class="currency points" title="超市积分 Store Points">
-      <div class="currency-row">
-        <span class="icon points-icon"></span>
-        <span class="value" id="pointsValue">0</span>
+    <div class="topbar-right">
+      <div class="currency coins" title="农场币 Farm Coin">
+        <div class="currency-row">
+          <span class="icon coin-icon"></span>
+          <span class="value" id="coinsValue">100</span>
+        </div>
+        <div class="label">农场币 · Coin</div>
       </div>
-      <div class="label">超市积分 · Points</div>
+      <div class="currency points" title="超市积分 Store Points">
+        <div class="currency-row">
+          <span class="icon points-icon"></span>
+          <span class="value" id="pointsValue">0</span>
+        </div>
+        <div class="label">超市积分 · Points</div>
+      </div>
+      <div id="memberButton" class="topbar-member-slot"></div>
+      <button id="todayButton" class="today-button" title="今日">
+        <span class="today-icon">🌅</span>
+        <span id="todayBadge" class="today-badge"></span>
+      </button>
     </div>
-    <button id="todayButton" class="today-button" title="今日">
-      <span class="today-icon">🌅</span>
-      <span id="todayBadge" class="today-badge"></span>
-    </button>
   </header>
 
   <!-- Festival banner (shows during events) -->
