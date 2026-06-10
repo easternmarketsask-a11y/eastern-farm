@@ -138,6 +138,13 @@
           wb.textContent = '💧';
           el.appendChild(wb);
         }
+        // 施肥标记：已施肥的在长作物左下角一颗星
+        if (plot.fertilized) {
+          const fb = document.createElement('div');
+          fb.className = 'plot-fertilized-badge';
+          fb.textContent = '🌟';
+          el.appendChild(fb);
+        }
       } else {
         if (plot.harvestsLeft > 1) {
           const badge = document.createElement('div');
@@ -175,6 +182,15 @@
             ? `<div class="care-note">💧 ${Farm.i18n.t('tending_water_done')}</div>`
             : '');
 
+      // 施肥行：本块已施肥 → 灰提示；否则有化肥库存 → 按钮（产量翻倍）
+      const fertCount = (Farm.tending && Farm.tending.fertilizerCount) ? Farm.tending.fertilizerCount() : 0;
+      const canFert = Farm.tending && Farm.tending.canFertilize(plot);
+      const fertHtml = plot.fertilized
+        ? `<div class="care-note">🌟 ${Farm.i18n.t('tending_fert_done')}</div>`
+        : (canFert
+            ? `<button class="btn care-btn" id="careFert">🌟 ${lang === 'en' ? 'Fertilize (×2 yield)' : '施肥（产量翻倍）'} <span style="opacity:.7;">(${fertCount})</span></button>`
+            : '');
+
       // 加速行：有券才显示（没券不唠叨）
       const accelHtml = charges > 0
         ? `<button class="btn secondary care-btn" id="careAccel">⚡ ${lang === 'en' ? 'Speed up now' : '立刻成熟'} <span style="opacity:.7;">(${charges})</span></button>`
@@ -187,6 +203,7 @@
         </p>
         <div class="care-actions">
           ${waterHtml}
+          ${fertHtml}
           ${accelHtml}
         </div>
         <div class="btn-row" style="margin-top:14px;">
@@ -199,6 +216,12 @@
       if (waterBtn) waterBtn.onclick = () => {
         Farm.ui.hideModal();
         if (Farm.tending) Farm.tending.waterPlot(plotIdx);
+      };
+
+      const fertBtn = document.getElementById('careFert');
+      if (fertBtn) fertBtn.onclick = () => {
+        Farm.ui.hideModal();
+        if (Farm.tending) Farm.tending.fertilizePlot(plotIdx);
       };
 
       const accelBtn = document.getElementById('careAccel');

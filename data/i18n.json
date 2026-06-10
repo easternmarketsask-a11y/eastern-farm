@@ -27,6 +27,9 @@
     "tending_water_done": { "zh": "本轮已浇过水啦", "en": "Already watered this round" },
     "tending_water_mature": { "zh": "已经熟啦，直接收获吧", "en": "It's ripe — harvest it!" },
     "tending_water_toast": { "zh": "💧 浇好水，长得更快啦！", "en": "💧 Watered — growing faster now!" },
+    "tending_fert_done": { "zh": "这块地已经施过肥啦", "en": "This plot is already fertilized" },
+    "tending_fert_none": { "zh": "没有化肥了，去商城买一袋吧", "en": "No fertilizer left — grab a bag in the shop" },
+    "tending_fert_toast": { "zh": "🌟 施好肥，这块地收获翻倍！", "en": "🌟 Fertilized — this plot yields double!" },
 
     "btn_plant": { "zh": "种植", "en": "Plant" },
     "btn_harvest": { "zh": "收获", "en": "Harvest" },

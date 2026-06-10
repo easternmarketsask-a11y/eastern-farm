@@ -63,6 +63,51 @@
       Farm.ui.toast(Farm.i18n.t('tending_water_toast'), 1800);
       return true;
     },
+
+    // ============ 施肥 ============
+    fertilizerCount() {
+      const eff = Farm.state.data.activeEffects || {};
+      return eff.fertilizerCharges || 0;
+    },
+
+    // 有作物、本块未施肥、且库存里有化肥才可施。
+    canFertilize(plot) {
+      if (!plot || !plot.crop || plot.fertilized) return false;
+      return this.fertilizerCount() > 0;
+    },
+
+    // 玩家施肥：消耗 1 袋化肥 → 标记本块，成熟收获时产量翻倍（crops.harvest 读 plot.fertilized）。
+    fertilizePlot(plotIdx) {
+      const plot = Farm.state.data.plots[plotIdx];
+      const lang = Farm.state.data.language;
+      if (!plot || !plot.crop) return false;
+      if (plot.fertilized) {
+        Farm.ui.toast(Farm.i18n.t('tending_fert_done'));
+        return false;
+      }
+      if (this.fertilizerCount() <= 0) {
+        Farm.ui.toast(Farm.i18n.t('tending_fert_none'));
+        return false;
+      }
+      Farm.state.data.activeEffects.fertilizerCharges -= 1;
+      plot.fertilized = true;
+      Farm.state.save();
+      if (Farm.audio) Farm.audio.play('buy');
+
+      const el = document.querySelector('.plot[data-plot-id="' + plotIdx + '"]');
+      if (el) {
+        el.classList.add('just-fertilized');
+        setTimeout(() => el.classList.remove('just-fertilized'), 1000);
+        const rect = el.getBoundingClientRect();
+        if (Farm.ui && Farm.ui.floatText) {
+          Farm.ui.floatText('🌟 ' + (lang === 'en' ? 'Fertilized' : '施肥'),
+            rect.left + rect.width / 2 - 18, rect.top, '#e08a00');
+        }
+      }
+      if (Farm.farm) Farm.farm.renderGrid();
+      Farm.ui.toast(Farm.i18n.t('tending_fert_toast'), 2000);
+      return true;
+    },
   };
 
   window.Farm = window.Farm || {};

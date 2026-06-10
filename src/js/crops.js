@@ -90,6 +90,7 @@
       plot.plantedAt = Date.now();
       plot.harvestsLeft = def.multi_harvest ? (def.harvest_count || 3) : 1;
       plot.watered = false;   // fresh cycle: can be watered once (打理系统)
+      plot.fertilized = false; // fresh cycle: not fertilized yet (打理系统)
       Farm.state.recordPlant(cropId);
       Farm.state.save();
 
@@ -128,13 +129,12 @@
       // Multi-harvest: deduct one harvest, reset growth timer
       plot.harvestsLeft -= 1;
       Farm.state.addToWarehouse(cropId);
-      // 高级化肥（双倍收获）: if a bumper charge is active, drop an extra crop
-      // into the warehouse (when there's room) and consume one charge.
+      // 施肥（双倍收获）: 若本块已施肥，额外入库一棵（仓库有位时），并清除施肥标记。
+      // 施肥仅对本次收获生效——多茬作物每茬需重新施肥。仓库满则保留标记留待下次。
       let bumper = false;
-      const _eff = Farm.state.data.activeEffects || {};
-      if ((_eff.bumperCharges || 0) > 0 && !Farm.state.isWarehouseFull()) {
+      if (plot.fertilized && !Farm.state.isWarehouseFull()) {
         Farm.state.addToWarehouse(cropId);
-        _eff.bumperCharges -= 1;
+        plot.fertilized = false;
         bumper = true;
       }
       const levelInfo = Farm.state.addXp(xp);

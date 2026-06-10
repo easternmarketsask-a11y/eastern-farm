@@ -16,9 +16,9 @@
     },
     {
       "id": "fertilizer",
-      "name_zh": "化肥",
-      "name_en": "Fertilizer",
-      "icon": "🌾",
+      "name_zh": "催熟剂",
+      "name_en": "Quick-Grow",
+      "icon": "💨",
       "cost_coins": 60,
       "category": "consumable",
       "kind": "stack_consumable",
@@ -28,15 +28,15 @@
     },
     {
       "id": "fertilizer_pro",
-      "name_zh": "高级化肥",
-      "name_en": "Premium Fertilizer",
+      "name_zh": "化肥",
+      "name_en": "Fertilizer",
       "icon": "🌟",
       "cost_coins": 120,
       "category": "consumable",
       "kind": "stack_consumable",
-      "stock_key": "bumperCharges",
-      "desc_zh": "下一次收获产量翻倍（×2），可叠加，收获时自动生效。",
-      "desc_en": "Your next harvest yields double (×2). Stacks; auto-applies on harvest."
+      "stock_key": "fertilizerCharges",
+      "desc_zh": "选一块地施肥，那块地成熟收获时产量翻倍（×2）。一袋管一块地。",
+      "desc_en": "Fertilize one plot — that crop yields double (×2) when harvested. One bag per plot."
     },
     {
       "id": "lottery_ticket",

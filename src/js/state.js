@@ -76,7 +76,8 @@
     activeEffects: {            // toggleable consumable effects
       accelerationCharges: 0,   // # of 加速券 in inventory (consumed on use)
       freshnessCharges: 0,      // # of 保鲜券 in inventory
-      bumperCharges: 0,         // # of 高级化肥 (next harvest yields ×2), consumed on harvest
+      bumperCharges: 0,         // vestigial — migrated to fertilizerCharges (T2 打理)
+      fertilizerCharges: 0,     // # of 化肥 in inventory; applied per-plot (plot.fertilized) → ×2 yield
     },
 
     // ============ 7-day sign-in calendar (login-calendar.js) ============
@@ -242,6 +243,13 @@
           // Deep-fill nested objects added in later versions
           this.data.dailyClaims = Object.assign({}, STARTER_STATE.dailyClaims, this.data.dailyClaims || {});
           this.data.activeEffects = Object.assign({}, STARTER_STATE.activeEffects, this.data.activeEffects || {});
+          // T2 打理迁移：旧「全局高级化肥」(bumperCharges, 收获自动×2) → 新「逐块化肥」
+          // 库存 (fertilizerCharges, 选地块施用)。幂等：迁移后 bumperCharges 清零。
+          if ((this.data.activeEffects.bumperCharges || 0) > 0) {
+            this.data.activeEffects.fertilizerCharges =
+              (this.data.activeEffects.fertilizerCharges || 0) + this.data.activeEffects.bumperCharges;
+            this.data.activeEffects.bumperCharges = 0;
+          }
           this.data.loginCalendar = Object.assign({}, STARTER_STATE.loginCalendar, this.data.loginCalendar || {});
           this.data.ownedShopItems = this.data.ownedShopItems || {};
           this.data.decorations = this.data.decorations || [];
