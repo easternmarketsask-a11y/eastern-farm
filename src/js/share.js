@@ -65,11 +65,15 @@
       canvas.width = W; canvas.height = H;
       const ctx = canvas.getContext('2d');
 
-      // Preload art in parallel: logo + 5 crop sprites for the mini-field.
-      const cropDefs = (Farm.crops && Farm.crops.all) ? Farm.crops.all().slice(0, 5) : [];
+      // Preload art in parallel: logo + a curated, colorful crop showcase for
+      // the mini-field. (The active crop catalog starts with many look-alike
+      // leafy greens; a hand-picked spread of shapes/colors reads far better:
+      // green bok choy · orange carrot · purple eggplant · white radish ·
+      // broccoli.)
+      const SHOWCASE = ['shanghai_miao', 'hu_luo_bo', 'eggplant', 'bai_luo_bo', 'xi_lan_hua'];
       const [logo, cropImgs] = await Promise.all([
         loadImage('assets/images/logo-horizontal.png'),
-        Promise.all(cropDefs.map(d => svgToImage(Farm.cropArt.icon(d.id, 72)))),
+        Promise.all(SHOWCASE.map(id => svgToImage(Farm.cropArt.icon(id, 80)))),
       ]);
 
       // ---- Background: sky → grass, with sun + soft clouds ----
@@ -155,9 +159,15 @@
       const gsd = md.gameStats || {};
       const harvests = s.totalHarvests || 0;
       const likes = gsd.likesReceived || 0;
+      const coins = s.coins || 0;
+      // Second chip: show likes only when there are some (a "0 赞" looks sad on a
+      // brag card) — otherwise show farm coins, which is always a positive number.
+      const chip2 = likes > 0
+        ? { t: '❤️ ' + likes + (ZH ? ' 赞' : ' likes'), bg: '#fdeef0', fg: '#c0556a' }
+        : { t: '🪙 ' + coins.toLocaleString(), bg: '#fff6df', fg: '#a9791e' };
       const chips = [
         { t: '🌾 ' + (ZH ? '收获 ' : 'Harvest ') + harvests, bg: '#f1f8e6', fg: '#5a7a2e' },
-        { t: '❤️ ' + likes + (ZH ? ' 赞' : ''), bg: '#fdeef0', fg: '#c0556a' },
+        chip2,
       ];
       ctx.font = '600 19px ' + CN;
       const chipW = chips.map(c => ctx.measureText(c.t).width + 30);
@@ -190,9 +200,9 @@
         roundRect(ctx, tx, ty + 18, tile, tile - 18, 12); ctx.fill();
         ctx.strokeStyle = '#5e3b22'; ctx.lineWidth = 1.5;
         roundRect(ctx, tx, ty + 18, tile, tile - 18, 12); ctx.stroke();
-        // crop art sitting on the tile
+        // crop art sitting on the tile (slightly larger, poking up from soil)
         const img = cropImgs[i];
-        if (img) ctx.drawImage(img, tx + 4, ty - 6, tile - 8, tile - 8);
+        if (img) ctx.drawImage(img, tx - 2, ty - 12, tile + 4, tile + 4);
         tx += tile + (isFinite(tgap) ? tgap : 0);
       }
 
@@ -213,10 +223,10 @@
       ctx.font = '700 19px Arial,sans-serif';
       ctx.fillText('farm.easternmarket.ca', W / 2, 723);
 
-      // ---- Footer ----
+      // ---- Footer: real store address (helps the card drive foot traffic) ----
       ctx.fillStyle = '#8a7a5c';
       ctx.font = '500 14px ' + CN;
-      ctx.fillText('🏪 Eastern Market 东方超市 · Saskatoon', W / 2, 762);
+      ctx.fillText('📍 133-412 Willowgrove Square, Saskatoon', W / 2, 762);
 
       // Capture a blob for native sharing (best-effort).
       try {
