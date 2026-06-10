@@ -25,6 +25,23 @@
     });
   }
 
+  // Rasterize an SVG string (e.g. a crop sprite from cropArt.svg) into an
+  // <img> so it can be drawn on the canvas. cropArt.svg() already includes the
+  // xmlns, so the blob loads as an image. Emoji-on-canvas was unreliable
+  // across devices — real crop SVGs render identically everywhere.
+  function svgToImage(svgString) {
+    return new Promise((resolve) => {
+      try {
+        const blob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const img = new Image();
+        img.onload = () => { resolve(img); setTimeout(() => URL.revokeObjectURL(url), 0); };
+        img.onerror = () => resolve(null);
+        img.src = url;
+      } catch (e) { resolve(null); }
+    });
+  }
+
   function roundRect(ctx, x, y, w, h, r) {
     ctx.beginPath();
     ctx.moveTo(x + r, y);
@@ -42,102 +59,164 @@
     async _renderCard() {
       const s = Farm.state.data;
       const lang = s.language || 'zh';
+      const ZH = lang !== 'en';
+      const CN = '"PingFang SC","Microsoft YaHei","Noto Sans SC",sans-serif';
       const canvas = document.createElement('canvas');
       canvas.width = W; canvas.height = H;
       const ctx = canvas.getContext('2d');
 
-      // Background: sky → grass gradient (matches the farm scene).
+      // Preload art in parallel: logo + 5 crop sprites for the mini-field.
+      const cropDefs = (Farm.crops && Farm.crops.all) ? Farm.crops.all().slice(0, 5) : [];
+      const [logo, cropImgs] = await Promise.all([
+        loadImage('assets/images/logo-horizontal.png'),
+        Promise.all(cropDefs.map(d => svgToImage(Farm.cropArt.icon(d.id, 72)))),
+      ]);
+
+      // ---- Background: sky → grass, with sun + soft clouds ----
       const g = ctx.createLinearGradient(0, 0, 0, H);
-      g.addColorStop(0, '#bfe5f4');
-      g.addColorStop(0.30, '#d9eee2');
-      g.addColorStop(0.55, '#cfe8a8');
-      g.addColorStop(1, '#a4cf76');
+      g.addColorStop(0, '#bfe6f5');
+      g.addColorStop(0.34, '#d9eee2');
+      g.addColorStop(0.62, '#cfe8a8');
+      g.addColorStop(1, '#9ccb6e');
       ctx.fillStyle = g;
       ctx.fillRect(0, 0, W, H);
-      // a soft sun
-      ctx.fillStyle = 'rgba(255,233,168,0.9)';
-      ctx.beginPath(); ctx.arc(510, 90, 36, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = 'rgba(255,228,150,0.95)';
+      ctx.beginPath(); ctx.arc(520, 84, 34, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.85)';
+      const cloud = (cx, cy, sc) => {
+        ctx.beginPath();
+        ctx.arc(cx, cy, 18 * sc, 0, Math.PI * 2);
+        ctx.arc(cx + 22 * sc, cy + 4 * sc, 14 * sc, 0, Math.PI * 2);
+        ctx.arc(cx - 20 * sc, cy + 5 * sc, 13 * sc, 0, Math.PI * 2);
+        ctx.fill();
+      };
+      cloud(120, 92, 1); cloud(300, 64, 0.7);
 
-      // White content card
+      // ---- White content card ----
       ctx.save();
-      ctx.shadowColor = 'rgba(90,60,30,0.18)';
-      ctx.shadowBlur = 24; ctx.shadowOffsetY = 8;
-      ctx.fillStyle = 'rgba(255,253,246,0.96)';
-      roundRect(ctx, 40, 48, W - 80, H - 116, 28);
+      ctx.shadowColor = 'rgba(90,60,30,0.22)';
+      ctx.shadowBlur = 28; ctx.shadowOffsetY = 10;
+      ctx.fillStyle = '#fffdf6';
+      roundRect(ctx, 36, 44, W - 72, H - 108, 30);
       ctx.fill();
       ctx.restore();
+      // inner hairline border
+      ctx.strokeStyle = 'rgba(106,176,76,0.35)';
+      ctx.lineWidth = 2;
+      roundRect(ctx, 42, 50, W - 84, H - 120, 26);
+      ctx.stroke();
 
       ctx.textAlign = 'center';
       ctx.textBaseline = 'alphabetic';
 
-      // Logo (centered) — optional
-      const logo = await loadImage('assets/images/logo-horizontal.png');
+      // ---- Logo + title ----
       if (logo) {
-        const lw = 180, lh = lw * (logo.height / logo.width || 0.28);
-        ctx.drawImage(logo, (W - lw) / 2, 78, lw, lh);
+        const lw = 168, lh = lw * (logo.height / logo.width || 0.28);
+        ctx.drawImage(logo, (W - lw) / 2, 76, lw, lh);
       }
-
-      // Title
       ctx.fillStyle = '#2a5c34';
-      ctx.font = '700 30px "PingFang SC","Microsoft YaHei",sans-serif';
+      ctx.font = '700 30px ' + CN;
       ctx.fillText('快乐农场', W / 2, 168);
       ctx.fillStyle = '#E8522A';
-      ctx.font = '600 14px Arial,sans-serif';
-      ctx.fillText('HAPPY FARM', W / 2, 190);
+      ctx.font = '700 13px Arial,sans-serif';
+      ctx.save(); ctx.translate(W / 2, 188);
+      ctx.fillText('H A P P Y   F A R M', 0, 0); ctx.restore();
 
-      // Avatar
-      ctx.font = '72px "Apple Color Emoji","Segoe UI Emoji",sans-serif';
-      ctx.fillText('🧑‍🌾', W / 2, 290);
+      // ---- Avatar in a soft ring ----
+      ctx.fillStyle = '#eaf6dc';
+      ctx.beginPath(); ctx.arc(W / 2, 250, 48, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#a6d178'; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(W / 2, 250, 48, 0, Math.PI * 2); ctx.stroke();
+      ctx.font = '60px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
+      ctx.fillText('🧑‍🌾', W / 2, 272);
 
-      // Nickname
+      // ---- Nickname ----
       const name = (Farm.fbGameSync && Farm.fbGameSync._selfDisplayName)
         ? Farm.fbGameSync._selfDisplayName()
-        : (s.nickname || '我的农场');
+        : (s.nickname || (ZH ? '我的农场' : 'My Farm'));
       ctx.fillStyle = '#3a2c18';
-      ctx.font = '700 34px "PingFang SC","Microsoft YaHei",sans-serif';
-      ctx.fillText(String(name).slice(0, 12), W / 2, 350);
+      ctx.font = '800 34px ' + CN;
+      ctx.fillText(String(name).slice(0, 12), W / 2, 342);
 
-      // Level + title
+      // ---- Level + title chip ----
       const lv = s.level || 1;
       const t = Farm.state.levelTitle ? Farm.state.levelTitle(lv) : null;
-      const titleStr = t ? (lang === 'en' ? t.en : t.zh) : '';
+      const titleStr = t ? (ZH ? t.zh : t.en) : '';
+      const lvText = 'Lv ' + lv + (titleStr ? ' · ' + titleStr : '');
+      ctx.font = '700 20px ' + CN;
+      const lvW = ctx.measureText(lvText).width + 36;
       ctx.fillStyle = '#3a8c50';
-      ctx.font = '600 22px "PingFang SC","Microsoft YaHei",sans-serif';
-      ctx.fillText('Lv ' + lv + (titleStr ? ' · ' + titleStr : ''), W / 2, 388);
-
-      // Stats line
-      const md = (Farm.fbAuth && Farm.fbAuth.memberDoc) || {};
-      const gs = md.gameStats || {};
-      const harvests = s.totalHarvests || 0;
-      const likes = gs.likesReceived || 0;
-      ctx.fillStyle = '#6b5a3c';
-      ctx.font = '500 22px "PingFang SC","Microsoft YaHei",sans-serif';
-      ctx.fillText('🌾 收获 ' + harvests + '    ❤️ ' + likes, W / 2, 446);
-
-      // Crop deco row
-      ctx.font = '40px "Apple Color Emoji","Segoe UI Emoji",sans-serif';
-      ctx.fillText('🥬  🍅  🥒  🌶️  🍆  🌽', W / 2, 520);
-
-      // CTA
-      ctx.fillStyle = '#2a5c34';
-      ctx.font = '600 21px "PingFang SC","Microsoft YaHei",sans-serif';
-      ctx.fillText('我在东方超市·快乐农场种菜啦！', W / 2, 590);
-      ctx.fillStyle = '#6b5a3c';
-      ctx.font = '500 17px "PingFang SC","Microsoft YaHei",sans-serif';
-      ctx.fillText('扫码或打开链接，一起来玩 🌱', W / 2, 622);
-
-      // URL pill
-      ctx.fillStyle = '#3a8c50';
-      roundRect(ctx, W / 2 - 165, 644, 330, 40, 20);
-      ctx.fill();
+      roundRect(ctx, W / 2 - lvW / 2, 360, lvW, 36, 18); ctx.fill();
       ctx.fillStyle = '#ffffff';
-      ctx.font = '700 18px Arial,sans-serif';
-      ctx.fillText('farm.easternmarket.ca', W / 2, 670);
+      ctx.fillText(lvText, W / 2, 384);
 
-      // Footer
+      // ---- Stat chips (harvests + likes) ----
+      const md = (Farm.fbAuth && Farm.fbAuth.memberDoc) || {};
+      const gsd = md.gameStats || {};
+      const harvests = s.totalHarvests || 0;
+      const likes = gsd.likesReceived || 0;
+      const chips = [
+        { t: '🌾 ' + (ZH ? '收获 ' : 'Harvest ') + harvests, bg: '#f1f8e6', fg: '#5a7a2e' },
+        { t: '❤️ ' + likes + (ZH ? ' 赞' : ''), bg: '#fdeef0', fg: '#c0556a' },
+      ];
+      ctx.font = '600 19px ' + CN;
+      const chipW = chips.map(c => ctx.measureText(c.t).width + 30);
+      const gap = 14;
+      let startX = (W - (chipW[0] + chipW[1] + gap)) / 2;
+      chips.forEach((c, i) => {
+        const w = chipW[i];
+        ctx.fillStyle = c.bg;
+        roundRect(ctx, startX, 418, w, 40, 20); ctx.fill();
+        ctx.fillStyle = c.fg;
+        ctx.fillText(c.t, startX + w / 2, 444);
+        startX += w + gap;
+      });
+
+      // ---- Mini farm field: a grass strip with soil plots + real crop art ----
+      const fieldX = 70, fieldY = 482, fieldW = W - 140, fieldH = 118;
+      const fg2 = ctx.createLinearGradient(0, fieldY, 0, fieldY + fieldH);
+      fg2.addColorStop(0, '#d6efb0'); fg2.addColorStop(1, '#b6dd84');
+      ctx.fillStyle = fg2;
+      roundRect(ctx, fieldX, fieldY, fieldW, fieldH, 18); ctx.fill();
+      const n = Math.max(1, cropImgs.length);
+      const tile = 72, tgap = (fieldW - 24 - n * tile) / Math.max(1, n - 1 || 1);
+      let tx = fieldX + 12 + (n === 1 ? (fieldW - 24 - tile) / 2 : 0);
+      const ty = fieldY + (fieldH - tile) / 2 - 2;
+      for (let i = 0; i < n; i++) {
+        // soil tile
+        const sg = ctx.createLinearGradient(0, ty, 0, ty + tile);
+        sg.addColorStop(0, '#b78657'); sg.addColorStop(1, '#7a5230');
+        ctx.fillStyle = sg;
+        roundRect(ctx, tx, ty + 18, tile, tile - 18, 12); ctx.fill();
+        ctx.strokeStyle = '#5e3b22'; ctx.lineWidth = 1.5;
+        roundRect(ctx, tx, ty + 18, tile, tile - 18, 12); ctx.stroke();
+        // crop art sitting on the tile
+        const img = cropImgs[i];
+        if (img) ctx.drawImage(img, tx + 4, ty - 6, tile - 8, tile - 8);
+        tx += tile + (isFinite(tgap) ? tgap : 0);
+      }
+
+      // ---- CTA ----
+      ctx.fillStyle = '#2a5c34';
+      ctx.font = '700 21px ' + CN;
+      ctx.fillText(ZH ? '我在东方超市·快乐农场种菜啦！' : 'Farming at Eastern Market!', W / 2, 648);
+      ctx.fillStyle = '#7a6a4a';
+      ctx.font = '500 16px ' + CN;
+      ctx.fillText(ZH ? '打开链接，一起来种菜 🌱' : 'Open the link and join me 🌱', W / 2, 676);
+
+      // ---- URL pill ----
+      const ug = ctx.createLinearGradient(0, 696, 0, 738);
+      ug.addColorStop(0, '#46a05f'); ug.addColorStop(1, '#2f7a45');
+      ctx.fillStyle = ug;
+      roundRect(ctx, W / 2 - 168, 696, 336, 42, 21); ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '700 19px Arial,sans-serif';
+      ctx.fillText('farm.easternmarket.ca', W / 2, 723);
+
+      // ---- Footer ----
       ctx.fillStyle = '#8a7a5c';
-      ctx.font = '500 14px "PingFang SC","Microsoft YaHei",sans-serif';
-      ctx.fillText('🏪 Eastern Market 东方超市 · Saskatoon', W / 2, 712);
+      ctx.font = '500 14px ' + CN;
+      ctx.fillText('🏪 Eastern Market 东方超市 · Saskatoon', W / 2, 762);
 
       // Capture a blob for native sharing (best-effort).
       try {
