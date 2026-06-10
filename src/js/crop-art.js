@@ -1533,22 +1533,23 @@
             <feComponentTransfer><feFuncA type="linear" slope="0.4"/></feComponentTransfer>
             <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
           </filter>
-          <radialGradient id="body_dong_gua" cx="40%" cy="35%" r="70%">
-            <stop offset="0%" stop-color="#dcedc8"/>
-            <stop offset="50%" stop-color="#a5d6a7"/>
-            <stop offset="100%" stop-color="#4a8a4f"/>
+          <radialGradient id="body_dong_gua" cx="40%" cy="32%" r="75%">
+            <stop offset="0%" stop-color="#b9dd9a"/>
+            <stop offset="50%" stop-color="#6fae54"/>
+            <stop offset="100%" stop-color="#356325"/>
           </radialGradient>
         </defs>
-        <ellipse cx="50" cy="94" rx="30" ry="3" fill="#000" opacity="0.25"/>
+        <ellipse cx="50" cy="94" rx="28" ry="3" fill="#000" opacity="0.25"/>
 
         <g filter="url(#ds_dong_gua)">
-          <!-- Big oval winter melon body -->
-          <ellipse cx="50" cy="60" rx="34" ry="28" fill="url(#body_dong_gua)" stroke="#2e5613" stroke-width="0.8"/>
+          <!-- Oblong barrel winter-melon body (冬瓜 are cylindrical, not round) -->
+          <path d="M 28 46 Q 28 30 50 30 Q 72 30 72 46 L 72 72 Q 72 88 50 88 Q 28 88 28 72 Z"
+                fill="url(#body_dong_gua)" stroke="#2e5613" stroke-width="0.8"/>
 
           <!-- Longitudinal stripe shading (subtle) -->
-          <path d="M 30 36 Q 30 60 36 84" stroke="#4a8a4f" stroke-width="0.6" fill="none" opacity="0.5"/>
-          <path d="M 50 32 L 50 88" stroke="#4a8a4f" stroke-width="0.6" fill="none" opacity="0.5"/>
-          <path d="M 70 36 Q 70 60 64 84" stroke="#4a8a4f" stroke-width="0.6" fill="none" opacity="0.5"/>
+          <path d="M 33 38 Q 31 60 35 82" stroke="#356325" stroke-width="0.6" fill="none" opacity="0.5"/>
+          <path d="M 50 31 L 50 87" stroke="#356325" stroke-width="0.6" fill="none" opacity="0.5"/>
+          <path d="M 67 38 Q 69 60 65 82" stroke="#356325" stroke-width="0.6" fill="none" opacity="0.5"/>
 
           <!-- WHITE WAX DUST spots (the winter-melon signature) -->
           <g fill="#fff" opacity="0.7">
@@ -1727,6 +1728,9 @@
     // mature variant) with WHITE-FLAT-CIRCLE on top (the drinking hole cut)
     // and the iconic 3-eye "face" on the front.
     ye_zi(c) {
+      // Trimmed "young coconut" (椰青) as sold in Asian groceries: a white
+      // husk-shaved body with a faceted pyramid top — the iconic "white
+      // diamond" shape, far more recognizable than a green ball.
       return `
         <defs>
           <filter id="ds_ye_zi" x="-15%" y="-15%" width="130%" height="130%">
@@ -1735,43 +1739,31 @@
             <feComponentTransfer><feFuncA type="linear" slope="0.4"/></feComponentTransfer>
             <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
           </filter>
-          <radialGradient id="body_ye_zi" cx="35%" cy="30%" r="80%">
-            <stop offset="0%" stop-color="#c5e1a5"/>
-            <stop offset="50%" stop-color="#7cb342"/>
-            <stop offset="100%" stop-color="#2e5613"/>
-          </radialGradient>
-          <radialGradient id="top_ye_zi" cx="50%" cy="40%" r="60%">
-            <stop offset="0%" stop-color="#ffffff"/>
-            <stop offset="80%" stop-color="#f5f0d8"/>
-            <stop offset="100%" stop-color="#c9b890"/>
-          </radialGradient>
+          <linearGradient id="body_ye_zi" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#f4ecda"/>
+            <stop offset="45%" stop-color="#ffffff"/>
+            <stop offset="100%" stop-color="#dccfb2"/>
+          </linearGradient>
         </defs>
-        <ellipse cx="50" cy="92" rx="24" ry="3" fill="#000" opacity="0.25"/>
+        <ellipse cx="50" cy="91" rx="22" ry="3" fill="#000" opacity="0.22"/>
         <g filter="url(#ds_ye_zi)">
-          <!-- Main green coconut body -->
-          <circle cx="50" cy="62" r="28" fill="url(#body_ye_zi)" stroke="#1f4d10" stroke-width="0.8"/>
-
-          <!-- 3-eye coconut "face" (front side dark holes) -->
-          <g fill="#1f4d10" opacity="0.8">
-            <circle cx="42" cy="56" r="2.2"/>
-            <circle cx="56" cy="54" r="2.2"/>
-            <circle cx="48" cy="68" r="2.2"/>
-          </g>
-          <g fill="#fff" opacity="0.6">
-            <circle cx="41.5" cy="55.5" r="0.7"/>
-            <circle cx="55.5" cy="53.5" r="0.7"/>
-            <circle cx="47.5" cy="67.5" r="0.7"/>
-          </g>
-
-          <!-- White drinking-hole cut on TOP -->
-          <ellipse cx="50" cy="36" rx="13" ry="4" fill="url(#top_ye_zi)" stroke="#7a6649" stroke-width="0.6"/>
-          <ellipse cx="50" cy="35" rx="6" ry="1.6" fill="#5a4a26"/>
-          <ellipse cx="50" cy="34" rx="3" ry="0.8" fill="#3a2810"/>
+          <!-- Lower body: rounded white cylinder -->
+          <path d="M 31 46 L 31 73 Q 31 88 50 88 Q 69 88 69 73 L 69 46 Z"
+                fill="url(#body_ye_zi)" stroke="#c4b594" stroke-width="0.7"/>
+          <!-- Faceted pyramid top: left (shadow) + right (light) facets -->
+          <path d="M 31 46 L 50 12 L 50 46 Z" fill="#ece2cd" stroke="#c4b594" stroke-width="0.6"/>
+          <path d="M 50 12 L 69 46 L 50 46 Z" fill="#fdfaf2" stroke="#c4b594" stroke-width="0.6"/>
+          <!-- Stepped facet cut near the shoulders -->
+          <path d="M 35 40 L 50 21 L 65 40" fill="none" stroke="#c4b594" stroke-width="0.6" opacity="0.6"/>
+          <!-- Pale-green husk remnant ring at the base -->
+          <path d="M 31 72 Q 31 88 50 88 Q 69 88 69 72 Q 50 80 31 72 Z" fill="#cfe0a8" opacity="0.4"/>
+          <!-- Vertical trim seams on the body -->
+          <path d="M 42 48 L 42 84" stroke="#d8ccae" stroke-width="0.6" opacity="0.5"/>
+          <path d="M 58 48 L 58 84" stroke="#d8ccae" stroke-width="0.6" opacity="0.5"/>
         </g>
-        <!-- Big shiny highlight on coconut left -->
-        <ellipse cx="38" cy="50" rx="6" ry="10" fill="#fff" opacity="0.4"/>
-        <ellipse cx="36" cy="44" rx="2.5" ry="3" fill="#fff" opacity="0.75"/>
-        <ellipse cx="50" cy="88" rx="20" ry="1.4" fill="#000" opacity="0.25"/>
+        <!-- Soft sheen on the left face -->
+        <ellipse cx="41" cy="60" rx="4" ry="13" fill="#fff" opacity="0.4"/>
+        <ellipse cx="44" cy="30" rx="2" ry="4" fill="#fff" opacity="0.6"/>
       `;
     },
 
