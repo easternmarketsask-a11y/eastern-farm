@@ -131,8 +131,9 @@
         timeLabel.textContent = Farm.crops.formatTimeRemaining(Farm.crops.timeRemaining(plot));
         el.appendChild(timeLabel);
 
-        // 打理标记：已浇水的在长作物左上角一滴水（不抢戏，只是反馈）
+        // 打理标记：已浇水 → 整块地变深色湿土 + 左上角一滴水
         if (plot.watered) {
+          el.classList.add('is-watered');
           const wb = document.createElement('div');
           wb.className = 'plot-watered-badge';
           wb.textContent = '💧';

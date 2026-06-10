@@ -22,6 +22,12 @@
   --border-soft:    #e8dcc4;
   --shadow-card:    0 2px 6px rgba(139, 90, 60, 0.12), 0 1px 2px rgba(139, 90, 60, 0.08);
   --shadow-card-hover: 0 4px 12px rgba(139, 90, 60, 0.18);
+  /* Soil-bed depth stack shared by .plot + its state variants and keyframes:
+     top light, bottom inner shade, solid bottom rim (= tile thickness), drop. */
+  --soil-shadow: inset 0 2px 3px rgba(255, 235, 200, 0.32),
+                 inset 0 -3px 5px rgba(70, 45, 25, 0.28),
+                 0 4px 0 #6f4a2c,
+                 0 7px 10px rgba(95, 60, 30, 0.22);
 
   --font-zh: 'Noto Sans SC', 'PingFang SC', sans-serif;
   --font-en: 'Plus Jakarta Sans', 'Quicksand', sans-serif;
@@ -674,6 +680,31 @@ body {
   background-repeat: no-repeat;
 }
 
+/* =============== FARM SCENE BAND =============== */
+/* Backdrop strip (SVG in index.html). Negative margins pull it flush against
+   the top/sides of #farm (cancelling its 44px/16px padding) so the scenery
+   bleeds edge-to-edge; it scrolls away naturally with the field. */
+.farm-scene {
+  margin: -44px -16px 14px;
+  line-height: 0;
+  pointer-events: none;
+}
+.farm-scene svg {
+  width: 100%;
+  height: 148px;
+  display: block;
+}
+.scene-cloud-a { animation: cloudDrift 36s ease-in-out infinite alternate; }
+.scene-cloud-b { animation: cloudDrift 48s ease-in-out infinite alternate-reverse; }
+@keyframes cloudDrift {
+  from { transform: translateX(0); }
+  to   { transform: translateX(46px); }
+}
+/* Seasonal mood on the backdrop (matches #farm.season-* palettes) */
+#farm.season-spring .farm-scene svg { filter: saturate(1.06) brightness(1.02); }
+#farm.season-autumn .farm-scene svg { filter: sepia(0.28) hue-rotate(-16deg) saturate(1.1); }
+#farm.season-winter .farm-scene svg { filter: saturate(0.4) brightness(1.1); }
+
 .farm-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -684,14 +715,17 @@ body {
 
 .plot {
   aspect-ratio: 1;
-  /* Tilled soil bed: warm soil gradient + fine vertical furrow lines + a
-   * raised-rim look (inset highlight on top, shadow at bottom). */
+  /* Tilled soil bed: horizontal furrows (dark groove + lit ridge pairs) over
+   * a warm top-lit soil gradient; depth comes from --soil-shadow. */
   background:
-    repeating-linear-gradient(90deg, rgba(0,0,0,0.07) 0 2px, rgba(0,0,0,0) 2px 13px),
-    linear-gradient(160deg, #b78657 0%, var(--soil-brown) 55%, var(--soil-dark) 100%);
-  border-radius: 14px;
-  border: 2px solid #5e3b22;
-  box-shadow: var(--shadow-card), inset 0 -4px 0 rgba(0,0,0,0.20), inset 0 4px 8px rgba(255,255,255,0.10);
+    repeating-linear-gradient(180deg,
+      transparent 0 10px,
+      rgba(78, 48, 26, 0.30) 10px 12px,
+      rgba(222, 180, 135, 0.16) 12px 13.5px,
+      transparent 13.5px 15px),
+    linear-gradient(172deg, #b98a5e 0%, var(--soil-brown) 55%, #7c5334 100%);
+  border-radius: 16px;
+  box-shadow: var(--soil-shadow);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -707,33 +741,74 @@ body {
 }
 
 .plot.empty {
-  background: linear-gradient(135deg, #b58465 0%, var(--soil-brown) 100%);
+  background:
+    repeating-linear-gradient(180deg,
+      transparent 0 10px,
+      rgba(78, 48, 26, 0.18) 10px 12px,
+      rgba(222, 180, 135, 0.12) 12px 13.5px,
+      transparent 13.5px 15px),
+    linear-gradient(172deg, #c09a70 0%, #a87a52 60%, #93684a 100%);
 }
 .plot.empty::before {
   content: "+";
   font-size: 36px;
-  color: rgba(255, 255, 255, 0.35);
+  color: rgba(255, 255, 255, 0.4);
   font-weight: 300;
 }
+/* dashed "you can plant here" inner ring */
+.plot.empty::after {
+  content: "";
+  position: absolute;
+  inset: 7px;
+  border: 2px dashed rgba(255, 245, 225, 0.30);
+  border-radius: 10px;
+  pointer-events: none;
+}
 
+/* Watered (growing) plot: soil reads visibly darker = wet earth. */
+.plot.is-watered {
+  background:
+    repeating-linear-gradient(180deg,
+      transparent 0 10px,
+      rgba(50, 30, 15, 0.40) 10px 12px,
+      rgba(190, 150, 110, 0.14) 12px 13.5px,
+      transparent 13.5px 15px),
+    linear-gradient(172deg, #9a6c42 0%, #835a35 55%, #6d4828 100%);
+  box-shadow: inset 0 2px 3px rgba(255, 235, 200, 0.16),
+              inset 0 -3px 5px rgba(50, 30, 15, 0.34),
+              0 4px 0 #5e4126,
+              0 7px 10px rgba(95, 60, 30, 0.22);
+}
+
+/* Locked plot: an uncleared, grass-overgrown patch (not a gray slab). */
 .plot.locked {
-  background: linear-gradient(135deg, #cccccc 0%, #999999 100%);
+  background:
+    radial-gradient(ellipse 26px 10px at 30% 78%, rgba(106, 138, 84, 0.50) 0 60%, transparent 61%),
+    radial-gradient(ellipse 30px 12px at 72% 86%, rgba(106, 138, 84, 0.42) 0 60%, transparent 61%),
+    radial-gradient(ellipse 22px 9px at 56% 30%, rgba(106, 138, 84, 0.32) 0 60%, transparent 61%),
+    linear-gradient(172deg, #aab193 0%, #8f9a78 60%, #7c8866 100%);
   cursor: not-allowed;
-  opacity: 0.7;
+  box-shadow: inset 0 2px 3px rgba(255, 255, 240, 0.25),
+              inset 0 -3px 5px rgba(60, 70, 45, 0.30),
+              0 4px 0 #67724f,
+              0 7px 10px rgba(70, 80, 50, 0.20);
 }
 .plot.locked::before {
   content: "🔒";
-  font-size: 28px;
-  opacity: 0.6;
+  font-size: 26px;
+  opacity: 0.55;
 }
 .plot.locked .lock-hint {
   position: absolute;
-  bottom: 4px;
+  bottom: 5px;
   font-size: 9px;
-  color: white;
-  background: rgba(0,0,0,0.4);
-  padding: 1px 6px;
+  font-weight: 700;
+  color: #ffe9c8;
+  background: linear-gradient(180deg, #9a7048, #7c5634);
+  border: 1px solid #6f4a2c;
+  padding: 1px 8px;
   border-radius: var(--radius-pill);
+  box-shadow: 0 1px 2px rgba(60, 40, 20, 0.3);
 }
 
 .plot .crop-icon {
@@ -767,9 +842,17 @@ body {
 }
 
 .plot.ready {
-  background: linear-gradient(135deg, #e8f4d2 0%, #c9e4a0 100%);
-  border-color: var(--leaf-dark);
-  box-shadow: var(--shadow-card), 0 0 0 3px rgba(247, 201, 72, 0.5);
+  /* Soil stays soil — a warm golden halo + lit earth says "pick me". */
+  background:
+    repeating-linear-gradient(180deg,
+      transparent 0 10px,
+      rgba(78, 48, 26, 0.26) 10px 12px,
+      rgba(232, 195, 150, 0.20) 12px 13.5px,
+      transparent 13.5px 15px),
+    linear-gradient(172deg, #c2925f 0%, #aa7c4e 55%, #8a5f3a 100%);
+  box-shadow: var(--soil-shadow),
+              0 0 0 3px rgba(247, 201, 72, 0.55),
+              0 0 14px 3px rgba(247, 201, 72, 0.35);
   animation: readyPulse 2s ease-in-out infinite;
 }
 .plot.ready .crop-icon {
@@ -797,8 +880,16 @@ body {
   50% { transform: translateY(-3px); }
 }
 @keyframes readyPulse {
-  0%, 100% { box-shadow: var(--shadow-card), 0 0 0 3px rgba(247, 201, 72, 0.5); }
-  50% { box-shadow: var(--shadow-card), 0 0 0 6px rgba(247, 201, 72, 0.3); }
+  0%, 100% {
+    box-shadow: var(--soil-shadow),
+                0 0 0 3px rgba(247, 201, 72, 0.55),
+                0 0 12px 2px rgba(247, 201, 72, 0.30);
+  }
+  50% {
+    box-shadow: var(--soil-shadow),
+                0 0 0 6px rgba(247, 201, 72, 0.30),
+                0 0 20px 6px rgba(247, 201, 72, 0.45);
+  }
 }
 @keyframes sparkle {
   0%, 100% { opacity: 1; transform: scale(1); }
@@ -1530,11 +1621,11 @@ body {
    the moment they harvest something. */
 @keyframes emptyPlotHint {
   0%, 100% {
-    box-shadow: var(--shadow-card), inset 0 0 0 0 rgba(247, 201, 72, 0);
+    box-shadow: var(--soil-shadow), inset 0 0 0 0 rgba(247, 201, 72, 0);
     transform: scale(1);
   }
   50% {
-    box-shadow: var(--shadow-card), inset 0 0 0 3px rgba(247, 201, 72, 0.55);
+    box-shadow: var(--soil-shadow), inset 0 0 0 3px rgba(247, 201, 72, 0.55);
     transform: scale(1.03);
   }
 }
