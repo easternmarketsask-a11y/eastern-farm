@@ -176,21 +176,22 @@
       const charges = eff.accelerationCharges || 0;
       const canWater = Farm.tending && Farm.tending.canWater(plot);
 
-      // 浇水行：可浇 → 按钮；已浇 → 灰提示
+      // 浇水行：可浇 → 按钮（说明=缩短成熟时间）；已浇 → 灰提示
       const waterHtml = canWater
-        ? `<button class="btn care-btn" id="careWater">💧 ${lang === 'en' ? 'Water (−20% time)' : '浇水（剩余 −20%）'}</button>`
+        ? `<button class="btn care-btn" id="careWater">💧 ${lang === 'en' ? 'Water · 20% faster' : '浇水 · 缩短 20% 时间'}</button>`
         : (plot.watered
             ? `<div class="care-note">💧 ${Farm.i18n.t('tending_water_done')}</div>`
             : '');
 
-      // 施肥行：本块已施肥 → 灰提示；否则有化肥库存 → 按钮（产量翻倍）
+      // 施肥行：已施肥 → 灰提示；有化肥 → 施肥按钮；没化肥 → 引导去商城买
+      // （以前没库存时整行隐藏，玩家以为"施肥没做"，故改成可发现的入口）
       const fertCount = (Farm.tending && Farm.tending.fertilizerCount) ? Farm.tending.fertilizerCount() : 0;
       const canFert = Farm.tending && Farm.tending.canFertilize(plot);
       const fertHtml = plot.fertilized
         ? `<div class="care-note">🌟 ${Farm.i18n.t('tending_fert_done')}</div>`
         : (canFert
-            ? `<button class="btn care-btn" id="careFert">🌟 ${lang === 'en' ? 'Fertilize (×2 yield)' : '施肥（产量翻倍）'} <span style="opacity:.7;">(${fertCount})</span></button>`
-            : '');
+            ? `<button class="btn care-btn" id="careFert">🌟 ${lang === 'en' ? 'Fertilize · ×2 yield' : '施肥 · 产量翻倍'} <span style="opacity:.7;">(${fertCount})</span></button>`
+            : `<button class="btn care-btn" id="careFertNone" disabled>🌟 ${lang === 'en' ? 'Fertilize · ×2 yield' : '施肥 · 产量翻倍'} <span style="opacity:.8;font-size:11px;">${lang === 'en' ? '· needs fertilizer' : '· 需要化肥'}</span></button>`);
 
       // 加速行：有券才显示（没券不唠叨）
       const accelHtml = charges > 0
@@ -199,8 +200,11 @@
 
       const html = `
         <h2 class="modal-title">🌱 ${def[nameKey]}</h2>
-        <p style="text-align:center;margin:10px 0 16px;color:var(--warm-text-soft);font-size:13px;">
+        <p style="text-align:center;margin:10px 0 4px;color:var(--warm-text-soft);font-size:13px;">
           ${lang === 'en' ? remaining + ' left' : '还剩 ' + remaining}
+        </p>
+        <p style="text-align:center;margin:0 0 14px;color:var(--warm-text-soft);font-size:11px;opacity:.85;">
+          ${lang === 'en' ? 'Optional boosts — crops grow & harvest fine without them.' : '都是可选加成，不打理也照常生长收获'}
         </p>
         <div class="care-actions">
           ${waterHtml}
@@ -224,6 +228,7 @@
         Farm.ui.hideModal();
         if (Farm.tending) Farm.tending.fertilizePlot(plotIdx);
       };
+
 
       const accelBtn = document.getElementById('careAccel');
       if (accelBtn) accelBtn.onclick = () => {
