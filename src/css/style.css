@@ -3124,3 +3124,7 @@ body {
 .sticker-btn:hover { background: rgba(106, 176, 76, 0.10); }
 .sticker-btn:active { transform: scale(1.3); }
 .sticker-btn:disabled { opacity: 0.5; cursor: default; }
+
+.brandbar-weather { transition: transform .12s ease, filter .12s ease; }
+.brandbar-weather:active { transform: scale(0.95); }
+.brandbar-weather:hover { filter: brightness(1.03); }

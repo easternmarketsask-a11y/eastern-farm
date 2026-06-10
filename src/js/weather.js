@@ -9,11 +9,13 @@
  * Saskatoon coords: 52.13°N, 106.67°W (Saskatchewan, time-zone Regina).
  */
 (function () {
-  const CACHE_KEY = 'eastern_farm_weather_v1';
+  const CACHE_KEY = 'eastern_farm_weather_v2';
   const CACHE_MS = 30 * 60 * 1000;  // 30 minutes
   const URL = 'https://api.open-meteo.com/v1/forecast'
     + '?latitude=52.13&longitude=-106.67'
-    + '&current_weather=true&timezone=America%2FRegina';
+    + '&timezone=America%2FRegina'
+    + '&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m,is_day'
+    + '&daily=temperature_2m_max,temperature_2m_min&forecast_days=1';
 
   // WMO code → { emoji, zh, en }
   const CODES = {
@@ -73,14 +75,20 @@
       const res = await fetch(URL);
       if (!res.ok) throw new Error('http ' + res.status);
       const json = await res.json();
-      const cw = json.current_weather;
-      if (!cw || typeof cw.temperature !== 'number') throw new Error('bad response');
+      const c = json.current;
+      if (!c || typeof c.temperature_2m !== 'number') throw new Error('bad response');
+      const d = json.daily || {};
+      const num = (v) => (typeof v === 'number' ? Math.round(v) : null);
       const data = {
-        temperatureC: Math.round(cw.temperature),
-        weatherCode: cw.weathercode,
-        windKph: cw.windspeed,
-        isDay: cw.is_day === 1,
-        observedAt: cw.time,
+        temperatureC: Math.round(c.temperature_2m),
+        feelsLikeC: num(c.apparent_temperature),
+        humidity: num(c.relative_humidity_2m),
+        weatherCode: c.weather_code,
+        windKph: c.wind_speed_10m,
+        isDay: c.is_day === 1,
+        observedAt: c.time,
+        highC: (d.temperature_2m_max && d.temperature_2m_max.length) ? Math.round(d.temperature_2m_max[0]) : null,
+        lowC: (d.temperature_2m_min && d.temperature_2m_min.length) ? Math.round(d.temperature_2m_min[0]) : null,
       };
       writeCache(data);
       return data;
@@ -129,7 +137,51 @@
       chip.id = 'weatherChip';
       chip.className = 'brandbar-weather';
       chip.textContent = '';
+      chip.style.cursor = 'pointer';
+      chip.onclick = () => this.showDetail();
       brandbar.appendChild(chip);
+    },
+
+    // Tap the chip → detailed current Saskatoon weather.
+    showDetail() {
+      const lang = (Farm.state && Farm.state.data && Farm.state.data.language) || 'zh';
+      const d = this.data;
+      if (!d) {
+        if (Farm.ui) Farm.ui.toast(lang === 'en' ? 'Weather unavailable' : '天气暂不可用', 1800);
+        return;
+      }
+      const code = CODES[d.weatherCode] || { emoji: '🌡', zh: '', en: '' };
+      const word = lang === 'en' ? code.en : code.zh;
+      const time = (d.observedAt && d.observedAt.length >= 16) ? d.observedAt.slice(11, 16) : '';
+      const row = (icon, lbl, val) => (val == null || val === '') ? '' : `
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 4px;border-bottom:1px solid var(--border-soft);font-size:14px;">
+          <span style="color:var(--warm-text-soft);">${icon} ${lbl}</span>
+          <span style="font-weight:700;color:var(--warm-text);">${val}</span>
+        </div>`;
+      const hl = (d.highC != null && d.lowC != null)
+        ? `↑ ${d.highC}°  ↓ ${d.lowC}°` : null;
+      const html = `
+        <h2 class="modal-title">🌤 ${lang === 'en' ? 'Saskatoon Weather' : '萨斯卡通天气'}</h2>
+        <div style="text-align:center;margin:6px 0 14px;">
+          <div style="font-size:60px;line-height:1;">${code.emoji}</div>
+          <div style="font-size:46px;font-weight:800;color:var(--leaf-dark);margin-top:6px;">${d.temperatureC}°<span style="font-size:24px;">C</span></div>
+          <div style="font-size:15px;color:var(--warm-text-soft);margin-top:2px;">${word}</div>
+        </div>
+        <div style="background:var(--cream-bg);border-radius:14px;padding:4px 14px;">
+          ${row('🌡', lang === 'en' ? 'Feels like' : '体感温度', d.feelsLikeC != null ? d.feelsLikeC + '°C' : null)}
+          ${row('📈', lang === 'en' ? 'Today high / low' : '今日最高 / 最低', hl)}
+          ${row('💧', lang === 'en' ? 'Humidity' : '湿度', d.humidity != null ? d.humidity + '%' : null)}
+          ${row('💨', lang === 'en' ? 'Wind' : '风速', Math.round(d.windKph) + ' km/h')}
+        </div>
+        <div style="text-align:center;font-size:11px;color:var(--warm-text-soft);margin-top:10px;">
+          ${lang === 'en' ? 'Updated' : '更新于'} ${time} · Open-Meteo
+        </div>
+        <div class="btn-row" style="margin-top:12px;">
+          <button class="btn" style="width:100%;" onclick="Farm.ui.hideModal()">${Farm.i18n.t('btn_close')}</button>
+        </div>
+      `;
+      if (Farm.ui && Farm.ui.showModal) Farm.ui.showModal(html);
+      if (Farm.audio) Farm.audio.play('tap');
     },
 
     _renderChip() {
