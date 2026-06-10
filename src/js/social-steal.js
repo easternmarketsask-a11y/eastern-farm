@@ -118,8 +118,10 @@
         maxSteal = Math.max(0, maxSteal - Farm.defenses.raidReduction());
       }
       const hrs = awayMs / 3600000;
-      const nSteal = Math.min(maxSteal, matureIdx.length, hrs >= 6 ? maxSteal : 1);
+      let nSteal = Math.min(maxSteal, matureIdx.length, hrs >= 6 ? maxSteal : 1);
       const thieves = this._pickActors('thief', Math.max(1, nSteal), now);
+      // 没有可用的"邻居"(如 AI 关闭且无真会员) ⇒ 不发生偷菜，绝不用 undefined 顶替小贼
+      if (thieves.length === 0) nSteal = 0;
 
       for (let k = 0; k < nSteal; k++) {
         const idx = matureIdx[k];

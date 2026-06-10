@@ -32,6 +32,10 @@
   }
 
   const ai = {
+    // 总开关：关闭后所有"假邻居"从今日/排行榜/顺菜/被偷小报中消失，
+    // 社交面板只显示真会员（没有就显示邀请态）。数据/代码保留，可逆。
+    // 真会员多起来后想恢复 AI 补位，把这里改回 true 即可。
+    enabled: false,
     roster: [],
     byId: {},
     levelEpoch: '2026-04-01',
@@ -54,7 +58,9 @@
     },
 
     get(id) { return this.byId[id] || null; },
-    ids() { return this.roster.map(n => n.id); },
+    // enabled=false ⇒ 对外"没有 AI 邻居"：所有枚举入口返回空，
+    // 今日/排行榜/顺菜/被偷结算自然全部回落到真会员/空态。
+    ids() { return this.enabled ? this.roster.map(n => n.id) : []; },
 
     name(id) {
       const n = this.get(id);
@@ -167,7 +173,7 @@
 
     // 今日确定性挑 n 个 AI（按日期 hash 洗牌），用于真会员不足时补位。
     dailyPick(n, dateStr) {
-      const ids = this.ids().slice();
+      const ids = this.ids().slice();   // enabled=false ⇒ [] ⇒ 不补位
       if (n >= ids.length) return ids;
       // 基于日期的确定性洗牌（Fisher–Yates，种子来自 dateStr）
       let h = hashStr('aipick:' + (dateStr || ''));
