@@ -218,8 +218,9 @@
         <h2 class="modal-title">${title}</h2>
         ${tabBarHtml}
         <div id="neighborBody">${body}</div>
-        <div class="btn-row" style="margin-top:12px;">
-          <button class="btn secondary" onclick="Farm.ui.hideModal()">${Farm.i18n.t('btn_close')}</button>
+        <div class="btn-row" style="margin-top:12px;gap:8px;">
+          <button class="btn" style="flex:1;" onclick="Farm.share && Farm.share.open()">📸 ${lang === 'en' ? 'Share my farm' : '晒农场'}</button>
+          <button class="btn secondary" style="flex:1;" onclick="Farm.ui.hideModal()">${Farm.i18n.t('btn_close')}</button>
         </div>
       `);
 

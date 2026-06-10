@@ -738,6 +738,7 @@
             ${lang === 'en' ? 'Synced with Eastern Market account' : '已与东方超市会员账户同步'}
           </div>
         </div>
+        <button class="btn" id="memberShareBtn" style="width:100%;margin-bottom:8px;">📸 ${lang === 'en' ? 'Share my farm' : '晒我的农场'}</button>
         <button class="btn secondary" id="memberSettingsBtn" style="width:100%;margin-bottom:8px;">⚙️ ${Farm.i18n.t('settings_title')}</button>
         <div class="btn-row">
           <button class="btn secondary" onclick="Farm.ui.hideModal()">${Farm.i18n.t('btn_close')}</button>
@@ -745,6 +746,8 @@
         </div>
       `;
       Farm.ui.showModal(html);
+      const shareBtn = document.getElementById('memberShareBtn');
+      if (shareBtn) shareBtn.onclick = () => { if (Farm.share) Farm.share.open(); };
       const settingsBtn = document.getElementById('memberSettingsBtn');
       if (settingsBtn) settingsBtn.onclick = () => {
         Farm.ui.hideModal();
