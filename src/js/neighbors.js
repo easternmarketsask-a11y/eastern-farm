@@ -10,18 +10,8 @@
  * Includes a "排行榜 / Leaderboard" tab: top 10 members by farm level.
  */
 (function () {
-  // Procedural fallback pool — kept for offline mode / before Firestore
-  // population is seeded. Smaller list, just safe defaults.
-  const FALLBACK_POOL = [
-    { name_zh: '王阿姨', name_en: 'Auntie Wang', emoji: '👩' },
-    { name_zh: '张大叔', name_en: 'Uncle Zhang', emoji: '👨' },
-    { name_zh: '李奶奶', name_en: 'Grandma Li', emoji: '👵' },
-    { name_zh: '陈爷爷', name_en: 'Grandpa Chen', emoji: '👴' },
-    { name_zh: '小红', name_en: 'Little Hong', emoji: '👧' },
-    { name_zh: '小明', name_en: 'Little Ming', emoji: '👦' },
-    { name_zh: '萨城宝妈', name_en: 'Sask Mom', emoji: '👩' },
-    { name_zh: '黄医生', name_en: 'Dr. Huang', emoji: '👨‍⚕️' },
-  ];
+  // (Removed dead FALLBACK_POOL of textbook names 王阿姨/张大叔… — neighbor
+  // fill-in now uses the deterministic AI roster, never these placeholders.)
 
   function hashStr(s) {
     let h = 2166136261;

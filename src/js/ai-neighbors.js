@@ -61,7 +61,14 @@
       if (!n) return id;
       return (Farm.state.data.language === 'en') ? n.name_en : n.name_zh;
     },
-    avatar(id) { const n = this.get(id); return n ? n.avatar : '🧑'; },
+    // 头像：用与真会员邻居完全相同的人物 emoji 池（neighbors.avatarFor），
+    // 确定性分配，让 AI 与真人在卡片上视觉一致、看不出差别。
+    // （名册里的 avatar 字段不再用于显示。）
+    avatar(id) {
+      const pool = ['👩', '👨', '👵', '👴', '👧', '👦', '🧑', '👩‍🌾', '👨‍🌾',
+                    '🧓', '🧑‍🎓', '👩‍🏫', '👨‍🍳', '🌺', '🌟', '🌅'];
+      return pool[hashStr(id + ':avatar') % pool.length];
+    },
 
     // 随真实天数缓慢上涨的等级（确定性、有上限）。
     levelAt(id, now) {
