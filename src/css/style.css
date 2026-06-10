@@ -3032,3 +3032,22 @@ body {
   padding: 4px 6px;
   cursor: pointer;
 }
+
+/* =============== PROMO reward celebration (launch Lv3 bonus) =============== */
+.promo-gift-pop {
+  display: inline-block;
+  animation: promoGiftPop 0.7s cubic-bezier(.2, 1.4, .5, 1) both;
+}
+@keyframes promoGiftPop {
+  0%   { transform: scale(0) rotate(-20deg); }
+  60%  { transform: scale(1.25) rotate(8deg); }
+  100% { transform: scale(1) rotate(0); }
+}
+.promo-coin-amount {
+  display: inline-block;
+  animation: promoCoinPulse 1.2s ease-in-out 0.3s;
+}
+@keyframes promoCoinPulse {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.12); }
+}

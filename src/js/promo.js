@@ -74,17 +74,15 @@
         return;
       }
       const lang = (Farm.state.data && Farm.state.data.language) || 'zh';
-      if (Farm.ui && Farm.ui.showConfetti) Farm.ui.showConfetti(40, 3000);
-      if (Farm.audio) Farm.audio.play('achievement');
       const html = `
         <div style="text-align:center;padding:8px 4px;">
-          <div style="font-size:52px;margin-bottom:6px;">🎁🌱</div>
+          <div class="promo-gift-pop" style="font-size:56px;margin-bottom:6px;">🎁</div>
           <h2 class="modal-title">${lang === 'en' ? 'Level 3 reached!' : '恭喜升到 3 级！'}</h2>
           <p style="font-size:15px;color:var(--warm-text);margin:10px 0;">
-            ${lang === 'en' ? 'Launch reward unlocked:' : '开业活动奖励到账：'}
+            ${lang === 'en' ? 'Launch reward unlocked:' : '开业活动大红包到账：'}
           </p>
-          <div style="font-size:30px;font-weight:800;color:#b8860b;margin:8px 0;">
-            <span class="coin-icon"></span> +${PROMO.rewardCoins.toLocaleString()}
+          <div class="promo-coin-amount" style="font-size:34px;font-weight:800;color:#b8860b;margin:8px 0;">
+            <span class="coin-icon"></span> +<span id="promoCoinCount">0</span>
           </div>
           <p style="font-size:12px;color:var(--warm-text-soft);line-height:1.6;margin-top:10px;">
             ${lang === 'en'
@@ -94,7 +92,30 @@
           <button class="btn" style="width:100%;margin-top:14px;" onclick="Farm.ui.hideModal()">${lang === 'en' ? 'Awesome!' : '太好了！'}</button>
         </div>`;
       if (Farm.ui && Farm.ui.showModal) Farm.ui.showModal(html);
+      // Dynamic payoff: golden coin rain + the number counting up + coin chimes.
+      if (Farm.ui && Farm.ui.coinBurst) Farm.ui.coinBurst(3);
+      else if (Farm.ui && Farm.ui.showConfetti) Farm.ui.showConfetti(40, 3000);
+      if (Farm.audio) {
+        Farm.audio.play('achievement');
+        for (let c = 0; c < 4; c++) setTimeout(() => Farm.audio.play('coin'), 220 + c * 160);
+      }
+      this._countUp('promoCoinCount', PROMO.rewardCoins, 1100);
       if (Farm.ui && Farm.ui.refreshHUD) Farm.ui.refreshHUD();
+    },
+
+    // Animate a number from 0 → target (ease-out) into element #id.
+    _countUp(id, target, dur) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const start = Date.now();
+      const tick = () => {
+        const t = Math.min(1, (Date.now() - start) / dur);
+        const eased = 1 - Math.pow(1 - t, 3);
+        el.textContent = Math.round(target * eased).toLocaleString();
+        if (t < 1) requestAnimationFrame(tick);
+        else el.textContent = target.toLocaleString();
+      };
+      requestAnimationFrame(tick);
     },
 
     // Banner for the "今日" panel: shows the offer + progress, hides once
