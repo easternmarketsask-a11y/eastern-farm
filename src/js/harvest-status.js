@@ -12,17 +12,28 @@
 (function() {
   const harvestStatus = {
 
-    // Compute current state from plots and update the DOM.
+    // Compute current state from plots and update the DOM. The center status
+    // pill IS the action now (no separate clunky "全收" button): when crops are
+    // ready, tapping the pill harvests all; when the silo is full, it opens the
+    // sell/expand dialog; while growing/empty it's just a label.
     render() {
       const textEl = document.getElementById('harvestStatusText');
+      const centerEl = document.getElementById('harvestStatusCenter');
       const btnEl = document.getElementById('harvestStatusBtn');
-      if (!textEl || !btnEl) return;
+      if (!textEl || !centerEl) return;
+      if (btnEl) btnEl.classList.add('hidden');  // retired in favour of tappable pill
+      const lang = Farm.state.data.language;
+
+      // Set the pill's clickable state + visual variant in one place.
+      const setAction = (handler, variant) => {
+        centerEl.onclick = handler || null;
+        centerEl.classList.toggle('is-actionable', !!handler);
+        centerEl.classList.toggle('is-warning', variant === 'warning');
+      };
 
       const plots = (Farm.state.data.plots || []).filter(p => p.unlocked && p.crop);
-
       let matureCount = 0;
       let earliestRemaining = null;
-
       plots.forEach(plot => {
         if (Farm.crops.isMature(plot)) {
           matureCount++;
@@ -37,33 +48,26 @@
       if (matureCount > 0) {
         const full = Farm.state.isWarehouseFull && Farm.state.isWarehouseFull();
         if (full) {
-          // Silo full: don't pretend "全收" will work — say why, and turn the
-          // button into the fix (sell / expand).
-          const lang = Farm.state.data.language;
+          // Silo full → tapping the pill opens the sell/expand dialog.
           textEl.textContent = (lang === 'en'
-            ? '📦 Silo full · ' + matureCount + ' crops waiting'
-            : '📦 仓库满了 · ' + matureCount + ' 棵等着收');
-          btnEl.textContent = (lang === 'en' ? '🏪 Sell / expand' : '🏪 卖货 / 扩容');
-          btnEl.classList.remove('hidden');
-          btnEl.onclick = () => {
+            ? '📦 Silo full · ' + matureCount + ' waiting · sell'
+            : '📦 仓库满了 · ' + matureCount + ' 棵 · 去卖货');
+          setAction(() => {
             if (Farm.warehouse && Farm.warehouse.openFullDialog) Farm.warehouse.openFullDialog();
-          };
+          }, 'warning');
         } else {
+          // Ready → tapping the pill harvests everything.
           textEl.textContent = Farm.i18n.t('harvest_status_ready', { n: matureCount });
-          btnEl.textContent = '🌾 ' + Farm.i18n.t('harvest_status_btn_all');
-          btnEl.classList.remove('hidden');
-          btnEl.onclick = () => this.harvestAll();
+          setAction(() => this.harvestAll(), 'ready');
         }
       } else if (earliestRemaining !== null) {
         textEl.textContent = Farm.i18n.t('harvest_status_growing', {
           time: Farm.crops.formatTimeRemaining(earliestRemaining),
         });
-        btnEl.classList.add('hidden');
-        btnEl.onclick = null;
+        setAction(null);
       } else {
         textEl.textContent = Farm.i18n.t('harvest_status_empty');
-        btnEl.classList.add('hidden');
-        btnEl.onclick = null;
+        setAction(null);
       }
     },
 

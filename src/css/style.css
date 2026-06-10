@@ -610,6 +610,42 @@ body {
   box-shadow: 0 1px 3px rgba(139, 90, 60, 0.12);
 }
 .harvest-status-text { line-height: 1.25; text-align: center; }
+
+/* Crops ready → the whole pill is a friendly, textured "tap to harvest" button
+   (replaces the old oversized 全收 button). Soft green gradient + inset
+   highlight for depth, a small chevron to signal it's tappable, press-scale. */
+.harvest-status-center.is-actionable {
+  cursor: pointer;
+  background: linear-gradient(180deg, #f1fbe7 0%, #cdebac 100%);
+  border: 1.5px solid #a6d178;
+  box-shadow: 0 1px 3px rgba(106, 176, 76, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.65);
+  color: var(--leaf-dark);
+  font-weight: 600;
+  transition: transform .12s ease, box-shadow .12s ease, filter .12s ease;
+}
+.harvest-status-center.is-actionable:hover { filter: brightness(1.03); }
+.harvest-status-center.is-actionable:active {
+  transform: scale(0.97);
+  box-shadow: 0 1px 2px rgba(106, 176, 76, 0.28), inset 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+.harvest-status-center.is-actionable::after {
+  content: '›';
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--leaf-green);
+  margin-left: 1px;
+  flex-shrink: 0;
+}
+/* Silo-full variant: warm amber, still tappable (opens sell / expand). */
+.harvest-status-center.is-warning {
+  background: linear-gradient(180deg, #fff3d6 0%, #ffe0a8 100%);
+  border-color: #f0c674;
+  color: #8a5a12;
+}
+.harvest-status-center.is-warning::after { color: #d68a00; }
+
+/* Legacy standalone button — retired (kept hidden for DOM compatibility). */
 .harvest-status-btn {
   flex-shrink: 0;
   padding: 5px 13px;
