@@ -113,26 +113,32 @@
       ctx.textAlign = 'center';
       ctx.textBaseline = 'alphabetic';
 
-      // ---- Logo + title ----
-      if (logo) {
-        const lw = 168, lh = lw * (logo.height / logo.width || 0.28);
-        ctx.drawImage(logo, (W - lw) / 2, 76, lw, lh);
-      }
+      // ---- Logo + title (logo is ~1080x556; size it small so it never
+      //      collides with the title, and place the title dynamically below it) ----
+      const logoW = 124;
+      const logoH = logo ? logoW * (logo.height / logo.width) : 64;
+      const logoY = 70;
+      if (logo) ctx.drawImage(logo, (W - logoW) / 2, logoY, logoW, logoH);
+      const titleY = logoY + logoH + 36;   // 快乐农场 baseline, always clear of logo
       ctx.fillStyle = '#2a5c34';
       ctx.font = '700 30px ' + CN;
-      ctx.fillText('快乐农场', W / 2, 168);
+      ctx.fillText('快乐农场', W / 2, titleY);
       ctx.fillStyle = '#E8522A';
       ctx.font = '700 13px Arial,sans-serif';
-      ctx.save(); ctx.translate(W / 2, 188);
-      ctx.fillText('H A P P Y   F A R M', 0, 0); ctx.restore();
+      ctx.fillText('H A P P Y   F A R M', W / 2, titleY + 20);
 
-      // ---- Avatar in a soft ring ----
+      // ---- Avatar in a soft ring (emoji centered via 'middle' baseline so it
+      //      sits in the circle instead of resting on the bottom edge) ----
+      const avY = 250;
       ctx.fillStyle = '#eaf6dc';
-      ctx.beginPath(); ctx.arc(W / 2, 250, 48, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(W / 2, avY, 48, 0, Math.PI * 2); ctx.fill();
       ctx.strokeStyle = '#a6d178'; ctx.lineWidth = 3;
-      ctx.beginPath(); ctx.arc(W / 2, 250, 48, 0, Math.PI * 2); ctx.stroke();
-      ctx.font = '60px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
-      ctx.fillText('🧑‍🌾', W / 2, 272);
+      ctx.beginPath(); ctx.arc(W / 2, avY, 48, 0, Math.PI * 2); ctx.stroke();
+      ctx.save();
+      ctx.textBaseline = 'middle';
+      ctx.font = '56px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
+      ctx.fillText('🧑‍🌾', W / 2, avY + 4);   // +4 optical centering
+      ctx.restore();
 
       // ---- Nickname ----
       const name = (Farm.fbGameSync && Farm.fbGameSync._selfDisplayName)
