@@ -87,39 +87,55 @@
       const tilesY = 400;
       const soilTiles = SHOWCASE.map((_, i) =>
         `<g transform="translate(${tilesX + i * (TILE + TGAP)},${tilesY})">
-           <rect x="0" y="6" width="${TILE}" height="78" rx="14" fill="#6f4a2c"/>
+           <rect x="0" y="7" width="${TILE}" height="78" rx="14" fill="#553620"/>
            <rect x="0" y="0" width="${TILE}" height="78" rx="14" fill="url(#soil)"/>
-           <path d="M8 22 H88 M8 40 H88 M8 58 H88" stroke="rgba(78,48,26,0.35)" stroke-width="3" stroke-linecap="round"/>
-           <path d="M8 25 H88 M8 43 H88 M8 61 H88" stroke="rgba(222,180,135,0.22)" stroke-width="1.5" stroke-linecap="round"/>
+           <rect x="0" y="0" width="${TILE}" height="78" rx="14" fill="none" stroke="rgba(60,38,20,0.5)" stroke-width="1.5"/>
+           <path d="M8 20 H88 M8 39 H88 M8 58 H88" stroke="rgba(58,34,16,0.45)" stroke-width="4" stroke-linecap="round"/>
+           <path d="M8 24 H88 M8 43 H88 M8 62 H88" stroke="rgba(228,188,142,0.28)" stroke-width="2" stroke-linecap="round"/>
          </g>`).join('');
       const sceneSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
         <defs>
           <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stop-color="#aee1f5"/><stop offset="0.6" stop-color="#cdeade"/><stop offset="1" stop-color="#d8efc8"/>
+            <stop offset="0" stop-color="#86ccef"/><stop offset="0.5" stop-color="#bbe6e2"/><stop offset="1" stop-color="#e7f1c6"/>
           </linearGradient>
           <linearGradient id="grass" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stop-color="#a8d48a"/><stop offset="1" stop-color="#7fb45e"/>
+            <stop offset="0" stop-color="#9ccd72"/><stop offset="1" stop-color="#6ba646"/>
           </linearGradient>
           <linearGradient id="wood" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stop-color="#b08252"/><stop offset="1" stop-color="#8a6240"/>
+            <stop offset="0" stop-color="#b3854f"/><stop offset="1" stop-color="#855c38"/>
           </linearGradient>
           <linearGradient id="soil" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stop-color="#b98a5e"/><stop offset="1" stop-color="#84583a"/>
+            <stop offset="0" stop-color="#a87a4c"/><stop offset="1" stop-color="#6a4225"/>
           </linearGradient>
+          <radialGradient id="sun" cx="50%" cy="50%" r="50%">
+            <stop offset="0" stop-color="#fff0b8"/><stop offset="0.6" stop-color="#ffd84d"/><stop offset="1" stop-color="#fcc63a"/>
+          </radialGradient>
         </defs>
         <rect width="${W}" height="330" fill="url(#sky)"/>
         <rect y="300" width="${W}" height="${H - 300}" fill="url(#grass)"/>
-        <!-- sun -->
-        <circle cx="510" cy="74" r="44" fill="#ffd95e" opacity="0.25"/>
-        <circle cx="510" cy="74" r="29" fill="#ffd95e" opacity="0.95"/>
-        <!-- clouds -->
-        <g fill="#ffffff" opacity="0.9">
-          <ellipse cx="92" cy="70" rx="30" ry="13"/><ellipse cx="122" cy="62" rx="24" ry="15"/><ellipse cx="146" cy="71" rx="18" ry="10"/>
-          <ellipse cx="330" cy="46" rx="24" ry="10" opacity="0.75"/><ellipse cx="354" cy="40" rx="18" ry="11" opacity="0.75"/>
+        <!-- sun: soft outer glow + rays + warm core -->
+        <circle cx="512" cy="72" r="56" fill="#ffe79a" opacity="0.22"/>
+        <circle cx="512" cy="72" r="42" fill="#ffdf7a" opacity="0.32"/>
+        <g stroke="#ffdd6e" stroke-width="4" stroke-linecap="round" opacity="0.6">
+          <line x1="512" y1="6" x2="512" y2="20"/>
+          <line x1="512" y1="124" x2="512" y2="138"/>
+          <line x1="446" y1="72" x2="460" y2="72"/>
+          <line x1="564" y1="72" x2="578" y2="72"/>
+          <line x1="466" y1="26" x2="476" y2="36"/>
+          <line x1="548" y1="108" x2="558" y2="118"/>
+          <line x1="558" y1="26" x2="548" y2="36"/>
+          <line x1="476" y1="108" x2="466" y2="118"/>
         </g>
-        <!-- hills -->
-        <path d="M0 268 Q 110 218 230 252 Q 360 286 470 240 Q 540 214 600 234 L 600 330 L 0 330 Z" fill="#9ccb7e" opacity="0.8"/>
-        <path d="M0 292 Q 140 246 300 276 Q 450 304 600 270 L 600 340 L 0 340 Z" fill="#8bc06c"/>
+        <circle cx="512" cy="72" r="28" fill="url(#sun)"/>
+        <!-- clouds -->
+        <g fill="#ffffff" opacity="0.92">
+          <ellipse cx="92" cy="70" rx="30" ry="13"/><ellipse cx="122" cy="62" rx="24" ry="15"/><ellipse cx="146" cy="71" rx="18" ry="10"/>
+          <ellipse cx="330" cy="46" rx="24" ry="10" opacity="0.78"/><ellipse cx="354" cy="40" rx="18" ry="11" opacity="0.78"/>
+        </g>
+        <!-- hills: 3 layers for depth, richer greens -->
+        <path d="M0 250 Q 120 206 250 238 Q 380 270 480 230 Q 550 206 600 222 L 600 330 L 0 330 Z" fill="#aed795" opacity="0.65"/>
+        <path d="M0 270 Q 110 222 230 254 Q 360 288 470 242 Q 540 216 600 236 L 600 330 L 0 330 Z" fill="#90c66f"/>
+        <path d="M0 296 Q 140 250 300 280 Q 450 308 600 274 L 600 340 L 0 340 Z" fill="#79b455"/>
         <!-- farmhouse (left) -->
         <g transform="translate(48,212)">
           <circle cx="58" cy="-4" r="5" fill="#fff" opacity="0.6"/>
@@ -151,14 +167,14 @@
           <line x1="0" y1="327" x2="${W}" y2="327"/>
         </g>
         <!-- hanging wooden sign — carries the GAME NAME (快乐农场) as the hero -->
-        <g transform="translate(0,8)">
-          <line x1="208" y1="96" x2="224" y2="128" stroke="#8a6240" stroke-width="5" stroke-linecap="round"/>
-          <line x1="392" y1="96" x2="376" y2="128" stroke="#8a6240" stroke-width="5" stroke-linecap="round"/>
-          <rect x="106" y="124" width="388" height="118" rx="20" fill="#6f4a2c"/>
-          <rect x="112" y="118" width="376" height="118" rx="18" fill="url(#wood)"/>
-          <rect x="124" y="130" width="352" height="94" rx="12" fill="none" stroke="rgba(255,240,210,0.35)" stroke-width="2.5" stroke-dasharray="1 0"/>
+        <g transform="translate(0,4)">
+          <line x1="208" y1="92" x2="224" y2="128" stroke="#8a6240" stroke-width="5" stroke-linecap="round"/>
+          <line x1="392" y1="92" x2="376" y2="128" stroke="#8a6240" stroke-width="5" stroke-linecap="round"/>
+          <rect x="106" y="124" width="388" height="140" rx="20" fill="#5f3f24"/>
+          <rect x="112" y="118" width="376" height="140" rx="18" fill="url(#wood)"/>
+          <rect x="124" y="130" width="352" height="116" rx="12" fill="none" stroke="rgba(255,240,210,0.35)" stroke-width="2.5"/>
           <circle cx="130" cy="136" r="4" fill="#5a3c22"/><circle cx="470" cy="136" r="4" fill="#5a3c22"/>
-          <circle cx="130" cy="218" r="4" fill="#5a3c22"/><circle cx="470" cy="218" r="4" fill="#5a3c22"/>
+          <circle cx="130" cy="240" r="4" fill="#5a3c22"/><circle cx="470" cy="240" r="4" fill="#5a3c22"/>
         </g>
         <!-- soil tiles for the crop showcase -->
         ${soilTiles}
@@ -214,37 +230,57 @@
       // point on the sign — not the individual player.
       const signCX = W / 2;
       ctx.save();
-      ctx.shadowColor = 'rgba(60,38,18,0.55)';
+      ctx.shadowColor = 'rgba(60,38,18,0.6)';
       ctx.shadowOffsetY = 2;
       ctx.fillStyle = '#fff3dd';
-      ctx.font = '700 42px ' + FD;
-      ctx.fillText('快乐农场', signCX, 188);
+      ctx.font = '700 44px ' + FD;
+      ctx.fillText('快乐农场', signCX, 184);
       ctx.restore();
       // "HAPPY FARM" — letter-spaced under the Chinese name
       (function () {
-        const txt = 'HAPPY FARM', ls = 3;
+        const txt = 'HAPPY FARM', ls = 3.5;
         ctx.font = '700 14px ' + EN;
         ctx.fillStyle = '#ffd9a0';
         let total = -ls;
         for (const ch of txt) total += ctx.measureText(ch).width + ls;
         let x = signCX - total / 2;
         ctx.textAlign = 'left';
-        for (const ch of txt) { ctx.fillText(ch, x, 214); x += ctx.measureText(ch).width + ls; }
+        for (const ch of txt) { ctx.fillText(ch, x, 210); x += ctx.measureText(ch).width + ls; }
         ctx.textAlign = 'center';
       })();
 
-      // ---- Player info, DOWN-PLAYED: small muted line below the sign ----
-      // (Personal name/level is secondary; the card sells the game, not the
-      // individual.) 🌱 is a single glyph (no ZWJ width quirk).
+      // ---- Player info, DOWN-PLAYED: a small wood-tone pill on the sign ----
+      // (Personal name/level is secondary; the card sells the GAME. The pill
+      // carries an avatar-initial circle + name · Lv, kept small + muted.)
       const name = String(
         (Farm.fbGameSync && Farm.fbGameSync._selfDisplayName)
           ? Farm.fbGameSync._selfDisplayName()
           : (s.nickname || (ZH ? '我的农场' : 'My Farm'))
       ).slice(0, 12);
       const lv = s.level || 1;
-      ctx.fillStyle = '#5f5240';
+      const initial = (name.match(/[A-Za-z0-9一-龥]/) || ['🌱'])[0];
+      const pillText = name + ' · Lv ' + lv;
       ctx.font = '500 15px ' + CN;
-      ctx.fillText('🌱 ' + name + ' · Lv ' + lv, signCX, 288);
+      const ptW = ctx.measureText(pillText).width;
+      const av = 24, padL = 6, gap = 8, padR = 16;
+      const pillW = padL + av + gap + ptW + padR;
+      const pillH = 30, pillY = 228, pillX = signCX - pillW / 2;
+      // pill background (translucent dark wood inset)
+      ctx.fillStyle = 'rgba(60,40,22,0.42)';
+      roundRect(ctx, pillX, pillY, pillW, pillH, pillH / 2); ctx.fill();
+      // avatar initial circle
+      const avCX = pillX + padL + av / 2, avCY = pillY + pillH / 2;
+      ctx.fillStyle = '#7bbf5b';
+      ctx.beginPath(); ctx.arc(avCX, avCY, av / 2, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '700 14px ' + CN;
+      ctx.fillText(initial, avCX, avCY + 5);
+      // name · Lv
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#fff3dd';
+      ctx.font = '500 15px ' + CN;
+      ctx.fillText(pillText, avCX + av / 2 + gap, avCY + 5);
+      ctx.textAlign = 'center';
 
       // ---- Crops planted on the soil tiles (drawn over the SVG tiles) ----
       cropImgs.forEach((img, i) => {
