@@ -31,6 +31,11 @@
     "tending_fert_none": { "zh": "没有化肥了，去商城买一袋吧", "en": "No fertilizer left — grab a bag in the shop" },
     "tending_fert_toast": { "zh": "🌟 施好肥，这块地收获翻倍！", "en": "🌟 Fertilized — this plot yields double!" },
 
+    "steal_done": { "zh": "🧺 从 {name} 家顺了一棵，已入库", "en": "🧺 Grabbed one from {name}'s farm!" },
+    "steal_daily_cap": { "zh": "今天顺得够多啦，明天再来～", "en": "You've grabbed plenty today — back tomorrow!" },
+    "steal_target_cap": { "zh": "在这家就顺这么多啦，去别家逛逛～", "en": "Enough from this neighbor — visit others!" },
+    "steal_warehouse_full": { "zh": "仓库满了，先去卖菜再来顺～", "en": "Silo's full — sell some crops first!" },
+
     "btn_plant": { "zh": "种植", "en": "Plant" },
     "btn_harvest": { "zh": "收获", "en": "Harvest" },
     "btn_buy": { "zh": "购买", "en": "Buy" },

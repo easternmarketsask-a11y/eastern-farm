@@ -11,8 +11,10 @@
  * 施肥（fertilize*）在 T2 加入本模块。
  */
 (function () {
-  // 浇水提速比例。T4 建立 Farm.socialConfig 后改为读取 socialConfig.WATER_SPEEDUP。
-  const WATER_SPEEDUP = 0.2;
+  // 浇水提速比例：统一从 Farm.socialConfig 读取（单一来源），缺失时回落 0.2。
+  function waterSpeedup() {
+    return (Farm.socialConfig && Farm.socialConfig.WATER_SPEEDUP) || 0.2;
+  }
 
   const tending = {
     // 生长中（未成熟）且本周期未浇水才可浇。
@@ -25,7 +27,7 @@
     // 返回 { ok, shavedMs }。不做任何 UI（供玩家浇水与「帮浇水」共用）。
     applyWaterSpeedup(plot) {
       if (!this.canWater(plot)) return { ok: false, shavedMs: 0 };
-      const shaved = Farm.crops.speedUp(plot, WATER_SPEEDUP);
+      const shaved = Farm.crops.speedUp(plot, waterSpeedup());
       plot.watered = true;
       return { ok: true, shavedMs: shaved };
     },

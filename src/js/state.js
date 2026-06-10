@@ -72,6 +72,8 @@
       firstHarvestDone: false,  // first harvest of day bonus claimed?
       firstDeliveryDone: false, // first warehouse→market delivery of day (+20%)
       likesSentToday: [],       // recipient UIDs liked today (cap 5)
+      stolenToday: 0,           // 主动顺菜总块数今日 (cap socialConfig.STEAL_MAX_PER_DAY)
+      stolenFromTargets: {},    // {targetId: count} 今日对每个对象顺了几块
     },
     activeEffects: {            // toggleable consumable effects
       accelerationCharges: 0,   // # of 加速券 in inventory (consumed on use)
@@ -285,6 +287,8 @@
               likesSentToday: [],
               helpSentToday: [],       // uids helped today (dedup, cap)
               stickersSentToday: [],   // sticker sends today (count vs cap)
+              stolenToday: 0,          // 主动顺菜总块数今日
+              stolenFromTargets: {},   // {targetId: count} 今日对每个对象顺了几块
             };
           }
         } catch (e) {

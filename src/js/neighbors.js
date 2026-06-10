@@ -412,12 +412,19 @@
         ? Farm.aiNeighbors.farmDisplay(neighbor.uid, Date.now())
         : generateFarmDisplay(neighbor.id);
 
-      const plotsHtml = fd.plots.map(p => {
+      const isAI = !!neighbor.isAI;
+      const plotsHtml = fd.plots.map((p, i) => {
         if (!p.cropId) return '<div class="neighbor-plot empty"></div>';
         const def = Farm.crops.get(p.cropId);
         if (!def) return '<div class="neighbor-plot empty"></div>';
         const svg = Farm.cropArt ? Farm.cropArt.svg(p.cropId, p.stage, 40) : `<span style="font-size:28px;">${def.icon}</span>`;
-        return `<div class="neighbor-plot ${p.stage >= 2 ? 'mature' : 'growing'}">${svg}</div>`;
+        const mature = p.stage >= 2;
+        // 主动偷：AI 农场里熟了的菜可"顺一棵"（真会员真农场是 Phase 1b）
+        const canSteal = isAI && mature;
+        const cls = `neighbor-plot ${mature ? 'mature' : 'growing'}${canSteal ? ' stealable' : ''}`;
+        const dataAttr = canSteal ? ` data-steal-idx="${i}" data-steal-crop="${p.cropId}"` : '';
+        const basket = canSteal ? '<span class="neighbor-steal-hint">🧺</span>' : '';
+        return `<div class="${cls}"${dataAttr}>${svg}${basket}</div>`;
       }).join('');
       const decoHtml = fd.decos.length > 0
         ? '<div class="neighbor-decos">' + fd.decos.map(e => `<span>${e}</span>`).join('') + '</div>'
@@ -474,6 +481,7 @@
         </div>
         <div class="neighbor-greeting">"${greeting}"</div>
         <div class="neighbor-farm">${plotsHtml}</div>
+        ${isAI ? `<div class="neighbor-steal-tip">${lang === 'en' ? '🧺 Tap a ripe crop to grab one for your silo' : '🧺 点熟了的菜，顺一棵回家～'}</div>` : ''}
         ${decoHtml}
         <div class="neighbor-actions">
           <button class="btn ${likeDisabled ? 'disabled' : ''}" id="neighborLikeBtn" ${likeDisabled ? 'disabled' : ''}>${likeLabel}</button>
@@ -503,6 +511,41 @@
       }
 
       document.getElementById('neighborBack').onclick = () => this._render();
+
+      // 主动偷：点 AI 农场里熟了的菜顺一棵入仓（遵守每日/单户上限 + 仓库满保护）
+      if (neighbor.isAI && Farm.steal) {
+        document.querySelectorAll('.neighbor-plot.stealable').forEach(cell => {
+          cell.onclick = () => {
+            const cropId = cell.dataset.stealCrop;
+            const can = Farm.steal.canStealFrom(neighbor.uid);
+            if (!can.ok) {
+              Farm.ui.toast(can.reason === 'daily_cap'
+                ? Farm.i18n.t('steal_daily_cap') : Farm.i18n.t('steal_target_cap'), 2600);
+              return;
+            }
+            const r = Farm.steal.stealOne(neighbor.uid, cropId);
+            if (!r.ok) {
+              Farm.ui.toast(r.reason === 'warehouse_full'
+                ? Farm.i18n.t('steal_warehouse_full')
+                : (r.reason === 'daily_cap' ? Farm.i18n.t('steal_daily_cap') : Farm.i18n.t('steal_target_cap')), 2700);
+              return;
+            }
+            cell.classList.remove('stealable', 'mature');
+            cell.classList.add('stolen');
+            cell.onclick = null;
+            cell.innerHTML = '<span class="neighbor-steal-done">✓</span>';
+            const rect = cell.getBoundingClientRect();
+            if (Farm.ui.floatText) {
+              Farm.ui.floatText('🧺 +1 ' + (lang === 'en' ? 'silo' : '入库'),
+                rect.left + rect.width / 2 - 18, rect.top, '#3a8c50');
+            }
+            if (Farm.audio) Farm.audio.play('coin');
+            Farm.ui.refreshHUD();
+            Farm.ui.toast(Farm.i18n.t('steal_done', { name: neighbor.name }), 2000);
+          };
+        });
+      }
+
       const likeBtn = document.getElementById('neighborLikeBtn');
       if (likeBtn && !likeDisabled) {
         likeBtn.onclick = async () => {

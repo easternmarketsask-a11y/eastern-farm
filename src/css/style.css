@@ -3173,3 +3173,22 @@ body {
   35%  { box-shadow: 0 0 16px 4px rgba(247, 201, 72, 0.65); }
   100% { box-shadow: 0 0 0 0 rgba(224, 138, 0, 0.0); }
 }
+
+/* ==================== 邻里偷菜（social-steal.js / T4-T6） ==================== */
+/* AI 农场里熟了、可顺的菜：手指可点 + 一圈柔和绿光呼吸 + 角上小篮子 */
+.neighbor-plot.stealable { cursor: pointer; position: relative; animation: stealPulse 1.8s ease-in-out infinite; border-radius: 10px; }
+@keyframes stealPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(58, 140, 80, 0.0); }
+  50%      { box-shadow: 0 0 10px 2px rgba(58, 140, 80, 0.45); }
+}
+.neighbor-plot.stealable:active { transform: scale(0.92); }
+.neighbor-steal-hint {
+  position: absolute; top: -4px; right: -4px; font-size: 13px;
+  filter: drop-shadow(0 1px 1px rgba(0,0,0,0.25)); pointer-events: none;
+}
+.neighbor-plot.stolen { opacity: 0.4; }
+.neighbor-steal-done { font-size: 20px; color: #3a8c50; }
+.neighbor-steal-tip {
+  text-align: center; font-size: 12px; color: var(--warm-text-soft);
+  margin: 6px 0 2px; opacity: 0.9;
+}
