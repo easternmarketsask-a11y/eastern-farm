@@ -3128,3 +3128,32 @@ body {
 .brandbar-weather { transition: transform .12s ease, filter .12s ease; }
 .brandbar-weather:active { transform: scale(0.95); }
 .brandbar-weather:hover { filter: brightness(1.03); }
+
+/* ==================== 打理系统：浇水 / 施肥（tending.js / T1-T2） ==================== */
+/* 地块「打理」弹窗里的动作按钮 */
+.care-actions { display: flex; flex-direction: column; gap: 10px; }
+.care-actions .care-btn { width: 100%; }
+.care-note {
+  text-align: center;
+  font-size: 13px;
+  color: var(--warm-text-soft);
+  padding: 8px 0;
+}
+
+/* 已浇水的在长作物，左上角一滴水（轻反馈，不抢戏） */
+.plot-watered-badge {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  font-size: 12px;
+  filter: drop-shadow(0 1px 1px rgba(0,0,0,0.25));
+  pointer-events: none;
+}
+
+/* 浇水瞬间：地块一圈柔和蓝色水光，900ms 后由 JS 移除 */
+.plot.just-watered { animation: justWatered 0.9s ease-out; }
+@keyframes justWatered {
+  0%   { box-shadow: 0 0 0 0 rgba(46, 134, 193, 0.0); }
+  35%  { box-shadow: 0 0 14px 3px rgba(46, 134, 193, 0.55); }
+  100% { box-shadow: 0 0 0 0 rgba(46, 134, 193, 0.0); }
+}

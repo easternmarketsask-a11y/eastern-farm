@@ -1,0 +1,70 @@
+/**
+ * tending.js — 打理系统：浇水 / 施肥（可选加成，绝不强制）。
+ *
+ * 设计原则（spec 2026-06-09）：不浇水/不施肥，作物照常生长与收获；
+ * 浇水只是让「来得勤、用心打理」的玩家多得好处，不变成强制杂活。
+ *
+ *   Farm.tending.waterPlot(idx)        玩家点「浇水」：剩余时间 -20%，每周期 1 次
+ *   Farm.tending.applyWaterSpeedup(p)  纯函数：对某 plot 施加一次浇水提速（供 T5「帮浇水」复用）
+ *   Farm.tending.canWater(plot)        该 plot 现在能否浇水
+ *
+ * 施肥（fertilize*）在 T2 加入本模块。
+ */
+(function () {
+  // 浇水提速比例。T4 建立 Farm.socialConfig 后改为读取 socialConfig.WATER_SPEEDUP。
+  const WATER_SPEEDUP = 0.2;
+
+  const tending = {
+    // 生长中（未成熟）且本周期未浇水才可浇。
+    canWater(plot) {
+      if (!plot || !plot.crop || plot.watered) return false;
+      return !Farm.crops.isMature(plot);
+    },
+
+    // 纯逻辑：对一块在长作物施加一次浇水提速并标记已浇。
+    // 返回 { ok, shavedMs }。不做任何 UI（供玩家浇水与「帮浇水」共用）。
+    applyWaterSpeedup(plot) {
+      if (!this.canWater(plot)) return { ok: false, shavedMs: 0 };
+      const shaved = Farm.crops.speedUp(plot, WATER_SPEEDUP);
+      plot.watered = true;
+      return { ok: true, shavedMs: shaved };
+    },
+
+    // 玩家主动浇水：校验 → 提速 → 存档 → 视觉 → 重渲染。
+    waterPlot(plotIdx) {
+      const plot = Farm.state.data.plots[plotIdx];
+      const lang = Farm.state.data.language;
+      if (!plot || !plot.crop) return false;
+      if (Farm.crops.isMature(plot)) {
+        Farm.ui.toast(Farm.i18n.t('tending_water_mature'));
+        return false;
+      }
+      if (plot.watered) {
+        Farm.ui.toast(Farm.i18n.t('tending_water_done'));
+        return false;
+      }
+      const r = this.applyWaterSpeedup(plot);
+      if (!r.ok) return false;
+      Farm.state.save();
+      if (Farm.audio) Farm.audio.play('coin');
+
+      // 视觉：地块短暂蓝色水光 + 飘字
+      const el = document.querySelector('.plot[data-plot-id="' + plotIdx + '"]');
+      if (el) {
+        el.classList.add('just-watered');
+        setTimeout(() => el.classList.remove('just-watered'), 900);
+        const rect = el.getBoundingClientRect();
+        if (Farm.ui && Farm.ui.floatText) {
+          Farm.ui.floatText('💧 ' + (lang === 'en' ? 'Watered' : '浇水'),
+            rect.left + rect.width / 2 - 18, rect.top, '#2e86c1');
+        }
+      }
+      if (Farm.farm) Farm.farm.renderGrid();
+      Farm.ui.toast(Farm.i18n.t('tending_water_toast'), 1800);
+      return true;
+    },
+  };
+
+  window.Farm = window.Farm || {};
+  window.Farm.tending = tending;
+})();

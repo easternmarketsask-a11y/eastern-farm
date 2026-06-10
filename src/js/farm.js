@@ -130,6 +130,14 @@
         timeLabel.style.cssText = 'font-size:9px;color:rgba(255,255,255,0.85);position:absolute;top:4px;right:4px;background:rgba(0,0,0,0.3);padding:1px 5px;border-radius:6px;';
         timeLabel.textContent = Farm.crops.formatTimeRemaining(Farm.crops.timeRemaining(plot));
         el.appendChild(timeLabel);
+
+        // 打理标记：已浇水的在长作物左上角一滴水（不抢戏，只是反馈）
+        if (plot.watered) {
+          const wb = document.createElement('div');
+          wb.className = 'plot-watered-badge';
+          wb.textContent = '💧';
+          el.appendChild(wb);
+        }
       } else {
         if (plot.harvestsLeft > 1) {
           const badge = document.createElement('div');
@@ -143,44 +151,59 @@
         if (isMature) {
           this.harvestPlot(idx, e);
         } else {
-          this.offerAccelerate(idx, plot, def);
+          this.openPlotCare(idx, plot, def);
         }
       };
 
       return el;
     },
 
-    // Show option to spend an acceleration ticket on a growing plot.
-    offerAccelerate(plotIdx, plot, def) {
+    // 「地块打理」弹窗：点一块生长中的作物 → 浇水 / 施肥 / 加速 三合一入口。
+    // 浇水免费(每周期1次)、施肥(T2)消耗化肥、加速消耗加速券。
+    openPlotCare(plotIdx, plot, def) {
       const lang = Farm.state.data.language;
       const nameKey = lang === 'en' ? 'name_en' : 'name_zh';
       const remaining = Farm.crops.formatTimeRemaining(Farm.crops.timeRemaining(plot));
-      const charges = (Farm.state.data.activeEffects && Farm.state.data.activeEffects.accelerationCharges) || 0;
-      if (charges <= 0) {
-        // No tickets — just show the standard timer toast
-        Farm.ui.toast(def[nameKey] + ' · ' + remaining);
-        return;
-      }
-      // Has tickets: offer to use one
+      const eff = Farm.state.data.activeEffects || {};
+      const charges = eff.accelerationCharges || 0;
+      const canWater = Farm.tending && Farm.tending.canWater(plot);
+
+      // 浇水行：可浇 → 按钮；已浇 → 灰提示
+      const waterHtml = canWater
+        ? `<button class="btn care-btn" id="careWater">💧 ${lang === 'en' ? 'Water (−20% time)' : '浇水（剩余 −20%）'}</button>`
+        : (plot.watered
+            ? `<div class="care-note">💧 ${Farm.i18n.t('tending_water_done')}</div>`
+            : '');
+
+      // 加速行：有券才显示（没券不唠叨）
+      const accelHtml = charges > 0
+        ? `<button class="btn secondary care-btn" id="careAccel">⚡ ${lang === 'en' ? 'Speed up now' : '立刻成熟'} <span style="opacity:.7;">(${charges})</span></button>`
+        : '';
+
       const html = `
-        <h2 class="modal-title">⚡ ${lang === 'en' ? 'Speed Up?' : '加速生长？'}</h2>
-        <p style="text-align:center;margin:16px 0;">
-          ${def[nameKey]} · ${lang === 'en' ? remaining + ' left' : '还剩 ' + remaining}
+        <h2 class="modal-title">🌱 ${def[nameKey]}</h2>
+        <p style="text-align:center;margin:10px 0 16px;color:var(--warm-text-soft);font-size:13px;">
+          ${lang === 'en' ? remaining + ' left' : '还剩 ' + remaining}
         </p>
-        <p style="text-align:center;font-size:13px;color:var(--warm-text-soft);margin-bottom:16px;">
-          ${lang === 'en'
-            ? 'Use 1 ⚡ Acceleration Ticket to mature instantly?'
-            : '使用 1 张 ⚡ 加速券立刻成熟？'}
-          <br>${lang === 'en' ? 'You have ' : '你有 '}<strong>${charges}</strong> ⚡
-        </p>
-        <div class="btn-row">
-          <button class="btn secondary" onclick="Farm.ui.hideModal()">${Farm.i18n.t('btn_cancel')}</button>
-          <button class="btn" id="accelConfirm">⚡ ${lang === 'en' ? 'Use' : '使用'}</button>
+        <div class="care-actions">
+          ${waterHtml}
+          ${accelHtml}
+        </div>
+        <div class="btn-row" style="margin-top:14px;">
+          <button class="btn secondary" onclick="Farm.ui.hideModal()">${Farm.i18n.t('btn_close')}</button>
         </div>
       `;
       Farm.ui.showModal(html);
-      document.getElementById('accelConfirm').onclick = () => {
-        if (Farm.state.data.activeEffects.accelerationCharges <= 0) {
+
+      const waterBtn = document.getElementById('careWater');
+      if (waterBtn) waterBtn.onclick = () => {
+        Farm.ui.hideModal();
+        if (Farm.tending) Farm.tending.waterPlot(plotIdx);
+      };
+
+      const accelBtn = document.getElementById('careAccel');
+      if (accelBtn) accelBtn.onclick = () => {
+        if ((Farm.state.data.activeEffects.accelerationCharges || 0) <= 0) {
           Farm.ui.toast(lang === 'en' ? 'No tickets left' : '没有加速券了');
           Farm.ui.hideModal();
           return;

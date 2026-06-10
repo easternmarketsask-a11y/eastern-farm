@@ -89,6 +89,7 @@
       plot.crop = cropId;
       plot.plantedAt = Date.now();
       plot.harvestsLeft = def.multi_harvest ? (def.harvest_count || 3) : 1;
+      plot.watered = false;   // fresh cycle: can be watered once (打理系统)
       Farm.state.recordPlant(cropId);
       Farm.state.save();
 
@@ -205,6 +206,7 @@
         // Multi-harvest crop: restart from regrow time
         const regrowMs = (def.regrow_minutes || def.grow_minutes) * 60000;
         plot.plantedAt = Date.now() - (def.grow_minutes * 60000 - regrowMs);
+        plot.watered = false;   // new regrow cycle: waterable again (打理系统)
       } else {
         // Done: clear plot
         plot.crop = null;
@@ -236,6 +238,19 @@
       const elapsedMs = Date.now() - plot.plantedAt;
       const remainMs = def.grow_minutes * 60000 - elapsedMs;
       return Math.max(0, remainMs);
+    },
+
+    // Cut remaining grow time by `frac` of what's left (e.g. 0.2 = -20%),
+    // by shifting plantedAt backward. Single source of plantedAt math lives
+    // here; tending.js (浇水) and the "help water" social action call this.
+    // Returns the milliseconds shaved (0 if already mature / invalid).
+    speedUp(plot, frac) {
+      if (!plot || !plot.crop) return 0;
+      const remainMs = this.timeRemaining(plot);
+      if (remainMs <= 0) return 0;
+      const shaved = remainMs * frac;
+      plot.plantedAt -= shaved;   // more elapsed → less remaining (× (1-frac))
+      return shaved;
     },
 
     formatTimeRemaining(ms) {
