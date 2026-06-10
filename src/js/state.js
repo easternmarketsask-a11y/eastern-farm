@@ -133,6 +133,11 @@
     // so the bonus + confetti only fires once per save.
     firstPlantCelebrated: false,
     firstHarvestCelebrated: false,
+
+    // ============ Promotions (2026-06) ============
+    // Claimed limited-time promos, keyed by promo id (e.g. lv3_week_202606).
+    // Mirrored into gameStats.promoClaims so a local reset can't re-claim.
+    promoClaims: {},
   };
 
   function getDateString(d) {

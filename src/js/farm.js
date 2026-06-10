@@ -322,6 +322,9 @@
           // Celebratory modal instead of a tiny toast (per owner request:
           // make level-up feel meaningful + preview the next milestone)
           Farm.ui.showLevelUpModal(li.oldLevel, li.newLevel, { epAwarded: epAward });
+          // Limited-time promo: reaching Lv3 this week → bonus coins. Waits
+          // for the level-up modal to close before showing its own.
+          if (Farm.promo && Farm.promo.check) Farm.promo.check();
         }, 500);
       }
 

@@ -67,6 +67,8 @@
         // can still browse the community (unlike visibleToNeighbors=false,
         // which also blinds the owner). Set via the owner toggle in settings.
         excludeFromRanking: !!s.excludeFromRanking,
+        // Claimed limited-time promos (per-account guard against local reset).
+        promoClaims: s.promoClaims || {},
         lastSeenAt: Farm.fb && Farm.fb.serverTimestamp
           ? Farm.fb.serverTimestamp()
           : new Date(),

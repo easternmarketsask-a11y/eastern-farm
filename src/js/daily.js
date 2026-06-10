@@ -149,6 +149,7 @@
       const html = `
         <h2 class="modal-title">🌅 ${lang === 'en' ? 'Today' : '今日'}</h2>
         <div class="daily-list">
+          ${(Farm.promo && Farm.promo.bannerHtml) ? Farm.promo.bannerHtml() : ''}
           ${signinHTML}
           ${newsHTML}
           ${specialHTML}

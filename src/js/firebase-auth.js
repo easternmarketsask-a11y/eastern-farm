@@ -57,6 +57,11 @@
           if (this.memberDoc && Farm.fbGameSync && Farm.fbGameSync.push) {
             Farm.fbGameSync.push();
           }
+          // Limited-time promo: catch members who are ALREADY Lv3+ when they
+          // sign in during the window (level-up hook covers reaching it live).
+          if (Farm.promo && Farm.promo.check) {
+            setTimeout(() => Farm.promo.check(), 1800);
+          }
           if (Farm.fbPoints && Farm.fbPoints.firstLoginBackfill) {
             Farm.fbPoints.firstLoginBackfill(user);
           }
