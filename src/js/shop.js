@@ -3,6 +3,19 @@
  * Also handles "plant seed into specific plot" flow.
  */
 (function() {
+  // Card icon: real crop art (the recognizable SVG sprites) when available,
+  // emoji from crops.json as fallback. Festival-only crops keep their emoji —
+  // they have no dedicated art and would render as a generic sprout.
+  function cropFace(c) {
+    try {
+      if (!c.festival_only && Farm.cropArt && Farm.cropArt.icon) {
+        const svg = Farm.cropArt.icon(c.id, 32);
+        if (svg) return svg;
+      }
+    } catch (e) { /* fall through to emoji */ }
+    return c.icon || '🌱';
+  }
+
   const shop = {
     open() {
       const lang = Farm.state.data.language;
@@ -46,7 +59,7 @@
             return `
               <div class="seed-card ${locked ? 'locked' : ''} ${isSpecial ? 'special' : ''}" data-crop-id="${c.id}" data-action="buy">
                 ${specialBadge}
-                <span class="seed-icon">${c.icon}</span>
+                <span class="seed-icon">${cropFace(c)}</span>
                 <div>
                   <div class="seed-name">${c[nameKey]}</div>
                   <div class="seed-meta">
@@ -124,7 +137,7 @@
             const owned = seeds[id] || 0;
             return `
               <div class="seed-card ${locked ? 'locked' : ''}" data-crop-id="${id}" data-action="plant">
-                <span class="seed-icon">${c.icon}</span>
+                <span class="seed-icon">${cropFace(c)}</span>
                 <div>
                   <div class="seed-name">${c[nameKey]}</div>
                   <div class="seed-meta">
