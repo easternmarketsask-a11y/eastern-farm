@@ -483,7 +483,7 @@
 
       <div class="btn-row">
         <button class="btn secondary" onclick="Farm.ui.hideModal()">${Farm.i18n.t('btn_close')}</button>
-        <button class="btn" id="resetBtn" style="background:#999;">${Farm.i18n.t('settings_reset')}</button>
+        <button class="btn danger" id="resetBtn">${Farm.i18n.t('settings_reset')}</button>
       </div>
     `;
     Farm.ui.showModal(html);

@@ -742,7 +742,7 @@
         <button class="btn secondary" id="memberSettingsBtn" style="width:100%;margin-bottom:8px;">⚙️ ${Farm.i18n.t('settings_title')}</button>
         <div class="btn-row">
           <button class="btn secondary" onclick="Farm.ui.hideModal()">${Farm.i18n.t('btn_close')}</button>
-          <button class="btn" id="memberLogoutBtn" style="background:#999;">${lang === 'en' ? 'Sign out' : '退出登录'}</button>
+          <button class="btn secondary" id="memberLogoutBtn">${lang === 'en' ? 'Sign out' : '退出登录'}</button>
         </div>
       `;
       Farm.ui.showModal(html);
