@@ -146,6 +146,11 @@
     // {aiId: {likedByMe, helpedByMe, stolenByMe, owesMeGift}} 本地记录，用于
     // AI「会回应你」（你帮过的回礼、你偷过的来顺你）。T5 据此生成回家小报事件。
     aiRelationships: {},
+
+    // 上次活跃时间戳（算"离开多久"→ 被偷结算）。0 = 从未设置(首次加载视为现在,不误判)。
+    lastActiveAt: 0,
+    // 最近一次离开期间的偷/帮事件（喂回家小报）。
+    raidLog: null,
   };
 
   function getDateString(d) {

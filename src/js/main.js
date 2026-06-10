@@ -58,6 +58,9 @@
     // 5. Festival check
     Farm.events.check();
 
+    // 5b. 被偷结算（回家小报）——必须在 renderGrid 前，让农场直接显示被顺后的状态。
+    if (Farm.homeReport) Farm.homeReport.settleOnBoot();
+
     // 6. Initial render
     Farm.ui.refreshHUD();
     Farm.farm.renderGrid();
@@ -96,6 +99,10 @@
       if (Farm.tutorial && Farm.tutorial.maybeShow) {
         setTimeout(() => Farm.tutorial.maybeShow(), 700);
       }
+      // 回家小报：排在签到/教程之后，自排队避开撞窗。
+      if (Farm.homeReport && Farm.homeReport.maybeShow) {
+        setTimeout(() => Farm.homeReport.maybeShow(), 1100);
+      }
     });
 
     // Refresh the today badge whenever the modal closes
@@ -105,6 +112,8 @@
     setInterval(() => Farm.farm.tick(), 1000);
     setInterval(() => Farm.storekeeper.refresh(), 45000);  // rotate every 45s
     setInterval(() => Farm.events.check(), 60000 * 30);    // re-check every 30 min
+    // 心跳：持续刷新"上次活跃"，让下次回来能正确算出离开多久（被偷结算用）。
+    setInterval(() => { Farm.state.data.lastActiveAt = Date.now(); Farm.state.save(); }, 60000);
 
     console.log('✅ Happy Farm ready.');
   }

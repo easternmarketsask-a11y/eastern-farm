@@ -36,6 +36,15 @@
     "steal_target_cap": { "zh": "在这家就顺这么多啦，去别家逛逛～", "en": "Enough from this neighbor — visit others!" },
     "steal_warehouse_full": { "zh": "仓库满了，先去卖菜再来顺～", "en": "Silo's full — sell some crops first!" },
 
+    "report_title": { "zh": "回家小报", "en": "While you were away" },
+    "report_bad_header": { "zh": "小馋嘴来过", "en": "Little nibblers" },
+    "report_good_header": { "zh": "邻里温情", "en": "Kind neighbors" },
+    "report_stolen": { "zh": "{name} 路过，顺走了你 {n} 棵{crop}", "en": "{name} dropped by and grabbed {n} {crop}" },
+    "report_revenge": { "zh": "去讨回来", "en": "Get even" },
+    "report_help_water": { "zh": "{name} 帮你浇了水，{crop}长得更快了", "en": "{name} watered your {crop} — growing faster!" },
+    "report_help_coins": { "zh": "{name} 给你送了 {amount} 农场币", "en": "{name} sent you {amount} farm coins" },
+    "report_caught": { "zh": "看家狗逮住了来串门的 {name}，TA 赔了你 1 棵{crop}！", "en": "Your dog caught {name} sneaking in — they left you 1 {crop}!" },
+
     "btn_plant": { "zh": "种植", "en": "Plant" },
     "btn_harvest": { "zh": "收获", "en": "Harvest" },
     "btn_buy": { "zh": "购买", "en": "Buy" },
