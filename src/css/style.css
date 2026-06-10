@@ -1653,9 +1653,16 @@ body {
   background: linear-gradient(180deg, transparent 0%, #f5e9c8 100%);
 }
 .storekeeper-avatar {
-  font-size: 34px;
+  font-size: 34px;     /* legacy emoji fallback sizing */
+  width: 46px;
+  height: 46px;
   flex-shrink: 0;
   filter: drop-shadow(0 2px 4px rgba(0,0,0,0.15));
+}
+.storekeeper-avatar svg {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 .storekeeper-bubble {
   background: var(--cream-card);
@@ -2291,7 +2298,24 @@ body {
 @keyframes splashOut {
   to { opacity: 0; visibility: hidden; transform: scale(1.02); }
 }
+/* Decorative meadow strip at the bottom of the splash (behind content). */
+.splash-scene {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  line-height: 0;
+}
+.splash-scene svg {
+  width: 100%;
+  height: 170px;
+  display: block;
+}
+
 .splash-content {
+  position: relative;   /* keep above .splash-scene */
+  z-index: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
