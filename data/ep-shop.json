@@ -250,6 +250,7 @@
     { "id": "lot_ep_lg", "weight": 3, "kind": "ep", "amount": 30, "label_zh": "+30 超市积分", "label_en": "+30 points", "icon": "💎" },
     { "id": "lot_seed_pack", "weight": 12, "kind": "seed_pack", "amount": 3, "label_zh": "随机种子 ×3", "label_en": "3 random seeds", "icon": "🌱" },
     { "id": "lot_acc_ticket", "weight": 8, "kind": "shop_item", "itemId": "acceleration_ticket", "amount": 1, "label_zh": "加速券 ×1", "label_en": "1 Acceleration", "icon": "⚡" },
+    { "id": "lot_fertilizer", "weight": 7, "kind": "shop_item", "itemId": "fertilizer_pro", "amount": 1, "label_zh": "化肥 ×1（产量翻倍）", "label_en": "1 Fertilizer (×2 yield)", "icon": "🌟" },
     { "id": "lot_jackpot", "weight": 1, "kind": "ep", "amount": 100, "label_zh": "🎉 大奖 +100 超市积分", "label_en": "🎉 JACKPOT +100 points", "icon": "🎰" }
   ]
 }

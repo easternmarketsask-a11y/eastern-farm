@@ -25,7 +25,7 @@
     { day: 1, coins: 20 },
     { day: 2, coins: 40 },
     { day: 3, coins: 60, seeds: 2 },
-    { day: 4, coins: 90 },
+    { day: 4, coins: 90, fert: 1 },
     { day: 5, coins: 120, seeds: 2 },
     { day: 6, coins: 150 },
     { day: 7, coins: 400, seeds: 3, big: true },
@@ -38,6 +38,7 @@
     if (r.coins) parts.push('+' + r.coins + '<span class="coin-icon"></span>');
     if (r.ep) parts.push('+' + r.ep + '<span class="points-icon"></span>');
     if (r.seeds) parts.push('+' + r.seeds + (lang === 'en' ? ' seeds 🌱' : ' 种子 🌱'));
+    if (r.fert) parts.push('+' + r.fert + (lang === 'en' ? ' fertilizer 🌟' : ' 化肥 🌟'));
     return parts.join(' ');
   }
 
@@ -60,6 +61,11 @@
     if (r.coins) Farm.state.addCoins(r.coins);
     if (r.seeds) {
       randomSeedIds(r.seeds).forEach(id => Farm.state.addSeed(id, 1));
+    }
+    if (r.fert) {
+      const eff = Farm.state.data.activeEffects || (Farm.state.data.activeEffects = {});
+      eff.fertilizerCharges = (eff.fertilizerCharges || 0) + r.fert;
+      Farm.state.save();
     }
     Farm.ui.refreshHUD();
   }
