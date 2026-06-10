@@ -158,7 +158,27 @@
     },
   };
 
+  // ===== 防御：看家狗（T6）=====
+  // 拥有 guard_dog 装饰 = 看家狗在岗（复用现有 pet 装饰渲染，农场里会溜达一只狗）。
+  // 单一数据源：是否在岗读 decorations，不另存 defenses 字段。
+  const defenses = {
+    hasDog() {
+      const decos = Farm.state.data.decorations || [];
+      return decos.some(d => d.itemId === 'guard_dog');
+    },
+    // settleRaid 调：在岗狗使被偷上限 -DOG_PROTECT。
+    raidReduction() {
+      return this.hasDog() ? socialConfig.DOG_PROTECT : 0;
+    },
+    // settleRaid 调：在岗狗有概率抓住小贼（拦下 + 反转为赔礼好消息）。
+    catchThief() {
+      if (!this.hasDog()) return false;
+      return Math.random() < 0.35;
+    },
+  };
+
   window.Farm = window.Farm || {};
   window.Farm.socialConfig = socialConfig;
   window.Farm.steal = steal;
+  window.Farm.defenses = defenses;
 })();

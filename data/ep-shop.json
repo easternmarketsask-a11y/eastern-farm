@@ -205,6 +205,18 @@
       "desc_en": "A permanent companion. Wanders around your farm, no utility, pure joy."
     },
     {
+      "id": "guard_dog",
+      "name_zh": "看家狗",
+      "name_en": "Guard Dog",
+      "icon": "🐕",
+      "cost_coins": 800,
+      "category": "pet",
+      "kind": "decoration",
+      "decoration_emoji": "🐕",
+      "desc_zh": "永久守护。在岗时邻居更难顺走你的菜，还有机会逮住小馋嘴让 TA 赔礼。",
+      "desc_en": "A permanent guardian. Fewer crops get grabbed while away, and may catch a nibbler red-handed."
+    },
+    {
       "id": "extra_plot_coins",
       "name_zh": "扩展地块（农场币）",
       "name_en": "Expand Plot (Coins)",
