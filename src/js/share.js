@@ -66,101 +66,184 @@
       const ctx = canvas.getContext('2d');
 
       // Preload art in parallel: logo + a curated, colorful crop showcase for
-      // the mini-field. (The active crop catalog starts with many look-alike
+      // the hero field. (The active crop catalog starts with many look-alike
       // leafy greens; a hand-picked spread of shapes/colors reads far better:
       // green bok choy · orange carrot · purple eggplant · white radish ·
-      // broccoli.)
+      // broccoli.) The whole decorative scene (sky/hills/farmhouse/fence/
+      // grass/sign/soil tiles/bottom panel) is one static SVG rasterized in
+      // a single pass — same visual language as the in-game farm scene band.
       const SHOWCASE = ['shanghai_miao', 'hu_luo_bo', 'eggplant', 'bai_luo_bo', 'xi_lan_hua'];
-      const [logo, cropImgs] = await Promise.all([
+      // Soil tile geometry shared between the SVG backdrop and the canvas
+      // pass that plants the crops on top.
+      const TILE = 96, TGAP = 8;
+      const tilesX = (W - (SHOWCASE.length * TILE + (SHOWCASE.length - 1) * TGAP)) / 2;
+      const tilesY = 400;
+      const soilTiles = SHOWCASE.map((_, i) =>
+        `<g transform="translate(${tilesX + i * (TILE + TGAP)},${tilesY})">
+           <rect x="0" y="6" width="${TILE}" height="78" rx="14" fill="#6f4a2c"/>
+           <rect x="0" y="0" width="${TILE}" height="78" rx="14" fill="url(#soil)"/>
+           <path d="M8 22 H88 M8 40 H88 M8 58 H88" stroke="rgba(78,48,26,0.35)" stroke-width="3" stroke-linecap="round"/>
+           <path d="M8 25 H88 M8 43 H88 M8 61 H88" stroke="rgba(222,180,135,0.22)" stroke-width="1.5" stroke-linecap="round"/>
+         </g>`).join('');
+      const sceneSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
+        <defs>
+          <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#aee1f5"/><stop offset="0.6" stop-color="#cdeade"/><stop offset="1" stop-color="#d8efc8"/>
+          </linearGradient>
+          <linearGradient id="grass" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#a8d48a"/><stop offset="1" stop-color="#7fb45e"/>
+          </linearGradient>
+          <linearGradient id="wood" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#b08252"/><stop offset="1" stop-color="#8a6240"/>
+          </linearGradient>
+          <linearGradient id="soil" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#b98a5e"/><stop offset="1" stop-color="#84583a"/>
+          </linearGradient>
+        </defs>
+        <rect width="${W}" height="330" fill="url(#sky)"/>
+        <rect y="300" width="${W}" height="${H - 300}" fill="url(#grass)"/>
+        <!-- sun -->
+        <circle cx="510" cy="74" r="44" fill="#ffd95e" opacity="0.25"/>
+        <circle cx="510" cy="74" r="29" fill="#ffd95e" opacity="0.95"/>
+        <!-- clouds -->
+        <g fill="#ffffff" opacity="0.9">
+          <ellipse cx="92" cy="70" rx="30" ry="13"/><ellipse cx="122" cy="62" rx="24" ry="15"/><ellipse cx="146" cy="71" rx="18" ry="10"/>
+          <ellipse cx="330" cy="46" rx="24" ry="10" opacity="0.75"/><ellipse cx="354" cy="40" rx="18" ry="11" opacity="0.75"/>
+        </g>
+        <!-- hills -->
+        <path d="M0 268 Q 110 218 230 252 Q 360 286 470 240 Q 540 214 600 234 L 600 330 L 0 330 Z" fill="#9ccb7e" opacity="0.8"/>
+        <path d="M0 292 Q 140 246 300 276 Q 450 304 600 270 L 600 340 L 0 340 Z" fill="#8bc06c"/>
+        <!-- farmhouse (left) -->
+        <g transform="translate(48,212)">
+          <circle cx="58" cy="-4" r="5" fill="#fff" opacity="0.6"/>
+          <circle cx="64" cy="-13" r="6.5" fill="#fff" opacity="0.4"/>
+          <rect x="10" y="28" width="56" height="40" rx="4" fill="#f3e3c2" stroke="#caa873" stroke-width="2"/>
+          <path d="M2 30 L38 4 L74 30 Z" fill="#d8694a" stroke="#b04f33" stroke-width="2"/>
+          <rect x="31" y="44" width="14" height="24" rx="2" fill="#9a6b3f"/>
+          <rect x="15" y="38" width="12" height="12" rx="2" fill="#cfe9f5" stroke="#caa873"/>
+          <rect x="49" y="38" width="12" height="12" rx="2" fill="#cfe9f5" stroke="#caa873"/>
+        </g>
+        <!-- trees -->
+        <g transform="translate(488,212)">
+          <rect x="12" y="30" width="8" height="18" rx="3" fill="#8a6240"/>
+          <circle cx="16" cy="19" r="19" fill="#5da253"/>
+          <circle cx="5" cy="27" r="12" fill="#6cb15f"/>
+          <circle cx="28" cy="27" r="12" fill="#6cb15f"/>
+        </g>
+        <g transform="translate(160,232) scale(0.7)">
+          <rect x="12" y="30" width="8" height="18" rx="3" fill="#8a6240"/>
+          <circle cx="16" cy="19" r="19" fill="#5da253"/>
+          <circle cx="5" cy="27" r="12" fill="#6cb15f"/>
+          <circle cx="28" cy="27" r="12" fill="#6cb15f"/>
+        </g>
+        <!-- fence -->
+        <g stroke="#c8a06a" stroke-width="6" stroke-linecap="round">
+          ${[12, 70, 128, 186, 244, 302, 360, 418, 476, 534, 588].map(x =>
+            `<line x1="${x}" y1="300" x2="${x}" y2="338"/>`).join('')}
+          <line x1="0" y1="310" x2="${W}" y2="310"/>
+          <line x1="0" y1="327" x2="${W}" y2="327"/>
+        </g>
+        <!-- hanging wooden farm-name sign -->
+        <g>
+          <line x1="208" y1="96" x2="224" y2="128" stroke="#8a6240" stroke-width="5" stroke-linecap="round"/>
+          <line x1="392" y1="96" x2="376" y2="128" stroke="#8a6240" stroke-width="5" stroke-linecap="round"/>
+          <rect x="106" y="124" width="388" height="118" rx="20" fill="#6f4a2c"/>
+          <rect x="112" y="118" width="376" height="118" rx="18" fill="url(#wood)"/>
+          <rect x="124" y="130" width="352" height="94" rx="12" fill="none" stroke="rgba(255,240,210,0.35)" stroke-width="2.5" stroke-dasharray="1 0"/>
+          <circle cx="130" cy="136" r="4" fill="#5a3c22"/><circle cx="470" cy="136" r="4" fill="#5a3c22"/>
+          <circle cx="130" cy="218" r="4" fill="#5a3c22"/><circle cx="470" cy="218" r="4" fill="#5a3c22"/>
+        </g>
+        <!-- soil tiles for the crop showcase -->
+        ${soilTiles}
+        <!-- little flowers scattered on the grass -->
+        <g>
+          <g transform="translate(36,368)"><circle r="6" fill="#ffd1dc"/><circle r="2.6" fill="#e8a23a"/></g>
+          <g transform="translate(566,378)"><circle r="6" fill="#fff1b8"/><circle r="2.6" fill="#e8a23a"/></g>
+          <g transform="translate(580,520)"><circle r="5" fill="#ffd1dc"/><circle r="2.2" fill="#e8a23a"/></g>
+          <g transform="translate(22,512)"><circle r="5" fill="#fff1b8"/><circle r="2.2" fill="#e8a23a"/></g>
+        </g>
+        <!-- bottom cream panel -->
+        <rect x="28" y="572" width="${W - 56}" height="186" rx="24" fill="rgba(90,60,30,0.18)" transform="translate(0,6)"/>
+        <rect x="28" y="572" width="${W - 56}" height="186" rx="24" fill="#fffdf6"/>
+        <rect x="34" y="578" width="${W - 68}" height="174" rx="20" fill="none" stroke="rgba(106,176,76,0.35)" stroke-width="2"/>
+      </svg>`;
+
+      const [logo, sceneImg, cropImgs] = await Promise.all([
         loadImage('assets/images/logo-horizontal.png'),
-        Promise.all(SHOWCASE.map(id => svgToImage(Farm.cropArt.icon(id, 80)))),
+        svgToImage(sceneSvg),
+        Promise.all(SHOWCASE.map(id => svgToImage(Farm.cropArt.icon(id, 110)))),
       ]);
 
-      // ---- Background: sky → grass, with sun + soft clouds ----
-      const g = ctx.createLinearGradient(0, 0, 0, H);
-      g.addColorStop(0, '#bfe6f5');
-      g.addColorStop(0.34, '#d9eee2');
-      g.addColorStop(0.62, '#cfe8a8');
-      g.addColorStop(1, '#9ccb6e');
-      ctx.fillStyle = g;
-      ctx.fillRect(0, 0, W, H);
-      ctx.fillStyle = 'rgba(255,228,150,0.95)';
-      ctx.beginPath(); ctx.arc(520, 84, 34, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = 'rgba(255,255,255,0.85)';
-      const cloud = (cx, cy, sc) => {
-        ctx.beginPath();
-        ctx.arc(cx, cy, 18 * sc, 0, Math.PI * 2);
-        ctx.arc(cx + 22 * sc, cy + 4 * sc, 14 * sc, 0, Math.PI * 2);
-        ctx.arc(cx - 20 * sc, cy + 5 * sc, 13 * sc, 0, Math.PI * 2);
-        ctx.fill();
-      };
-      cloud(120, 92, 1); cloud(300, 64, 0.7);
-
-      // ---- White content card ----
-      ctx.save();
-      ctx.shadowColor = 'rgba(90,60,30,0.22)';
-      ctx.shadowBlur = 28; ctx.shadowOffsetY = 10;
-      ctx.fillStyle = '#fffdf6';
-      roundRect(ctx, 36, 44, W - 72, H - 108, 30);
-      ctx.fill();
-      ctx.restore();
-      // inner hairline border
-      ctx.strokeStyle = 'rgba(106,176,76,0.35)';
-      ctx.lineWidth = 2;
-      roundRect(ctx, 42, 50, W - 84, H - 120, 26);
-      ctx.stroke();
+      // ---- Scene backdrop (with plain-gradient fallback if SVG raster fails) ----
+      if (sceneImg) {
+        ctx.drawImage(sceneImg, 0, 0, W, H);
+      } else {
+        const g = ctx.createLinearGradient(0, 0, 0, H);
+        g.addColorStop(0, '#aee1f5'); g.addColorStop(0.4, '#cdeade'); g.addColorStop(1, '#7fb45e');
+        ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+      }
 
       ctx.textAlign = 'center';
       ctx.textBaseline = 'alphabetic';
 
-      // ---- Logo + title (logo is ~1080x556; size it small so it never
-      //      collides with the title, and place the title dynamically below it) ----
-      const logoW = 124;
-      const logoH = logo ? logoW * (logo.height / logo.width) : 64;
-      const logoY = 70;
-      if (logo) ctx.drawImage(logo, (W - logoW) / 2, logoY, logoW, logoH);
-      const titleY = logoY + logoH + 36;   // 快乐农场 baseline, always clear of logo
-      ctx.fillStyle = '#2a5c34';
-      ctx.font = '700 30px ' + CN;
-      ctx.fillText('快乐农场', W / 2, titleY);
-      ctx.fillStyle = '#E8522A';
-      ctx.font = '700 13px Arial,sans-serif';
-      ctx.fillText('H A P P Y   F A R M', W / 2, titleY + 20);
+      // ---- Logo on a small white chip, top center ----
+      const logoW = 116;
+      const logoH = logo ? logoW * (logo.height / logo.width) : 60;
+      if (logo) {
+        ctx.save();
+        ctx.shadowColor = 'rgba(90,60,30,0.25)';
+        ctx.shadowBlur = 10; ctx.shadowOffsetY = 3;
+        ctx.fillStyle = '#ffffff';
+        roundRect(ctx, (W - logoW) / 2 - 10, 18, logoW + 20, logoH + 14, 14);
+        ctx.fill();
+        ctx.restore();
+        ctx.drawImage(logo, (W - logoW) / 2, 25, logoW, logoH);
+      }
 
-      // ---- Avatar in a soft ring (emoji centered via 'middle' baseline so it
-      //      sits in the circle instead of resting on the bottom edge) ----
-      const avY = 250;
-      ctx.fillStyle = '#eaf6dc';
-      ctx.beginPath(); ctx.arc(W / 2, avY, 48, 0, Math.PI * 2); ctx.fill();
-      ctx.strokeStyle = '#a6d178'; ctx.lineWidth = 3;
-      ctx.beginPath(); ctx.arc(W / 2, avY, 48, 0, Math.PI * 2); ctx.stroke();
+      // ---- Farm name carved on the wooden sign (auto-shrink to fit) ----
+      const name = String(
+        (Farm.fbGameSync && Farm.fbGameSync._selfDisplayName)
+          ? Farm.fbGameSync._selfDisplayName()
+          : (s.nickname || (ZH ? '我的农场' : 'My Farm'))
+      ).slice(0, 12);
+      const signCX = W / 2, FD = '"ZCOOL KuaiLe",' + CN;
+      let nameSize = 42;
+      ctx.font = '700 ' + nameSize + 'px ' + FD;
+      while (ctx.measureText(name).width > 330 && nameSize > 22) {
+        nameSize -= 2;
+        ctx.font = '700 ' + nameSize + 'px ' + FD;
+      }
       ctx.save();
-      ctx.textBaseline = 'middle';
-      ctx.font = '56px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
-      ctx.fillText('🧑‍🌾', W / 2, avY + 4);   // +4 optical centering
+      ctx.shadowColor = 'rgba(60,38,18,0.55)';
+      ctx.shadowBlur = 0; ctx.shadowOffsetY = 2;
+      ctx.fillStyle = '#fff3dd';
+      ctx.fillText(name, signCX, 178);
       ctx.restore();
 
-      // ---- Nickname ----
-      const name = (Farm.fbGameSync && Farm.fbGameSync._selfDisplayName)
-        ? Farm.fbGameSync._selfDisplayName()
-        : (s.nickname || (ZH ? '我的农场' : 'My Farm'));
-      ctx.fillStyle = '#3a2c18';
-      ctx.font = '800 34px ' + CN;
-      ctx.fillText(String(name).slice(0, 12), W / 2, 342);
-
-      // ---- Level + title chip ----
+      // ---- Level + title, small plate on the sign ----
       const lv = s.level || 1;
       const t = Farm.state.levelTitle ? Farm.state.levelTitle(lv) : null;
       const titleStr = t ? (ZH ? t.zh : t.en) : '';
-      const lvText = 'Lv ' + lv + (titleStr ? ' · ' + titleStr : '');
-      ctx.font = '700 20px ' + CN;
-      const lvW = ctx.measureText(lvText).width + 36;
-      ctx.fillStyle = '#3a8c50';
-      roundRect(ctx, W / 2 - lvW / 2, 360, lvW, 36, 18); ctx.fill();
-      ctx.fillStyle = '#ffffff';
-      ctx.fillText(lvText, W / 2, 384);
+      const lvText = '🧑‍🌾 Lv ' + lv + (titleStr ? ' · ' + titleStr : '');
+      ctx.font = '700 19px ' + CN;
+      const lvW = ctx.measureText(lvText).width + 32;
+      ctx.fillStyle = 'rgba(80,52,28,0.55)';
+      roundRect(ctx, signCX - lvW / 2, 192, lvW, 34, 17); ctx.fill();
+      ctx.fillStyle = '#ffe9c8';
+      ctx.fillText(lvText, signCX, 215);
 
-      // ---- Stat chips (harvests + likes) ----
+      // ---- Crops planted on the soil tiles (drawn over the SVG tiles) ----
+      cropImgs.forEach((img, i) => {
+        if (!img) return;
+        const cx = tilesX + i * (TILE + TGAP) + TILE / 2;
+        ctx.save();
+        ctx.shadowColor = 'rgba(60,35,15,0.35)';
+        ctx.shadowBlur = 6; ctx.shadowOffsetY = 4;
+        ctx.drawImage(img, cx - 52, tilesY - 44, 104, 104);
+        ctx.restore();
+      });
+
+      // ---- Stat chips (harvests + likes/coins) on the grass ----
       const md = (Farm.fbAuth && Farm.fbAuth.memberDoc) || {};
       const gsd = md.gameStats || {};
       const harvests = s.totalHarvests || 0;
@@ -169,70 +252,52 @@
       // Second chip: show likes only when there are some (a "0 赞" looks sad on a
       // brag card) — otherwise show farm coins, which is always a positive number.
       const chip2 = likes > 0
-        ? { t: '❤️ ' + likes + (ZH ? ' 赞' : ' likes'), bg: '#fdeef0', fg: '#c0556a' }
-        : { t: '🪙 ' + coins.toLocaleString(), bg: '#fff6df', fg: '#a9791e' };
+        ? { t: '❤️ ' + likes + (ZH ? ' 赞' : ' likes'), fg: '#c0556a' }
+        : { t: '🪙 ' + coins.toLocaleString(), fg: '#a9791e' };
       const chips = [
-        { t: '🌾 ' + (ZH ? '收获 ' : 'Harvest ') + harvests, bg: '#f1f8e6', fg: '#5a7a2e' },
+        { t: '🌾 ' + (ZH ? '收获 ' : 'Harvest ') + harvests, fg: '#5a7a2e' },
         chip2,
       ];
-      ctx.font = '600 19px ' + CN;
-      const chipW = chips.map(c => ctx.measureText(c.t).width + 30);
-      const gap = 14;
-      let startX = (W - (chipW[0] + chipW[1] + gap)) / 2;
+      ctx.font = '700 20px ' + CN;
+      const chipW = chips.map(c => ctx.measureText(c.t).width + 36);
+      const cgap = 16;
+      let startX = (W - (chipW[0] + chipW[1] + cgap)) / 2;
       chips.forEach((c, i) => {
         const w = chipW[i];
-        ctx.fillStyle = c.bg;
-        roundRect(ctx, startX, 418, w, 40, 20); ctx.fill();
+        ctx.save();
+        ctx.shadowColor = 'rgba(70,50,20,0.22)';
+        ctx.shadowBlur = 8; ctx.shadowOffsetY = 3;
+        ctx.fillStyle = '#fffdf6';
+        roundRect(ctx, startX, 508, w, 44, 22); ctx.fill();
+        ctx.restore();
         ctx.fillStyle = c.fg;
-        ctx.fillText(c.t, startX + w / 2, 444);
-        startX += w + gap;
+        ctx.fillText(c.t, startX + w / 2, 537);
+        startX += w + cgap;
       });
 
-      // ---- Mini farm field: a grass strip with soil plots + real crop art ----
-      const fieldX = 70, fieldY = 482, fieldW = W - 140, fieldH = 118;
-      const fg2 = ctx.createLinearGradient(0, fieldY, 0, fieldY + fieldH);
-      fg2.addColorStop(0, '#d6efb0'); fg2.addColorStop(1, '#b6dd84');
-      ctx.fillStyle = fg2;
-      roundRect(ctx, fieldX, fieldY, fieldW, fieldH, 18); ctx.fill();
-      const n = Math.max(1, cropImgs.length);
-      const tile = 72, tgap = (fieldW - 24 - n * tile) / Math.max(1, n - 1 || 1);
-      let tx = fieldX + 12 + (n === 1 ? (fieldW - 24 - tile) / 2 : 0);
-      const ty = fieldY + (fieldH - tile) / 2 - 2;
-      for (let i = 0; i < n; i++) {
-        // soil tile
-        const sg = ctx.createLinearGradient(0, ty, 0, ty + tile);
-        sg.addColorStop(0, '#b78657'); sg.addColorStop(1, '#7a5230');
-        ctx.fillStyle = sg;
-        roundRect(ctx, tx, ty + 18, tile, tile - 18, 12); ctx.fill();
-        ctx.strokeStyle = '#5e3b22'; ctx.lineWidth = 1.5;
-        roundRect(ctx, tx, ty + 18, tile, tile - 18, 12); ctx.stroke();
-        // crop art sitting on the tile (slightly larger, poking up from soil)
-        const img = cropImgs[i];
-        if (img) ctx.drawImage(img, tx - 2, ty - 12, tile + 4, tile + 4);
-        tx += tile + (isFinite(tgap) ? tgap : 0);
-      }
-
-      // ---- CTA ----
+      // ---- Bottom panel: CTA + URL + address ----
       ctx.fillStyle = '#2a5c34';
-      ctx.font = '700 21px ' + CN;
-      ctx.fillText(ZH ? '我在东方超市·快乐农场种菜啦！' : 'Farming at Eastern Market!', W / 2, 648);
+      ctx.font = '700 24px ' + FD;
+      ctx.fillText(ZH ? '我在东方超市·快乐农场种菜啦！' : 'Farming at Eastern Market!', W / 2, 622);
       ctx.fillStyle = '#7a6a4a';
       ctx.font = '500 16px ' + CN;
-      ctx.fillText(ZH ? '打开链接，一起来种菜 🌱' : 'Open the link and join me 🌱', W / 2, 676);
+      ctx.fillText(ZH ? '打开链接，一起来种菜 🌱' : 'Open the link and join me 🌱', W / 2, 650);
 
-      // ---- URL pill ----
-      const ug = ctx.createLinearGradient(0, 696, 0, 738);
+      const ug = ctx.createLinearGradient(0, 668, 0, 712);
       ug.addColorStop(0, '#46a05f'); ug.addColorStop(1, '#2f7a45');
+      ctx.save();
+      ctx.shadowColor = 'rgba(47,122,69,0.4)';
+      ctx.shadowBlur = 10; ctx.shadowOffsetY = 4;
       ctx.fillStyle = ug;
-      roundRect(ctx, W / 2 - 168, 696, 336, 42, 21); ctx.fill();
+      roundRect(ctx, W / 2 - 172, 668, 344, 44, 22); ctx.fill();
+      ctx.restore();
       ctx.fillStyle = '#ffffff';
-      ctx.font = '700 19px Arial,sans-serif';
-      ctx.fillText('farm.easternmarket.ca', W / 2, 723);
+      ctx.font = '700 20px Arial,sans-serif';
+      ctx.fillText('farm.easternmarket.ca', W / 2, 697);
 
-      // ---- Footer: real store address (helps the card drive foot traffic) ----
       ctx.fillStyle = '#8a7a5c';
       ctx.font = '500 14px ' + CN;
-      ctx.fillText('📍 133-412 Willowgrove Square, Saskatoon', W / 2, 762);
+      ctx.fillText('📍 133-412 Willowgrove Square, Saskatoon', W / 2, 740);
 
       // Capture a blob for native sharing (best-effort).
       try {
