@@ -25,6 +25,7 @@
       Farm.achievements.load(),
       Farm.epShop.load(),
       Farm.daily.load(),
+      Farm.aiNeighbors.load(),
     ]);
 
     // 2. Init state, then migrate plots/seeds against the current catalog

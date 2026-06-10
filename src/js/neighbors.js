@@ -96,7 +96,7 @@
       // Real members only — no procedural/fake fill-ins. If fewer than 3 real
       // neighbors are available we just show fewer cards (and an invite state
       // when there are none), rather than fabricating fake players.
-      this._todayList = real.map((m, order) => ({
+      const list = real.map((m, order) => ({
         isReal: true,
         uid: m.uid,
         name: Farm.fbGameSync.displayName(m.doc),
@@ -109,6 +109,18 @@
         id: 'real_' + m.uid,
         order,
       }));
+      // 真会员不足 3 个时，用确定性 AI 邻居补足（够真，不再显示"还没邻居在线"）。
+      // 真人优先，AI 兜底。
+      if (list.length < 3 && Farm.aiNeighbors && Farm.aiNeighbors.loaded) {
+        const need = 3 - list.length;
+        const now = Date.now();
+        Farm.aiNeighbors.dailyPick(need, Farm.state.getDateString()).forEach((aiId, i) => {
+          const card = Farm.aiNeighbors.displayCard(aiId, now);
+          card.order = list.length + i;
+          list.push(card);
+        });
+      }
+      this._todayList = list;
       return this._todayList;
     },
 
@@ -149,6 +161,23 @@
             this._selfRank = await Farm.fbGameSync.fetchSelfRank(metric);
           }
         } catch (_) {}
+      }
+      // 把确定性 AI 邻居并入排行榜后按指标重排取前 10（与真会员混排，让榜单是活的）。
+      if (Farm.aiNeighbors && Farm.aiNeighbors.loaded) {
+        const now = Date.now();
+        const aiRows = Farm.aiNeighbors.ids().map(aiId => {
+          const card = Farm.aiNeighbors.displayCard(aiId, now);
+          const active = Farm.aiNeighbors.isActiveNow(aiId, now);
+          return {
+            uid: aiId, id: aiId, isAI: true,
+            name: card.name, emoji: card.emoji, level: card.level,
+            value: Farm.aiNeighbors.metricValue(aiId, metric, now),
+            totalHarvests: card.totalHarvests, likesReceived: card.likesReceived,
+            isSelf: false, champion: false,
+            online: active ? { tier: 'online', label: '在线', labelEn: 'online' } : null,
+          };
+        });
+        list = list.concat(aiRows).sort((a, b) => (b.value || 0) - (a.value || 0)).slice(0, 10);
       }
       this._leaderboardList = list;
       return list;
@@ -377,7 +406,11 @@
     // Visit a single neighbor's farm + offer the Like button
     viewFarm(neighbor) {
       const lang = Farm.state.data.language;
-      const fd = generateFarmDisplay(neighbor.id);
+      // AI 邻居渲染其"随真实时间在长"的真农场（有真实熟菜，T4 可偷）；
+      // 真会员在 1a 仍用占位农场（真农场同步是 Phase 1b）。
+      const fd = (neighbor.isAI && Farm.aiNeighbors && Farm.aiNeighbors.loaded)
+        ? Farm.aiNeighbors.farmDisplay(neighbor.uid, Date.now())
+        : generateFarmDisplay(neighbor.id);
 
       const plotsHtml = fd.plots.map(p => {
         if (!p.cropId) return '<div class="neighbor-plot empty"></div>';
@@ -474,7 +507,9 @@
       if (likeBtn && !likeDisabled) {
         likeBtn.onclick = async () => {
           likeBtn.disabled = true;
-          const result = await Farm.fbGameSync.sendLike(neighbor.uid);
+          const result = neighbor.isAI
+            ? Farm.aiNeighbors.interact(neighbor.uid, 'like')
+            : await Farm.fbGameSync.sendLike(neighbor.uid);
           if (!result.ok) {
             Farm.ui.toast(result.message || '❌');
             likeBtn.disabled = false;
@@ -495,7 +530,9 @@
       if (helpBtn && !helpDisabled) {
         helpBtn.onclick = async () => {
           helpBtn.disabled = true;
-          const r = await Farm.fbGameSync.sendHelp(neighbor.uid);
+          const r = neighbor.isAI
+            ? Farm.aiNeighbors.interact(neighbor.uid, 'help')
+            : await Farm.fbGameSync.sendHelp(neighbor.uid);
           if (!r.ok) {
             Farm.ui.toast(r.message || '❌');
             helpBtn.disabled = false;
@@ -515,7 +552,9 @@
         btn.onclick = async () => {
           const emoji = btn.dataset.sticker;
           document.querySelectorAll('.sticker-btn').forEach(b => { b.disabled = true; });
-          const r = await Farm.fbGameSync.sendSticker(neighbor.uid, emoji);
+          const r = neighbor.isAI
+            ? Farm.aiNeighbors.interact(neighbor.uid, 'sticker', emoji)
+            : await Farm.fbGameSync.sendSticker(neighbor.uid, emoji);
           if (!r.ok) {
             Farm.ui.toast(r.message || '❌');
             document.querySelectorAll('.sticker-btn').forEach(b => { b.disabled = false; });

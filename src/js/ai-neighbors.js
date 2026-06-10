@@ -1,0 +1,218 @@
+/**
+ * ai-neighbors.js — 本地确定性 AI 邻居引擎（spec 2026-06-09 方向①）。
+ *
+ * 人少阶段撑场子，但要"够真"：每个 AI 有固定身份/性格/作息，农场随真实时间
+ * 播种→生长→成熟（有真实可偷的熟菜，T4 用），等级随天数缓慢上涨（排行榜是活的）。
+ * 全部是 f(seed, now) 的纯函数 + 本地状态，不连服务器、离线可算。
+ *
+ *   Farm.aiNeighbors.load()                  读名册
+ *   Farm.aiNeighbors.get(id)                 名册条目
+ *   Farm.aiNeighbors.levelAt(id, now)        随天数上涨的等级
+ *   Farm.aiNeighbors.farmStateAt(id, now)    12 块地 [{cropId,stage,mature}]
+ *   Farm.aiNeighbors.farmDisplay(id, now)    {plots,decos}（喂 neighbors.viewFarm）
+ *   Farm.aiNeighbors.isActiveNow(id, now)    当前是否在作息活跃时段
+ *   Farm.aiNeighbors.displayCard(id, now)    混排进今日/排行榜的条目
+ *   Farm.aiNeighbors.metricValue(id, m, now) 排行榜某指标的值
+ *   Farm.aiNeighbors.dailyPick(n, dateStr)   今日确定性挑 n 个 AI 补位
+ *   Farm.aiNeighbors.interact(id, kind, emoji) 本地点赞/帮忙/贴纸（不写云端）
+ */
+(function () {
+  // 名义生长周期：固定 14h（> 最长作物 12h），让每块地都能在周期内成熟，
+  // 余下时间为"熟菜停留窗口"。长作物→大多在长、短作物→大多已熟，自然形成混合。
+  const NOMINAL_CYCLE = 14 * 60 * 60 * 1000;
+  const DAY_MS = 86400000;
+
+  function hashStr(s) {
+    let h = 2166136261;
+    for (let i = 0; i < s.length; i++) {
+      h ^= s.charCodeAt(i);
+      h = (h * 16777619) >>> 0;
+    }
+    return h >>> 0;
+  }
+
+  const ai = {
+    roster: [],
+    byId: {},
+    levelEpoch: '2026-04-01',
+    loaded: false,
+
+    async load() {
+      try {
+        const res = await fetch('../data/ai-neighbors.json');
+        const data = await res.json();
+        this.roster = data.neighbors || [];
+        this.levelEpoch = data._level_epoch || this.levelEpoch;
+        this.byId = {};
+        this.roster.forEach(n => { this.byId[n.id] = n; });
+        this.loaded = true;
+      } catch (e) {
+        console.error('ai-neighbors load failed', e);
+        this.roster = [];
+        this.loaded = true;
+      }
+    },
+
+    get(id) { return this.byId[id] || null; },
+    ids() { return this.roster.map(n => n.id); },
+
+    name(id) {
+      const n = this.get(id);
+      if (!n) return id;
+      return (Farm.state.data.language === 'en') ? n.name_en : n.name_zh;
+    },
+    avatar(id) { const n = this.get(id); return n ? n.avatar : '🧑'; },
+
+    // 随真实天数缓慢上涨的等级（确定性、有上限）。
+    levelAt(id, now) {
+      const n = this.get(id);
+      if (!n) return 1;
+      const epochMs = Date.parse(this.levelEpoch + 'T00:00:00');
+      const days = Math.max(0, (now - epochMs) / DAY_MS);
+      const lv = (n.baseLevel || 1) + Math.floor(days / (n.growthRate || 8));
+      return Math.min(60, lv);
+    },
+
+    // 当前是否在作息活跃时段（用于"谁来偷你/在线"）。
+    isActiveNow(id, now) {
+      const n = this.get(id);
+      if (!n || !n.activeHours) return false;
+      const h = new Date(now).getHours();
+      const [a, b] = n.activeHours;
+      return (a <= b) ? (h >= a && h < b) : (h >= a || h < b);
+    },
+    personality(id) { const n = this.get(id); return n ? (n.personality || 'balanced') : 'balanced'; },
+
+    // 12 块地的确定性状态：每块独立周期、独立相位错峰；作物从玩家可见目录里
+    // 按 (id,plot,cycleIndex) 确定性挑选——同一时刻恒定、不同时刻演化、有真实熟菜。
+    farmStateAt(id, now) {
+      const empty = () => ({ cropId: null, stage: -1, mature: false });
+      if (!this.get(id) || !Farm.crops || !Farm.crops.loaded) {
+        return Array.from({ length: 12 }, empty);
+      }
+      const level = this.levelAt(id, now);
+      const avail = Farm.crops.all().filter(c => c.unlock_level <= Math.min(level + 2, 10));
+      if (avail.length === 0) return Array.from({ length: 12 }, empty);
+
+      const occupied = 6 + (hashStr(id + ':occ') % 5); // 6..10 块在用
+      const plots = [];
+      for (let i = 0; i < 12; i++) {
+        if (i >= occupied) { plots.push(empty()); continue; }
+        const phase = hashStr(id + ':' + i + ':phase') % NOMINAL_CYCLE;
+        const delta = now - phase;
+        const cycleIndex = Math.floor(delta / NOMINAL_CYCLE);
+        const tInCycle = ((delta % NOMINAL_CYCLE) + NOMINAL_CYCLE) % NOMINAL_CYCLE;
+        const crop = avail[hashStr(id + ':' + i + ':' + cycleIndex) % avail.length];
+        const growMs = (crop.grow_minutes || 30) * 60000;
+        if (tInCycle < growMs) {
+          const frac = tInCycle / growMs;
+          plots.push({ cropId: crop.id, stage: frac >= 0.4 ? 1 : 0, mature: false });
+        } else {
+          plots.push({ cropId: crop.id, stage: 2, mature: true });
+        }
+      }
+      return plots;
+    },
+
+    // {plots:[{cropId,stage}], decos:[]}（与 neighbors.generateFarmDisplay 兼容）
+    farmDisplay(id, now) {
+      const plots = this.farmStateAt(id, now).map(p => ({ cropId: p.cropId, stage: p.stage }));
+      const pool = ['🏮', '🌻', '🪵', '🎋', '🐤'];
+      const decoN = hashStr(id + ':deco') % 3;
+      const decos = [];
+      for (let i = 0; i < decoN; i++) decos.push(pool[hashStr(id + ':deco' + i) % pool.length]);
+      return { plots, decos };
+    },
+
+    _estHarvests(id, now) { return this.levelAt(id, now) * 9 + (hashStr(id + ':h') % 50); },
+
+    // 混排进今日/排行榜的条目（形状对齐 neighbors.js 真会员条目）。
+    displayCard(id, now) {
+      now = now || Date.now();
+      const harvests = this._estHarvests(id, now);
+      return {
+        isReal: false,
+        isAI: true,
+        uid: id,
+        id: id,                       // 稳定访问 id（与真会员的 'real_'+uid 区分）
+        name: this.name(id),
+        emoji: this.avatar(id),
+        level: this.levelAt(id, now),
+        totalHarvests: harvests,
+        totalDeliveries: Math.floor(harvests / 3),
+        likesReceived: hashStr(id + ':likes') % 40,
+      };
+    },
+
+    metricValue(id, metric, now) {
+      now = now || Date.now();
+      switch (metric) {
+        case 'level': return this.levelAt(id, now);
+        case 'deliveries': return Math.floor(this._estHarvests(id, now) / 3);
+        case 'weekly': {
+          const wid = Farm.state.getWeekId ? Farm.state.getWeekId() : '';
+          return hashStr(id + ':w' + wid) % 30;
+        }
+        case 'harvests':
+        default: return this._estHarvests(id, now);
+      }
+    },
+
+    // 今日确定性挑 n 个 AI（按日期 hash 洗牌），用于真会员不足时补位。
+    dailyPick(n, dateStr) {
+      const ids = this.ids().slice();
+      if (n >= ids.length) return ids;
+      // 基于日期的确定性洗牌（Fisher–Yates，种子来自 dateStr）
+      let h = hashStr('aipick:' + (dateStr || ''));
+      const rng = () => { h = (h + 0x6D2B79F5) >>> 0; let t = h; t = Math.imul(t ^ t >>> 15, t | 1); t ^= t + Math.imul(t ^ t >>> 7, t | 61); return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+      for (let i = ids.length - 1; i > 0; i--) {
+        const j = Math.floor(rng() * (i + 1));
+        [ids[i], ids[j]] = [ids[j], ids[i]];
+      }
+      return ids.slice(0, n);
+    },
+
+    // 与某 AI 的本地关系记录（T5 用于"会回应你"）。
+    _rel(id) {
+      const ar = (Farm.state.data.aiRelationships = Farm.state.data.aiRelationships || {});
+      return (ar[id] = ar[id] || {});
+    },
+
+    // 本地点赞/帮忙/贴纸：复用与真会员同一套 dailyClaims 计数与封顶，
+    // 奖励同为农场币，但绝不写 Firestore（AI 不是真会员）。返回形状对齐 fbGameSync。
+    interact(id, kind, emoji) {
+      const lang = Farm.state.data.language || 'zh';
+      const claims = Farm.state.data.dailyClaims;
+      if (kind === 'like') {
+        const given = claims.likesSentToday || [];
+        if (given.length >= 5) return { ok: false, reason: 'cap_reached', message: lang === 'en' ? 'Daily 5-like cap reached!' : '今天 5 个赞都送完啦！' };
+        if (given.includes(id)) return { ok: false, reason: 'already_liked', message: lang === 'en' ? 'Already liked today.' : '今天给 TA 点过赞了。' };
+        claims.likesSentToday = given.concat([id]);
+        this._rel(id).likedByMe = true;
+        Farm.state.addCoins(5);
+        Farm.state.save();
+        return { ok: true, remaining: 5 - claims.likesSentToday.length, coinsEarned: 5, mutual: false };
+      }
+      if (kind === 'help') {
+        const done = claims.helpSentToday || [];
+        if (done.length >= 5) return { ok: false, reason: 'cap_reached', message: lang === 'en' ? 'Daily help limit reached!' : '今天帮忙次数用完啦！' };
+        if (done.includes(id)) return { ok: false, reason: 'already', message: lang === 'en' ? 'Already helped today.' : '今天已经帮过 TA 了。' };
+        claims.helpSentToday = done.concat([id]);
+        this._rel(id).helpedByMe = true;
+        Farm.state.addCoins(10);
+        Farm.state.save();
+        return { ok: true, remaining: 5 - claims.helpSentToday.length, coinsEarned: 10 };
+      }
+      // sticker
+      const sent = claims.stickersSentToday || [];
+      if (sent.length >= 10) return { ok: false, reason: 'cap_reached', message: lang === 'en' ? 'Daily sticker limit reached!' : '今天贴纸用完啦！' };
+      claims.stickersSentToday = sent.concat([{ to: id, emoji: emoji || '👍' }]);
+      Farm.state.addCoins(2);
+      Farm.state.save();
+      return { ok: true, remaining: 10 - claims.stickersSentToday.length, coinsEarned: 2 };
+    },
+  };
+
+  window.Farm = window.Farm || {};
+  window.Farm.aiNeighbors = ai;
+})();

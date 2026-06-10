@@ -139,6 +139,11 @@
     // Claimed limited-time promos, keyed by promo id (e.g. lv3_week_202606).
     // Mirrored into gameStats.promoClaims so a local reset can't re-claim.
     promoClaims: {},
+
+    // ============ AI 邻居关系（社交①, 2026-06-09） ============
+    // {aiId: {likedByMe, helpedByMe, stolenByMe, owesMeGift}} 本地记录，用于
+    // AI「会回应你」（你帮过的回礼、你偷过的来顺你）。T5 据此生成回家小报事件。
+    aiRelationships: {},
   };
 
   function getDateString(d) {
@@ -253,6 +258,8 @@
           this.data.loginCalendar = Object.assign({}, STARTER_STATE.loginCalendar, this.data.loginCalendar || {});
           this.data.ownedShopItems = this.data.ownedShopItems || {};
           this.data.decorations = this.data.decorations || [];
+          // Fresh top-level object so per-ai relationship writes never leak into STARTER_STATE.
+          this.data.aiRelationships = Object.assign({}, STARTER_STATE.aiRelationships, this.data.aiRelationships || {});
           // Reset session stats daily
           const today = getDateString();
           if (this.data.sessionStats.date !== today) {

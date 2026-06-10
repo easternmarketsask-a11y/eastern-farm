@@ -1,0 +1,19 @@
+{
+  "_comment": "AI 邻居名册（本地确定性模拟，spec 2026-06-09 方向①）。id 存档稳定，勿改名。personality: greedy(馋嘴爱偷)/kind(热心爱帮)/balanced。activeHours [起,止] 24h 本地作息，用于'谁来偷你/在线'。baseLevel+growthRate(天/级)从 levelEpoch 起算缓慢升级。农场作物按玩家可见目录确定性生成，不在此硬编码。",
+  "_schema_version": 1,
+  "_level_epoch": "2026-04-01",
+  "neighbors": [
+    { "id": "wang_ayi",    "name_zh": "王阿姨",   "name_en": "Auntie Wang",  "avatar": "👩",     "personality": "balanced", "activeHours": [17, 21], "baseLevel": 8,  "growthRate": 7 },
+    { "id": "zhang_dashu", "name_zh": "张大叔",   "name_en": "Uncle Zhang",  "avatar": "👨",     "personality": "greedy",   "activeHours": [6, 9],   "baseLevel": 12, "growthRate": 6 },
+    { "id": "li_nainai",   "name_zh": "李奶奶",   "name_en": "Grandma Li",   "avatar": "👵",     "personality": "kind",     "activeHours": [9, 12],  "baseLevel": 6,  "growthRate": 9 },
+    { "id": "chen_yeye",   "name_zh": "陈爷爷",   "name_en": "Grandpa Chen", "avatar": "👴",     "personality": "kind",     "activeHours": [14, 18], "baseLevel": 10, "growthRate": 8 },
+    { "id": "xiao_hong",   "name_zh": "小红",     "name_en": "Little Hong",  "avatar": "👧",     "personality": "greedy",   "activeHours": [16, 20], "baseLevel": 4,  "growthRate": 5 },
+    { "id": "xiao_ming",   "name_zh": "小明",     "name_en": "Little Ming",  "avatar": "👦",     "personality": "greedy",   "activeHours": [15, 19], "baseLevel": 5,  "growthRate": 5 },
+    { "id": "sask_mom",    "name_zh": "萨城宝妈", "name_en": "Sask Mom",     "avatar": "👩",     "personality": "balanced", "activeHours": [19, 22], "baseLevel": 9,  "growthRate": 6 },
+    { "id": "huang_doc",   "name_zh": "黄医生",   "name_en": "Dr. Huang",    "avatar": "🧑‍⚕️", "personality": "balanced", "activeHours": [12, 14], "baseLevel": 11, "growthRate": 8 },
+    { "id": "lao_liu",     "name_zh": "刘伯",     "name_en": "Old Liu",      "avatar": "👨‍🌾", "personality": "kind",     "activeHours": [7, 10],  "baseLevel": 14, "growthRate": 10 },
+    { "id": "amy_chen",    "name_zh": "Amy",      "name_en": "Amy",          "avatar": "👩‍🎓", "personality": "greedy",   "activeHours": [20, 23], "baseLevel": 3,  "growthRate": 4 },
+    { "id": "zhou_ayi",    "name_zh": "周阿姨",   "name_en": "Auntie Zhou",  "avatar": "👩",     "personality": "balanced", "activeHours": [10, 13], "baseLevel": 7,  "growthRate": 7 },
+    { "id": "lin_shifu",   "name_zh": "林师傅",   "name_en": "Master Lin",   "avatar": "🧑‍🍳", "personality": "greedy",   "activeHours": [11, 14], "baseLevel": 13, "growthRate": 9 }
+  ]
+}
