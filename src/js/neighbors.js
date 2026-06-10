@@ -128,13 +128,17 @@
           const thisW = Farm.state.getWeekId ? Farm.state.getWeekId() : null;
           const lastW = Farm.state.getWeekId ? Farm.state.getWeekId(new Date(Date.now() - 7 * 86400000)) : null;
           list = rows.map(r => {
-            const cw = r.doc && r.doc.gameStats && r.doc.gameStats.championWeek;
+            const gs = (r.doc && r.doc.gameStats) || {};
+            const cw = gs.championWeek;
             return {
               uid: r.uid,
+              id: 'real_' + r.uid,        // stable visit id (matches today-list)
               name: Farm.fbGameSync.displayName(r.doc),
               emoji: avatarFor(r.uid),
               level: r.level,
               value: r.value,
+              totalHarvests: gs.totalHarvests || 0,
+              likesReceived: gs.likesReceived || 0,
               isSelf: r.uid === myId,
               champion: !!cw && (cw === thisW || cw === lastW),
               online: Farm.fbGameSync.onlineStatus(r.doc),
@@ -331,11 +335,12 @@
               ? '<span class="lb-online" title="' + m.online.label + '"></span>'
               : '';
             return `
-              <div class="leaderboard-row ${m.isSelf ? 'is-self' : ''}">
+              <div class="leaderboard-row ${m.isSelf ? 'is-self' : 'is-visitable'}" ${m.isSelf ? '' : 'data-lb-uid="' + m.uid + '"'}>
                 <span class="lb-rank">${medal}</span>
                 <span class="lb-avatar">${m.emoji}${onlineDot}</span>
                 <span class="lb-name">${m.champion ? '👑 ' : ''}${m.name}${m.isSelf ? ' <span class="lb-you">(你)</span>' : ''}</span>
                 <span class="lb-level">${m.value}</span>
+                ${m.isSelf ? '' : '<span class="lb-visit">🏘</span>'}
               </div>
             `;
           }).join('');
@@ -352,6 +357,17 @@
             this._leaderboardList = null;  // force refetch
             if (Farm.audio) Farm.audio.play('tap');
             this._render();
+          };
+        });
+        // Tap any leaderboard row → visit that player's farm (like/help/sticker).
+        // This is how players reach anyone beyond today's 3 neighbors.
+        document.querySelectorAll('.leaderboard-row.is-visitable[data-lb-uid]').forEach(row => {
+          row.onclick = () => {
+            const uid = row.dataset.lbUid;
+            const m = (this._leaderboardList || []).find(x => x.uid === uid);
+            if (!m) return;
+            if (Farm.audio) Farm.audio.play('tap');
+            this.viewFarm(m);
           };
         });
       }
@@ -396,7 +412,26 @@
         ? '❤️ ' + (lang === 'en' ? 'Liked today' : '今日已赞')
         : likesRemaining === 0
           ? '❤️ ' + (lang === 'en' ? 'Daily limit' : '今日已满')
-          : '❤️ ' + (lang === 'en' ? 'Send Like  +1 ' : '点个赞  +1 ') + '<span class="points-icon"></span>';
+          : '❤️ ' + (lang === 'en' ? 'Like +1 ' : '点赞 +1 ') + '<span class="points-icon"></span>';
+
+      // Help (water) button state
+      const gs = Farm.fbGameSync;
+      const helpedAlready = gs && gs.helpedToday && gs.helpedToday(neighbor.uid);
+      const helpRemaining = gs && gs.helpRemaining ? gs.helpRemaining() : 0;
+      const helpDisabled = !!helpedAlready || helpRemaining === 0;
+      const helpLabel = helpedAlready
+        ? '💧 ' + (lang === 'en' ? 'Helped today' : '今日已帮')
+        : helpRemaining === 0
+          ? '💧 ' + (lang === 'en' ? 'Daily limit' : '今日已满')
+          : '💧 ' + (lang === 'en' ? 'Water +10 ' : '帮浇水 +10 ') + '<span class="coin-icon"></span>';
+      const STICKERS = ['👍', '🌸', '🎉', '💪', '😋'];
+      const stickersLeft = gs && gs.stickersRemaining ? gs.stickersRemaining() : 0;
+      const stickerRow = stickersLeft > 0
+        ? `<div class="neighbor-stickers">
+             <span class="sticker-hint">${lang === 'en' ? 'Say hi:' : '打个招呼：'}</span>
+             ${STICKERS.map(e => `<button class="sticker-btn" data-sticker="${e}">${e}</button>`).join('')}
+           </div>`
+        : `<div class="neighbor-stickers"><span class="sticker-hint">${lang === 'en' ? 'Sticker limit reached today' : '今日贴纸已用完'}</span></div>`;
 
       const html = `
         <h2 class="modal-title">${neighbor.emoji} ${neighbor.name}</h2>
@@ -406,11 +441,13 @@
         <div class="neighbor-greeting">"${greeting}"</div>
         <div class="neighbor-farm">${plotsHtml}</div>
         ${decoHtml}
-        <div class="btn-row" style="margin-top:14px;">
+        <div class="neighbor-actions">
+          <button class="btn ${likeDisabled ? 'disabled' : ''}" id="neighborLikeBtn" ${likeDisabled ? 'disabled' : ''}>${likeLabel}</button>
+          <button class="btn secondary ${helpDisabled ? 'disabled' : ''}" id="neighborHelpBtn" ${helpDisabled ? 'disabled' : ''}>${helpLabel}</button>
+        </div>
+        ${stickerRow}
+        <div class="btn-row" style="margin-top:10px;">
           <button class="btn secondary" id="neighborBack">${lang === 'en' ? 'Back' : '返回'}</button>
-          <button class="btn ${likeDisabled ? 'disabled' : ''}" id="neighborLikeBtn" ${likeDisabled ? 'disabled' : ''}>
-            ${likeLabel}
-          </button>
         </div>
       `;
       Farm.ui.showModal(html);
@@ -451,6 +488,44 @@
             : `❤️ 点赞成功！+${result.coinsEarned} <span class="coin-icon"></span>（今日还剩 ${result.remaining}）`, 2200);
         };
       }
+
+      // Help (water) button
+      const helpBtn = document.getElementById('neighborHelpBtn');
+      if (helpBtn && !helpDisabled) {
+        helpBtn.onclick = async () => {
+          helpBtn.disabled = true;
+          const r = await Farm.fbGameSync.sendHelp(neighbor.uid);
+          if (!r.ok) {
+            Farm.ui.toast(r.message || '❌');
+            helpBtn.disabled = false;
+            return;
+          }
+          helpBtn.innerHTML = '💧 ' + (lang === 'en' ? 'Watered!' : '已帮浇水！');
+          Farm.ui.refreshHUD();
+          if (Farm.audio) Farm.audio.play('coin');
+          Farm.ui.toast(lang === 'en'
+            ? `💧 Watered ${neighbor.name}'s crops! +${r.coinsEarned} <span class="coin-icon"></span> (${r.remaining} left)`
+            : `💧 帮 ${neighbor.name} 浇了水！+${r.coinsEarned} <span class="coin-icon"></span>（今日还剩 ${r.remaining}）`, 2600);
+        };
+      }
+
+      // Sticker buttons (say hi)
+      document.querySelectorAll('.sticker-btn[data-sticker]').forEach(btn => {
+        btn.onclick = async () => {
+          const emoji = btn.dataset.sticker;
+          document.querySelectorAll('.sticker-btn').forEach(b => { b.disabled = true; });
+          const r = await Farm.fbGameSync.sendSticker(neighbor.uid, emoji);
+          if (!r.ok) {
+            Farm.ui.toast(r.message || '❌');
+            document.querySelectorAll('.sticker-btn').forEach(b => { b.disabled = false; });
+            return;
+          }
+          btn.style.transform = 'scale(1.4)';
+          if (Farm.audio) Farm.audio.play('tap');
+          Farm.ui.refreshHUD();
+          Farm.ui.toast(emoji + ' ' + (lang === 'en' ? `Sent to ${neighbor.name}!` : `已发给 ${neighbor.name}！`), 1800);
+        };
+      });
     },
 
     // ============ Friends tab ============

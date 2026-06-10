@@ -96,6 +96,22 @@
               // Show 1 toast per gift, staggered
               gifts.forEach((g, i) => {
                 setTimeout(() => {
+                  const safeFrom = String(g.fromName || '').replace(/[<>"&]/g, '') || (lang === 'en' ? 'A friend' : '一位朋友');
+                  // Help + sticker get their own phrasing (not "sent you …").
+                  if (g.kind === 'help') {
+                    const amt = (g.payload && g.payload.amount) || 0;
+                    Farm.ui.toast('💧 ' + safeFrom + (lang === 'en'
+                      ? ' watered your crops! +' + amt + ' <span class="coin-icon"></span>'
+                      : ' 帮你浇了水！+' + amt + ' <span class="coin-icon"></span>'), 3800);
+                    if (Farm.audio) Farm.audio.play('coin');
+                    if (Farm.ui && Farm.ui.refreshHUD) Farm.ui.refreshHUD();
+                    return;
+                  }
+                  if (g.kind === 'sticker') {
+                    const emoji = (g.payload && g.payload.emoji) || '👍';
+                    Farm.ui.toast(emoji + ' ' + safeFrom + (lang === 'en' ? ' said hi to your farm!' : ' 来你农场打了个招呼！'), 3600);
+                    return;
+                  }
                   let what;
                   if (g.kind === 'seed' && g.payload && g.payload.cropId) {
                     const def = Farm.crops.get(g.payload.cropId);
@@ -105,7 +121,6 @@
                   } else {
                     what = lang === 'en' ? 'a gift' : '一份礼物';
                   }
-                  const safeFrom = String(g.fromName || '').replace(/[<>"&]/g, '') || (lang === 'en' ? 'A friend' : '一位朋友');
                   Farm.ui.toast('🎁 ' + safeFrom + (lang === 'en' ? ' sent you ' : ' 送你 ') + what, 3800);
                   if (Farm.audio) Farm.audio.play('coin');
                   if (Farm.ui && Farm.ui.refreshHUD) Farm.ui.refreshHUD();

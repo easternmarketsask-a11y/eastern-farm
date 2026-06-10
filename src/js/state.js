@@ -268,6 +268,8 @@
               firstHarvestDone: false,
               firstDeliveryDone: false,
               likesSentToday: [],
+              helpSentToday: [],       // uids helped today (dedup, cap)
+              stickersSentToday: [],   // sticker sends today (count vs cap)
             };
           }
         } catch (e) {

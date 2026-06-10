@@ -21,6 +21,11 @@
   const SYNC_MIN_INTERVAL_MS = 60 * 1000;
   const PRIVACY_DEFAULT_VISIBLE = true;
   const DAILY_LIKE_CAP = 5;
+  const DAILY_HELP_CAP = 5;       // help (water) up to 5 neighbors/day
+  const DAILY_STICKER_CAP = 10;   // leave up to 10 stickers/day
+  const HELP_RECIPIENT_COINS = 20;
+  const HELP_SENDER_COINS = 10;
+  const STICKER_SENDER_COINS = 2;
   let _lastSyncAt = 0;
   let _pendingTimer = null;
 
@@ -322,6 +327,89 @@
       return Math.max(0, DAILY_LIKE_CAP - given);
     },
 
+    helpRemaining() {
+      const given = (Farm.state.data.dailyClaims.helpSentToday || []).length;
+      return Math.max(0, DAILY_HELP_CAP - given);
+    },
+    stickersRemaining() {
+      const given = (Farm.state.data.dailyClaims.stickersSentToday || []).length;
+      return Math.max(0, DAILY_STICKER_CAP - given);
+    },
+    helpedToday(uid) {
+      return (Farm.state.data.dailyClaims.helpSentToday || []).includes(uid);
+    },
+
+    // Help a neighbor (water their crops). Recipient gets coins + a notice in
+    // their inbox on next login; helper earns a small reward. Cap 5/day, once
+    // per recipient per day. Reuses the pendingGifts inbox (kind 'help').
+    async sendHelp(toUid) {
+      const lang = Farm.state.data.language || 'zh';
+      const claims = Farm.state.data.dailyClaims;
+      const done = claims.helpSentToday || [];
+      if (done.length >= DAILY_HELP_CAP) {
+        return { ok: false, reason: 'cap_reached', message: lang === 'en'
+          ? 'Daily help limit reached — come back tomorrow!' : '今天帮忙次数用完啦，明天再来！' };
+      }
+      if (done.includes(toUid)) {
+        return { ok: false, reason: 'already', message: lang === 'en'
+          ? 'You already helped this neighbor today.' : '今天已经帮过这位邻居了。' };
+      }
+      const myUid = Farm.fbAuth && meId();
+      if (!myUid) return { ok: false, reason: 'not_logged_in' };
+      const gift = {
+        id: myUid + '_help_' + Date.now(),
+        fromUid: myUid, fromName: this._selfDisplayName(),
+        kind: 'help', payload: { amount: HELP_RECIPIENT_COINS },
+        sentAt: Date.now(),
+      };
+      try {
+        await Farm.fb.db.collection('farm_players').doc(toUid).set(
+          { gameStats: { pendingGifts: firebase.firestore.FieldValue.arrayUnion(gift) } },
+          { merge: true }
+        );
+      } catch (e) {
+        console.warn('[gameSync] sendHelp failed', e);
+        return { ok: false, reason: 'write_failed' };
+      }
+      claims.helpSentToday = done.concat([toUid]);
+      Farm.state.addCoins(HELP_SENDER_COINS);
+      Farm.state.save();
+      return { ok: true, remaining: DAILY_HELP_CAP - claims.helpSentToday.length, coinsEarned: HELP_SENDER_COINS };
+    },
+
+    // Leave a preset sticker on a neighbor (a friendly hello). Recipient sees a
+    // notice in their inbox. Cap 10/day; repeats allowed. Inbox kind 'sticker'.
+    async sendSticker(toUid, emoji) {
+      const lang = Farm.state.data.language || 'zh';
+      const claims = Farm.state.data.dailyClaims;
+      const sent = claims.stickersSentToday || [];
+      if (sent.length >= DAILY_STICKER_CAP) {
+        return { ok: false, reason: 'cap_reached', message: lang === 'en'
+          ? 'Daily sticker limit reached!' : '今天贴纸用完啦！' };
+      }
+      const myUid = Farm.fbAuth && meId();
+      if (!myUid) return { ok: false, reason: 'not_logged_in' };
+      const gift = {
+        id: myUid + '_sticker_' + Date.now(),
+        fromUid: myUid, fromName: this._selfDisplayName(),
+        kind: 'sticker', payload: { emoji: emoji || '👍' },
+        sentAt: Date.now(),
+      };
+      try {
+        await Farm.fb.db.collection('farm_players').doc(toUid).set(
+          { gameStats: { pendingGifts: firebase.firestore.FieldValue.arrayUnion(gift) } },
+          { merge: true }
+        );
+      } catch (e) {
+        console.warn('[gameSync] sendSticker failed', e);
+        return { ok: false, reason: 'write_failed' };
+      }
+      claims.stickersSentToday = sent.concat([{ to: toUid, emoji: emoji || '👍' }]);
+      if (STICKER_SENDER_COINS > 0) Farm.state.addCoins(STICKER_SENDER_COINS);
+      Farm.state.save();
+      return { ok: true, remaining: DAILY_STICKER_CAP - claims.stickersSentToday.length, coinsEarned: STICKER_SENDER_COINS };
+    },
+
     // Leaderboard by metric: 'level' | 'harvests' | 'deliveries'
     async fetchLeaderboard(metric, topN) {
       metric = metric || 'level';
@@ -561,10 +649,12 @@
         for (const g of gifts) {
           if (g.kind === 'seed' && g.payload && g.payload.cropId) {
             Farm.state.addSeed(g.payload.cropId, 1);
-          } else if ((g.kind === 'coins' || g.kind === 'ep') && g.payload && g.payload.amount) {
-            // 'ep' kept for any legacy pending gifts; both credited as coins now.
+          } else if ((g.kind === 'coins' || g.kind === 'ep' || g.kind === 'help') && g.payload && g.payload.amount) {
+            // 'ep' legacy; 'help' = neighbor watered your crops. All credited as coins.
             Farm.state.addCoins(g.payload.amount);
           }
+          // 'sticker' carries no payout — it's a friendly hello (notice only,
+          // surfaced by the reconcile toast in firebase-auth).
         }
         // Clear server-side queue
         await Farm.fb.db.collection('farm_players').doc(uid).set(
