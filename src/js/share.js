@@ -61,9 +61,16 @@
       const lang = s.language || 'zh';
       const ZH = lang !== 'en';
       const CN = '"PingFang SC","Microsoft YaHei","Noto Sans SC",sans-serif';
+      const EN = '"Plus Jakarta Sans","Quicksand",Arial,sans-serif';
+      const FD = '"ZCOOL KuaiLe",' + CN;   // display font (rounded, playful)
       const canvas = document.createElement('canvas');
       canvas.width = W; canvas.height = H;
       const ctx = canvas.getContext('2d');
+
+      // Wait for webfonts (ZCOOL KuaiLe / Noto Sans SC) before drawing —
+      // otherwise canvas falls back to a system font with different metrics,
+      // which makes centered text look subtly off-center. Best-effort.
+      try { if (document.fonts && document.fonts.ready) await document.fonts.ready; } catch (e) {}
 
       // Preload art in parallel: logo + a curated, colorful crop showcase for
       // the hero field. (The active crop catalog starts with many look-alike
@@ -143,8 +150,8 @@
           <line x1="0" y1="310" x2="${W}" y2="310"/>
           <line x1="0" y1="327" x2="${W}" y2="327"/>
         </g>
-        <!-- hanging wooden farm-name sign -->
-        <g>
+        <!-- hanging wooden farm-name sign (shifted down to clear the brand line) -->
+        <g transform="translate(0,22)">
           <line x1="208" y1="96" x2="224" y2="128" stroke="#8a6240" stroke-width="5" stroke-linecap="round"/>
           <line x1="392" y1="96" x2="376" y2="128" stroke="#8a6240" stroke-width="5" stroke-linecap="round"/>
           <rect x="106" y="124" width="388" height="118" rx="20" fill="#6f4a2c"/>
@@ -163,9 +170,9 @@
           <g transform="translate(22,512)"><circle r="5" fill="#fff1b8"/><circle r="2.2" fill="#e8a23a"/></g>
         </g>
         <!-- bottom cream panel -->
-        <rect x="28" y="572" width="${W - 56}" height="186" rx="24" fill="rgba(90,60,30,0.18)" transform="translate(0,6)"/>
-        <rect x="28" y="572" width="${W - 56}" height="186" rx="24" fill="#fffdf6"/>
-        <rect x="34" y="578" width="${W - 68}" height="174" rx="20" fill="none" stroke="rgba(106,176,76,0.35)" stroke-width="2"/>
+        <rect x="28" y="560" width="${W - 56}" height="206" rx="24" fill="rgba(90,60,30,0.18)" transform="translate(0,6)"/>
+        <rect x="28" y="560" width="${W - 56}" height="206" rx="24" fill="#fffdf6"/>
+        <rect x="34" y="566" width="${W - 68}" height="194" rx="20" fill="none" stroke="rgba(106,176,76,0.35)" stroke-width="2"/>
       </svg>`;
 
       const [logo, sceneImg, cropImgs] = await Promise.all([
@@ -186,19 +193,41 @@
       ctx.textAlign = 'center';
       ctx.textBaseline = 'alphabetic';
 
-      // ---- Logo on a small white chip, top center ----
-      const logoW = 116;
-      const logoH = logo ? logoW * (logo.height / logo.width) : 60;
-      if (logo) {
-        ctx.save();
-        ctx.shadowColor = 'rgba(90,60,30,0.25)';
-        ctx.shadowBlur = 10; ctx.shadowOffsetY = 3;
-        ctx.fillStyle = '#ffffff';
-        roundRect(ctx, (W - logoW) / 2 - 10, 18, logoW + 20, logoH + 14, 14);
-        ctx.fill();
-        ctx.restore();
-        ctx.drawImage(logo, (W - logoW) / 2, 25, logoW, logoH);
-      }
+      // ---- Logo + brand on a white chip, top center ----
+      // Chip holds the store logo with the game's bilingual name beneath it,
+      // so 快乐农场 / Happy Farm always reads as the masthead.
+      const logoW = 104;
+      const logoH = logo ? logoW * (logo.height / logo.width) : 54;
+      const lcW = Math.max(logoW + 40, 168);
+      const lcH = logoH + 12 + 26;          // logo + pad + brand line
+      const lcX = (W - lcW) / 2, lcY = 16;
+      ctx.save();
+      ctx.shadowColor = 'rgba(90,60,30,0.25)';
+      ctx.shadowBlur = 10; ctx.shadowOffsetY = 3;
+      ctx.fillStyle = '#ffffff';
+      roundRect(ctx, lcX, lcY, lcW, lcH, 16);
+      ctx.fill();
+      ctx.restore();
+      if (logo) ctx.drawImage(logo, (W - logoW) / 2, lcY + 8, logoW, logoH);
+      // Brand line: 快乐农场 (green) · Happy Farm (orange) — one centered line.
+      const brandY = lcY + 8 + logoH + 19;
+      const bZh = '快乐农场', bMid = '  ·  ', bEn = 'Happy Farm';
+      ctx.font = '700 15px ' + FD;
+      const wZh = ctx.measureText(bZh).width;
+      ctx.font = '700 12px ' + CN;
+      const wMid = ctx.measureText(bMid).width;
+      ctx.font = '700 12px ' + EN;
+      const wEn = ctx.measureText(bEn).width;
+      const brandTotal = wZh + wMid + wEn;
+      let bx = (W - brandTotal) / 2;
+      ctx.textAlign = 'left';
+      ctx.font = '700 15px ' + FD; ctx.fillStyle = '#2a5c34';
+      ctx.fillText(bZh, bx, brandY); bx += wZh;
+      ctx.font = '700 12px ' + CN; ctx.fillStyle = '#c9b89a';
+      ctx.fillText(bMid, bx, brandY); bx += wMid;
+      ctx.font = '700 12px ' + EN; ctx.fillStyle = '#E8522A';
+      ctx.fillText(bEn, bx, brandY);
+      ctx.textAlign = 'center';
 
       // ---- Farm name carved on the wooden sign (auto-shrink to fit) ----
       const name = String(
@@ -206,8 +235,8 @@
           ? Farm.fbGameSync._selfDisplayName()
           : (s.nickname || (ZH ? '我的农场' : 'My Farm'))
       ).slice(0, 12);
-      const signCX = W / 2, FD = '"ZCOOL KuaiLe",' + CN;
-      let nameSize = 42;
+      const signCX = W / 2;
+      let nameSize = 40;
       ctx.font = '700 ' + nameSize + 'px ' + FD;
       while (ctx.measureText(name).width > 330 && nameSize > 22) {
         nameSize -= 2;
@@ -217,20 +246,23 @@
       ctx.shadowColor = 'rgba(60,38,18,0.55)';
       ctx.shadowBlur = 0; ctx.shadowOffsetY = 2;
       ctx.fillStyle = '#fff3dd';
-      ctx.fillText(name, signCX, 178);
+      ctx.fillText(name, signCX, 200);
       ctx.restore();
 
-      // ---- Level + title, small plate on the sign ----
+      // ---- Level + bilingual title, small plate on the sign ----
+      // No emoji here: a ZWJ emoji (🧑‍🌾) measures one width but renders
+      // wider on some systems, which pushed the plate text off-center.
       const lv = s.level || 1;
       const t = Farm.state.levelTitle ? Farm.state.levelTitle(lv) : null;
-      const titleStr = t ? (ZH ? t.zh : t.en) : '';
-      const lvText = '🧑‍🌾 Lv ' + lv + (titleStr ? ' · ' + titleStr : '');
-      ctx.font = '700 19px ' + CN;
+      const titleZh = t ? t.zh : '';
+      const titleEn = t ? t.en : '';
+      const lvText = 'Lv ' + lv + (titleZh ? ' · ' + titleZh : '') + (titleEn ? ' ' + titleEn : '');
+      ctx.font = '700 17px ' + CN;
       const lvW = ctx.measureText(lvText).width + 32;
       ctx.fillStyle = 'rgba(80,52,28,0.55)';
-      roundRect(ctx, signCX - lvW / 2, 192, lvW, 34, 17); ctx.fill();
+      roundRect(ctx, signCX - lvW / 2, 216, lvW, 32, 16); ctx.fill();
       ctx.fillStyle = '#ffe9c8';
-      ctx.fillText(lvText, signCX, 215);
+      ctx.fillText(lvText, signCX, 238);
 
       // ---- Crops planted on the soil tiles (drawn over the SVG tiles) ----
       cropImgs.forEach((img, i) => {
@@ -249,55 +281,58 @@
       const harvests = s.totalHarvests || 0;
       const likes = gsd.likesReceived || 0;
       const coins = s.coins || 0;
-      // Second chip: show likes only when there are some (a "0 赞" looks sad on a
-      // brag card) — otherwise show farm coins, which is always a positive number.
+      // Bilingual stat chips. Second chip: likes only when there are some (a
+      // "0 赞" looks sad on a brag card) — otherwise farm coins, always positive.
       const chip2 = likes > 0
-        ? { t: '❤️ ' + likes + (ZH ? ' 赞' : ' likes'), fg: '#c0556a' }
-        : { t: '🪙 ' + coins.toLocaleString(), fg: '#a9791e' };
+        ? { t: '❤️ 赞 Likes ' + likes, fg: '#c0556a' }
+        : { t: '🪙 金币 Coins ' + coins.toLocaleString(), fg: '#a9791e' };
       const chips = [
-        { t: '🌾 ' + (ZH ? '收获 ' : 'Harvest ') + harvests, fg: '#5a7a2e' },
+        { t: '🌾 收获 Harvest ' + harvests, fg: '#5a7a2e' },
         chip2,
       ];
-      ctx.font = '700 20px ' + CN;
-      const chipW = chips.map(c => ctx.measureText(c.t).width + 36);
-      const cgap = 16;
-      let startX = (W - (chipW[0] + chipW[1] + cgap)) / 2;
+      ctx.font = '700 18px ' + CN;
+      const chipWs = chips.map(c => ctx.measureText(c.t).width + 32);
+      const cgap = 14;
+      let startX = (W - (chipWs[0] + chipWs[1] + cgap)) / 2;
       chips.forEach((c, i) => {
-        const w = chipW[i];
+        const w = chipWs[i];
         ctx.save();
         ctx.shadowColor = 'rgba(70,50,20,0.22)';
         ctx.shadowBlur = 8; ctx.shadowOffsetY = 3;
         ctx.fillStyle = '#fffdf6';
-        roundRect(ctx, startX, 508, w, 44, 22); ctx.fill();
+        roundRect(ctx, startX, 500, w, 42, 21); ctx.fill();
         ctx.restore();
         ctx.fillStyle = c.fg;
-        ctx.fillText(c.t, startX + w / 2, 537);
+        ctx.fillText(c.t, startX + w / 2, 528);
         startX += w + cgap;
       });
 
-      // ---- Bottom panel: CTA + URL + address ----
+      // ---- Bottom panel: bilingual CTA + URL + address ----
       ctx.fillStyle = '#2a5c34';
-      ctx.font = '700 24px ' + FD;
-      ctx.fillText(ZH ? '我在东方超市·快乐农场种菜啦！' : 'Farming at Eastern Market!', W / 2, 622);
+      ctx.font = '700 22px ' + FD;
+      ctx.fillText('我在东方超市·快乐农场种菜啦！', W / 2, 600);
+      ctx.fillStyle = '#3a8c50';
+      ctx.font = '700 15px ' + EN;
+      ctx.fillText('Farming at Eastern Market · Happy Farm!', W / 2, 622);
       ctx.fillStyle = '#7a6a4a';
-      ctx.font = '500 16px ' + CN;
-      ctx.fillText(ZH ? '打开链接，一起来种菜 🌱' : 'Open the link and join me 🌱', W / 2, 650);
+      ctx.font = '500 14px ' + CN;
+      ctx.fillText('打开链接一起种菜 · Open the link & join me 🌱', W / 2, 648);
 
-      const ug = ctx.createLinearGradient(0, 668, 0, 712);
+      const ug = ctx.createLinearGradient(0, 664, 0, 706);
       ug.addColorStop(0, '#46a05f'); ug.addColorStop(1, '#2f7a45');
       ctx.save();
       ctx.shadowColor = 'rgba(47,122,69,0.4)';
       ctx.shadowBlur = 10; ctx.shadowOffsetY = 4;
       ctx.fillStyle = ug;
-      roundRect(ctx, W / 2 - 172, 668, 344, 44, 22); ctx.fill();
+      roundRect(ctx, W / 2 - 172, 664, 344, 42, 21); ctx.fill();
       ctx.restore();
       ctx.fillStyle = '#ffffff';
-      ctx.font = '700 20px Arial,sans-serif';
-      ctx.fillText('farm.easternmarket.ca', W / 2, 697);
+      ctx.font = '700 19px ' + EN;
+      ctx.fillText('farm.easternmarket.ca', W / 2, 692);
 
       ctx.fillStyle = '#8a7a5c';
-      ctx.font = '500 14px ' + CN;
-      ctx.fillText('📍 133-412 Willowgrove Square, Saskatoon', W / 2, 740);
+      ctx.font = '500 13px ' + CN;
+      ctx.fillText('📍 133-412 Willowgrove Square, Saskatoon', W / 2, 730);
 
       // Capture a blob for native sharing (best-effort).
       try {
