@@ -150,8 +150,8 @@
           <line x1="0" y1="310" x2="${W}" y2="310"/>
           <line x1="0" y1="327" x2="${W}" y2="327"/>
         </g>
-        <!-- hanging wooden farm-name sign (shifted down to clear the brand line) -->
-        <g transform="translate(0,22)">
+        <!-- hanging wooden sign — carries the GAME NAME (快乐农场) as the hero -->
+        <g transform="translate(0,8)">
           <line x1="208" y1="96" x2="224" y2="128" stroke="#8a6240" stroke-width="5" stroke-linecap="round"/>
           <line x1="392" y1="96" x2="376" y2="128" stroke="#8a6240" stroke-width="5" stroke-linecap="round"/>
           <rect x="106" y="124" width="388" height="118" rx="20" fill="#6f4a2c"/>
@@ -193,76 +193,58 @@
       ctx.textAlign = 'center';
       ctx.textBaseline = 'alphabetic';
 
-      // ---- Logo + brand on a white chip, top center ----
-      // Chip holds the store logo with the game's bilingual name beneath it,
-      // so 快乐农场 / Happy Farm always reads as the masthead.
-      const logoW = 104;
-      const logoH = logo ? logoW * (logo.height / logo.width) : 54;
-      const lcW = Math.max(logoW + 40, 168);
-      const lcH = logoH + 12 + 26;          // logo + pad + brand line
-      const lcX = (W - lcW) / 2, lcY = 16;
+      // ---- Eastern Market logo on a small white chip, top center ----
+      // Logo stands alone; the game name 快乐农场 lives on the sign below.
+      const logoW = 116;
+      const logoH = logo ? logoW * (logo.height / logo.width) : 60;
+      const lcW = logoW + 28;
+      const lcH = logoH + 16;
+      const lcX = (W - lcW) / 2, lcY = 14;
       ctx.save();
       ctx.shadowColor = 'rgba(90,60,30,0.25)';
       ctx.shadowBlur = 10; ctx.shadowOffsetY = 3;
       ctx.fillStyle = '#ffffff';
-      roundRect(ctx, lcX, lcY, lcW, lcH, 16);
+      roundRect(ctx, lcX, lcY, lcW, lcH, 14);
       ctx.fill();
       ctx.restore();
       if (logo) ctx.drawImage(logo, (W - logoW) / 2, lcY + 8, logoW, logoH);
-      // Brand line: 快乐农场 (green) · Happy Farm (orange) — one centered line.
-      const brandY = lcY + 8 + logoH + 19;
-      const bZh = '快乐农场', bMid = '  ·  ', bEn = 'Happy Farm';
-      ctx.font = '700 15px ' + FD;
-      const wZh = ctx.measureText(bZh).width;
-      ctx.font = '700 12px ' + CN;
-      const wMid = ctx.measureText(bMid).width;
-      ctx.font = '700 12px ' + EN;
-      const wEn = ctx.measureText(bEn).width;
-      const brandTotal = wZh + wMid + wEn;
-      let bx = (W - brandTotal) / 2;
-      ctx.textAlign = 'left';
-      ctx.font = '700 15px ' + FD; ctx.fillStyle = '#2a5c34';
-      ctx.fillText(bZh, bx, brandY); bx += wZh;
-      ctx.font = '700 12px ' + CN; ctx.fillStyle = '#c9b89a';
-      ctx.fillText(bMid, bx, brandY); bx += wMid;
-      ctx.font = '700 12px ' + EN; ctx.fillStyle = '#E8522A';
-      ctx.fillText(bEn, bx, brandY);
-      ctx.textAlign = 'center';
 
-      // ---- Farm name carved on the wooden sign (auto-shrink to fit) ----
+      // ---- GAME NAME as the hero, carved on the wooden sign ----
+      // This poster promotes the GAME, so 快乐农场 / HAPPY FARM is the focal
+      // point on the sign — not the individual player.
+      const signCX = W / 2;
+      ctx.save();
+      ctx.shadowColor = 'rgba(60,38,18,0.55)';
+      ctx.shadowOffsetY = 2;
+      ctx.fillStyle = '#fff3dd';
+      ctx.font = '700 42px ' + FD;
+      ctx.fillText('快乐农场', signCX, 188);
+      ctx.restore();
+      // "HAPPY FARM" — letter-spaced under the Chinese name
+      (function () {
+        const txt = 'HAPPY FARM', ls = 3;
+        ctx.font = '700 14px ' + EN;
+        ctx.fillStyle = '#ffd9a0';
+        let total = -ls;
+        for (const ch of txt) total += ctx.measureText(ch).width + ls;
+        let x = signCX - total / 2;
+        ctx.textAlign = 'left';
+        for (const ch of txt) { ctx.fillText(ch, x, 214); x += ctx.measureText(ch).width + ls; }
+        ctx.textAlign = 'center';
+      })();
+
+      // ---- Player info, DOWN-PLAYED: small muted line below the sign ----
+      // (Personal name/level is secondary; the card sells the game, not the
+      // individual.) 🌱 is a single glyph (no ZWJ width quirk).
       const name = String(
         (Farm.fbGameSync && Farm.fbGameSync._selfDisplayName)
           ? Farm.fbGameSync._selfDisplayName()
           : (s.nickname || (ZH ? '我的农场' : 'My Farm'))
       ).slice(0, 12);
-      const signCX = W / 2;
-      let nameSize = 40;
-      ctx.font = '700 ' + nameSize + 'px ' + FD;
-      while (ctx.measureText(name).width > 330 && nameSize > 22) {
-        nameSize -= 2;
-        ctx.font = '700 ' + nameSize + 'px ' + FD;
-      }
-      ctx.save();
-      ctx.shadowColor = 'rgba(60,38,18,0.55)';
-      ctx.shadowBlur = 0; ctx.shadowOffsetY = 2;
-      ctx.fillStyle = '#fff3dd';
-      ctx.fillText(name, signCX, 200);
-      ctx.restore();
-
-      // ---- Level + bilingual title, small plate on the sign ----
-      // No emoji here: a ZWJ emoji (🧑‍🌾) measures one width but renders
-      // wider on some systems, which pushed the plate text off-center.
       const lv = s.level || 1;
-      const t = Farm.state.levelTitle ? Farm.state.levelTitle(lv) : null;
-      const titleZh = t ? t.zh : '';
-      const titleEn = t ? t.en : '';
-      const lvText = 'Lv ' + lv + (titleZh ? ' · ' + titleZh : '') + (titleEn ? ' ' + titleEn : '');
-      ctx.font = '700 17px ' + CN;
-      const lvW = ctx.measureText(lvText).width + 32;
-      ctx.fillStyle = 'rgba(80,52,28,0.55)';
-      roundRect(ctx, signCX - lvW / 2, 216, lvW, 32, 16); ctx.fill();
-      ctx.fillStyle = '#ffe9c8';
-      ctx.fillText(lvText, signCX, 238);
+      ctx.fillStyle = '#5f5240';
+      ctx.font = '500 15px ' + CN;
+      ctx.fillText('🌱 ' + name + ' · Lv ' + lv, signCX, 288);
 
       // ---- Crops planted on the soil tiles (drawn over the SVG tiles) ----
       cropImgs.forEach((img, i) => {
