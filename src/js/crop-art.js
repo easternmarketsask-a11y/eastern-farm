@@ -959,43 +959,41 @@
           </linearGradient>
         </defs>
         <!-- Shadow under the tip (offset to the lower-right) -->
-        <ellipse cx="58" cy="94" rx="13" ry="2.3" fill="#000" opacity="0.22"/>
+        <ellipse cx="54" cy="92" rx="14" ry="2.3" fill="#000" opacity="0.22"/>
 
         <g filter="url(#ds_niu_jiao_jiao)">
-          <!-- Asymmetric horn-shaped body: wide rounded shoulders just
-               below stem, body curves down-and-right, tapers to a
-               sharp pointed tip in the lower right. Like a comma. -->
-          <path d="M 48 14
-                   Q 40 14 34 22
-                   Q 26 36 26 52
-                   Q 28 70 36 80
-                   Q 48 90 62 90
-                   L 72 84
-                   Q 66 78 58 72
-                   Q 50 62 48 50
-                   Q 46 34 50 22
-                   Q 52 14 48 14
+          <!-- Horn-shaped body: FULL rounded shoulders just below the calyx,
+               then a continuous taper down a gentle bend to a SHARP point at
+               the bottom — the silhouette of a real ox-horn pepper, not a
+               uniform banana/pod. Outer (left) edge convex, inner (right)
+               edge concave; the two edges meet in a cusp at the tip. -->
+          <path d="M 45 17
+                   C 38 17 33 24 32 34
+                   C 31 51 38 74 58 90
+                   C 56 69 55 48 57 34
+                   C 57 24 52 17 46 17
+                   C 46 15 45 15 45 17
                    Z"
                 fill="url(#body_niu_jiao_jiao)" stroke="#2f5212" stroke-width="0.6"/>
 
-          <!-- Glossy highlight on the outer (left) shoulder curve -->
-          <path d="M 32 26 Q 26 44 32 60" stroke="#d8f0a8" stroke-width="3" fill="none" opacity="0.55" stroke-linecap="round"/>
-          <path d="M 32 26 Q 26 44 32 60" stroke="#f4fadd" stroke-width="1.2" fill="none" opacity="0.85" stroke-linecap="round"/>
+          <!-- Glossy highlight following the convex (left) edge + the bend -->
+          <path d="M 38 26 C 32 42 35 64 51 84" stroke="#d8f0a8" stroke-width="3" fill="none" opacity="0.5" stroke-linecap="round"/>
+          <path d="M 38 26 C 32 42 35 64 51 84" stroke="#f4fadd" stroke-width="1.2" fill="none" opacity="0.85" stroke-linecap="round"/>
 
-          <!-- Subtle body ridge along the curve -->
-          <path d="M 44 22 Q 36 50 54 80" stroke="#2f5212" stroke-width="0.5" fill="none" opacity="0.32"/>
+          <!-- Subtle center ridge tracing the bend -->
+          <path d="M 46 22 C 41 46 47 70 56 86" stroke="#2f5212" stroke-width="0.5" fill="none" opacity="0.3"/>
 
-          <!-- Darker green calyx (3 small leaves at top) — clearly distinct from body green -->
-          <path d="M 42 14 Q 44 8 49 6 Q 53 10 51 14 Z" fill="#3d6c1a" stroke="#26450c" stroke-width="0.5"/>
-          <path d="M 50 8 Q 54 6 58 8 Q 56 14 50 12 Z" fill="#4a7e22" stroke="#26450c" stroke-width="0.5"/>
-          <path d="M 54 14 Q 58 12 60 16 Q 56 18 52 16 Z" fill="#3d6c1a" stroke="#26450c" stroke-width="0.5"/>
+          <!-- Darker green calyx (small leaves hugging the shoulder) -->
+          <path d="M 40 16 Q 42 10 47 8 Q 50 12 48 16 Z" fill="#3d6c1a" stroke="#26450c" stroke-width="0.5"/>
+          <path d="M 47 10 Q 51 8 55 10 Q 53 16 47 14 Z" fill="#4a7e22" stroke="#26450c" stroke-width="0.5"/>
+          <path d="M 51 16 Q 55 14 57 18 Q 53 19 49 17 Z" fill="#3d6c1a" stroke="#26450c" stroke-width="0.5"/>
 
           <!-- Short stem nub -->
-          <path d="M 49 8 L 49 2" stroke="#2f5212" stroke-width="2.2" stroke-linecap="round"/>
+          <path d="M 47 10 L 46 3" stroke="#2f5212" stroke-width="2.2" stroke-linecap="round"/>
         </g>
 
-        <!-- Tiny specular hot spot on the outer (left) bulge -->
-        <ellipse cx="34" cy="36" rx="2" ry="3" fill="#fff" opacity="0.7"/>
+        <!-- Tiny specular hot spot on the outer (left) shoulder bulge -->
+        <ellipse cx="35" cy="38" rx="2" ry="3" fill="#fff" opacity="0.7"/>
       `;
     },
 
