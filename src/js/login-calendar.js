@@ -73,11 +73,16 @@
   const loginCalendar = {
     _justClaimed: null,  // { dayIndex } set right after a successful sign-in this session
 
+    _autoOpened: false,   // 会话级防重：本次启动最多自动弹一次
+
     // Auto-open once per launch if the player hasn't signed in today yet.
+    // 当天已签 → 永不自动弹（手动从「今日」面板仍可查看）。
     maybeAutoOpen() {
+      if (this._autoOpened) return;
       const cal = Farm.state.data.loginCalendar;
       const today = Farm.state.getDateString();
       if (cal.lastSignDate !== today) {
+        this._autoOpened = true;
         setTimeout(() => this.open(), 600);
       }
     },
@@ -152,8 +157,9 @@
         if (result.reset) {
           Farm.ui.toast(lang === 'en' ? 'A fresh week begins!' : '新的一轮开始啦', 2600);
         }
-        // Re-render to show the signed state.
-        setTimeout(() => this.open(), 350);
+        // 签完直接收起（toast 已说明奖励）——不再回弹日历让用户多关一次
+        // （Chris 2026-06-11：当天签过就不要再弹出）。
+        Farm.ui.hideModal();
       }
     },
 
