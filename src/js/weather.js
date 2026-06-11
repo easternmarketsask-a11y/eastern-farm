@@ -153,6 +153,25 @@
       const code = CODES[d.weatherCode] || { emoji: '🌡', zh: '', en: '' };
       const word = lang === 'en' ? code.en : code.zh;
       const time = (d.observedAt && d.observedAt.length >= 16) ? d.observedAt.slice(11, 16) : '';
+      // Saskatoon-local date + weekday (the store's timezone, America/Regina).
+      // Derive from observedAt's date part so it matches the weather reading,
+      // not the visitor's possibly-different timezone.
+      let dateLine = '';
+      try {
+        const ymd = (d.observedAt && d.observedAt.length >= 10) ? d.observedAt.slice(0, 10) : '';
+        if (ymd) {
+          const [y, m, day] = ymd.split('-').map(n => parseInt(n, 10));
+          const wd = new Date(y, m - 1, day).getDay();   // 0=Sun
+          if (lang === 'en') {
+            const mo = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][m - 1];
+            const wk = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][wd];
+            dateLine = mo + ' ' + day + ' · ' + wk;
+          } else {
+            const wk = ['周日','周一','周二','周三','周四','周五','周六'][wd];
+            dateLine = m + '月' + day + '日 · ' + wk;
+          }
+        }
+      } catch (_) {}
       const row = (icon, lbl, val) => (val == null || val === '') ? '' : `
         <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 4px;border-bottom:1px solid var(--border-soft);font-size:14px;">
           <span style="color:var(--warm-text-soft);">${icon} ${lbl}</span>
@@ -173,8 +192,11 @@
           ${row('💧', lang === 'en' ? 'Humidity' : '湿度', d.humidity != null ? d.humidity + '%' : null)}
           ${row('💨', lang === 'en' ? 'Wind' : '风速', Math.round(d.windKph) + ' km/h')}
         </div>
-        <div style="text-align:center;font-size:11px;color:var(--warm-text-soft);margin-top:10px;">
-          ${lang === 'en' ? 'Updated' : '更新于'} ${time} · Open-Meteo
+        <div style="text-align:center;font-size:12px;color:var(--warm-text-soft);margin-top:12px;font-weight:600;">
+          ${dateLine}${dateLine && time ? '  ·  ' : ''}${time}
+        </div>
+        <div style="text-align:center;font-size:10px;color:var(--warm-text-soft);margin-top:3px;opacity:0.7;">
+          ${lang === 'en' ? 'Saskatoon · updated · Open-Meteo' : '萨斯卡通 · 实时更新 · Open-Meteo'}
         </div>
         <div class="btn-row" style="margin-top:12px;">
           <button class="btn" style="width:100%;" onclick="Farm.ui.hideModal()">${Farm.i18n.t('btn_close')}</button>
