@@ -275,7 +275,14 @@
       // this plot. The crop scales up + fades out so picking feels alive.
       // Deferred renderGrid by 350ms (matches harvestPop duration).
       const harvestedEl = document.querySelector('.plot[data-plot-id="' + plotIdx + '"]');
-      if (harvestedEl) harvestedEl.classList.add('harvesting');
+      if (harvestedEl) {
+        harvestedEl.classList.add('harvesting');
+        // 采摘爆裂：叶子+星光从地块中心炸开（juice 2026-06-11）
+        const hr = harvestedEl.getBoundingClientRect();
+        if (Farm.ui && Farm.ui.burst) {
+          Farm.ui.burst(hr.left + hr.width / 2, hr.top + hr.height / 2, ['🍃', '✨', '🌿'], 8);
+        }
+      }
 
       // Update warehouse badge with new count
       if (Farm.warehouse && Farm.warehouse.refreshBadge) Farm.warehouse.refreshBadge();
@@ -406,6 +413,20 @@
         // Update progress bar or transition to ready
         if (wasMature !== isMature) {
           this.renderGrid();
+          // 刚成熟的瞬间：squash-and-stretch 弹跳 + 星光爆裂（juice 2026-06-11）。
+          // renderGrid 重建了 DOM，所以效果挂在新元素上。
+          if (isMature) {
+            const fresh = document.querySelector('.plot[data-plot-id="' + idx + '"]');
+            if (fresh) {
+              fresh.classList.add('just-matured');
+              setTimeout(() => fresh.classList.remove('just-matured'), 600);
+              const r = fresh.getBoundingClientRect();
+              if (Farm.ui && Farm.ui.burst) {
+                Farm.ui.burst(r.left + r.width / 2, r.top + r.height / 2, ['✨', '⭐', '🌟'], 6);
+              }
+              if (Farm.audio) Farm.audio.play('plant');
+            }
+          }
           return;
         }
         if (!isMature) {

@@ -180,7 +180,15 @@
         return;
       }
       Farm.ui.hideModal();
-      Farm.ui.refreshHUD();
+      // Juice (2026-06-11): coins fly from screen center up to the HUD
+      // counter, THEN the number ticks up — sell feels like real money moving.
+      if (Farm.ui.flyCoins) {
+        Farm.ui.flyCoins(window.innerWidth / 2, window.innerHeight * 0.45,
+          Math.min(10, Math.max(4, result.itemCount)));
+        setTimeout(() => Farm.ui.refreshHUD(), 300);
+      } else {
+        Farm.ui.refreshHUD();
+      }
       if (Farm.audio) Farm.audio.play('coin');
 
       // Celebration toast with breakdown

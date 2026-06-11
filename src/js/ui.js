@@ -3,11 +3,42 @@
  */
 (function() {
   const ui = {
+    // Last HUD-shown balances — lets refreshHUD tick-count + pulse on change
+    // (Hay Day-style juice) instead of snapping numbers silently.
+    _shownCoins: null,
+    _shownPoints: null,
+
+    // Animate a counter element from `from` to `to` over ~420ms + pulse its
+    // parent currency card. Falls back to instant set for tiny deltas.
+    _tickCounter(el, from, to) {
+      if (!el) return;
+      if (from == null || from === to || Math.abs(to - from) < 2) {
+        el.textContent = to.toLocaleString();
+        return;
+      }
+      const card = el.closest('.currency');
+      if (card) {
+        card.classList.remove('hud-bump');
+        void card.offsetWidth;             // restart the pulse animation
+        card.classList.add('hud-bump');
+      }
+      const t0 = performance.now(), DUR = 420;
+      const step = (t) => {
+        const k = Math.min(1, (t - t0) / DUR);
+        const eased = 1 - Math.pow(1 - k, 3);
+        el.textContent = Math.round(from + (to - from) * eased).toLocaleString();
+        if (k < 1) requestAnimationFrame(step);
+      };
+      requestAnimationFrame(step);
+    },
+
     refreshHUD() {
       const s = Farm.state.data;
       const lang = s.language || 'zh';
-      document.getElementById('coinsValue').textContent = s.coins.toLocaleString();
-      document.getElementById('pointsValue').textContent = s.eastPoints.toLocaleString();
+      this._tickCounter(document.getElementById('coinsValue'), this._shownCoins, s.coins);
+      this._tickCounter(document.getElementById('pointsValue'), this._shownPoints, s.eastPoints);
+      this._shownCoins = s.coins;
+      this._shownPoints = s.eastPoints;
       document.getElementById('levelValue').textContent = s.level;
 
       // Title (e.g. 新手 / 学徒 / 农神 / 萨城传说)
@@ -101,6 +132,75 @@
       if (color) el.style.color = color;
       document.body.appendChild(el);
       setTimeout(() => el.remove(), 1200);
+    },
+
+    // ===== Game-feel juice (2026-06-11, Hay Day benchmark) =====
+
+    // Fly N gold coins from (x,y) to the HUD coin counter along a slight
+    // arc, staggered. Each arrival nudges the counter card. Pure DOM +
+    // Web Animations API; coins render with the standard .coin-icon disc.
+    flyCoins(x, y, n) {
+      const target = document.getElementById('coinsValue');
+      if (!target) return;
+      const r = target.getBoundingClientRect();
+      const tx = r.left + r.width / 2, ty = r.top + r.height / 2;
+      const count = Math.max(1, Math.min(n || 5, 10));
+      for (let i = 0; i < count; i++) {
+        const c = document.createElement('span');
+        c.className = 'coin-icon fly-coin';
+        c.textContent = '';
+        // small scatter around the origin so the flock feels organic
+        const sx = x + (Math.random() - 0.5) * 36;
+        const sy = y + (Math.random() - 0.5) * 24;
+        c.style.left = sx + 'px';
+        c.style.top = sy + 'px';
+        document.body.appendChild(c);
+        const dx = tx - sx, dy = ty - sy;
+        // arc: rise a bit before homing in on the counter
+        const anim = c.animate([
+          { transform: 'translate(0,0) scale(1)', opacity: 1 },
+          { transform: `translate(${dx * 0.35}px, ${dy * 0.35 - 46}px) scale(1.05)`, opacity: 1, offset: 0.45 },
+          { transform: `translate(${dx}px, ${dy}px) scale(0.45)`, opacity: 0.9 },
+        ], {
+          duration: 560 + Math.random() * 120,
+          delay: i * 55,
+          easing: 'cubic-bezier(0.5, -0.1, 0.7, 1)',
+          fill: 'forwards',
+        });
+        anim.onfinish = () => {
+          c.remove();
+          // tiny pulse on each coin landing (cheap, restarts cleanly)
+          const card = target.closest('.currency');
+          if (card) {
+            card.classList.remove('hud-bump');
+            void card.offsetWidth;
+            card.classList.add('hud-bump');
+          }
+        };
+      }
+      if (Farm.audio) Farm.audio.play('coin');
+    },
+
+    // Radial particle burst at (x,y) — used for harvest picks & mature pops.
+    // emojis: array to sample from; count ~6-10 keeps it lively not noisy.
+    burst(x, y, emojis, count) {
+      emojis = emojis && emojis.length ? emojis : ['✨', '🍃'];
+      count = count || 7;
+      for (let i = 0; i < count; i++) {
+        const p = document.createElement('span');
+        p.className = 'burst-particle';
+        p.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+        const ang = (Math.PI * 2 / count) * i + Math.random() * 0.7;
+        const dist = 34 + Math.random() * 30;
+        p.style.left = x + 'px';
+        p.style.top = y + 'px';
+        p.style.setProperty('--bx', Math.cos(ang) * dist + 'px');
+        p.style.setProperty('--by', Math.sin(ang) * dist - 18 + 'px');
+        p.style.fontSize = (11 + Math.random() * 8) + 'px';
+        p.style.animationDelay = (Math.random() * 70) + 'ms';
+        document.body.appendChild(p);
+        setTimeout(() => p.remove(), 800);
+      }
     },
 
     setStorekeeperLine(text) {
