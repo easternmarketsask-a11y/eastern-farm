@@ -33,8 +33,13 @@ console.log(await ev(`(async function(){
   Farm.fbAuth.uid = () => 'me_uid';
   Farm.fbAuth.isLoggedIn = () => true;
 
-  // ===== R1: thief side — stealFromReal success path =====
+  // ===== R0: 自己未到 Lv7 → 顺菜被锁 =====
   Farm.state.data.level = 5;
+  const rLock = await Farm.steal.stealFromReal({ uid: 'v0', name: 'n', level: 9, hasGuardDog: false }, { plotIdx: 0, cropId: 'cai_xin', plantedAt: 1 });
+  T('R0 locked under Lv7', rLock.ok === false && rLock.reason === 'locked');
+
+  // ===== R1: thief side — stealFromReal success path (Lv7+ unlocked) =====
+  Farm.state.data.level = 8;
   Farm.state.data.coins = 100;
   Farm.state.data.dailyClaims.stolenToday = 0;
   Farm.state.data.dailyClaims.stolenFromTargets = {};

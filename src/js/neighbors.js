@@ -449,9 +449,11 @@
       }
       if (!fd) fd = generateFarmDisplay(neighbor.id);
 
-      // 可偷判定：真会员需有真快照 + 不是自己 + 已登录 + 对方过新手保护线
+      // 自己达到解锁等级才能顺菜（Chris 2026-06-11：Lv7 解锁）
       const cfg = Farm.socialConfig || {};
-      const realStealable = !!realSnap && !!myId && neighbor.uid !== myId &&
+      const stealUnlocked = (Farm.state.data.level || 1) >= (cfg.STEAL_UNLOCK_LEVEL || 7);
+      // 可偷判定：解锁 + 真会员需有真快照 + 不是自己 + 已登录 + 对方过新手保护线
+      const realStealable = stealUnlocked && !!realSnap && !!myId && neighbor.uid !== myId &&
         (realSnap.level >= (cfg.NEWBIE_PROTECT_LEVEL || 3)) &&
         Farm.steal && Farm.steal.stealFromReal;
 
@@ -461,7 +463,7 @@
         if (!def) return '<div class="neighbor-plot empty"></div>';
         const svg = Farm.cropArt ? Farm.cropArt.svg(p.cropId, p.stage, 40) : `<span style="font-size:28px;">${def.icon}</span>`;
         const mature = p.stage >= 2;
-        const canSteal = mature && (isAI || realStealable);
+        const canSteal = mature && stealUnlocked && (isAI || realStealable);
         const cls = `neighbor-plot ${mature ? 'mature' : 'growing'}${canSteal ? ' stealable' : ''}`;
         const dataAttr = canSteal
           ? ` data-steal-idx="${p.plotIdx != null ? p.plotIdx : i}" data-steal-crop="${p.cropId}" data-steal-planted="${p.plantedAt || 0}"`
@@ -524,7 +526,11 @@
         </div>
         <div class="neighbor-greeting">"${greeting}"</div>
         <div class="neighbor-farm">${plotsHtml}</div>
-        ${(isAI || realStealable) ? `<div class="neighbor-steal-tip">${lang === 'en' ? '🧺 Tap a ripe crop to grab one for your silo' : '🧺 点熟了的菜，顺一棵回家～'}</div>` : ''}
+        ${(isAI || realStealable)
+          ? `<div class="neighbor-steal-tip">${lang === 'en' ? '🧺 Tap a ripe crop to grab one for your silo' : '🧺 点熟了的菜，顺一棵回家～'}</div>`
+          : (!stealUnlocked && fd.plots.some(p => p.cropId && p.stage >= 2)
+              ? `<div class="neighbor-steal-tip" style="opacity:.85;">${lang === 'en' ? `🔒 Reach Lv${cfg.STEAL_UNLOCK_LEVEL || 7} to unlock grabbing crops` : `🔒 农场到 Lv${cfg.STEAL_UNLOCK_LEVEL || 7} 解锁顺菜`}</div>`
+              : '')}
         ${decoHtml}
         <div class="neighbor-actions">
           <button class="btn ${likeDisabled ? 'disabled' : ''}" id="neighborLikeBtn" ${likeDisabled ? 'disabled' : ''}>${likeLabel}</button>
