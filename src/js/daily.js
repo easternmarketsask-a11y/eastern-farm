@@ -150,6 +150,11 @@
         <h2 class="modal-title">🌅 ${lang === 'en' ? 'Today' : '今日'}</h2>
         <div class="daily-list">
           ${(Farm.promo && Farm.promo.bannerHtml) ? Farm.promo.bannerHtml() : ''}
+          <div class="daily-card daily-guide">
+            <div class="daily-card-title">📖 ${lang === 'en' ? 'How to Play' : '怎么玩'}</div>
+            <div class="daily-card-body">${lang === 'en' ? 'New here? See everything you can do on the farm.' : '第一次玩？一页看懂农场能做的事。'}</div>
+            <button class="daily-claim" id="dailyOpenGuide">📖 ${lang === 'en' ? 'View guide' : '看玩法'}</button>
+          </div>
           ${signinHTML}
           ${newsHTML}
           ${specialHTML}
@@ -196,6 +201,10 @@
         Farm.ui.toast('🌱 +1 ' + specialCrop[nameKey]);
         if (Farm.audio) Farm.audio.play('buy');
         setTimeout(() => this.open(), 400);
+      };
+      const guideBtn = $('dailyOpenGuide');
+      if (guideBtn) guideBtn.onclick = () => {
+        if (Farm.guide) Farm.guide.open();
       };
       const signinBtn = $('dailyOpenSignin');
       if (signinBtn) signinBtn.onclick = () => {

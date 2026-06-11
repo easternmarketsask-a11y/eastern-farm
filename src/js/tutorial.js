@@ -60,6 +60,11 @@
               ${t('tutorial_btn_start')}
             </button>
           </div>
+          <div class="tutorial-help-hint" style="text-align:center;margin-top:10px;font-size:12px;color:var(--warm-text-soft);">
+            ${lang === 'en'
+              ? 'Tap <b>❓ 玩法</b> at the top any time for the full guide.'
+              : '想再看玩法？随时点顶部的 <b>❓ 玩法</b>。'}
+          </div>
         </div>
       `;
       Farm.ui.showModal(html);
