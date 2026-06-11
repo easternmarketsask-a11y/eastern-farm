@@ -92,6 +92,7 @@
       cycleStartDate: '',   // YYYY-MM-DD when the current 7-day cycle began
       lastSignDate: '',     // YYYY-MM-DD of the last successful sign-in
       dayIndex: 0,          // 0-7; how many days of THIS cycle have been claimed
+      autoShownDate: '',    // YYYY-MM-DD it last auto-popped (signed OR dismissed)
     },
 
     // ============ Warehouse (V2 — 2026-05-24) ============

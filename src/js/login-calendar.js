@@ -75,8 +75,11 @@
 
     _autoOpened: false,   // 会话级防重：本次启动最多自动弹一次
 
-    // Auto-open once per launch if the player hasn't signed in today yet.
-    // 当天已签 → 永不自动弹（手动从「今日」面板仍可查看）。
+    // Auto-open AT MOST ONCE PER CALENDAR DAY — not once per session.
+    // 关键：玩家一天会开好几次游戏。旧逻辑只用会话级 _autoOpened 去重，
+    // 没签就关掉的玩家每次重开都会被再弹一次 → 感觉「签到反复出现」。
+    // 现在用持久化的 autoShownDate：当天弹过一次(签没签都算)就不再自动弹，
+    // 想签仍可从「今日」面板进入。当天已签也不弹。
     maybeAutoOpen() {
       if (this._autoOpened) return;
       // 全新玩家先看新手教程，签到日历让到下次启动——免得两个开屏弹窗
@@ -84,10 +87,12 @@
       if (!Farm.state.data.tutorialV1Done) return;
       const cal = Farm.state.data.loginCalendar;
       const today = Farm.state.getDateString();
-      if (cal.lastSignDate !== today) {
-        this._autoOpened = true;
-        setTimeout(() => this.open(), 600);
-      }
+      if (cal.lastSignDate === today) return;   // 当天已签
+      if (cal.autoShownDate === today) return;   // 当天已自动弹过一次
+      this._autoOpened = true;
+      cal.autoShownDate = today;
+      Farm.state.save();
+      setTimeout(() => this.open(), 600);
     },
 
     open() {
@@ -122,7 +127,8 @@
         <div class="btn-row">
           ${alreadySignedToday
             ? `<button class="btn secondary" onclick="Farm.ui.hideModal()">${Farm.i18n.t('btn_close')}</button>`
-            : `<button class="btn primary" id="lcClaimBtn">🎁 ${lang === 'en' ? 'Sign in' : '签到领取'}</button>`}
+            : `<button class="btn secondary" onclick="Farm.ui.hideModal()">${lang === 'en' ? 'Later' : '稍后'}</button>
+               <button class="btn primary" id="lcClaimBtn">🎁 ${lang === 'en' ? 'Sign in' : '签到领取'}</button>`}
         </div>
       `;
       Farm.ui.showModal(html);
