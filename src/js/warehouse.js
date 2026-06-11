@@ -243,12 +243,10 @@
       btn.id = 'warehouseBtn';
       btn.className = 'warehouse-btn';
       btn.setAttribute('aria-label', '仓库 Warehouse');
-      // 真插画谷仓（Gemini「快乐仓库」裁切）装在建筑铭牌卡里：
-      // 圆角+深褐描边+实色底沿，与土块/木牌同一套视觉语言。
+      // 真插画谷仓（Gemini「快乐仓库」按轮廓抠图，透明底）——直接坐在
+      // 草地上像一座真建筑，配 CSS 地面椭圆影自然融入农场。
       btn.innerHTML = `
-        <span class="warehouse-card" aria-hidden="true">
-          <img class="warehouse-img" src="assets/images/warehouse-barn.jpg" alt="">
-        </span>
+        <img class="warehouse-img" src="assets/images/warehouse-barn.png" alt="">
         <span class="warehouse-label">仓库 / Warehouse</span>
         <span class="warehouse-badge">0/20</span>
       `;
