@@ -2306,7 +2306,9 @@ body {
 @keyframes splashOut {
   to { opacity: 0; visibility: hidden; transform: scale(1.02); }
 }
-/* Decorative meadow strip at the bottom of the splash (behind content). */
+/* Real-illustration strip at the bottom of the splash (behind content).
+   Same farm-backdrop.jpg as the in-game scene band; the top edge fades
+   into the cream splash background via CSS mask. */
 .splash-scene {
   position: absolute;
   left: 0;
@@ -2315,10 +2317,14 @@ body {
   pointer-events: none;
   line-height: 0;
 }
-.splash-scene svg {
-  width: 100%;
-  height: 170px;
+.splash-scene-img {
   display: block;
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+  object-position: 6% 38%;
+  -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 36%);
+  mask-image: linear-gradient(180deg, transparent 0, #000 36%);
 }
 
 .splash-content {
@@ -2416,8 +2422,11 @@ body {
 .splash-footer {
   margin-top: 24px;
   font-size: 11px;
-  color: var(--warm-text-soft);
-  opacity: 0.75;
+  color: #5a4c3a;
+  /* cream pill so the address stays readable over the illustration strip */
+  background: rgba(253, 248, 238, 0.85);
+  padding: 4px 14px;
+  border-radius: 999px;
   animation: splashSlideUp 0.6s ease 0.95s both;
 }
 

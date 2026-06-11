@@ -48,42 +48,11 @@
 <div id="splash" class="splash">
   <!-- Decorative meadow strip pinned to the bottom: hills + a row of
        freshly-planted veggies. Sits behind the content (z-index). -->
-  <!-- Taller strip with content in the UPPER half: the PWA install banner
-       (when shown) overlays the bottom ~70px, so hills + veggies must live
-       above that line to stay visible. -->
+  <!-- Real illustration strip pinned to the bottom (same farm-backdrop.jpg
+       as the in-game scene band). Top edge fades into the cream splash via
+       CSS mask. Content sits high enough to clear the PWA install banner. -->
   <div class="splash-scene" aria-hidden="true">
-    <svg viewBox="0 0 390 170" preserveAspectRatio="xMidYMax slice">
-      <path d="M0 50 Q 100 16 200 38 Q 300 60 390 32 L 390 170 L 0 170 Z" fill="#cfe8b0" opacity="0.8"/>
-      <path d="M0 70 Q 120 42 240 60 Q 330 76 390 58 L 390 170 L 0 170 Z" fill="#b3d98e"/>
-      <!-- bok choy -->
-      <g transform="translate(74,62)">
-        <ellipse cx="0" cy="22" rx="14" ry="4" fill="#8a6240" opacity="0.35"/>
-        <path d="M0 20 Q -9 12 -7 -2 Q -2 6 0 20 Z" fill="#6fae54"/>
-        <path d="M0 20 Q 9 12 7 -2 Q 2 6 0 20 Z" fill="#7cba5e"/>
-        <path d="M-3 20 Q 0 2 3 20 Z" fill="#eef7e2"/>
-      </g>
-      <!-- carrot in a soil mound -->
-      <g transform="translate(160,72)">
-        <ellipse cx="0" cy="14" rx="16" ry="5" fill="#9a6b3f"/>
-        <path d="M-6 12 Q 0 18 6 12 L 0 -2 Z" fill="#ef8b3a"/>
-        <path d="M-1 -2 Q -7 -12 -10 -13 M0 -2 Q 0 -13 -1 -16 M1 -2 Q 7 -12 10 -13" stroke="#5e9c4a" stroke-width="2.4" fill="none" stroke-linecap="round"/>
-      </g>
-      <!-- tomato bush -->
-      <g transform="translate(252,64)">
-        <ellipse cx="0" cy="20" rx="14" ry="4" fill="#8a6240" opacity="0.35"/>
-        <circle cx="-6" cy="8" r="9" fill="#6fae54"/>
-        <circle cx="7" cy="5" r="10" fill="#7cba5e"/>
-        <circle cx="2" cy="14" r="7.5" fill="#e8543a"/>
-        <circle cx="-0.5" cy="11.5" r="2.4" fill="#fff" opacity="0.4"/>
-      </g>
-      <!-- flowers + butterfly -->
-      <g transform="translate(330,82)"><circle r="5" fill="#ffd1dc"/><circle r="2.2" fill="#e8a23a"/></g>
-      <g transform="translate(26,90)"><circle r="4.5" fill="#fff1b8"/><circle r="2" fill="#e8a23a"/></g>
-      <g transform="translate(302,28)">
-        <path d="M0 0 Q -7 -7 -9 -1 Q -7 4 0 0 Z" fill="#f2a4c0"/>
-        <path d="M0 0 Q 7 -7 9 -1 Q 7 4 0 0 Z" fill="#f7bcd2"/>
-      </g>
-    </svg>
+    <img class="splash-scene-img" src="assets/images/farm-backdrop.jpg" alt="">
   </div>
   <div class="splash-content">
     <img class="splash-logo" src="assets/images/logo-horizontal.png" alt="东方超市 · Eastern Market">

@@ -162,6 +162,17 @@
       `;
       Farm.ui.showModal(html);
 
+      // 没有可走访的邻居（AI 已关、真会员为空）→ 撤掉走访卡，
+      // 别挂一个永远 0/3 完不成的任务在那。
+      if (Farm.neighbors && Farm.neighbors._fetchToday) {
+        Farm.neighbors._fetchToday().then((list) => {
+          if (!list || list.length === 0) {
+            const card = document.querySelector('.daily-card.daily-neighbor');
+            if (card) card.remove();
+          }
+        }).catch(() => {});
+      }
+
       const $ = (id) => document.getElementById(id);
       const readBtn = $('dailyReadNews');
       if (readBtn) readBtn.onclick = () => {
