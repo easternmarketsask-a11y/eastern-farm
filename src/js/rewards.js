@@ -183,6 +183,71 @@
         if (Farm.epShop) Farm.epShop.open();
       };
     },
+
+    // 农场币信息面板（点左上农场币卡片打开）：余额 + 兑换入口 + 获取规则。
+    openCoinInfo() {
+      const lang = Farm.state.data.language;
+      const EN = lang === 'en';
+      const coins = (Farm.state.data.coins || 0).toLocaleString();
+      const coin = '<span class="coin-icon"></span>';
+      const pts = '<span class="points-icon"></span>';
+
+      const earn = EN ? [
+        { icon: '🏪', t: 'Sell harvested crops to Eastern Market (main source)' },
+        { icon: '🌅', t: "First delivery each day: +20% bonus" },
+        { icon: '📅', t: 'Daily 7-day sign-in: 20–400 coins' },
+        { icon: '📋', t: 'Finish daily tasks' },
+        { icon: '🏘', t: 'Visit 3 neighbors a day: +40' },
+        { icon: '❤️', t: 'Like / water neighbors: +5 / +10' },
+        { icon: '⭐', t: 'Level up: +50 per level' },
+        { icon: '🎰', t: 'Daily lottery wheel' },
+        { icon: '📨', t: 'Invite a friend: +200 each' },
+      ] : [
+        { icon: '🏪', t: '把收获卖给东方超市（最主要来源）' },
+        { icon: '🌅', t: '每天第一笔卖货 +20% 加成' },
+        { icon: '📅', t: '七日签到：每天 20–400 币' },
+        { icon: '📋', t: '完成每日任务' },
+        { icon: '🏘', t: '每天走访 3 户邻居 +40' },
+        { icon: '❤️', t: '给邻居点赞 / 帮浇水：+5 / +10' },
+        { icon: '⭐', t: '升级：每级 +50' },
+        { icon: '🎰', t: '每日大转盘' },
+        { icon: '📨', t: '邀请好友：两人各得 +200' },
+      ];
+
+      const html = `
+        <h2 class="modal-title">${coin} ${EN ? 'Farm Coins' : '农场币'}</h2>
+        <div class="ep-overview coininfo-overview">
+          <div class="ep-overview-balance">
+            <div class="ep-overview-label">${EN ? 'Your farm coins' : '当前农场币余额'}</div>
+            <div class="ep-overview-value">${coin} ${coins}</div>
+            <div class="ep-overview-note">
+              ${EN
+                ? "The farm's currency — earn by selling crops, spend on seeds, shop & expansion."
+                : '农场通用货币——卖菜赚取，用来买种子、逛商城、扩建农场。'}
+            </div>
+          </div>
+          <div class="ep-cap-row">
+            <div>🔄 ${EN
+              ? `<b>10 coins → 1</b> ${pts} point · daily cap 500`
+              : `<b>10 农场币 → 1</b> ${pts} 超市积分 · 每日上限 500`}</div>
+          </div>
+        </div>
+        <h3 class="rewards-section">${EN ? '💡 How to earn coins' : '💡 如何赚农场币'}</h3>
+        <ul class="earn-list">
+          ${earn.map(e => `<li><span class="earn-icon">${e.icon}</span> ${e.t}</li>`).join('')}
+        </ul>
+        <div class="btn-row" style="margin-top:14px;gap:8px;">
+          <button class="btn" id="coinInfoExchange" style="flex:1.2;">🔄 ${EN ? 'Exchange for points' : '兑换超市积分'}</button>
+          <button class="btn secondary" id="coinInfoShop" style="flex:1;">🛍️ ${EN ? 'Shop' : '商城'}</button>
+          <button class="btn secondary" onclick="Farm.ui.hideModal()" style="flex:0.7;">${Farm.i18n.t('btn_close')}</button>
+        </div>
+      `;
+      Farm.ui.showModal(html);
+      const exBtn = document.getElementById('coinInfoExchange');
+      if (exBtn) exBtn.onclick = () => this.open();          // 兑换面板里有币↔积分双向兑换
+      const shopBtn = document.getElementById('coinInfoShop');
+      if (shopBtn) shopBtn.onclick = () => { if (Farm.epShop) Farm.epShop.open(); };
+    },
   };
 
   window.Farm = window.Farm || {};

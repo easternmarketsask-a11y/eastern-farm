@@ -111,24 +111,26 @@
   <!-- Currency + harvest status band: 农场币 on the left, "when are my crops
        ready" status in the middle, 超市积分 on the right. -->
   <div id="harvestStatusBar" class="harvest-status-bar">
-    <div class="currency coins" title="农场币 Farm Coin">
+    <button class="currency coins currency-tappable" id="coinsCard" title="农场币 — 点开看获取规则与兑换">
       <div class="currency-row">
         <span class="icon coin-icon"></span>
         <span class="value" id="coinsValue">100</span>
+        <span class="currency-chevron">›</span>
       </div>
       <div class="label">农场币 · Coin</div>
-    </div>
+    </button>
     <div class="harvest-status-center" id="harvestStatusCenter">
       <span class="harvest-status-text" id="harvestStatusText"></span>
       <button class="btn harvest-status-btn hidden" id="harvestStatusBtn"></button>
     </div>
-    <div class="currency points" title="超市积分 Store Points">
+    <button class="currency points currency-tappable" id="pointsCard" title="超市积分 — 点开兑换与积分明细">
       <div class="currency-row">
         <span class="icon points-icon"></span>
         <span class="value" id="pointsValue">0</span>
+        <span class="currency-chevron">›</span>
       </div>
       <div class="label">超市积分 · Points</div>
-    </div>
+    </button>
   </div>
 
   <!-- Main farm view -->
@@ -240,9 +242,9 @@
       <span class="action-icon">🏘</span>
       <span class="action-label" data-i18n="nav_community">社区</span>
     </button>
-    <button class="action-btn" data-action="rewards">
-      <span class="action-icon">🎁</span>
-      <span class="action-label" data-i18n="nav_rewards">兑换</span>
+    <button class="action-btn" data-action="store">
+      <span class="action-icon">🛍️</span>
+      <span class="action-label" data-i18n="nav_store">农场商城</span>
     </button>
     <button class="action-btn" data-action="collection">
       <span class="action-icon">📖</span>

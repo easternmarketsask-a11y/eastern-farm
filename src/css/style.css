@@ -234,6 +234,30 @@ body {
   margin-top: 1px;
   white-space: nowrap;
 }
+/* Tappable currency cards: a solid bottom rim + chevron make them read as
+   buttons; sink on press (same candy language as nav + soil). 2026-06-11. */
+.currency-tappable {
+  font-family: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  box-shadow: 0 2px 0 var(--border-soft);
+  transition: transform 0.1s ease, box-shadow 0.1s ease, border-color 0.12s ease;
+}
+.currency-tappable:active {
+  transform: translateY(2px);
+  box-shadow: 0 0 0 var(--border-soft);
+}
+.currency.coins.currency-tappable  { box-shadow: 0 2px 0 #e6c878; }
+.currency.coins.currency-tappable:active  { transform: translateY(2px); box-shadow: 0 0 0 #e6c878; }
+.currency.points.currency-tappable { box-shadow: 0 2px 0 #cdb6e6; }
+.currency.points.currency-tappable:active { transform: translateY(2px); box-shadow: 0 0 0 #cdb6e6; }
+.currency-chevron {
+  font-size: 14px;
+  font-weight: 800;
+  opacity: 0.45;
+  margin-left: 1px;
+  line-height: 1;
+}
 
 .topbar-member-slot { display: inline-flex; }
 
@@ -1847,11 +1871,11 @@ body {
 .action-btn[data-action="community"]:active .action-icon {
   box-shadow: 0 0 0 #8fbcdb, 0 1px 3px rgba(80, 150, 200, 0.16), inset 0 1px 0 rgba(255,255,255,0.6);
 }
-.action-btn[data-action="rewards"] .action-icon {
+.action-btn[data-action="store"] .action-icon {
   background: linear-gradient(180deg, #fdf0f2 0%, #fad6dc 100%);
   border-color: #eba8b4; box-shadow: 0 3px 0 #dd96a3, 0 4px 8px rgba(200, 90, 110, 0.15), inset 0 1px 0 rgba(255,255,255,0.85);
 }
-.action-btn[data-action="rewards"]:active .action-icon {
+.action-btn[data-action="store"]:active .action-icon {
   box-shadow: 0 0 0 #dd96a3, 0 1px 3px rgba(200, 90, 110, 0.15), inset 0 1px 0 rgba(255,255,255,0.6);
 }
 .action-btn[data-action="collection"] .action-icon {

@@ -222,13 +222,27 @@
         switch (action) {
           case 'shop': Farm.shop.open(); break;
           case 'tasks': Farm.tasks.open(); break;
-          case 'rewards': Farm.rewards.open(); break;
+          case 'store': if (Farm.epShop) Farm.epShop.open(); break;   // 农场商城
+          case 'rewards': Farm.rewards.open(); break;                  // legacy (now via points card)
           case 'community': if (Farm.neighbors) Farm.neighbors.open(); break;
           case 'collection': openCollection(); break;
           case 'settings': openSettings(); break;
         }
       };
     });
+
+    // 顶部货币卡片点击：超市积分卡 → 兑换/积分明细面板；农场币卡 → 农场币
+    // 信息面板（余额 / 兑换 / 获取规则）。
+    const pointsCard = document.getElementById('pointsCard');
+    if (pointsCard) pointsCard.onclick = () => {
+      if (Farm.audio) Farm.audio.play('tap');
+      if (Farm.rewards) Farm.rewards.open();
+    };
+    const coinsCard = document.getElementById('coinsCard');
+    if (coinsCard) coinsCard.onclick = () => {
+      if (Farm.audio) Farm.audio.play('tap');
+      if (Farm.rewards && Farm.rewards.openCoinInfo) Farm.rewards.openCoinInfo();
+    };
   }
 
   // Settings left the bottom nav (now reached via the 👤 account button, both
