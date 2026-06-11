@@ -81,13 +81,15 @@
         loadImage('assets/images/farm-poster.jpg'),
       ]);
 
-      // ---- Poster hero (cover-fit into top region; bias left to keep house) ----
+      // ---- Poster hero (cover-fit into top region) ----
+      // Shift the crop window rightward (frac 0.34) so the farmhouse sits in
+      // the far-left corner — clear of the centered logo+sign over clean sky.
       if (poster) {
         const scale = Math.max(W / poster.width, POSTER_H / poster.height);
         const dw = poster.width * scale, dh = poster.height * scale;
         ctx.save();
         ctx.beginPath(); ctx.rect(0, 0, W, POSTER_H); ctx.clip();
-        ctx.drawImage(poster, (W - dw) * 0.12, (POSTER_H - dh) * 0.5, dw, dh);
+        ctx.drawImage(poster, (W - dw) * 0.34, (POSTER_H - dh) * 0.5, dw, dh);
         ctx.restore();
       } else {
         const g = ctx.createLinearGradient(0, 0, 0, POSTER_H);
@@ -159,7 +161,12 @@
         ctx.textAlign = 'center';
       })();
 
-      // ---- Player info, DOWN-PLAYED: small pill below the sign (over scene) ----
+      // ================= Cream content panel =================
+      const md = (Farm.fbAuth && Farm.fbAuth.memberDoc) || {};
+      const gsd = md.gameStats || {};
+      const harvests = s.totalHarvests || 0;
+      const likes = gsd.likesReceived || 0;
+      const coins = s.coins || 0;
       const name = String(
         (Farm.fbGameSync && Farm.fbGameSync._selfDisplayName)
           ? Farm.fbGameSync._selfDisplayName()
@@ -167,33 +174,47 @@
       ).slice(0, 12);
       const lv = s.level || 1;
       const initial = (name.match(/[A-Za-z0-9一-龥]/) || ['🌱'])[0];
-      const pillText = name + ' · Lv ' + lv;
-      ctx.font = '500 15px ' + CN;
-      const ptW = ctx.measureText(pillText).width;
-      const av = 24, padL = 6, gap = 8, padR = 16;
-      const pillW = padL + av + gap + ptW + padR;
-      const pillH = 30, pillY = sgY + sgH + 12, pillX = signCX - pillW / 2;
-      ctx.save();
-      ctx.shadowColor = 'rgba(20,20,20,0.3)'; ctx.shadowBlur = 6; ctx.shadowOffsetY = 2;
-      ctx.fillStyle = 'rgba(50,34,18,0.55)';
-      roundRect(ctx, pillX, pillY, pillW, pillH, pillH / 2); ctx.fill();
-      ctx.restore();
-      const avCX = pillX + padL + av / 2, avCY = pillY + pillH / 2;
+
+      // Decorative flower (5 petals + center) to dress the panel's empty sides.
+      const flower = (cx, cy, r, petal, mid) => {
+        for (let i = 0; i < 5; i++) {
+          const a = (Math.PI * 2 / 5) * i - Math.PI / 2;
+          ctx.fillStyle = petal;
+          ctx.beginPath();
+          ctx.arc(cx + Math.cos(a) * r * 0.6, cy + Math.sin(a) * r * 0.6, r * 0.5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.fillStyle = mid;
+        ctx.beginPath(); ctx.arc(cx, cy, r * 0.4, 0, Math.PI * 2); ctx.fill();
+      };
+      const leaf = (cx, cy, dir) => {
+        ctx.fillStyle = '#7bbf5b';
+        ctx.beginPath(); ctx.ellipse(cx, cy, 9, 4.5, dir, 0, Math.PI * 2); ctx.fill();
+      };
+      // flowers flanking the side margins (text is centered + narrower)
+      leaf(40, 540, -0.5); leaf(560, 540, 0.5);
+      flower(38, 524, 24, '#ffd1dc', '#f6a93b');
+      flower(66, 560, 16, '#fff1b8', '#f3923a');
+      flower(562, 524, 24, '#ffc7d8', '#f6a93b');
+      flower(534, 560, 16, '#fff1b8', '#f3923a');
+      flower(34, 686, 20, '#f3c7ef', '#f6a93b');
+      flower(566, 686, 20, '#ffd1dc', '#f6a93b');
+
+      // ---- Player line (moved down into the text area) ----
+      const pName = name + '  ·  Lv ' + lv;
+      ctx.font = '700 18px ' + CN;
+      const pNameW = ctx.measureText(pName).width;
+      const pav = 30, pgap = 10, pTotal = pav + pgap + pNameW;
+      const px = (W - pTotal) / 2, pcy = 502;
       ctx.fillStyle = '#7bbf5b';
-      ctx.beginPath(); ctx.arc(avCX, avCY, av / 2, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = '#ffffff'; ctx.font = '700 14px ' + CN;
-      ctx.fillText(initial, avCX, avCY + 5);
-      ctx.textAlign = 'left';
-      ctx.fillStyle = '#fff3dd'; ctx.font = '500 15px ' + CN;
-      ctx.fillText(pillText, avCX + av / 2 + gap, avCY + 5);
+      ctx.beginPath(); ctx.arc(px + pav / 2, pcy, pav / 2, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#fff'; ctx.font = '700 17px ' + CN; ctx.textAlign = 'center';
+      ctx.fillText(initial, px + pav / 2, pcy + 6);
+      ctx.textAlign = 'left'; ctx.fillStyle = '#5a4632'; ctx.font = '700 18px ' + CN;
+      ctx.fillText(pName, px + pav + pgap, pcy + 6);
       ctx.textAlign = 'center';
 
-      // ---- Stat chips (harvests + likes/coins) inside the cream panel ----
-      const md = (Farm.fbAuth && Farm.fbAuth.memberDoc) || {};
-      const gsd = md.gameStats || {};
-      const harvests = s.totalHarvests || 0;
-      const likes = gsd.likesReceived || 0;
-      const coins = s.coins || 0;
+      // ---- Stat chips (bigger) ----
       const chip2 = likes > 0
         ? { t: '❤️ 赞 Likes ' + likes, bg: '#fdeef0', fg: '#c0556a' }
         : { t: '🪙 金币 Coins ' + coins.toLocaleString(), bg: '#fff6df', fg: '#a9791e' };
@@ -201,46 +222,43 @@
         { t: '🌾 收获 Harvest ' + harvests, bg: '#f1f8e6', fg: '#5a7a2e' },
         chip2,
       ];
-      const chipsY = POSTER_H + 18;
-      ctx.font = '700 18px ' + CN;
-      const chipWs = chips.map(c => ctx.measureText(c.t).width + 32);
+      const chipsY = 534;
+      ctx.font = '700 19px ' + CN;
+      const chipWs = chips.map(c => ctx.measureText(c.t).width + 34);
       const cgap = 14;
       let startX = (W - (chipWs[0] + chipWs[1] + cgap)) / 2;
       chips.forEach((c, i) => {
         const w = chipWs[i];
         ctx.fillStyle = c.bg;
-        roundRect(ctx, startX, chipsY, w, 42, 21); ctx.fill();
+        roundRect(ctx, startX, chipsY, w, 46, 23); ctx.fill();
         ctx.fillStyle = c.fg;
-        ctx.fillText(c.t, startX + w / 2, chipsY + 27);
+        ctx.fillText(c.t, startX + w / 2, chipsY + 30);
         startX += w + cgap;
       });
 
-      // ---- Cream panel: bilingual CTA + URL + address ----
+      // ---- CTA + URL + address (bigger text) ----
       ctx.fillStyle = '#2a5c34';
-      ctx.font = '700 22px ' + FD;
-      ctx.fillText('我在东方超市·快乐农场种菜啦！', W / 2, 580);
+      ctx.font = '700 26px ' + FD;
+      ctx.fillText('我在东方超市·快乐农场种菜啦！', W / 2, 616);
       ctx.fillStyle = '#3a8c50';
-      ctx.font = '700 15px ' + EN;
-      ctx.fillText('Farming at Eastern Market · Happy Farm!', W / 2, 602);
-      ctx.fillStyle = '#7a6a4a';
-      ctx.font = '500 14px ' + CN;
-      ctx.fillText('打开链接一起种菜 · Open the link & join me 🌱', W / 2, 628);
+      ctx.font = '700 16px ' + EN;
+      ctx.fillText('Farming at Eastern Market · Happy Farm!', W / 2, 640);
 
-      const ug = ctx.createLinearGradient(0, 646, 0, 688);
+      const ug = ctx.createLinearGradient(0, 660, 0, 710);
       ug.addColorStop(0, '#46a05f'); ug.addColorStop(1, '#2f7a45');
       ctx.save();
       ctx.shadowColor = 'rgba(47,122,69,0.4)';
-      ctx.shadowBlur = 10; ctx.shadowOffsetY = 4;
+      ctx.shadowBlur = 12; ctx.shadowOffsetY = 5;
       ctx.fillStyle = ug;
-      roundRect(ctx, W / 2 - 172, 646, 344, 42, 21); ctx.fill();
+      roundRect(ctx, W / 2 - 178, 660, 356, 48, 24); ctx.fill();
       ctx.restore();
       ctx.fillStyle = '#ffffff';
-      ctx.font = '700 19px ' + EN;
-      ctx.fillText('farm.easternmarket.ca', W / 2, 674);
+      ctx.font = '700 22px ' + EN;
+      ctx.fillText('farm.easternmarket.ca', W / 2, 691);
 
       ctx.fillStyle = '#8a7a5c';
-      ctx.font = '500 13px ' + CN;
-      ctx.fillText('📍 133-412 Willowgrove Square, Saskatoon', W / 2, 712);
+      ctx.font = '500 14px ' + CN;
+      ctx.fillText('📍 133-412 Willowgrove Square, Saskatoon', W / 2, 730);
 
       // Capture a blob for native sharing (best-effort).
       try {
