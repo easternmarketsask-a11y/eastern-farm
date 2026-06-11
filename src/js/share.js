@@ -14,7 +14,8 @@
  */
 (function () {
   const GAME_URL = 'https://farm.easternmarket.ca';
-  const W = 600, H = 800;
+  const W = 600, H = 760;
+  const POSTER_H = 470;   // illustration hero height; cream panel fills the rest
 
   function loadImage(src) {
     return new Promise((resolve) => {
@@ -72,157 +73,46 @@
       // which makes centered text look subtly off-center. Best-effort.
       try { if (document.fonts && document.fonts.ready) await document.fonts.ready; } catch (e) {}
 
-      // Preload art in parallel: logo + a curated, colorful crop showcase for
-      // the hero field. (The active crop catalog starts with many look-alike
-      // leafy greens; a hand-picked spread of shapes/colors reads far better:
-      // green bok choy · orange carrot · purple eggplant · white radish ·
-      // broccoli.) The whole decorative scene (sky/hills/farmhouse/fence/
-      // grass/sign/soil tiles/bottom panel) is one static SVG rasterized in
-      // a single pass — same visual language as the in-game farm scene band.
-      const SHOWCASE = ['shanghai_miao', 'hu_luo_bo', 'eggplant', 'bai_luo_bo', 'xi_lan_hua'];
-      // Soil tile geometry shared between the SVG backdrop and the canvas
-      // pass that plants the crops on top.
-      const TILE = 96, TGAP = 8;
-      const tilesX = (W - (SHOWCASE.length * TILE + (SHOWCASE.length - 1) * TGAP)) / 2;
-      const tilesY = 400;
-      const soilTiles = SHOWCASE.map((_, i) =>
-        `<g transform="translate(${tilesX + i * (TILE + TGAP)},${tilesY})">
-           <rect x="0" y="7" width="${TILE}" height="78" rx="14" fill="#553620"/>
-           <rect x="0" y="0" width="${TILE}" height="78" rx="14" fill="url(#soil)"/>
-           <rect x="0" y="0" width="${TILE}" height="78" rx="14" fill="none" stroke="rgba(60,38,20,0.5)" stroke-width="1.5"/>
-           <path d="M8 20 H88 M8 39 H88 M8 58 H88" stroke="rgba(58,34,16,0.45)" stroke-width="4" stroke-linecap="round"/>
-           <path d="M8 24 H88 M8 43 H88 M8 62 H88" stroke="rgba(228,188,142,0.28)" stroke-width="2" stroke-linecap="round"/>
-         </g>`).join('');
-      const sceneSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
-        <defs>
-          <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stop-color="#86ccef"/><stop offset="0.5" stop-color="#bbe6e2"/><stop offset="1" stop-color="#e7f1c6"/>
-          </linearGradient>
-          <linearGradient id="grass" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stop-color="#9ccd72"/><stop offset="1" stop-color="#6ba646"/>
-          </linearGradient>
-          <linearGradient id="wood" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stop-color="#b3854f"/><stop offset="1" stop-color="#855c38"/>
-          </linearGradient>
-          <linearGradient id="soil" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stop-color="#a87a4c"/><stop offset="1" stop-color="#6a4225"/>
-          </linearGradient>
-          <radialGradient id="sun" cx="50%" cy="50%" r="50%">
-            <stop offset="0" stop-color="#fff0b8"/><stop offset="0.6" stop-color="#ffd84d"/><stop offset="1" stop-color="#fcc63a"/>
-          </radialGradient>
-        </defs>
-        <rect width="${W}" height="330" fill="url(#sky)"/>
-        <rect y="300" width="${W}" height="${H - 300}" fill="url(#grass)"/>
-        <!-- sun: soft outer glow + rays + warm core -->
-        <circle cx="512" cy="72" r="56" fill="#ffe79a" opacity="0.22"/>
-        <circle cx="512" cy="72" r="42" fill="#ffdf7a" opacity="0.32"/>
-        <g stroke="#ffdd6e" stroke-width="4" stroke-linecap="round" opacity="0.6">
-          <line x1="512" y1="6" x2="512" y2="20"/>
-          <line x1="512" y1="124" x2="512" y2="138"/>
-          <line x1="446" y1="72" x2="460" y2="72"/>
-          <line x1="564" y1="72" x2="578" y2="72"/>
-          <line x1="466" y1="26" x2="476" y2="36"/>
-          <line x1="548" y1="108" x2="558" y2="118"/>
-          <line x1="558" y1="26" x2="548" y2="36"/>
-          <line x1="476" y1="108" x2="466" y2="118"/>
-        </g>
-        <circle cx="512" cy="72" r="28" fill="url(#sun)"/>
-        <!-- clouds -->
-        <g fill="#ffffff" opacity="0.92">
-          <ellipse cx="92" cy="70" rx="30" ry="13"/><ellipse cx="122" cy="62" rx="24" ry="15"/><ellipse cx="146" cy="71" rx="18" ry="10"/>
-          <ellipse cx="330" cy="46" rx="24" ry="10" opacity="0.78"/><ellipse cx="354" cy="40" rx="18" ry="11" opacity="0.78"/>
-        </g>
-        <!-- hills: 3 layers for depth, richer greens -->
-        <path d="M0 250 Q 120 206 250 238 Q 380 270 480 230 Q 550 206 600 222 L 600 330 L 0 330 Z" fill="#aed795" opacity="0.65"/>
-        <path d="M0 270 Q 110 222 230 254 Q 360 288 470 242 Q 540 216 600 236 L 600 330 L 0 330 Z" fill="#90c66f"/>
-        <path d="M0 296 Q 140 250 300 280 Q 450 308 600 274 L 600 340 L 0 340 Z" fill="#79b455"/>
-        <!-- farmhouse (left) -->
-        <g transform="translate(48,212)">
-          <circle cx="58" cy="-4" r="5" fill="#fff" opacity="0.6"/>
-          <circle cx="64" cy="-13" r="6.5" fill="#fff" opacity="0.4"/>
-          <rect x="10" y="28" width="56" height="40" rx="4" fill="#f3e3c2" stroke="#caa873" stroke-width="2"/>
-          <path d="M2 30 L38 4 L74 30 Z" fill="#d8694a" stroke="#b04f33" stroke-width="2"/>
-          <rect x="31" y="44" width="14" height="24" rx="2" fill="#9a6b3f"/>
-          <rect x="15" y="38" width="12" height="12" rx="2" fill="#cfe9f5" stroke="#caa873"/>
-          <rect x="49" y="38" width="12" height="12" rx="2" fill="#cfe9f5" stroke="#caa873"/>
-        </g>
-        <!-- trees -->
-        <g transform="translate(488,212)">
-          <rect x="12" y="30" width="8" height="18" rx="3" fill="#8a6240"/>
-          <circle cx="16" cy="19" r="19" fill="#5da253"/>
-          <circle cx="5" cy="27" r="12" fill="#6cb15f"/>
-          <circle cx="28" cy="27" r="12" fill="#6cb15f"/>
-        </g>
-        <g transform="translate(160,232) scale(0.7)">
-          <rect x="12" y="30" width="8" height="18" rx="3" fill="#8a6240"/>
-          <circle cx="16" cy="19" r="19" fill="#5da253"/>
-          <circle cx="5" cy="27" r="12" fill="#6cb15f"/>
-          <circle cx="28" cy="27" r="12" fill="#6cb15f"/>
-        </g>
-        <!-- fence -->
-        <g stroke="#c8a06a" stroke-width="6" stroke-linecap="round">
-          ${[12, 70, 128, 186, 244, 302, 360, 418, 476, 534, 588].map(x =>
-            `<line x1="${x}" y1="300" x2="${x}" y2="338"/>`).join('')}
-          <line x1="0" y1="310" x2="${W}" y2="310"/>
-          <line x1="0" y1="327" x2="${W}" y2="327"/>
-        </g>
-        <!-- hanging wooden sign — carries the GAME NAME (快乐农场) as the hero -->
-        <g transform="translate(0,4)">
-          <line x1="208" y1="92" x2="224" y2="128" stroke="#8a6240" stroke-width="5" stroke-linecap="round"/>
-          <line x1="392" y1="92" x2="376" y2="128" stroke="#8a6240" stroke-width="5" stroke-linecap="round"/>
-          <rect x="106" y="124" width="388" height="140" rx="20" fill="#5f3f24"/>
-          <rect x="112" y="118" width="376" height="140" rx="18" fill="url(#wood)"/>
-          <rect x="124" y="130" width="352" height="116" rx="12" fill="none" stroke="rgba(255,240,210,0.35)" stroke-width="2.5"/>
-          <circle cx="130" cy="136" r="4" fill="#5a3c22"/><circle cx="470" cy="136" r="4" fill="#5a3c22"/>
-          <circle cx="130" cy="240" r="4" fill="#5a3c22"/><circle cx="470" cy="240" r="4" fill="#5a3c22"/>
-        </g>
-        <!-- soil tiles for the crop showcase -->
-        ${soilTiles}
-        <!-- little flowers scattered on the grass -->
-        <g>
-          <g transform="translate(36,368)"><circle r="6" fill="#ffd1dc"/><circle r="2.6" fill="#e8a23a"/></g>
-          <g transform="translate(566,378)"><circle r="6" fill="#fff1b8"/><circle r="2.6" fill="#e8a23a"/></g>
-          <g transform="translate(580,520)"><circle r="5" fill="#ffd1dc"/><circle r="2.2" fill="#e8a23a"/></g>
-          <g transform="translate(22,512)"><circle r="5" fill="#fff1b8"/><circle r="2.2" fill="#e8a23a"/></g>
-        </g>
-        <!-- bottom cream panel -->
-        <rect x="28" y="560" width="${W - 56}" height="206" rx="24" fill="rgba(90,60,30,0.18)" transform="translate(0,6)"/>
-        <rect x="28" y="560" width="${W - 56}" height="206" rx="24" fill="#fffdf6"/>
-        <rect x="34" y="566" width="${W - 68}" height="194" rx="20" fill="none" stroke="rgba(106,176,76,0.35)" stroke-width="2"/>
-      </svg>`;
-
-      const [logo, sceneImg, cropImgs] = await Promise.all([
+      // Background is Chris's full farm illustration (farm-poster.jpg). The
+      // game name lives on a wooden sign over the illustration's clean sky;
+      // the player's own crops show right in the illustration's garden.
+      const [logo, poster] = await Promise.all([
         loadImage('assets/images/logo-horizontal.png'),
-        svgToImage(sceneSvg),
-        // Crops: raster sprite files when available (canvas-safe, no SVG-blob
-        // external-ref limitation); SVG-blob fallback for sprite-less crops.
-        Promise.all(SHOWCASE.map(id => {
-          const url = Farm.cropArt.spriteUrl && Farm.cropArt.spriteUrl(id);
-          return url ? loadImage(url) : svgToImage(Farm.cropArt.icon(id, 110));
-        })),
+        loadImage('assets/images/farm-poster.jpg'),
       ]);
 
-      // ---- Scene backdrop (with plain-gradient fallback if SVG raster fails) ----
-      if (sceneImg) {
-        ctx.drawImage(sceneImg, 0, 0, W, H);
+      // ---- Poster hero (cover-fit into top region; bias left to keep house) ----
+      if (poster) {
+        const scale = Math.max(W / poster.width, POSTER_H / poster.height);
+        const dw = poster.width * scale, dh = poster.height * scale;
+        ctx.save();
+        ctx.beginPath(); ctx.rect(0, 0, W, POSTER_H); ctx.clip();
+        ctx.drawImage(poster, (W - dw) * 0.12, (POSTER_H - dh) * 0.5, dw, dh);
+        ctx.restore();
       } else {
-        const g = ctx.createLinearGradient(0, 0, 0, H);
-        g.addColorStop(0, '#aee1f5'); g.addColorStop(0.4, '#cdeade'); g.addColorStop(1, '#7fb45e');
-        ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+        const g = ctx.createLinearGradient(0, 0, 0, POSTER_H);
+        g.addColorStop(0, '#aee1f5'); g.addColorStop(1, '#7fb45e');
+        ctx.fillStyle = g; ctx.fillRect(0, 0, W, POSTER_H);
       }
+
+      // ---- Cream content panel (overlaps the poster bottom a touch) ----
+      ctx.save();
+      ctx.shadowColor = 'rgba(60,40,20,0.28)';
+      ctx.shadowBlur = 16; ctx.shadowOffsetY = -2;
+      ctx.fillStyle = '#fffdf6';
+      roundRect(ctx, 0, POSTER_H - 22, W, H - (POSTER_H - 22), 26);
+      ctx.fill();
+      ctx.restore();
 
       ctx.textAlign = 'center';
       ctx.textBaseline = 'alphabetic';
 
       // ---- Eastern Market logo on a small white chip, top center ----
-      // Logo stands alone; the game name 快乐农场 lives on the sign below.
       const logoW = 116;
       const logoH = logo ? logoW * (logo.height / logo.width) : 60;
-      const lcW = logoW + 28;
-      const lcH = logoH + 16;
-      const lcX = (W - lcW) / 2, lcY = 14;
+      const lcW = logoW + 28, lcH = logoH + 16, lcX = (W - lcW) / 2, lcY = 14;
       ctx.save();
-      ctx.shadowColor = 'rgba(90,60,30,0.25)';
+      ctx.shadowColor = 'rgba(40,40,40,0.3)';
       ctx.shadowBlur = 10; ctx.shadowOffsetY = 3;
       ctx.fillStyle = '#ffffff';
       roundRect(ctx, lcX, lcY, lcW, lcH, 14);
@@ -230,33 +120,46 @@
       ctx.restore();
       if (logo) ctx.drawImage(logo, (W - logoW) / 2, lcY + 8, logoW, logoH);
 
-      // ---- GAME NAME as the hero, carved on the wooden sign ----
-      // This poster promotes the GAME, so 快乐农场 / HAPPY FARM is the focal
-      // point on the sign — not the individual player.
+      // ---- Wooden sign over the illustration sky: GAME NAME hero ----
       const signCX = W / 2;
+      const sgW = 320, sgH = 96, sgX = signCX - sgW / 2, sgY = 96;
+      // hanging ropes
+      ctx.strokeStyle = '#6b4a2a'; ctx.lineWidth = 5; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(sgX + 44, sgY - 14); ctx.lineTo(sgX + 60, sgY + 10);
+      ctx.moveTo(sgX + sgW - 44, sgY - 14); ctx.lineTo(sgX + sgW - 60, sgY + 10); ctx.stroke();
+      // plank: dark rim + wood gradient + inner border + screws
       ctx.save();
-      ctx.shadowColor = 'rgba(60,38,18,0.6)';
-      ctx.shadowOffsetY = 2;
-      ctx.fillStyle = '#fff3dd';
-      ctx.font = '700 44px ' + FD;
-      ctx.fillText('快乐农场', signCX, 184);
+      ctx.shadowColor = 'rgba(40,25,10,0.4)'; ctx.shadowBlur = 12; ctx.shadowOffsetY = 5;
+      const wg = ctx.createLinearGradient(0, sgY, 0, sgY + sgH);
+      wg.addColorStop(0, '#b3854f'); wg.addColorStop(1, '#855c38');
+      ctx.fillStyle = '#5f3f24'; roundRect(ctx, sgX - 4, sgY + 4, sgW + 8, sgH, 18); ctx.fill();
+      ctx.shadowColor = 'transparent';
+      ctx.fillStyle = wg; roundRect(ctx, sgX, sgY, sgW, sgH, 16); ctx.fill();
       ctx.restore();
-      // "HAPPY FARM" — letter-spaced under the Chinese name
+      ctx.strokeStyle = 'rgba(255,240,210,0.35)'; ctx.lineWidth = 2.5;
+      roundRect(ctx, sgX + 12, sgY + 10, sgW - 24, sgH - 20, 11); ctx.stroke();
+      ctx.fillStyle = '#5a3c22';
+      [[sgX + 14, sgY + 14], [sgX + sgW - 14, sgY + 14], [sgX + 14, sgY + sgH - 14], [sgX + sgW - 14, sgY + sgH - 14]]
+        .forEach(([cx, cy]) => { ctx.beginPath(); ctx.arc(cx, cy, 4, 0, Math.PI * 2); ctx.fill(); });
+      // 快乐农场 (carved cream)
+      ctx.save();
+      ctx.shadowColor = 'rgba(60,38,18,0.6)'; ctx.shadowOffsetY = 2;
+      ctx.fillStyle = '#fff3dd'; ctx.font = '700 40px ' + FD;
+      ctx.fillText('快乐农场', signCX, sgY + 52);
+      ctx.restore();
+      // HAPPY FARM — letter-spaced
       (function () {
         const txt = 'HAPPY FARM', ls = 3.5;
-        ctx.font = '700 14px ' + EN;
-        ctx.fillStyle = '#ffd9a0';
+        ctx.font = '700 13px ' + EN; ctx.fillStyle = '#ffd9a0';
         let total = -ls;
         for (const ch of txt) total += ctx.measureText(ch).width + ls;
         let x = signCX - total / 2;
         ctx.textAlign = 'left';
-        for (const ch of txt) { ctx.fillText(ch, x, 210); x += ctx.measureText(ch).width + ls; }
+        for (const ch of txt) { ctx.fillText(ch, x, sgY + 74); x += ctx.measureText(ch).width + ls; }
         ctx.textAlign = 'center';
       })();
 
-      // ---- Player info, DOWN-PLAYED: a small wood-tone pill on the sign ----
-      // (Personal name/level is secondary; the card sells the GAME. The pill
-      // carries an avatar-initial circle + name · Lv, kept small + muted.)
+      // ---- Player info, DOWN-PLAYED: small pill below the sign (over scene) ----
       const name = String(
         (Farm.fbGameSync && Farm.fbGameSync._selfDisplayName)
           ? Farm.fbGameSync._selfDisplayName()
@@ -269,93 +172,75 @@
       const ptW = ctx.measureText(pillText).width;
       const av = 24, padL = 6, gap = 8, padR = 16;
       const pillW = padL + av + gap + ptW + padR;
-      const pillH = 30, pillY = 228, pillX = signCX - pillW / 2;
-      // pill background (translucent dark wood inset)
-      ctx.fillStyle = 'rgba(60,40,22,0.42)';
+      const pillH = 30, pillY = sgY + sgH + 12, pillX = signCX - pillW / 2;
+      ctx.save();
+      ctx.shadowColor = 'rgba(20,20,20,0.3)'; ctx.shadowBlur = 6; ctx.shadowOffsetY = 2;
+      ctx.fillStyle = 'rgba(50,34,18,0.55)';
       roundRect(ctx, pillX, pillY, pillW, pillH, pillH / 2); ctx.fill();
-      // avatar initial circle
+      ctx.restore();
       const avCX = pillX + padL + av / 2, avCY = pillY + pillH / 2;
       ctx.fillStyle = '#7bbf5b';
       ctx.beginPath(); ctx.arc(avCX, avCY, av / 2, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = '#ffffff';
-      ctx.font = '700 14px ' + CN;
+      ctx.fillStyle = '#ffffff'; ctx.font = '700 14px ' + CN;
       ctx.fillText(initial, avCX, avCY + 5);
-      // name · Lv
       ctx.textAlign = 'left';
-      ctx.fillStyle = '#fff3dd';
-      ctx.font = '500 15px ' + CN;
+      ctx.fillStyle = '#fff3dd'; ctx.font = '500 15px ' + CN;
       ctx.fillText(pillText, avCX + av / 2 + gap, avCY + 5);
       ctx.textAlign = 'center';
 
-      // ---- Crops planted on the soil tiles (drawn over the SVG tiles) ----
-      cropImgs.forEach((img, i) => {
-        if (!img) return;
-        const cx = tilesX + i * (TILE + TGAP) + TILE / 2;
-        ctx.save();
-        ctx.shadowColor = 'rgba(60,35,15,0.35)';
-        ctx.shadowBlur = 6; ctx.shadowOffsetY = 4;
-        ctx.drawImage(img, cx - 52, tilesY - 44, 104, 104);
-        ctx.restore();
-      });
-
-      // ---- Stat chips (harvests + likes/coins) on the grass ----
+      // ---- Stat chips (harvests + likes/coins) inside the cream panel ----
       const md = (Farm.fbAuth && Farm.fbAuth.memberDoc) || {};
       const gsd = md.gameStats || {};
       const harvests = s.totalHarvests || 0;
       const likes = gsd.likesReceived || 0;
       const coins = s.coins || 0;
-      // Bilingual stat chips. Second chip: likes only when there are some (a
-      // "0 赞" looks sad on a brag card) — otherwise farm coins, always positive.
       const chip2 = likes > 0
-        ? { t: '❤️ 赞 Likes ' + likes, fg: '#c0556a' }
-        : { t: '🪙 金币 Coins ' + coins.toLocaleString(), fg: '#a9791e' };
+        ? { t: '❤️ 赞 Likes ' + likes, bg: '#fdeef0', fg: '#c0556a' }
+        : { t: '🪙 金币 Coins ' + coins.toLocaleString(), bg: '#fff6df', fg: '#a9791e' };
       const chips = [
-        { t: '🌾 收获 Harvest ' + harvests, fg: '#5a7a2e' },
+        { t: '🌾 收获 Harvest ' + harvests, bg: '#f1f8e6', fg: '#5a7a2e' },
         chip2,
       ];
+      const chipsY = POSTER_H + 18;
       ctx.font = '700 18px ' + CN;
       const chipWs = chips.map(c => ctx.measureText(c.t).width + 32);
       const cgap = 14;
       let startX = (W - (chipWs[0] + chipWs[1] + cgap)) / 2;
       chips.forEach((c, i) => {
         const w = chipWs[i];
-        ctx.save();
-        ctx.shadowColor = 'rgba(70,50,20,0.22)';
-        ctx.shadowBlur = 8; ctx.shadowOffsetY = 3;
-        ctx.fillStyle = '#fffdf6';
-        roundRect(ctx, startX, 500, w, 42, 21); ctx.fill();
-        ctx.restore();
+        ctx.fillStyle = c.bg;
+        roundRect(ctx, startX, chipsY, w, 42, 21); ctx.fill();
         ctx.fillStyle = c.fg;
-        ctx.fillText(c.t, startX + w / 2, 528);
+        ctx.fillText(c.t, startX + w / 2, chipsY + 27);
         startX += w + cgap;
       });
 
-      // ---- Bottom panel: bilingual CTA + URL + address ----
+      // ---- Cream panel: bilingual CTA + URL + address ----
       ctx.fillStyle = '#2a5c34';
       ctx.font = '700 22px ' + FD;
-      ctx.fillText('我在东方超市·快乐农场种菜啦！', W / 2, 600);
+      ctx.fillText('我在东方超市·快乐农场种菜啦！', W / 2, 580);
       ctx.fillStyle = '#3a8c50';
       ctx.font = '700 15px ' + EN;
-      ctx.fillText('Farming at Eastern Market · Happy Farm!', W / 2, 622);
+      ctx.fillText('Farming at Eastern Market · Happy Farm!', W / 2, 602);
       ctx.fillStyle = '#7a6a4a';
       ctx.font = '500 14px ' + CN;
-      ctx.fillText('打开链接一起种菜 · Open the link & join me 🌱', W / 2, 648);
+      ctx.fillText('打开链接一起种菜 · Open the link & join me 🌱', W / 2, 628);
 
-      const ug = ctx.createLinearGradient(0, 664, 0, 706);
+      const ug = ctx.createLinearGradient(0, 646, 0, 688);
       ug.addColorStop(0, '#46a05f'); ug.addColorStop(1, '#2f7a45');
       ctx.save();
       ctx.shadowColor = 'rgba(47,122,69,0.4)';
       ctx.shadowBlur = 10; ctx.shadowOffsetY = 4;
       ctx.fillStyle = ug;
-      roundRect(ctx, W / 2 - 172, 664, 344, 42, 21); ctx.fill();
+      roundRect(ctx, W / 2 - 172, 646, 344, 42, 21); ctx.fill();
       ctx.restore();
       ctx.fillStyle = '#ffffff';
       ctx.font = '700 19px ' + EN;
-      ctx.fillText('farm.easternmarket.ca', W / 2, 692);
+      ctx.fillText('farm.easternmarket.ca', W / 2, 674);
 
       ctx.fillStyle = '#8a7a5c';
       ctx.font = '500 13px ' + CN;
-      ctx.fillText('📍 133-412 Willowgrove Square, Saskatoon', W / 2, 730);
+      ctx.fillText('📍 133-412 Willowgrove Square, Saskatoon', W / 2, 712);
 
       // Capture a blob for native sharing (best-effort).
       try {
