@@ -75,12 +75,20 @@
         // Claimed limited-time promos (per-account guard against local reset).
         promoClaims: s.promoClaims || {},
         // Farm snapshot for real-member visits + stealing (spec 2026-06-11):
-        // non-empty unlocked plots only, compact {i,c,p} = plotIdx/cropId/
-        // plantedAt. Visitors compute maturity locally from plantedAt.
+        // non-empty unlocked plots only, compact {i,c,p,g} = plotIdx/cropId/
+        // plantedAt/growMinutes. Visitors (and the StockWise admin panel)
+        // compute live maturity from p + g without needing crops.json.
         farmPlots: (s.plots || [])
           .map((p, i) => ({ i, c: p.crop, p: p.plantedAt || 0, u: !!p.unlocked }))
           .filter(p => p.u && p.c)
-          .map(p => ({ i: p.i, c: p.c, p: p.p })),
+          .map(p => {
+            const def = (Farm.crops && Farm.crops.get) ? Farm.crops.get(p.c) : null;
+            return { i: p.i, c: p.c, p: p.p, g: (def && def.grow_minutes) || 0 };
+          }),
+        // Live balances for the admin 游戏管理 panel (display only — the
+        // authoritative copy stays in the local save).
+        coins: s.coins || 0,
+        eastPoints: s.eastPoints || 0,
         // Guard-dog flag: thief side reads this to tighten caps + risk being caught.
         hasGuardDog: !!(Farm.defenses && Farm.defenses.hasDog && Farm.defenses.hasDog()),
         lastSeenAt: Farm.fb && Farm.fb.serverTimestamp
