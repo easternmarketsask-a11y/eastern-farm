@@ -527,6 +527,13 @@
       `;
       Farm.ui.showModal(html);
 
+      // 来访足迹：逛真会员农场给对方留一条「来逛过🐾」（每天每家一次，
+      // recordVisit 内部节流；AI/自己/未登录自动跳过）。
+      if (!isAI && neighbor.uid && myId && neighbor.uid !== myId &&
+          Farm.fbGameSync && Farm.fbGameSync.recordVisit) {
+        Farm.fbGameSync.recordVisit(neighbor.uid);
+      }
+
       // Mark visited + reward if 3rd of day
       const wasNew = Farm.state.claimNeighborVisit(neighbor.id);
       if (wasNew) {

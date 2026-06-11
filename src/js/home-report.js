@@ -48,6 +48,24 @@
       if (!Farm.steal || !Farm.steal.settleRealEvents) return;
       try {
         const events = await Farm.steal.settleRealEvents();
+        // 来访足迹并入"邻里温情"：逐人最多列 4 条，更多归并为一行"还有 N 位"。
+        // 同一访客多条足迹（跨几天没上线）按人去重。
+        if (Farm.fbGameSync && Farm.fbGameSync.fetchAndClearVisitEvents) {
+          const visits = await Farm.fbGameSync.fetchAndClearVisitEvents();
+          const seen = new Set();
+          const uniq = [];
+          visits.forEach(v => {
+            if (!v || !v.visitorUid || seen.has(v.visitorUid)) return;
+            seen.add(v.visitorUid);
+            uniq.push(v);
+          });
+          uniq.slice(0, 4).forEach(v => {
+            events.helped.push({ kind: 'visit', name: v.visitorName || '邻居', realUid: v.visitorUid });
+          });
+          if (uniq.length > 4) {
+            events.helped.push({ kind: 'visit_more', n: uniq.length - 4 });
+          }
+        }
         const any = (events.stolen && events.stolen.length) || (events.helped && events.helped.length);
         if (!any) return;
         if (_pending) {
@@ -101,6 +119,10 @@
         let txt;
         if (h.kind === 'water') txt = Farm.i18n.t('report_help_water', { name: nameOf(h), crop: cropName(h.cropId) });
         else if (h.kind === 'caught') txt = Farm.i18n.t('report_caught', { name: nameOf(h), crop: cropName(h.cropId) });
+        else if (h.kind === 'visit') txt = Farm.i18n.t('report_visit', { name: nameOf(h) });
+        else if (h.kind === 'visit_more') {
+          return `<div class="report-row report-good"><span class="report-ava">🐾</span><span class="report-text">${Farm.i18n.t('report_visit_more', { n: h.n })}</span></div>`;
+        }
         else txt = Farm.i18n.t('report_help_coins', { name: nameOf(h), amount: h.amount });
         return `<div class="report-row report-good"><span class="report-ava">${avaOf(h)}</span><span class="report-text">${txt}</span></div>`;
       }).join('');

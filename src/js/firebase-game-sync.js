@@ -710,6 +710,53 @@
       }
     },
 
+    // ===== 来访足迹（社区温度包 2026-06-11）=====
+    // 逛真会员农场时留一条足迹，对方下次上线在回家小报看到
+    // 「XX 来你农场逛过🐾」。每天对同一家只记一次（本地节流）。
+    async recordVisit(hostUid) {
+      if (!Farm.fb || !Farm.fb.available || !Farm.fbAuth || !Farm.fbAuth.isLoggedIn()) return;
+      const myUid = meId();
+      if (!myUid || !hostUid || hostUid === myUid) return;
+      const c = Farm.state.data.dailyClaims;
+      const noted = c.visitFootprints || [];
+      if (noted.includes(hostUid)) return;          // 今天已留过足迹
+      c.visitFootprints = noted.concat([hostUid]);
+      Farm.state.save();
+      try {
+        await Farm.fb.db.collection('farm_players').doc(hostUid).set(
+          { gameStats: { visitEvents: firebase.firestore.FieldValue.arrayUnion({
+              visitorUid: myUid,
+              visitorName: this._selfDisplayName(),
+              at: Date.now(),
+            }) } },
+          { merge: true }
+        );
+      } catch (e) {
+        console.warn('[gameSync] recordVisit failed', e);
+      }
+    },
+
+    // 拉取并清空自己文档上的来访足迹。
+    async fetchAndClearVisitEvents() {
+      if (!Farm.fb || !Farm.fb.available || !Farm.fbAuth || !Farm.fbAuth.isLoggedIn()) return [];
+      const uid = meId();
+      if (!uid) return [];
+      try {
+        const snap = await Farm.fb.db.collection('farm_players').doc(uid).get();
+        if (!snap.exists) return [];
+        const evts = ((snap.data().gameStats) || {}).visitEvents || [];
+        if (evts.length === 0) return [];
+        await Farm.fb.db.collection('farm_players').doc(uid).set(
+          { gameStats: { visitEvents: [] } },
+          { merge: true }
+        );
+        return evts;
+      } catch (e) {
+        console.warn('[gameSync] fetchAndClearVisitEvents failed', e);
+        return [];
+      }
+    },
+
     // 拉取并清空自己文档上的偷菜事件（结算逻辑在 Farm.steal.settleRealEvents）。
     async fetchAndClearStealEvents() {
       if (!Farm.fb || !Farm.fb.available || !Farm.fbAuth || !Farm.fbAuth.isLoggedIn()) return [];

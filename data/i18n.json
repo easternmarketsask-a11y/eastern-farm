@@ -44,6 +44,8 @@
     "report_help_water": { "zh": "{name} 帮你浇了水，{crop}长得更快了", "en": "{name} watered your {crop} — growing faster!" },
     "report_help_coins": { "zh": "{name} 给你送了 {amount} 农场币", "en": "{name} sent you {amount} farm coins" },
     "report_caught": { "zh": "看家狗逮住了来串门的 {name}，TA 赔了你 1 棵{crop}！", "en": "Your dog caught {name} sneaking in — they left you 1 {crop}!" },
+    "report_visit": { "zh": "{name} 来你农场逛过 🐾", "en": "{name} stopped by your farm 🐾" },
+    "report_visit_more": { "zh": "还有 {n} 位邻居也来逛过～", "en": "…and {n} more neighbors dropped by!" },
 
     "btn_plant": { "zh": "种植", "en": "Plant" },
     "btn_harvest": { "zh": "收获", "en": "Harvest" },
