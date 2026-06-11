@@ -55,8 +55,9 @@ console.log(await ev(`(async function(){
   T('V3 self skipped', vWrites().length === 2);
 
   // V4: settleRealOnLogin merges visits into report (4 + more-row)
+  // 新流程走 fetchAndClearInbox 单次读取
   Farm.steal.settleRealEvents = async () => ({ stolen: [], helped: [] });
-  Farm.fbGameSync.fetchAndClearVisitEvents = async () => ([
+  Farm.fbGameSync.fetchAndClearInbox = async () => ({ steals: [], visits: [
     { visitorUid: 'a', visitorName: '阿芳', at: 1 },
     { visitorUid: 'a', visitorName: '阿芳', at: 2 },   // dup → dedup
     { visitorUid: 'b', visitorName: '老张头儿', at: 3 },
@@ -64,7 +65,7 @@ console.log(await ev(`(async function(){
     { visitorUid: 'd', visitorName: 'Amy', at: 5 },
     { visitorUid: 'e', visitorName: '大厨阿林', at: 6 },
     { visitorUid: 'f', visitorName: '半亩良田', at: 7 },
-  ]);
+  ] });
   await Farm.homeReport.settleRealOnLogin();
   await new Promise(r => setTimeout(r, 400));
   const txt = (document.getElementById('modalContent') || {}).innerText || '';

@@ -74,6 +74,8 @@
       likesSentToday: [],       // recipient UIDs liked today (cap 5)
       stolenToday: 0,           // 主动顺菜总块数今日 (cap socialConfig.STEAL_MAX_PER_DAY)
       stolenFromTargets: {},    // {targetId: count} 今日对每个对象顺了几块
+      lostToRealToday: 0,       // 今日被真人偷走的棵数 (cap socialConfig.LOST_DAILY_MAX)
+      visitFootprints: [],      // 今日已留过足迹的 host uids（每天每家一次）
     },
     activeEffects: {            // toggleable consumable effects
       accelerationCharges: 0,   // # of 加速券 in inventory (consumed on use)
@@ -294,6 +296,8 @@
               stickersSentToday: [],   // sticker sends today (count vs cap)
               stolenToday: 0,          // 主动顺菜总块数今日
               stolenFromTargets: {},   // {targetId: count} 今日对每个对象顺了几块
+              lostToRealToday: 0,      // 今日被真人偷走的棵数
+              visitFootprints: [],     // 今日已留足迹的 host uids
             };
           }
         } catch (e) {

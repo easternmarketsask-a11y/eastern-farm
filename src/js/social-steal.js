@@ -131,11 +131,15 @@
     // 已熟未收 → 清地块（受 LOST_DAILY_MAX 封顶 + 新手保护兜底）。
     // 'caught' 事件 = 好消息：狗抓住了贼，+赔礼币。
     // 返回 home-report 形状 { stolen:[], helped:[] }，事件自带 name。
-    async settleRealEvents() {
+    async settleRealEvents(prefetchedEvts) {
       if (!Farm.fbGameSync || !Farm.fbGameSync.fetchAndClearStealEvents) {
         return { stolen: [], helped: [] };
       }
-      const evts = await Farm.fbGameSync.fetchAndClearStealEvents();
+      // 调用方可传入已拉取的事件（fetchAndClearInbox 一读多用）；
+      // 不传则自己拉（向后兼容/独立调用）。
+      const evts = Array.isArray(prefetchedEvts)
+        ? prefetchedEvts
+        : await Farm.fbGameSync.fetchAndClearStealEvents();
       const out = { stolen: [], helped: [] };
       if (!evts.length) return out;
 
@@ -157,8 +161,12 @@
         if (myLevel < socialConfig.NEWBIE_PROTECT_LEVEL) continue;
         if (lostToday >= socialConfig.LOST_DAILY_MAX) continue;   // 被偷封顶，超出作废
         const p = plots[e.plotIdx];
-        // 三元组验证：同一块地、同一茬菜、还没收 → 防旧事件重放清新菜
-        if (!p || !p.unlocked || p.crop !== e.cropId || (p.plantedAt || 0) !== (e.plantedAt || 0)) continue;
+        // 同茬验证：同一块地、同一种菜，且当前 plantedAt ≤ 事件快照值。
+        // 浇水/加速会把 plantedAt 改小（crops.speedUp），精确相等会把
+        // "被偷后又打理过"的合法事件错误作废；而重放旧事件时快照值
+        // 必然小于新一茬的 plantedAt，方向性比较照样挡得住。
+        if (!p || !p.unlocked || p.crop !== e.cropId) continue;
+        if ((p.plantedAt || 0) > (e.plantedAt || 0)) continue;   // 新茬 → 旧事件作废
         if (!Farm.crops.isMature(p)) continue;   // 调性红线：只动已熟未收
         // 清地块（等同被替你收走了；仓库永不被碰）
         p.crop = null; p.plantedAt = 0; p.harvestsLeft = 0; p.watered = false; p.fertilized = false;

@@ -91,6 +91,17 @@ console.log(await ev(`(async function(){
   T('R5 caught helps +20', res.helped.length === 1 && Farm.state.data.coins === coinsB4 + 20);
   T('R5 lost counter', Farm.state.data.dailyClaims.lostToRealToday === 3);
 
+  // ===== R5b: 浇水改小 plantedAt 后，合法偷菜事件仍然有效（方向性校验）=====
+  Farm.state.data.dailyClaims.lostToRealToday = 0;
+  setPlot(5, now - growMs - 8000);
+  const origPlanted = P[5].plantedAt;
+  P[5].plantedAt -= 60000;   // 模拟浇水 shaved 60s（speedUp 把 plantedAt 改小）
+  serverEvents = [
+    { kind: 'steal', thiefName: '阿测', thiefUid: 'tA', plotIdx: 5, cropId: 'shanghai_miao', plantedAt: origPlanted, at: 9 },
+  ];
+  const res2 = await Farm.steal.settleRealEvents();
+  T('R5b watered plot still stealable', res2.stolen.length === 1 && P[5].crop === null);
+
   // ===== R6: viewFarm renders real snapshot + stealable cells =====
   const nb = {
     isReal: true, uid: 'v9', id: 'real_v9', name: '快照户', emoji: '🧑',

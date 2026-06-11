@@ -47,11 +47,20 @@
     async settleRealOnLogin() {
       if (!Farm.steal || !Farm.steal.settleRealEvents) return;
       try {
-        const events = await Farm.steal.settleRealEvents();
+        // 一次读取拿全收件箱（偷菜+足迹），再分别结算——省一半登录读写。
+        // fetchAndClearInbox 缺失时回落到各自拉取（老测试/降级路径）。
+        let inbox = null;
+        if (Farm.fbGameSync && Farm.fbGameSync.fetchAndClearInbox) {
+          inbox = await Farm.fbGameSync.fetchAndClearInbox();
+        }
+        const events = await Farm.steal.settleRealEvents(inbox ? inbox.steals : undefined);
         // 来访足迹并入"邻里温情"：逐人最多列 4 条，更多归并为一行"还有 N 位"。
         // 同一访客多条足迹（跨几天没上线）按人去重。
-        if (Farm.fbGameSync && Farm.fbGameSync.fetchAndClearVisitEvents) {
-          const visits = await Farm.fbGameSync.fetchAndClearVisitEvents();
+        const visits = inbox
+          ? inbox.visits
+          : ((Farm.fbGameSync && Farm.fbGameSync.fetchAndClearVisitEvents)
+              ? await Farm.fbGameSync.fetchAndClearVisitEvents() : []);
+        {
           const seen = new Set();
           const uniq = [];
           visits.forEach(v => {

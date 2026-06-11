@@ -22,8 +22,13 @@
         void card.offsetWidth;             // restart the pulse animation
         card.classList.add('hud-bump');
       }
+      // Cancellation token: a rapid second update (e.g. deliver + bonus in
+      // quick succession) supersedes the running loop instead of having two
+      // rAF loops fight over textContent.
+      const token = (el._tickToken = (el._tickToken || 0) + 1);
       const t0 = performance.now(), DUR = 420;
       const step = (t) => {
+        if (el._tickToken !== token) return;   // superseded
         const k = Math.min(1, (t - t0) / DUR);
         const eased = 1 - Math.pow(1 - k, 3);
         el.textContent = Math.round(from + (to - from) * eased).toLocaleString();
@@ -155,6 +160,9 @@
         c.style.left = sx + 'px';
         c.style.top = sy + 'px';
         document.body.appendChild(c);
+        // Ancient Safari (≤iOS 12) lacks the Web Animations API — degrade to
+        // no flight rather than leaving orphaned coins on screen.
+        if (typeof c.animate !== 'function') { c.remove(); continue; }
         const dx = tx - sx, dy = ty - sy;
         // arc: rise a bit before homing in on the counter
         const anim = c.animate([
@@ -169,9 +177,12 @@
         });
         anim.onfinish = () => {
           c.remove();
-          // tiny pulse on each coin landing (cheap, restarts cleanly)
+          // pulse on landing — throttled to one restart per 120ms so ten
+          // landings don't force ten layout reflows back-to-back
           const card = target.closest('.currency');
-          if (card) {
+          const now = performance.now();
+          if (card && (!card._lastBumpAt || now - card._lastBumpAt > 120)) {
+            card._lastBumpAt = now;
             card.classList.remove('hud-bump');
             void card.offsetWidth;
             card.classList.add('hud-bump');

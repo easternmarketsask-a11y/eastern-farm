@@ -816,6 +816,33 @@
       }
     },
 
+    // 一次性拉取并清空自己文档上的全部社交收件（偷菜事件+来访足迹）：
+    // 登录结算只需一读一写，替代分别调用两个 fetchAndClear*（两读两写）。
+    async fetchAndClearInbox() {
+      if (!Farm.fb || !Farm.fb.available || !Farm.fbAuth || !Farm.fbAuth.isLoggedIn()) {
+        return { steals: [], visits: [] };
+      }
+      const uid = meId();
+      if (!uid) return { steals: [], visits: [] };
+      try {
+        const snap = await Farm.fb.db.collection('farm_players').doc(uid).get();
+        if (!snap.exists) return { steals: [], visits: [] };
+        const gs = (snap.data().gameStats) || {};
+        const steals = gs.stealEvents || [];
+        const visits = gs.visitEvents || [];
+        if (steals.length || visits.length) {
+          await Farm.fb.db.collection('farm_players').doc(uid).set(
+            { gameStats: { stealEvents: [], visitEvents: [] } },
+            { merge: true }
+          );
+        }
+        return { steals, visits };
+      } catch (e) {
+        console.warn('[gameSync] fetchAndClearInbox failed', e);
+        return { steals: [], visits: [] };
+      }
+    },
+
     // 拉取并清空自己文档上的来访足迹。
     async fetchAndClearVisitEvents() {
       if (!Farm.fb || !Farm.fb.available || !Farm.fbAuth || !Farm.fbAuth.isLoggedIn()) return [];
