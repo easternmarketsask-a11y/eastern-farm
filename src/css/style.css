@@ -1065,7 +1065,7 @@ body {
   justify-content: center;
   gap: 8px;
   margin-top: 16px;
-  background: #ffffff;
+  background: linear-gradient(180deg, #ffffff 0%, #eef6ea 100%);
   border: 1.5px solid #3a8c50;
   color: #2a5c34;
   padding: 11px 26px;
@@ -1074,21 +1074,25 @@ body {
   letter-spacing: 0.3px;
   border-radius: 24px;
   cursor: pointer;
+  /* candy 3D: solid bottom rim + sink on press, matching .splash-start */
   box-shadow:
-    0 3px 8px rgba(58, 140, 80, 0.18),
-    inset 0 1px 0 rgba(255, 255, 255, 0.8);
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+    0 4px 0 #bcd8c2,
+    0 7px 12px rgba(58, 140, 80, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
 }
 .splash-login:hover {
   box-shadow:
-    0 4px 12px rgba(58, 140, 80, 0.28),
-    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    0 4px 0 #bcd8c2,
+    0 8px 16px rgba(58, 140, 80, 0.26),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
 }
 .splash-login:active {
-  transform: scale(0.96);
+  transform: translateY(3px);
   box-shadow:
-    0 1px 3px rgba(58, 140, 80, 0.2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+    0 1px 0 #bcd8c2,
+    0 2px 5px rgba(58, 140, 80, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.7);
 }
 .splash-login .icon {
   font-size: 17px;
@@ -1108,14 +1112,26 @@ body {
 }
 /* Logged-in welcome variant: warmer gold gradient + tier emoji */
 .splash-login.splash-login--logged-in {
-  background: linear-gradient(135deg, #fff8e1 0%, #ffd54f 100%);
+  background: linear-gradient(180deg, #fff8e1 0%, #ffd54f 100%);
   border-color: #d68f00;
   color: #6b4a08;
+  box-shadow:
+    0 4px 0 #dba93f,
+    0 7px 12px rgba(214, 143, 0, 0.24),
+    inset 0 1px 0 rgba(255, 255, 255, 0.85);
+}
+.splash-login.splash-login--logged-in:active {
+  transform: translateY(3px);
+  box-shadow:
+    0 1px 0 #dba93f,
+    0 2px 5px rgba(214, 143, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.65);
 }
 .splash-login.splash-login--logged-in:hover {
   box-shadow:
-    0 4px 12px rgba(214, 143, 0, 0.32),
-    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    0 4px 0 #dba93f,
+    0 8px 16px rgba(214, 143, 0, 0.32),
+    inset 0 1px 0 rgba(255, 255, 255, 0.85);
 }
 
 /* =============== FRIENDS + GIFTS (Phase 3) ============= */
@@ -2449,27 +2465,35 @@ body {
   from { opacity: 0; transform: translateY(12px); }
   to { opacity: 1; transform: translateY(0); }
 }
+/* Candy 3D start button — same press language as .btn / soil tiles:
+   top-lit gradient + solid bottom rim, sink on press. Pulse keeps the
+   rim constant and only breathes the outer glow. */
 .splash-start {
   margin-top: 18px;
-  background: linear-gradient(135deg, #3a8c50 0%, #2a5c34 100%);
+  background: linear-gradient(180deg, #5bb874 0%, #3f9657 52%, #34864a 100%);
   color: white;
   border: none;
-  padding: 14px 32px;
+  padding: 14px 34px;
   border-radius: var(--radius-pill);
   font-family: inherit;
   font-size: 16px;
-  font-weight: 600;
+  font-weight: 700;
   display: flex;
   align-items: center;
   gap: 10px;
   cursor: pointer;
-  box-shadow: 0 6px 18px rgba(58, 140, 80, 0.35), inset 0 1px 0 rgba(255,255,255,0.2);
+  box-shadow: 0 5px 0 #2a6038,
+              0 9px 18px rgba(47, 122, 69, 0.32),
+              inset 0 1px 0 rgba(255, 255, 255, 0.4);
   animation: splashSlideUp 0.6s ease 0.75s both, splashPulse 2.5s ease-in-out 1.4s infinite;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
 }
 .splash-start:active {
-  transform: scale(0.96);
-  box-shadow: 0 3px 10px rgba(58, 140, 80, 0.35);
+  transform: translateY(4px);
+  box-shadow: 0 1px 0 #2a6038,
+              0 2px 6px rgba(47, 122, 69, 0.28),
+              inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  animation: splashSlideUp 0.6s ease 0.75s both;   /* pause the pulse while pressed */
 }
 .splash-start-icon { font-size: 22px; }
 .splash-start-en {
@@ -2479,8 +2503,14 @@ body {
   margin-left: 4px;
 }
 @keyframes splashPulse {
-  0%, 100% { box-shadow: 0 6px 18px rgba(58, 140, 80, 0.35), inset 0 1px 0 rgba(255,255,255,0.2); }
-  50% { box-shadow: 0 8px 24px rgba(232, 82, 42, 0.35), inset 0 1px 0 rgba(255,255,255,0.2); }
+  0%, 100% {
+    box-shadow: 0 5px 0 #2a6038, 0 9px 18px rgba(47, 122, 69, 0.32),
+                inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  }
+  50% {
+    box-shadow: 0 5px 0 #2a6038, 0 11px 26px rgba(232, 140, 42, 0.38),
+                inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  }
 }
 .splash-footer {
   margin-top: 24px;
