@@ -23,11 +23,12 @@
   --shadow-card:    0 2px 6px rgba(139, 90, 60, 0.12), 0 1px 2px rgba(139, 90, 60, 0.08);
   --shadow-card-hover: 0 4px 12px rgba(139, 90, 60, 0.18);
   /* Soil-bed depth stack shared by .plot + its state variants and keyframes:
-     top light, bottom inner shade, solid bottom rim (= tile thickness), drop. */
-  --soil-shadow: inset 0 2px 3px rgba(255, 235, 200, 0.32),
-                 inset 0 -3px 5px rgba(70, 45, 25, 0.28),
-                 0 4px 0 #6f4a2c,
-                 0 7px 10px rgba(95, 60, 30, 0.22);
+     top light, bottom inner shade, solid bottom rim (= tile thickness), drop.
+     Colors sampled from the Gemini illustration (soil #A86B35, rim #6F3D24). */
+  --soil-shadow: inset 0 3px 4px rgba(255, 222, 170, 0.32),
+                 inset 0 -4px 6px rgba(70, 38, 12, 0.34),
+                 0 5px 0 #6f3d24,
+                 0 8px 10px rgba(60, 35, 12, 0.30);
 
   --font-zh: 'Noto Sans SC', 'PingFang SC', sans-serif;
   --font-en: 'Plus Jakarta Sans', 'Quicksand', sans-serif;
@@ -668,42 +669,45 @@ body {
   padding: 44px 16px 28px;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  /* Cozy farm scene, pure CSS (no art assets): soft sky → grass, a sun, and
-   * a couple of rolling-hill silhouettes at the horizon. The background is
-   * anchored to #farm (doesn't scroll with the plots), so it reads as a
-   * backdrop the farm sits on. Seasonal re-skins can override these later. */
+  /* Lawn palette sampled from the Gemini illustration (#BAD435→#609428):
+   * saturated cartoon green with a sunlit pool below the fence line, darker
+   * toward the bottom — the scene band image above carries the sky/house. */
   background:
-    radial-gradient(circle at 84% 30px, #ffe9a8 0 19px, rgba(255,233,168,0) 21px),
-    radial-gradient(150% 78px at 24% 120px, #bfe0a0 0 58%, transparent 60%),
-    radial-gradient(150% 66px at 88% 126px, #c9e5a7 0 58%, transparent 60%),
-    linear-gradient(180deg, #bfe5f4 0%, #d9eee2 22%, #cfe8a8 36%, #b3da84 70%, #a4cf76 100%);
+    radial-gradient(130% 240px at 50% 150px, rgba(222, 238, 96, 0.50) 0%, rgba(222, 238, 96, 0) 70%),
+    linear-gradient(180deg, #b7d33a 0%, #a3c032 40%, #84b22c 72%, #659c2a 100%);
   background-repeat: no-repeat;
 }
 
 /* =============== FARM SCENE BAND =============== */
-/* Backdrop strip (SVG in index.html). Negative margins pull it flush against
-   the top/sides of #farm (cancelling its 44px/16px padding) so the scenery
-   bleeds edge-to-edge; it scrolls away naturally with the field. */
+/* Backdrop strip: real illustration jpg (cropped from the Gemini reference)
+   + cartoon SVG fence below it in the same style. Negative margins pull it
+   flush against the top/sides of #farm (cancelling its 44px/16px padding)
+   so the scenery bleeds edge-to-edge; scrolls away naturally with the field. */
 .farm-scene {
-  margin: -44px -16px 14px;
+  margin: -44px -16px 10px;
   line-height: 0;
   pointer-events: none;
 }
-.farm-scene svg {
-  width: 100%;
-  height: 148px;
+.farm-scene-img {
   display: block;
+  width: 100%;
+  height: 150px;
+  object-fit: cover;
+  /* show the farmhouse (left) + sun; wider screens reveal more scene */
+  object-position: 14% 72%;
 }
-.scene-cloud-a { animation: cloudDrift 36s ease-in-out infinite alternate; }
-.scene-cloud-b { animation: cloudDrift 48s ease-in-out infinite alternate-reverse; }
-@keyframes cloudDrift {
-  from { transform: translateX(0); }
-  to   { transform: translateX(46px); }
+.farm-scene-fence {
+  width: 100%;
+  height: 44px;
+  display: block;
+  margin-top: -6px;   /* tuck pickets up against the band's grass edge */
 }
 /* Seasonal mood on the backdrop (matches #farm.season-* palettes) */
-#farm.season-spring .farm-scene svg { filter: saturate(1.06) brightness(1.02); }
-#farm.season-autumn .farm-scene svg { filter: sepia(0.28) hue-rotate(-16deg) saturate(1.1); }
-#farm.season-winter .farm-scene svg { filter: saturate(0.4) brightness(1.1); }
+#farm.season-spring .farm-scene-img { filter: saturate(1.05) brightness(1.02); }
+#farm.season-autumn .farm-scene-img { filter: sepia(0.3) hue-rotate(-14deg) saturate(1.12); }
+#farm.season-winter .farm-scene-img { filter: saturate(0.42) brightness(1.12); }
+#farm.season-autumn .farm-scene-fence { filter: sepia(0.2) saturate(1.05); }
+#farm.season-winter .farm-scene-fence { filter: saturate(0.6) brightness(1.06); }
 
 .farm-grid {
   display: grid;
@@ -715,16 +719,18 @@ body {
 
 .plot {
   aspect-ratio: 1;
-  /* Tilled soil bed: horizontal furrows (dark groove + lit ridge pairs) over
-   * a warm top-lit soil gradient; depth comes from --soil-shadow. */
+  /* Tilled soil bed in the illustration style: saturated saddle-brown soil
+   * (sampled #B5793E→#8D5526), CHUNKY dark furrows, and a bold cartoon
+   * outline; depth comes from --soil-shadow. */
   background:
     repeating-linear-gradient(180deg,
-      transparent 0 10px,
-      rgba(78, 48, 26, 0.30) 10px 12px,
-      rgba(222, 180, 135, 0.16) 12px 13.5px,
-      transparent 13.5px 15px),
-    linear-gradient(172deg, #b98a5e 0%, var(--soil-brown) 55%, #7c5334 100%);
-  border-radius: 16px;
+      transparent 0 12px,
+      rgba(86, 49, 22, 0.50) 12px 15px,
+      rgba(232, 186, 130, 0.22) 15px 16.5px,
+      transparent 16.5px 19px),
+    linear-gradient(178deg, #b5793e 0%, #a86b35 55%, #8d5526 100%);
+  border: 3px solid #5d3318;
+  border-radius: 18px;
   box-shadow: var(--soil-shadow);
   display: flex;
   flex-direction: column;
@@ -743,11 +749,11 @@ body {
 .plot.empty {
   background:
     repeating-linear-gradient(180deg,
-      transparent 0 10px,
-      rgba(78, 48, 26, 0.18) 10px 12px,
-      rgba(222, 180, 135, 0.12) 12px 13.5px,
-      transparent 13.5px 15px),
-    linear-gradient(172deg, #c09a70 0%, #a87a52 60%, #93684a 100%);
+      transparent 0 12px,
+      rgba(86, 49, 22, 0.30) 12px 15px,
+      rgba(232, 186, 130, 0.16) 15px 16.5px,
+      transparent 16.5px 19px),
+    linear-gradient(178deg, #c08a4e 0%, #b0763e 60%, #9c6330 100%);
 }
 .plot.empty::before {
   content: "+";
@@ -769,29 +775,31 @@ body {
 .plot.is-watered {
   background:
     repeating-linear-gradient(180deg,
-      transparent 0 10px,
-      rgba(50, 30, 15, 0.40) 10px 12px,
-      rgba(190, 150, 110, 0.14) 12px 13.5px,
-      transparent 13.5px 15px),
-    linear-gradient(172deg, #9a6c42 0%, #835a35 55%, #6d4828 100%);
-  box-shadow: inset 0 2px 3px rgba(255, 235, 200, 0.16),
-              inset 0 -3px 5px rgba(50, 30, 15, 0.34),
-              0 4px 0 #5e4126,
-              0 7px 10px rgba(95, 60, 30, 0.22);
+      transparent 0 12px,
+      rgba(45, 24, 10, 0.55) 12px 15px,
+      rgba(196, 150, 100, 0.16) 15px 16.5px,
+      transparent 16.5px 19px),
+    linear-gradient(178deg, #8f5d2e 0%, #7a4c24 55%, #633a18 100%);
+  border-color: #44250f;
+  box-shadow: inset 0 3px 4px rgba(255, 222, 170, 0.14),
+              inset 0 -4px 6px rgba(45, 24, 10, 0.40),
+              0 5px 0 #532e14,
+              0 8px 10px rgba(60, 35, 12, 0.30);
 }
 
 /* Locked plot: an uncleared, grass-overgrown patch (not a gray slab). */
 .plot.locked {
   background:
-    radial-gradient(ellipse 26px 10px at 30% 78%, rgba(106, 138, 84, 0.50) 0 60%, transparent 61%),
-    radial-gradient(ellipse 30px 12px at 72% 86%, rgba(106, 138, 84, 0.42) 0 60%, transparent 61%),
-    radial-gradient(ellipse 22px 9px at 56% 30%, rgba(106, 138, 84, 0.32) 0 60%, transparent 61%),
-    linear-gradient(172deg, #aab193 0%, #8f9a78 60%, #7c8866 100%);
+    radial-gradient(ellipse 26px 10px at 30% 78%, rgba(96, 140, 50, 0.55) 0 60%, transparent 61%),
+    radial-gradient(ellipse 30px 12px at 72% 86%, rgba(96, 140, 50, 0.45) 0 60%, transparent 61%),
+    radial-gradient(ellipse 22px 9px at 56% 30%, rgba(96, 140, 50, 0.35) 0 60%, transparent 61%),
+    linear-gradient(178deg, #a9bd62 0%, #92aa4c 60%, #7d9740 100%);
   cursor: not-allowed;
-  box-shadow: inset 0 2px 3px rgba(255, 255, 240, 0.25),
-              inset 0 -3px 5px rgba(60, 70, 45, 0.30),
-              0 4px 0 #67724f,
-              0 7px 10px rgba(70, 80, 50, 0.20);
+  border-color: #5a702e;
+  box-shadow: inset 0 3px 4px rgba(255, 255, 230, 0.28),
+              inset 0 -4px 6px rgba(58, 76, 26, 0.32),
+              0 5px 0 #586d2c,
+              0 8px 10px rgba(60, 75, 30, 0.22);
 }
 .plot.locked::before {
   content: "🔒";
@@ -845,11 +853,11 @@ body {
   /* Soil stays soil — a warm golden halo + lit earth says "pick me". */
   background:
     repeating-linear-gradient(180deg,
-      transparent 0 10px,
-      rgba(78, 48, 26, 0.26) 10px 12px,
-      rgba(232, 195, 150, 0.20) 12px 13.5px,
-      transparent 13.5px 15px),
-    linear-gradient(172deg, #c2925f 0%, #aa7c4e 55%, #8a5f3a 100%);
+      transparent 0 12px,
+      rgba(86, 49, 22, 0.40) 12px 15px,
+      rgba(240, 198, 140, 0.24) 15px 16.5px,
+      transparent 16.5px 19px),
+    linear-gradient(178deg, #c2854a 0%, #b0723c 55%, #96602e 100%);
   box-shadow: var(--soil-shadow),
               0 0 0 3px rgba(247, 201, 72, 0.55),
               0 0 14px 3px rgba(247, 201, 72, 0.35);
@@ -3109,33 +3117,28 @@ body {
 /* ============ Seasonal skins (seasons.js) ============ */
 #farm { position: relative; }   /* anchor the falling-particle overlay */
 
+/* Seasonal lawn palettes — variants of the illustration green. The scene
+   band image carries sky/house (tinted via .farm-scene-img filters), so
+   these only need the grass + sunlit pool. */
 #farm.season-spring {
   background:
-    radial-gradient(circle at 84% 30px, #fff3c0 0 19px, rgba(255,243,192,0) 21px),
-    radial-gradient(150% 78px at 24% 120px, #c7e7a0 0 58%, transparent 60%),
-    radial-gradient(150% 66px at 88% 126px, #d6eeb0 0 58%, transparent 60%),
-    linear-gradient(180deg, #d4ecf7 0%, #e8f3e0 24%, #d6ecae 38%, #bfe28a 100%);
+    radial-gradient(130% 240px at 50% 150px, rgba(228, 244, 120, 0.5) 0%, rgba(228, 244, 120, 0) 70%),
+    linear-gradient(180deg, #c2dc48 0%, #aecb3c 40%, #8fbb34 72%, #74a832 100%);
 }
 #farm.season-summer {
   background:
-    radial-gradient(circle at 84% 28px, #ffe07a 0 22px, rgba(255,224,122,0) 24px),
-    radial-gradient(150% 78px at 24% 120px, #b6df8e 0 58%, transparent 60%),
-    radial-gradient(150% 66px at 88% 126px, #c2e69a 0 58%, transparent 60%),
-    linear-gradient(180deg, #a9def5 0%, #cdeede 26%, #b6df8e 40%, #98cf6e 100%);
+    radial-gradient(130% 240px at 50% 150px, rgba(222, 238, 96, 0.5) 0%, rgba(222, 238, 96, 0) 70%),
+    linear-gradient(180deg, #b7d33a 0%, #a3c032 40%, #84b22c 72%, #609428 100%);
 }
 #farm.season-autumn {
   background:
-    radial-gradient(circle at 84% 30px, #ffcf86 0 20px, rgba(255,207,134,0) 22px),
-    radial-gradient(150% 78px at 24% 122px, #d8c06a 0 58%, transparent 60%),
-    radial-gradient(150% 66px at 88% 128px, #e0cd86 0 58%, transparent 60%),
-    linear-gradient(180deg, #e9d8b0 0%, #f0e6c8 26%, #d9c074 42%, #c4a85a 100%);
+    radial-gradient(130% 240px at 50% 150px, rgba(244, 226, 120, 0.45) 0%, rgba(244, 226, 120, 0) 70%),
+    linear-gradient(180deg, #d4c356 0%, #c4ad42 42%, #a8902f 74%, #8f7a28 100%);
 }
 #farm.season-winter {
   background:
-    radial-gradient(circle at 84% 30px, #fdf3d0 0 18px, rgba(253,243,208,0) 20px),
-    radial-gradient(150% 78px at 24% 124px, #e8eef0 0 58%, transparent 60%),
-    radial-gradient(150% 66px at 88% 130px, #eef3f5 0 58%, transparent 60%),
-    linear-gradient(180deg, #d7e6ef 0%, #e6eef2 30%, #e9eeec 50%, #dde6e0 100%);
+    radial-gradient(130% 240px at 50% 150px, rgba(245, 248, 235, 0.5) 0%, rgba(245, 248, 235, 0) 70%),
+    linear-gradient(180deg, #cdd6bb 0%, #bcc9ab 42%, #a7b896 74%, #93a682 100%);
 }
 
 .season-particles {

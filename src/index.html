@@ -164,61 +164,41 @@
 
   <!-- Main farm view -->
   <main id="farm">
-    <!-- Decorative backdrop band: sun, clouds, hills, farmhouse, trees, fence.
-         Pure inline SVG, pointer-events:none, scrolls away with the field.
-         Seasonal tint applied via CSS filter on #farm.season-* .farm-scene. -->
+    <!-- Decorative backdrop band: REAL illustration (cropped from the
+         Gemini-generated reference, 1408x300 jpg). object-fit:cover crops
+         responsively — phones see the farmhouse + sun, wider screens see
+         more scene. The cartoon fence below is inline SVG in the same
+         style (amber pickets + dark outline), left/right segments with an
+         open center like the reference. -->
     <div class="farm-scene" aria-hidden="true">
-      <svg viewBox="0 0 390 150" preserveAspectRatio="xMidYMid slice">
-        <!-- sun -->
-        <circle cx="332" cy="32" r="28" fill="#ffd95e" opacity="0.25"/>
-        <circle cx="332" cy="32" r="19" fill="#ffd95e" opacity="0.95"/>
-        <!-- far hills -->
-        <path d="M0 84 Q 70 48 150 78 Q 230 104 300 70 Q 350 54 390 70 L 390 150 L 0 150 Z" fill="#9ccb7e" opacity="0.75"/>
-        <path d="M0 102 Q 90 70 190 94 Q 290 118 390 90 L 390 150 L 0 150 Z" fill="#8bc06c"/>
-        <!-- farmhouse -->
-        <g transform="translate(34,58)">
-          <circle cx="46" cy="-2" r="3.4" fill="#fff" opacity="0.65"/>
-          <circle cx="50" cy="-9" r="4.4" fill="#fff" opacity="0.45"/>
-          <rect x="8" y="22" width="42" height="30" rx="3" fill="#f3e3c2" stroke="#caa873" stroke-width="1.5"/>
-          <path d="M2 24 L29 4 L56 24 Z" fill="#d8694a" stroke="#b04f33" stroke-width="1.5"/>
-          <rect x="24" y="34" width="11" height="18" rx="1.5" fill="#9a6b3f"/>
-          <rect x="12" y="30" width="9" height="9" rx="1.5" fill="#cfe9f5" stroke="#caa873"/>
-          <rect x="38" y="30" width="9" height="9" rx="1.5" fill="#cfe9f5" stroke="#caa873"/>
+      <img class="farm-scene-img" src="assets/images/farm-backdrop.jpg" alt="">
+      <svg class="farm-scene-fence" viewBox="0 0 390 46" preserveAspectRatio="xMidYMid slice">
+        <g stroke="#5d3a1a" stroke-width="1.6" fill="#c98b42">
+          <!-- left segment -->
+          <rect x="-4" y="16" width="124" height="7" rx="3.5"/>
+          <rect x="-4" y="30" width="124" height="7" rx="3.5"/>
+          <rect x="6"  y="6" width="11" height="36" rx="5"/>
+          <rect x="36" y="4" width="11" height="38" rx="5"/>
+          <rect x="66" y="6" width="11" height="36" rx="5"/>
+          <rect x="96" y="4" width="11" height="38" rx="5"/>
+          <!-- right segment -->
+          <rect x="270" y="16" width="124" height="7" rx="3.5"/>
+          <rect x="270" y="30" width="124" height="7" rx="3.5"/>
+          <rect x="283" y="6" width="11" height="36" rx="5"/>
+          <rect x="313" y="4" width="11" height="38" rx="5"/>
+          <rect x="343" y="6" width="11" height="36" rx="5"/>
+          <rect x="373" y="4" width="11" height="38" rx="5"/>
         </g>
-        <!-- trees -->
-        <g transform="translate(128,72)">
-          <rect x="9" y="22" width="6" height="14" rx="2" fill="#8a6240"/>
-          <circle cx="12" cy="14" r="14" fill="#5da253"/>
-          <circle cx="4" cy="20" r="9" fill="#6cb15f"/>
-          <circle cx="21" cy="20" r="9" fill="#6cb15f"/>
-        </g>
-        <g transform="translate(258,80) scale(0.8)">
-          <rect x="9" y="22" width="6" height="14" rx="2" fill="#8a6240"/>
-          <circle cx="12" cy="14" r="14" fill="#5da253"/>
-          <circle cx="4" cy="20" r="9" fill="#6cb15f"/>
-          <circle cx="21" cy="20" r="9" fill="#6cb15f"/>
-        </g>
-        <!-- drifting clouds (CSS-animated groups) -->
-        <g class="scene-cloud scene-cloud-a">
-          <ellipse cx="62" cy="34" rx="20" ry="9" fill="#fff" opacity="0.92"/>
-          <ellipse cx="82" cy="29" rx="16" ry="10" fill="#fff" opacity="0.92"/>
-          <ellipse cx="96" cy="35" rx="12" ry="7" fill="#fff" opacity="0.92"/>
-        </g>
-        <g class="scene-cloud scene-cloud-b">
-          <ellipse cx="202" cy="52" rx="17" ry="8" fill="#fff" opacity="0.7"/>
-          <ellipse cx="219" cy="47" rx="13" ry="8" fill="#fff" opacity="0.7"/>
-        </g>
-        <!-- fence row -->
-        <g stroke="#c8a06a" stroke-width="4" stroke-linecap="round">
-          <line x1="8" y1="122" x2="8" y2="146"/><line x1="40" y1="122" x2="40" y2="146"/>
-          <line x1="72" y1="122" x2="72" y2="146"/><line x1="104" y1="122" x2="104" y2="146"/>
-          <line x1="136" y1="122" x2="136" y2="146"/><line x1="168" y1="122" x2="168" y2="146"/>
-          <line x1="200" y1="122" x2="200" y2="146"/><line x1="232" y1="122" x2="232" y2="146"/>
-          <line x1="264" y1="122" x2="264" y2="146"/><line x1="296" y1="122" x2="296" y2="146"/>
-          <line x1="328" y1="122" x2="328" y2="146"/><line x1="360" y1="122" x2="360" y2="146"/>
-          <line x1="384" y1="122" x2="384" y2="146"/>
-          <line x1="0" y1="128" x2="390" y2="128"/>
-          <line x1="0" y1="139" x2="390" y2="139"/>
+        <!-- picket highlights -->
+        <g fill="#e3a85e" opacity="0.7">
+          <rect x="8"  y="8" width="3" height="30" rx="1.5"/>
+          <rect x="38" y="6" width="3" height="32" rx="1.5"/>
+          <rect x="68" y="8" width="3" height="30" rx="1.5"/>
+          <rect x="98" y="6" width="3" height="32" rx="1.5"/>
+          <rect x="285" y="8" width="3" height="30" rx="1.5"/>
+          <rect x="315" y="6" width="3" height="32" rx="1.5"/>
+          <rect x="345" y="8" width="3" height="30" rx="1.5"/>
+          <rect x="375" y="6" width="3" height="32" rx="1.5"/>
         </g>
       </svg>
     </div>
