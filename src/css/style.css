@@ -1702,38 +1702,97 @@ body {
   display: flex;
   background: linear-gradient(0deg, #fffaeb 0%, #faf0d8 100%);
   border-top: 2px solid var(--border-soft);
-  padding: 8px 4px;
-  gap: 2px;
-  padding-bottom: max(8px, env(safe-area-inset-bottom));
+  box-shadow: 0 -3px 10px rgba(139, 90, 60, 0.08);
+  padding: 7px 6px;
+  gap: 4px;
+  padding-bottom: max(7px, env(safe-area-inset-bottom));
 }
+/* Entrance buttons as little candy chips: each icon sits in its own
+   pastel rounded tile with a solid bottom rim (mini-3D, same language
+   as the .btn candy buttons and soil tiles). Press = sink the rim. */
 .action-btn {
   flex: 1;
   background: transparent;
   border: none;
-  padding: 8px 4px;
+  padding: 4px 2px 5px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 3px;
+  gap: 4px;
   cursor: pointer;
   border-radius: var(--radius-md);
   position: relative;
-  transition: background var(--transition);
+  -webkit-tap-highlight-color: transparent;
 }
-.action-btn:active {
-  background: rgba(139, 90, 60, 0.1);
+.action-icon {
+  font-size: 22px;
+  line-height: 1;
+  width: 42px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 13px;
+  background: linear-gradient(180deg, #ffffff 0%, #f3ead4 100%);
+  border: 1.5px solid #e6d8b4;
+  box-shadow: 0 3px 0 #e2d3ac,
+              0 4px 8px rgba(139, 90, 60, 0.12),
+              inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
 }
-.action-icon { font-size: 24px; }
+.action-btn:active .action-icon {
+  transform: translateY(3px);
+  box-shadow: 0 0 0 #e2d3ac,
+              0 1px 3px rgba(139, 90, 60, 0.12),
+              inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+/* Per-entry pastel tiles (data-action set in index.html) */
+.action-btn[data-action="shop"] .action-icon {
+  background: linear-gradient(180deg, #f2fae9 0%, #d9efc2 100%);
+  border-color: #b8d98e; box-shadow: 0 3px 0 #a9cc7e, 0 4px 8px rgba(106, 166, 70, 0.16), inset 0 1px 0 rgba(255,255,255,0.85);
+}
+.action-btn[data-action="shop"]:active .action-icon {
+  box-shadow: 0 0 0 #a9cc7e, 0 1px 3px rgba(106, 166, 70, 0.16), inset 0 1px 0 rgba(255,255,255,0.6);
+}
+.action-btn[data-action="tasks"] .action-icon {
+  background: linear-gradient(180deg, #fff7e4 0%, #ffe5b0 100%);
+  border-color: #f0c674; box-shadow: 0 3px 0 #e3b35c, 0 4px 8px rgba(214, 158, 40, 0.16), inset 0 1px 0 rgba(255,255,255,0.85);
+}
+.action-btn[data-action="tasks"]:active .action-icon {
+  box-shadow: 0 0 0 #e3b35c, 0 1px 3px rgba(214, 158, 40, 0.16), inset 0 1px 0 rgba(255,255,255,0.6);
+}
+.action-btn[data-action="community"] .action-icon {
+  background: linear-gradient(180deg, #eef7fd 0%, #cfe8f7 100%);
+  border-color: #9fcbe8; box-shadow: 0 3px 0 #8fbcdb, 0 4px 8px rgba(80, 150, 200, 0.16), inset 0 1px 0 rgba(255,255,255,0.85);
+}
+.action-btn[data-action="community"]:active .action-icon {
+  box-shadow: 0 0 0 #8fbcdb, 0 1px 3px rgba(80, 150, 200, 0.16), inset 0 1px 0 rgba(255,255,255,0.6);
+}
+.action-btn[data-action="rewards"] .action-icon {
+  background: linear-gradient(180deg, #fdf0f2 0%, #fad6dc 100%);
+  border-color: #eba8b4; box-shadow: 0 3px 0 #dd96a3, 0 4px 8px rgba(200, 90, 110, 0.15), inset 0 1px 0 rgba(255,255,255,0.85);
+}
+.action-btn[data-action="rewards"]:active .action-icon {
+  box-shadow: 0 0 0 #dd96a3, 0 1px 3px rgba(200, 90, 110, 0.15), inset 0 1px 0 rgba(255,255,255,0.6);
+}
+.action-btn[data-action="collection"] .action-icon {
+  background: linear-gradient(180deg, #f5f0fc 0%, #e2d6f5 100%);
+  border-color: #c3aee4; box-shadow: 0 3px 0 #b29dd6, 0 4px 8px rgba(130, 100, 190, 0.15), inset 0 1px 0 rgba(255,255,255,0.85);
+}
+.action-btn[data-action="collection"]:active .action-icon {
+  box-shadow: 0 0 0 #b29dd6, 0 1px 3px rgba(130, 100, 190, 0.15), inset 0 1px 0 rgba(255,255,255,0.6);
+}
 .action-label {
   font-size: 11px;
-  font-weight: 500;
-  color: var(--warm-text-soft);
+  font-weight: 700;
+  color: #6b5d52;
+  letter-spacing: 0.2px;
 }
 
 .task-badge {
   position: absolute;
-  top: 4px;
-  right: 16px;
+  top: 0;
+  right: calc(50% - 27px);   /* rides the top-right corner of the 42px icon tile */
   background: var(--barn-red);
   color: white;
   font-size: 9px;
@@ -1742,6 +1801,8 @@ body {
   border-radius: var(--radius-pill);
   min-width: 14px;
   text-align: center;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  z-index: 1;
 }
 .task-badge:empty { display: none; }
 
