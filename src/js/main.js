@@ -548,7 +548,10 @@
     const nickEl = document.getElementById('nicknameInput');
     if (nickEl) {
       nickEl.onblur = () => {
-        const v = nickEl.value.trim().slice(0, 12);
+        // Strip HTML-significant chars at the write boundary (defense-in-depth
+        // with render-time escaping): a nickname is plain text, never markup.
+        const v = nickEl.value.replace(/[<>&"']/g, '').trim().slice(0, 12);
+        nickEl.value = v;
         Farm.state.data.nickname = v || null;
         Farm.state.save();
         if (Farm.fbGameSync) Farm.fbGameSync.push();

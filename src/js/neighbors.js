@@ -13,6 +13,12 @@
   // (Removed dead FALLBACK_POOL of textbook names 王阿姨/张大叔… — neighbor
   // fill-in now uses the deterministic AI roster, never these placeholders.)
 
+  // HTML-escape any cross-player name before it hits innerHTML (stored-XSS
+  // guard, 2026-06-11). Falls back to a local escaper if ui.js absent.
+  const esc = (s) => (Farm.ui && Farm.ui.escapeHtml)
+    ? Farm.ui.escapeHtml(s)
+    : String(s == null ? '' : s).replace(/[<>&"']/g, '');
+
   function hashStr(s) {
     let h = 2166136261;
     for (let i = 0; i < s.length; i++) {
@@ -292,7 +298,7 @@
           return `
             <div class="neighbor-card ${isVisited ? 'visited' : ''}" data-id="${n.id}">
               <div class="neighbor-avatar">${n.emoji}${onlineDot}</div>
-              <div class="neighbor-name">${n.name} ${realBadge}</div>
+              <div class="neighbor-name">${esc(n.name)} ${realBadge}</div>
               <div class="neighbor-status">
                 Lv ${n.level} · ${isVisited
                   ? '✅ ' + (lang === 'en' ? 'Visited' : '已访问')
@@ -362,7 +368,7 @@
               <div class="leaderboard-row ${m.isSelf ? 'is-self' : 'is-visitable'}" ${m.isSelf ? '' : 'data-lb-uid="' + m.uid + '"'}>
                 <span class="lb-rank">${medal}</span>
                 <span class="lb-avatar">${m.emoji}${onlineDot}</span>
-                <span class="lb-name">${m.champion ? '👑 ' : ''}${m.name}${m.isSelf ? ' <span class="lb-you">(你)</span>' : ''}</span>
+                <span class="lb-name">${m.champion ? '👑 ' : ''}${esc(m.name)}${m.isSelf ? ' <span class="lb-you">(你)</span>' : ''}</span>
                 <span class="lb-level">${m.value}</span>
                 ${m.isSelf ? '' : '<span class="lb-visit">🏘</span>'}
               </div>
@@ -512,7 +518,7 @@
         : `<div class="neighbor-stickers"><span class="sticker-hint">${lang === 'en' ? 'Sticker limit reached today' : '今日贴纸已用完'}</span></div>`;
 
       const html = `
-        <h2 class="modal-title">${neighbor.emoji} ${neighbor.name}</h2>
+        <h2 class="modal-title">${neighbor.emoji} ${esc(neighbor.name)}</h2>
         <div style="text-align:center;font-size:12px;color:var(--warm-text-soft);margin-bottom:4px;">
           Lv ${neighbor.level} · ${lang === 'en' ? 'Harvests' : '收获'} ${neighbor.totalHarvests} · ${lang === 'en' ? 'Likes' : '赞'} ❤️${neighbor.likesReceived}
         </div>
@@ -571,7 +577,7 @@
           }
           if (Farm.audio) Farm.audio.play('coin');
           Farm.ui.refreshHUD();
-          Farm.ui.toast(Farm.i18n.t('steal_done', { name: neighbor.name }), 2000);
+          Farm.ui.toast(Farm.i18n.t('steal_done', { name: esc(neighbor.name) }), 2000);
         };
         const failToast = (r) => {
           if (r.message) { Farm.ui.toast(r.message, 3000); return; }
@@ -657,8 +663,8 @@
           Farm.ui.refreshHUD();
           if (Farm.audio) Farm.audio.play('coin');
           Farm.ui.toast(lang === 'en'
-            ? `💧 Watered ${neighbor.name}'s crops! +${r.coinsEarned} <span class="coin-icon"></span> (${r.remaining} left)`
-            : `💧 帮 ${neighbor.name} 浇了水！+${r.coinsEarned} <span class="coin-icon"></span>（今日还剩 ${r.remaining}）`, 2600);
+            ? `💧 Watered ${esc(neighbor.name)}'s crops! +${r.coinsEarned} <span class="coin-icon"></span> (${r.remaining} left)`
+            : `💧 帮 ${esc(neighbor.name)} 浇了水！+${r.coinsEarned} <span class="coin-icon"></span>（今日还剩 ${r.remaining}）`, 2600);
         };
       }
 
@@ -678,7 +684,7 @@
           btn.style.transform = 'scale(1.4)';
           if (Farm.audio) Farm.audio.play('tap');
           Farm.ui.refreshHUD();
-          Farm.ui.toast(emoji + ' ' + (lang === 'en' ? `Sent to ${neighbor.name}!` : `已发给 ${neighbor.name}！`), 1800);
+          Farm.ui.toast(emoji + ' ' + (lang === 'en' ? `Sent to ${esc(neighbor.name)}!` : `已发给 ${esc(neighbor.name)}！`), 1800);
         };
       });
     },

@@ -2,7 +2,21 @@
  * ui.js — Generic UI helpers: modal, toast, currency display, level bar.
  */
 (function() {
+  // Escape a string for safe insertion into HTML (text OR attribute context).
+  // Cross-player names (nicknames, thief/visitor/gift sender names) flow into
+  // many innerHTML sinks; without this a player named `<img onerror=...>` would
+  // run JS in every other player's client (stored XSS). 2026-06-11.
+  function escapeHtml(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
   const ui = {
+    escapeHtml: escapeHtml,
     // Last HUD-shown balances — lets refreshHUD tick-count + pulse on change
     // (Hay Day-style juice) instead of snapping numbers silently.
     _shownCoins: null,

@@ -106,8 +106,12 @@
     show(events) {
       const lang = Farm.state.data.language;
       const AN = Farm.aiNeighbors;
+      const esc = (s) => (Farm.ui && Farm.ui.escapeHtml)
+        ? Farm.ui.escapeHtml(s)
+        : String(s == null ? '' : s).replace(/[<>&"']/g, '');
       // 事件可能来自 AI（带 aiId，查名册）或真会员（自带 name/realUid）。
-      const nameOf = (e) => e.name || (AN && e.aiId ? AN.name(e.aiId) : (e.aiId || '邻居'));
+      // 名字一律转义后再进 innerHTML（跨玩家字符串，防存储型 XSS）。
+      const nameOf = (e) => esc(e.name || (AN && e.aiId ? AN.name(e.aiId) : (e.aiId || '邻居')));
       const avaOf = (e) => {
         if (e.realUid && Farm.neighbors && Farm.neighbors.avatarFor) return Farm.neighbors.avatarFor(e.realUid);
         return (AN && e.aiId) ? AN.avatar(e.aiId) : '🧑';
@@ -119,7 +123,7 @@
         <div class="report-row report-bad">
           <span class="report-ava">${avaOf(s)}</span>
           <span class="report-text">${Farm.i18n.t('report_stolen', { name: nameOf(s), n: s.count, crop: cropName(s.cropId) })}</span>
-          <button class="report-revenge-btn" data-revenge-btn="${revengeId(s)}" data-revenge-name="${(s.name || '').replace(/"/g, '')}">${Farm.i18n.t('report_revenge')}</button>
+          <button class="report-revenge-btn" data-revenge-btn="${revengeId(s)}" data-revenge-name="${esc(s.name || '')}">${Farm.i18n.t('report_revenge')}</button>
         </div>
       `).join('');
 
