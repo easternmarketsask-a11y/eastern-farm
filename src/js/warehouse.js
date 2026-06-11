@@ -243,53 +243,12 @@
       btn.id = 'warehouseBtn';
       btn.className = 'warehouse-btn';
       btn.setAttribute('aria-label', '仓库 Warehouse');
+      // 真插画谷仓（Gemini「快乐仓库」裁切）装在建筑铭牌卡里：
+      // 圆角+深褐描边+实色底沿，与土块/木牌同一套视觉语言。
       btn.innerHTML = `
-        <svg class="warehouse-svg" viewBox="0 0 140 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-          <defs>
-            <linearGradient id="whBody" x1="0%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" stop-color="#c4936b"/>
-              <stop offset="100%" stop-color="#6d4525"/>
-            </linearGradient>
-            <linearGradient id="whRoof" x1="0%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" stop-color="#e74c3c"/>
-              <stop offset="100%" stop-color="#9b2317"/>
-            </linearGradient>
-            <linearGradient id="whWindow" x1="0%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" stop-color="#fff5b3"/>
-              <stop offset="100%" stop-color="#f7c948"/>
-            </linearGradient>
-          </defs>
-          <!-- ground shadow -->
-          <ellipse cx="70" cy="96" rx="56" ry="3" fill="#000" opacity="0.22"/>
-          <!-- barn body -->
-          <rect x="18" y="40" width="104" height="52" fill="url(#whBody)" stroke="#3a200d" stroke-width="1.2"/>
-          <!-- wood plank lines -->
-          <line x1="18" y1="56" x2="122" y2="56" stroke="#3a200d" stroke-width="0.7" opacity="0.45"/>
-          <line x1="18" y1="74" x2="122" y2="74" stroke="#3a200d" stroke-width="0.7" opacity="0.45"/>
-          <line x1="18" y1="90" x2="122" y2="90" stroke="#3a200d" stroke-width="0.7" opacity="0.45"/>
-          <line x1="70" y1="40" x2="70" y2="92" stroke="#3a200d" stroke-width="0.7" opacity="0.35"/>
-          <!-- roof -->
-          <path d="M 8 44 L 70 8 L 132 44 Z" fill="url(#whRoof)" stroke="#3a200d" stroke-width="1.2"/>
-          <!-- roof shading line -->
-          <path d="M 8 44 L 70 8 L 132 44" stroke="#fff" stroke-width="0.5" opacity="0.25" fill="none"/>
-          <!-- hayloft round window in roof -->
-          <circle cx="70" cy="32" r="6" fill="#3a200d"/>
-          <circle cx="70" cy="32" r="5" fill="url(#whWindow)" stroke="#3a200d" stroke-width="0.4"/>
-          <!-- window cross -->
-          <line x1="65" y1="32" x2="75" y2="32" stroke="#3a200d" stroke-width="0.5"/>
-          <line x1="70" y1="27" x2="70" y2="37" stroke="#3a200d" stroke-width="0.5"/>
-          <!-- big double door -->
-          <rect x="48" y="58" width="44" height="34" fill="#5d3a1a" stroke="#3a200d" stroke-width="0.8"/>
-          <rect x="49" y="59" width="42" height="32" fill="#3a200d"/>
-          <rect x="50" y="60" width="20" height="30" fill="#724829"/>
-          <rect x="70" y="60" width="20" height="30" fill="#5d3a1a"/>
-          <!-- X cross-brace on doors -->
-          <path d="M 50 60 L 70 90 M 70 60 L 50 90" stroke="#c4936b" stroke-width="0.7" opacity="0.55"/>
-          <path d="M 70 60 L 90 90 M 90 60 L 70 90" stroke="#c4936b" stroke-width="0.7" opacity="0.55"/>
-          <!-- door handles -->
-          <circle cx="68" cy="76" r="1.2" fill="#f7c948"/>
-          <circle cx="72" cy="76" r="1.2" fill="#f7c948"/>
-        </svg>
+        <span class="warehouse-card" aria-hidden="true">
+          <img class="warehouse-img" src="assets/images/warehouse-barn.jpg" alt="">
+        </span>
         <span class="warehouse-label">仓库 / Warehouse</span>
         <span class="warehouse-badge">0/20</span>
       `;
