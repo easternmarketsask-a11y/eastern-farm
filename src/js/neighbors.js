@@ -320,6 +320,8 @@
           </div>
         `;
         document.getElementById('neighborBody').innerHTML = progressHtml + '<div class="neighbor-list">' + cardsHtml + '</div>';
+        // 首次有邻居可见：教点赞/串门赚币（仅在确有邻居时）
+        if (list.length > 0 && Farm.coach) Farm.coach.fire('first_neighbor', 500);
         document.querySelectorAll('.neighbor-card').forEach(card => {
           card.onclick = () => {
             const id = card.dataset.id;

@@ -214,6 +214,8 @@
       if (Farm.tasks && Farm.tasks.onEvent) {
         Farm.tasks.onEvent('deliver', { itemCount: result.itemCount, coins: result.totalCoins });
       }
+      // 首次卖货：解释赚币 + 首单加成（晚于卖货庆祝 toast）
+      if (Farm.coach) Farm.coach.fire('first_sell', 2000);
     },
 
     // Refresh the floating barn button's "14/20" badge after harvest/deliver.

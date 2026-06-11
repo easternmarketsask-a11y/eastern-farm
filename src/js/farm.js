@@ -286,6 +286,8 @@
 
       // Update warehouse badge with new count
       if (Farm.warehouse && Farm.warehouse.refreshBadge) Farm.warehouse.refreshBadge();
+      // 首次收获入仓：教"菜进了仓库，攒着卖"（晚于首收撒花的 toast）
+      if (Farm.coach) Farm.coach.fire('first_warehouse', 1600);
 
       // V2: floating "📦 +1" feedback since coins aren't credited until
       // delivery. EP bonuses (jackpot etc.) still float separately because
@@ -381,6 +383,11 @@
           // Celebratory modal instead of a tiny toast (per owner request:
           // make level-up feel meaningful + preview the next milestone)
           Farm.ui.showLevelUpModal(li.oldLevel, li.newLevel, { epAwarded: epAward });
+          // 升到解锁等级（Lv7）→ 顺菜解锁庆祝提示（等升级弹窗关掉后再弹）
+          const unlockLv = (Farm.socialConfig && Farm.socialConfig.STEAL_UNLOCK_LEVEL) || 7;
+          if (li.oldLevel < unlockLv && li.newLevel >= unlockLv && Farm.coach) {
+            Farm.coach.fire('steal_unlocked', 1200);
+          }
           // Limited-time promo: reaching Lv3 this week → bonus coins. Waits
           // for the level-up modal to close before showing its own.
           if (Farm.promo && Farm.promo.check) Farm.promo.check();
@@ -425,6 +432,7 @@
                 Farm.ui.burst(r.left + r.width / 2, r.top + r.height / 2, ['✨', '⭐', '🌟'], 6);
               }
               if (Farm.audio) Farm.audio.play('plant');
+              if (Farm.coach) Farm.coach.fire('first_mature', 400);   // 首次有菜熟：教收获
             }
           }
           return;

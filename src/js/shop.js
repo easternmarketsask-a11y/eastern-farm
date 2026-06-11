@@ -186,6 +186,8 @@
             Farm.ui.refreshHUD();
             // Replace the usual "已种下" toast with a louder first-time one
             Farm.ui.toast(Farm.i18n.t('toast_first_plant'), 3200);
+            // 首次种植：店主提示"等它长大、熟了发光"（晚于首种奖励 toast）
+            if (Farm.coach) Farm.coach.fire('first_plant', 3600);
           } else {
             Farm.ui.toast('🌱 ' + def[Farm.state.data.language === 'en' ? 'name_en' : 'name_zh']);
           }

@@ -138,6 +138,9 @@
     // so the bonus + confetti only fires once per save.
     firstPlantCelebrated: false,
     firstHarvestCelebrated: false,
+    // Coach (just-in-time rule hints): which one-line tips have already fired.
+    // Each rule shows ONCE ever, keyed by id (see coach.js). 2026-06-11.
+    coachSeen: {},
 
     // ============ Promotions (2026-06) ============
     // Claimed limited-time promos, keyed by promo id (e.g. lv3_week_202606).

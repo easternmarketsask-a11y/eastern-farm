@@ -58,6 +58,10 @@
       this._tickCounter(document.getElementById('pointsValue'), this._shownPoints, s.eastPoints);
       this._shownCoins = s.coins;
       this._shownPoints = s.eastPoints;
+      // 首次攒到 ≥100 农场币：提示可点金币卡兑换超市积分
+      if (s.coins >= 100 && Farm.coach && !Farm.coach.seen('first_coins_exchange')) {
+        Farm.coach.fire('first_coins_exchange', 1200);
+      }
       document.getElementById('levelValue').textContent = s.level;
 
       // Title (e.g. 新手 / 学徒 / 农神 / 萨城传说)

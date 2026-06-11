@@ -63,6 +63,7 @@
       }
       if (Farm.farm) Farm.farm.renderGrid();
       Farm.ui.toast(Farm.i18n.t('tending_water_toast'), 1800);
+      if (Farm.coach) Farm.coach.fire('first_water', 2000);   // 首次浇水：解释加成
       return true;
     },
 
