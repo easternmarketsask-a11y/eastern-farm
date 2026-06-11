@@ -2450,13 +2450,42 @@
     },
   };
 
+  // Gemini illustration sprites (sliced from Chris's sheets, 2026-06-11).
+  // Mature-stage raster art in src/assets/crops/{id}.png — far richer than
+  // the hand-coded SVGs. Seed/sprout stages keep the generic vector art.
+  // Festival crops (narcissus/osmanthus) have no sprite → SVG fallback.
+  const SPRITES = {
+    shanghai_miao: 1, ji_mao_cai: 1, wa_wa_cai: 1, da_bai_cai: 1, cai_xin: 1, you_mai_cai: 1,
+    bo_cai: 1, tong_hao: 1, cilantro: 1, jiucai: 1, xiao_cong: 1, jing_cong: 1,
+    niu_jiao_jiao: 1, eggplant: 1, dong_gua: 1, xi_lan_hua: 1, tw_cauliflower: 1, wo_sun: 1,
+    hu_luo_bo: 1, bai_luo_bo: 1, lian_ou: 1, shan_yao: 1, sheng_jiang: 1, taro: 1,
+    pa_pa_gan: 1, wo_gan: 1, sha_tang_ju: 1, kumquat: 1, pomelo: 1, pi_pa: 1,
+    suan_tai: 1, chun_sun: 1, ye_zi: 1, mang_guo: 1, huo_long_guo: 1, xiang_yin_putao: 1,
+  };
+
   const cropArt = {
+    // Raster sprite URL for a crop's mature art, or null if none exists.
+    // (share.js loads these directly onto canvas instead of via SVG blobs.)
+    spriteUrl(cropId) {
+      return SPRITES[cropId] ? 'assets/crops/' + cropId + '.png' : null;
+    },
+
     svg(cropId, stage, sizePx, opts) {
       opts = opts || {};
       const def = (window.Farm && Farm.crops && Farm.crops.get) ? Farm.crops.get(cropId) : null;
       const color = (def && def.color) || '#7cb342';
       const size = sizePx || 64;
       const soil = opts.bare ? '' : SOIL;
+
+      // Mature stage: prefer the illustration sprite (renders via <img>,
+      // works in every innerHTML call site).
+      if (stage >= 2) {
+        const url = this.spriteUrl(cropId);
+        if (url) {
+          return '<img class="crop-sprite" src="' + url + '" width="' + size +
+            '" height="' + size + '" style="display:block;object-fit:contain;" alt=""/>';
+        }
+      }
 
       let inner;
       if (stage <= 0) inner = genericSeed(color);

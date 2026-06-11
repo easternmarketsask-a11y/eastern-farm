@@ -194,7 +194,12 @@
       const [logo, sceneImg, cropImgs] = await Promise.all([
         loadImage('assets/images/logo-horizontal.png'),
         svgToImage(sceneSvg),
-        Promise.all(SHOWCASE.map(id => svgToImage(Farm.cropArt.icon(id, 110)))),
+        // Crops: raster sprite files when available (canvas-safe, no SVG-blob
+        // external-ref limitation); SVG-blob fallback for sprite-less crops.
+        Promise.all(SHOWCASE.map(id => {
+          const url = Farm.cropArt.spriteUrl && Farm.cropArt.spriteUrl(id);
+          return url ? loadImage(url) : svgToImage(Farm.cropArt.icon(id, 110));
+        })),
       ]);
 
       // ---- Scene backdrop (with plain-gradient fallback if SVG raster fails) ----
