@@ -710,6 +710,86 @@
       }
     },
 
+    // ===== 邀请好友双向奖励（社区温度包 2026-06-11）=====
+    // 链接形如 farm.easternmarket.ca/?ref=<会员docId>。被邀请人登录后
+    // applyReferral：双方各得 INVITE_BONUS 农场币。防滥用：每个账号只能
+    // 被邀请一次(farm_players.gameStats.referredBy 一次性)、不能自邀。
+    INVITE_BONUS: 200,
+
+    inviteLink() {
+      const uid = meId();
+      return uid ? ('https://farm.easternmarket.ca/?ref=' + encodeURIComponent(uid)) : 'https://farm.easternmarket.ca';
+    },
+
+    // 分享邀请：原生分享面板，不支持则复制到剪贴板。
+    async shareInvite() {
+      const lang = Farm.state.data.language || 'zh';
+      if (!Farm.fbAuth || !Farm.fbAuth.isLoggedIn() || !meId()) {
+        Farm.ui.toast(lang === 'en' ? 'Sign in first to invite friends' : '先登录会员，邀请才能算上奖励哦', 2600);
+        return;
+      }
+      const link = this.inviteLink();
+      const text = lang === 'en'
+        ? 'I\'m farming at Eastern Market Happy Farm — join me and we both get ' + this.INVITE_BONUS + ' coins!'
+        : '我在东方超市·快乐农场种菜，点链接进来我们做邻居，你我各得 ' + this.INVITE_BONUS + ' 农场币！';
+      if (navigator.share) {
+        try { await navigator.share({ title: '东方超市·快乐农场', text: text, url: link }); } catch (_) {}
+        return;
+      }
+      try {
+        await navigator.clipboard.writeText(text + ' ' + link);
+        Farm.ui.toast(lang === 'en' ? '📨 Invite link copied — paste it to a friend!' : '📨 邀请链接已复制，发给朋友吧！', 2800);
+      } catch (_) {
+        Farm.ui.toast(link, 4000);
+      }
+    },
+
+    // 登录后调用：若本地存有 ?ref= 来源且本账号从未被邀请过 → 双向发奖。
+    async applyReferral() {
+      let ref = null;
+      try { ref = localStorage.getItem('eastern_farm_ref'); } catch (_) {}
+      if (!ref) return;
+      if (!Farm.fb || !Farm.fb.available || !Farm.fbAuth || !Farm.fbAuth.isLoggedIn()) return;
+      const myUid = meId();
+      if (!myUid) return;
+      const clear = () => { try { localStorage.removeItem('eastern_farm_ref'); } catch (_) {} };
+      if (ref === myUid) { clear(); return; }   // 不能自邀
+      const lang = Farm.state.data.language || 'zh';
+      try {
+        // 一次性：已被邀请过的账号不再发奖（跨设备以云端为准）
+        const meSnap = await Farm.fb.db.collection('farm_players').doc(myUid).get();
+        const myGs = (meSnap.exists && meSnap.data().gameStats) || {};
+        if (myGs.referredBy) { clear(); return; }
+        await Farm.fb.db.collection('farm_players').doc(myUid).set(
+          { gameStats: { referredBy: ref, referredAt: Date.now() } },
+          { merge: true }
+        );
+        // 被邀请人（自己）当场入账
+        Farm.state.addCoins(this.INVITE_BONUS);
+        Farm.state.save();
+        Farm.ui.refreshHUD();
+        Farm.ui.toast(lang === 'en'
+          ? '🎉 Friend invite accepted: +' + this.INVITE_BONUS + ' <span class="coin-icon"></span>'
+          : '🎉 接受好友邀请成功 +' + this.INVITE_BONUS + ' <span class="coin-icon"></span>', 3400);
+        // 邀请人那边走礼物通道（reconcileGifts 自动入账+提示）
+        await Farm.fb.db.collection('farm_players').doc(ref).set(
+          { gameStats: { pendingGifts: firebase.firestore.FieldValue.arrayUnion({
+              id: 'inv_' + Date.now() + '_' + Math.floor(Math.random() * 1e6),
+              fromUid: myUid,
+              fromName: this._selfDisplayName() + (lang === 'en' ? ' (invite reward)' : '（邀请奖励）'),
+              kind: 'coins',
+              payload: { amount: this.INVITE_BONUS },
+              sentAt: Date.now(),
+            }) } },
+          { merge: true }
+        );
+        clear();
+      } catch (e) {
+        console.warn('[gameSync] applyReferral failed', e);
+        // 不 clear：下次登录重试（referredBy 以云端为准，重试幂等）
+      }
+    },
+
     // ===== 来访足迹（社区温度包 2026-06-11）=====
     // 逛真会员农场时留一条足迹，对方下次上线在回家小报看到
     // 「XX 来你农场逛过🐾」。每天对同一家只记一次（本地节流）。

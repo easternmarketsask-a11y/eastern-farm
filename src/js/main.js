@@ -28,6 +28,12 @@
       Farm.aiNeighbors.load(),
     ]);
 
+    // 1b. 邀请链接：进场就把 ?ref=<会员id> 存下（登录后 applyReferral 发奖）。
+    try {
+      const refMatch = location.search.match(/[?&]ref=([A-Za-z0-9_-]{4,64})/);
+      if (refMatch) localStorage.setItem('eastern_farm_ref', refMatch[1]);
+    } catch (_) {}
+
     // 2. Init state, then migrate plots/seeds against the current catalog
     // (drops crops no longer in data/crops.json, renames qingcai → shanghai_miao)
     Farm.state.init();

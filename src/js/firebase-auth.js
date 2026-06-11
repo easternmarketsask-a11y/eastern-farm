@@ -75,6 +75,10 @@
           if (Farm.homeReport && Farm.homeReport.settleRealOnLogin) {
             setTimeout(() => Farm.homeReport.settleRealOnLogin(), 2200);
           }
+          // 邀请奖励：?ref= 进来的新邻居，登录后双向发奖（幂等，一次性）
+          if (Farm.fbGameSync && Farm.fbGameSync.applyReferral) {
+            setTimeout(() => Farm.fbGameSync.applyReferral(), 3000);
+          }
           // Neighbor likes received — reconcile + notify
           if (Farm.fbGameSync && Farm.fbGameSync.reconcileReceivedLikes) {
             setTimeout(async () => {

@@ -238,8 +238,9 @@
         ${tabBarHtml}
         <div id="neighborBody">${body}</div>
         <div class="btn-row" style="margin-top:12px;gap:8px;">
-          <button class="btn" style="flex:1;" onclick="Farm.share && Farm.share.open()">📸 ${lang === 'en' ? 'Share my farm' : '晒农场'}</button>
-          <button class="btn secondary" style="flex:1;" onclick="Farm.ui.hideModal()">${Farm.i18n.t('btn_close')}</button>
+          <button class="btn" style="flex:1.2;" onclick="Farm.fbGameSync && Farm.fbGameSync.shareInvite()">📨 ${lang === 'en' ? 'Invite' : '邀请好友'}</button>
+          <button class="btn secondary" style="flex:1;" onclick="Farm.share && Farm.share.open()">📸 ${lang === 'en' ? 'Share' : '晒农场'}</button>
+          <button class="btn secondary" style="flex:0.8;" onclick="Farm.ui.hideModal()">${Farm.i18n.t('btn_close')}</button>
         </div>
       `);
 
@@ -268,9 +269,12 @@
                   ? 'As more Eastern Market members start farming, real neighbors show up here. Invite a friend, or add one by phone number.'
                   : '随着更多东方超市会员开始种菜，真实邻居就会出现在这里。叫上朋友一起玩，或用手机号直接加好友。'}
               </div>
-              <button class="btn" id="emptyAddFriendBtn">➕ ${lang === 'en' ? 'Add a friend by phone' : '用手机号加好友'}</button>
+              <button class="btn" id="emptyInviteBtn">📨 ${lang === 'en' ? 'Invite a friend (+' : '邀请好友（各得 '}${Farm.fbGameSync ? Farm.fbGameSync.INVITE_BONUS : 200}${lang === 'en' ? ' coins each)' : ' 农场币）'}</button>
+              <button class="btn secondary" id="emptyAddFriendBtn" style="margin-top:8px;">➕ ${lang === 'en' ? 'Add a friend by phone' : '用手机号加好友'}</button>
             </div>
           `;
+          const invBtn = document.getElementById('emptyInviteBtn');
+          if (invBtn) invBtn.onclick = () => { if (Farm.fbGameSync) Farm.fbGameSync.shareInvite(); };
           const addBtn = document.getElementById('emptyAddFriendBtn');
           if (addBtn) addBtn.onclick = () => { this._currentTab = 'friends'; this._render(); };
           return;
