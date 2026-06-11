@@ -394,25 +394,68 @@
     },
 
     // Visit a single neighbor's farm + offer the Like button
-    viewFarm(neighbor) {
+    async viewFarm(neighbor) {
       const lang = Farm.state.data.language;
-      // AI 邻居渲染其"随真实时间在长"的真农场（有真实熟菜，T4 可偷）；
-      // 真会员在 1a 仍用占位农场（真农场同步是 Phase 1b）。
-      const fd = (neighbor.isAI && Farm.aiNeighbors && Farm.aiNeighbors.loaded)
-        ? Farm.aiNeighbors.farmDisplay(neighbor.uid, Date.now())
-        : generateFarmDisplay(neighbor.id);
-
       const isAI = !!neighbor.isAI;
+      const myId = Farm.fbAuth && (Farm.fbAuth.memberDocId ? Farm.fbAuth.memberDocId() : Farm.fbAuth.uid && Farm.fbAuth.uid());
+
+      // 农场数据源（spec 2026-06-11）：
+      //   AI → 确定性引擎；真会员 → farm_players 快照(farmPlots)真农场；
+      //   无快照(老客户端/离线) → 回落生成的占位农场（不可偷）。
+      let fd = null;
+      let realSnap = null;   // { hasGuardDog, level } — 有真快照才可偷
+      if (isAI && Farm.aiNeighbors && Farm.aiNeighbors.loaded) {
+        fd = Farm.aiNeighbors.farmDisplay(neighbor.uid, Date.now());
+      } else if (!isAI && neighbor.uid && Farm.fb && Farm.fb.available) {
+        let gs = (neighbor._doc && neighbor._doc.gameStats) || null;
+        if (!gs || !Array.isArray(gs.farmPlots)) {
+          try {
+            const snap = await Farm.fb.db.collection('farm_players').doc(neighbor.uid).get();
+            if (snap.exists) gs = snap.data().gameStats || gs;
+          } catch (_) {}
+        }
+        if (gs && Array.isArray(gs.farmPlots)) {
+          realSnap = { hasGuardDog: !!gs.hasGuardDog, level: gs.level || neighbor.level || 1 };
+          // 回填卡片头部缺失字段（小报"去讨回来"只带 uid+name 进来）
+          if (neighbor.level == null) neighbor.level = gs.level || 1;
+          if (neighbor.totalHarvests == null) neighbor.totalHarvests = gs.totalHarvests || 0;
+          if (neighbor.likesReceived == null) neighbor.likesReceived = gs.likesReceived || 0;
+          const slots = Array.from({ length: 12 }, () => ({ cropId: null, stage: -1, mature: false }));
+          gs.farmPlots.forEach((fp) => {
+            const def = fp && Farm.crops.get(fp.c);
+            if (!def || fp.i == null || fp.i < 0 || fp.i >= 12) return;
+            const growMs = (def.grow_minutes || 30) * 60000;
+            const frac = growMs > 0 ? (Date.now() - (fp.p || 0)) / growMs : 1;
+            slots[fp.i] = {
+              cropId: fp.c,
+              stage: frac >= 1 ? 2 : (frac >= 0.4 ? 1 : 0),
+              mature: frac >= 1,
+              plantedAt: fp.p || 0,
+              plotIdx: fp.i,
+            };
+          });
+          fd = { plots: slots, decos: [] };
+        }
+      }
+      if (!fd) fd = generateFarmDisplay(neighbor.id);
+
+      // 可偷判定：真会员需有真快照 + 不是自己 + 已登录 + 对方过新手保护线
+      const cfg = Farm.socialConfig || {};
+      const realStealable = !!realSnap && !!myId && neighbor.uid !== myId &&
+        (realSnap.level >= (cfg.NEWBIE_PROTECT_LEVEL || 3)) &&
+        Farm.steal && Farm.steal.stealFromReal;
+
       const plotsHtml = fd.plots.map((p, i) => {
         if (!p.cropId) return '<div class="neighbor-plot empty"></div>';
         const def = Farm.crops.get(p.cropId);
         if (!def) return '<div class="neighbor-plot empty"></div>';
         const svg = Farm.cropArt ? Farm.cropArt.svg(p.cropId, p.stage, 40) : `<span style="font-size:28px;">${def.icon}</span>`;
         const mature = p.stage >= 2;
-        // 主动偷：AI 农场里熟了的菜可"顺一棵"（真会员真农场是 Phase 1b）
-        const canSteal = isAI && mature;
+        const canSteal = mature && (isAI || realStealable);
         const cls = `neighbor-plot ${mature ? 'mature' : 'growing'}${canSteal ? ' stealable' : ''}`;
-        const dataAttr = canSteal ? ` data-steal-idx="${i}" data-steal-crop="${p.cropId}"` : '';
+        const dataAttr = canSteal
+          ? ` data-steal-idx="${p.plotIdx != null ? p.plotIdx : i}" data-steal-crop="${p.cropId}" data-steal-planted="${p.plantedAt || 0}"`
+          : '';
         const basket = canSteal ? '<span class="neighbor-steal-hint">🧺</span>' : '';
         return `<div class="${cls}"${dataAttr}>${svg}${basket}</div>`;
       }).join('');
@@ -471,7 +514,7 @@
         </div>
         <div class="neighbor-greeting">"${greeting}"</div>
         <div class="neighbor-farm">${plotsHtml}</div>
-        ${isAI ? `<div class="neighbor-steal-tip">${lang === 'en' ? '🧺 Tap a ripe crop to grab one for your silo' : '🧺 点熟了的菜，顺一棵回家～'}</div>` : ''}
+        ${(isAI || realStealable) ? `<div class="neighbor-steal-tip">${lang === 'en' ? '🧺 Tap a ripe crop to grab one for your silo' : '🧺 点熟了的菜，顺一棵回家～'}</div>` : ''}
         ${decoHtml}
         <div class="neighbor-actions">
           <button class="btn ${likeDisabled ? 'disabled' : ''}" id="neighborLikeBtn" ${likeDisabled ? 'disabled' : ''}>${likeLabel}</button>
@@ -502,36 +545,64 @@
 
       document.getElementById('neighborBack').onclick = () => this._render();
 
-      // 主动偷：点 AI 农场里熟了的菜顺一棵入仓（遵守每日/单户上限 + 仓库满保护）
-      if (neighbor.isAI && Farm.steal) {
+      // 主动偷：点熟了的菜顺一棵入仓（遵守每日/单户上限 + 仓库满保护）。
+      // AI 走本地 stealOne；真会员走 stealFromReal（含看家狗判定 + 事件写云端）。
+      if ((neighbor.isAI || realStealable) && Farm.steal) {
+        const stealSuccessUi = (cell) => {
+          cell.classList.remove('stealable', 'mature');
+          cell.classList.add('stolen');
+          cell.onclick = null;
+          cell.innerHTML = '<span class="neighbor-steal-done">✓</span>';
+          const rect = cell.getBoundingClientRect();
+          if (Farm.ui.floatText) {
+            Farm.ui.floatText('🧺 +1 ' + (lang === 'en' ? 'silo' : '入库'),
+              rect.left + rect.width / 2 - 18, rect.top, '#3a8c50');
+          }
+          if (Farm.audio) Farm.audio.play('coin');
+          Farm.ui.refreshHUD();
+          Farm.ui.toast(Farm.i18n.t('steal_done', { name: neighbor.name }), 2000);
+        };
+        const failToast = (r) => {
+          if (r.message) { Farm.ui.toast(r.message, 3000); return; }
+          Farm.ui.toast(r.reason === 'warehouse_full'
+            ? Farm.i18n.t('steal_warehouse_full')
+            : (r.reason === 'daily_cap' ? Farm.i18n.t('steal_daily_cap') : Farm.i18n.t('steal_target_cap')), 2700);
+        };
         document.querySelectorAll('.neighbor-plot.stealable').forEach(cell => {
-          cell.onclick = () => {
+          cell.onclick = async () => {
             const cropId = cell.dataset.stealCrop;
-            const can = Farm.steal.canStealFrom(neighbor.uid);
-            if (!can.ok) {
-              Farm.ui.toast(can.reason === 'daily_cap'
-                ? Farm.i18n.t('steal_daily_cap') : Farm.i18n.t('steal_target_cap'), 2600);
+            if (neighbor.isAI) {
+              const can = Farm.steal.canStealFrom(neighbor.uid);
+              if (!can.ok) { failToast(can); return; }
+              const r = Farm.steal.stealOne(neighbor.uid, cropId);
+              if (!r.ok) { failToast(r); return; }
+              stealSuccessUi(cell);
               return;
             }
-            const r = Farm.steal.stealOne(neighbor.uid, cropId);
+            // 真会员：防连点 → 异步走完整规则
+            if (cell.dataset.busy) return;
+            cell.dataset.busy = '1';
+            const r = await Farm.steal.stealFromReal(
+              { uid: neighbor.uid, name: neighbor.name, level: realSnap.level, hasGuardDog: realSnap.hasGuardDog },
+              { plotIdx: parseInt(cell.dataset.stealIdx, 10),
+                cropId: cropId,
+                plantedAt: parseInt(cell.dataset.stealPlanted, 10) || 0 }
+            );
+            delete cell.dataset.busy;
             if (!r.ok) {
-              Farm.ui.toast(r.reason === 'warehouse_full'
-                ? Farm.i18n.t('steal_warehouse_full')
-                : (r.reason === 'daily_cap' ? Farm.i18n.t('steal_daily_cap') : Farm.i18n.t('steal_target_cap')), 2700);
+              if (r.reason === 'caught') {
+                // 被狗逮住：这块菜偷不成了
+                cell.classList.remove('stealable', 'mature');
+                cell.classList.add('stolen');
+                cell.onclick = null;
+                cell.innerHTML = '<span class="neighbor-steal-done">🐕</span>';
+                if (Farm.audio) Farm.audio.play('error');
+                Farm.ui.refreshHUD();
+              }
+              failToast(r);
               return;
             }
-            cell.classList.remove('stealable', 'mature');
-            cell.classList.add('stolen');
-            cell.onclick = null;
-            cell.innerHTML = '<span class="neighbor-steal-done">✓</span>';
-            const rect = cell.getBoundingClientRect();
-            if (Farm.ui.floatText) {
-              Farm.ui.floatText('🧺 +1 ' + (lang === 'en' ? 'silo' : '入库'),
-                rect.left + rect.width / 2 - 18, rect.top, '#3a8c50');
-            }
-            if (Farm.audio) Farm.audio.play('coin');
-            Farm.ui.refreshHUD();
-            Farm.ui.toast(Farm.i18n.t('steal_done', { name: neighbor.name }), 2000);
+            stealSuccessUi(cell);
           };
         });
       }
@@ -813,6 +884,9 @@
       });
     },
   };
+
+  // 头像函数对外暴露：回家小报给真小偷配头像时要和邻居卡片一致。
+  neighbors.avatarFor = avatarFor;
 
   window.Farm = window.Farm || {};
   window.Farm.neighbors = neighbors;

@@ -74,6 +74,15 @@
         excludeFromRanking: !!s.excludeFromRanking,
         // Claimed limited-time promos (per-account guard against local reset).
         promoClaims: s.promoClaims || {},
+        // Farm snapshot for real-member visits + stealing (spec 2026-06-11):
+        // non-empty unlocked plots only, compact {i,c,p} = plotIdx/cropId/
+        // plantedAt. Visitors compute maturity locally from plantedAt.
+        farmPlots: (s.plots || [])
+          .map((p, i) => ({ i, c: p.crop, p: p.plantedAt || 0, u: !!p.unlocked }))
+          .filter(p => p.u && p.c)
+          .map(p => ({ i: p.i, c: p.c, p: p.p })),
+        // Guard-dog flag: thief side reads this to tighten caps + risk being caught.
+        hasGuardDog: !!(Farm.defenses && Farm.defenses.hasDog && Farm.defenses.hasDog()),
         lastSeenAt: Farm.fb && Farm.fb.serverTimestamp
           ? Farm.fb.serverTimestamp()
           : new Date(),
@@ -672,6 +681,54 @@
     canSendGiftToday() {
       const today = Farm.state.getDateString();
       return Farm.state.data.lastGiftSentDate !== today;
+    },
+
+    // ===== 真会员互偷（spec 2026-06-11）=====
+    // 偷菜事件写入受害者的公共文档（与 pendingGifts 同模式/同安全规则）。
+    // evt: { kind:'steal'|'caught', plotIdx, cropId, plantedAt, coins? }
+    async sendStealEvent(victimUid, evt) {
+      if (!Farm.fb || !Farm.fb.available || !Farm.fbAuth || !Farm.fbAuth.isLoggedIn()) {
+        return { ok: false, reason: 'offline' };
+      }
+      const myUid = meId();
+      if (!myUid || !victimUid || victimUid === myUid) return { ok: false, reason: 'bad_target' };
+      try {
+        const full = Object.assign({
+          id: 'se_' + Date.now() + '_' + Math.floor(Math.random() * 1e6),
+          thiefUid: myUid,
+          thiefName: this._selfDisplayName(),
+          at: Date.now(),
+        }, evt);
+        await Farm.fb.db.collection('farm_players').doc(victimUid).set(
+          { gameStats: { stealEvents: firebase.firestore.FieldValue.arrayUnion(full) } },
+          { merge: true }
+        );
+        return { ok: true };
+      } catch (e) {
+        console.warn('[gameSync] sendStealEvent failed', e);
+        return { ok: false, reason: 'write_failed' };
+      }
+    },
+
+    // 拉取并清空自己文档上的偷菜事件（结算逻辑在 Farm.steal.settleRealEvents）。
+    async fetchAndClearStealEvents() {
+      if (!Farm.fb || !Farm.fb.available || !Farm.fbAuth || !Farm.fbAuth.isLoggedIn()) return [];
+      const uid = meId();
+      if (!uid) return [];
+      try {
+        const snap = await Farm.fb.db.collection('farm_players').doc(uid).get();
+        if (!snap.exists) return [];
+        const evts = ((snap.data().gameStats) || {}).stealEvents || [];
+        if (evts.length === 0) return [];
+        await Farm.fb.db.collection('farm_players').doc(uid).set(
+          { gameStats: { stealEvents: [] } },
+          { merge: true }
+        );
+        return evts;
+      } catch (e) {
+        console.warn('[gameSync] fetchAndClearStealEvents failed', e);
+        return [];
+      }
     },
 
     // Online indicator helper — returns label/color tier from lastSeenAt

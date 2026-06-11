@@ -20,6 +20,11 @@
     WATER_SPEEDUP: 0.2,               // 浇水：剩余生长时间 -20%（tending.js 共用）
     FERT_YIELD_MULT: 2,               // 施肥：产量 ×2
     DOG_PROTECT: 1,                   // 看家狗在岗：被偷上限 -1（T6）
+    // ===== 真会员互偷（spec 2026-06-11）=====
+    LOST_DAILY_MAX: 3,                // 每天最多被真人偷走的棵数（超出的事件作废）
+    NEWBIE_PROTECT_LEVEL: 3,          // victim level < 3 不可被偷
+    DOG_CATCH_CHANCE: 0.2,            // 对方有狗时小偷被抓概率
+    DOG_CAUGHT_FINE: 20,              // 被抓赔礼农场币（小偷付出/受害者收到）
   };
 
   const steal = {
@@ -67,6 +72,102 @@
         remainingToday: socialConfig.STEAL_MAX_PER_DAY - c.stolenToday,
         remainingTarget: this.perTargetCap(targetId) - c.stolenFromTargets[targetId],
       };
+    },
+
+    // ===== 真会员互偷：小偷端（spec 2026-06-11）=====
+    // 从真会员农场顺一棵：本地限额（与 AI 共用同一套每日/单户计数）→
+    // 看家狗判定（限额收紧 + 概率被抓赔礼）→ 入仓 → 事件写对方文档。
+    // victim: { uid, name, level, hasGuardDog }；plotInfo: { plotIdx, cropId, plantedAt }
+    async stealFromReal(victim, plotInfo) {
+      const lang = Farm.state.data.language || 'zh';
+      if ((victim.level || 1) < socialConfig.NEWBIE_PROTECT_LEVEL) {
+        return { ok: false, reason: 'newbie_protected' };
+      }
+      // 对方有狗 → 该户上限收紧 1 棵（在 canStealFrom 的统一限额之上再卡）
+      const c = Farm.state.data.dailyClaims;
+      const fromThis = (c.stolenFromTargets || {})[victim.uid] || 0;
+      if (victim.hasGuardDog && fromThis >= Math.max(1, this.perTargetCap(victim.uid) - socialConfig.DOG_PROTECT)) {
+        return { ok: false, reason: 'dog_cap',
+          message: lang === 'en'
+            ? '🐕 Their guard dog is watching — that\'s all you can grab here today.'
+            : '🐕 TA 家的狗盯得紧，今天这里就只能顺这么多啦' };
+      }
+      const can = this.canStealFrom(victim.uid);
+      if (!can.ok) return can;
+
+      // 看家狗抓贼：偷不到，赔礼 20 币写给对方（小报好消息）
+      if (victim.hasGuardDog && Math.random() < socialConfig.DOG_CATCH_CHANCE) {
+        const fine = socialConfig.DOG_CAUGHT_FINE;
+        if (Farm.state.data.coins >= fine) Farm.state.spendCoins(fine);
+        // 计数照记：被抓也消耗当日对该户的尝试次数，防无限白嫖重试
+        c.stolenFromTargets = c.stolenFromTargets || {};
+        c.stolenFromTargets[victim.uid] = fromThis + 1;
+        Farm.state.save();
+        if (Farm.fbGameSync && Farm.fbGameSync.sendStealEvent) {
+          Farm.fbGameSync.sendStealEvent(victim.uid, {
+            kind: 'caught', plotIdx: plotInfo.plotIdx, cropId: plotInfo.cropId,
+            plantedAt: plotInfo.plantedAt, coins: fine,
+          });
+        }
+        return { ok: false, reason: 'caught', fine,
+          message: lang === 'en'
+            ? '🐕 Caught by the guard dog! Paid ' + fine + ' coins to apologize…'
+            : '🐕 被看家狗逮个正着！赔了 ' + fine + ' 农场币道歉…' };
+      }
+
+      const r = this.stealOne(victim.uid, plotInfo.cropId);
+      if (!r.ok) return r;
+      if (Farm.fbGameSync && Farm.fbGameSync.sendStealEvent) {
+        Farm.fbGameSync.sendStealEvent(victim.uid, {
+          kind: 'steal', plotIdx: plotInfo.plotIdx, cropId: plotInfo.cropId,
+          plantedAt: plotInfo.plantedAt,
+        });
+      }
+      return r;
+    },
+
+    // ===== 真会员互偷：受害者结算（上线时调用一次）=====
+    // 拉取 stealEvents → 逐条验证 (plotIdx,cropId,plantedAt) 三元组仍匹配且
+    // 已熟未收 → 清地块（受 LOST_DAILY_MAX 封顶 + 新手保护兜底）。
+    // 'caught' 事件 = 好消息：狗抓住了贼，+赔礼币。
+    // 返回 home-report 形状 { stolen:[], helped:[] }，事件自带 name。
+    async settleRealEvents() {
+      if (!Farm.fbGameSync || !Farm.fbGameSync.fetchAndClearStealEvents) {
+        return { stolen: [], helped: [] };
+      }
+      const evts = await Farm.fbGameSync.fetchAndClearStealEvents();
+      const out = { stolen: [], helped: [] };
+      if (!evts.length) return out;
+
+      const myLevel = Farm.state.data.level || 1;
+      const c = Farm.state.data.dailyClaims;
+      let lostToday = c.lostToRealToday || 0;
+      const plots = Farm.state.data.plots;
+
+      evts.sort((a, b) => (a.at || 0) - (b.at || 0));
+      for (const e of evts) {
+        const name = e.thiefName || '邻居';
+        if (e.kind === 'caught') {
+          // 狗替你抓住了贼：收下赔礼
+          Farm.state.addCoins(e.coins || socialConfig.DOG_CAUGHT_FINE);
+          out.helped.push({ kind: 'caught', name, cropId: e.cropId, realUid: e.thiefUid });
+          continue;
+        }
+        // 新手保护兜底（偷端已禁，老客户端/作弊兜底）
+        if (myLevel < socialConfig.NEWBIE_PROTECT_LEVEL) continue;
+        if (lostToday >= socialConfig.LOST_DAILY_MAX) continue;   // 被偷封顶，超出作废
+        const p = plots[e.plotIdx];
+        // 三元组验证：同一块地、同一茬菜、还没收 → 防旧事件重放清新菜
+        if (!p || !p.unlocked || p.crop !== e.cropId || (p.plantedAt || 0) !== (e.plantedAt || 0)) continue;
+        if (!Farm.crops.isMature(p)) continue;   // 调性红线：只动已熟未收
+        // 清地块（等同被替你收走了；仓库永不被碰）
+        p.crop = null; p.plantedAt = 0; p.harvestsLeft = 0; p.watered = false; p.fertilized = false;
+        lostToday += 1;
+        out.stolen.push({ kind: 'steal', name, cropId: e.cropId, count: 1, realUid: e.thiefUid });
+      }
+      c.lostToRealToday = lostToday;
+      Farm.state.save();
+      return out;
     },
 
     // ===== 被偷结算（回家时一次性，非确定性；结果存 raidLog，不重算）=====

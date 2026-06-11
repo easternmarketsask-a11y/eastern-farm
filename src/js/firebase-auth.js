@@ -70,6 +70,11 @@
             Farm.fbPoints.firstLoginGameSignupBonus(user);
           }
           if (Farm.fbQueue && Farm.fbQueue.flush) Farm.fbQueue.flush();
+          // 真会员互偷结算（spec 2026-06-11）：拉云端 stealEvents → 验证清地 →
+          // 并入回家小报。错开其它开屏弹窗/同步。
+          if (Farm.homeReport && Farm.homeReport.settleRealOnLogin) {
+            setTimeout(() => Farm.homeReport.settleRealOnLogin(), 2200);
+          }
           // Neighbor likes received — reconcile + notify
           if (Farm.fbGameSync && Farm.fbGameSync.reconcileReceivedLikes) {
             setTimeout(async () => {

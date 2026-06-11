@@ -42,6 +42,28 @@
 
     hasPending() { return !!_pending; },
 
+    // 真会员互偷结算（spec 2026-06-11）：登录后调用一次。拉取云端 stealEvents
+    // → Farm.steal.settleRealEvents 验证清地 → 并入小报待弹队列 → 重渲染农场。
+    async settleRealOnLogin() {
+      if (!Farm.steal || !Farm.steal.settleRealEvents) return;
+      try {
+        const events = await Farm.steal.settleRealEvents();
+        const any = (events.stolen && events.stolen.length) || (events.helped && events.helped.length);
+        if (!any) return;
+        if (_pending) {
+          _pending.stolen = (_pending.stolen || []).concat(events.stolen || []);
+          _pending.helped = (_pending.helped || []).concat(events.helped || []);
+        } else {
+          _pending = events;
+        }
+        if (Farm.farm && Farm.farm.renderGrid) Farm.farm.renderGrid();  // 被清的地块即时反映
+        Farm.ui.refreshHUD();
+        this.maybeShow();
+      } catch (e) {
+        console.warn('[homeReport] settleRealOnLogin failed', e);
+      }
+    },
+
     // 自排队：若当前有别的弹窗开着（签到/教程），稍后再试，避免撞窗。
     maybeShow() {
       if (!_pending) return;
@@ -57,25 +79,30 @@
     show(events) {
       const lang = Farm.state.data.language;
       const AN = Farm.aiNeighbors;
-      const nameOf = (id) => (AN ? AN.name(id) : id);
-      const avaOf = (id) => (AN ? AN.avatar(id) : '🧑');
+      // 事件可能来自 AI（带 aiId，查名册）或真会员（自带 name/realUid）。
+      const nameOf = (e) => e.name || (AN && e.aiId ? AN.name(e.aiId) : (e.aiId || '邻居'));
+      const avaOf = (e) => {
+        if (e.realUid && Farm.neighbors && Farm.neighbors.avatarFor) return Farm.neighbors.avatarFor(e.realUid);
+        return (AN && e.aiId) ? AN.avatar(e.aiId) : '🧑';
+      };
+      const revengeId = (e) => e.realUid ? ('real:' + e.realUid) : (e.aiId || '');
 
       // 坏消息（被顺）——每条带"去讨回来"
-      const stolenHtml = (events.stolen || []).map((s, i) => `
-        <div class="report-row report-bad" data-revenge="${s.aiId}">
-          <span class="report-ava">${avaOf(s.aiId)}</span>
-          <span class="report-text">${Farm.i18n.t('report_stolen', { name: nameOf(s.aiId), n: s.count, crop: cropName(s.cropId) })}</span>
-          <button class="report-revenge-btn" data-revenge-btn="${s.aiId}">${Farm.i18n.t('report_revenge')}</button>
+      const stolenHtml = (events.stolen || []).map((s) => `
+        <div class="report-row report-bad">
+          <span class="report-ava">${avaOf(s)}</span>
+          <span class="report-text">${Farm.i18n.t('report_stolen', { name: nameOf(s), n: s.count, crop: cropName(s.cropId) })}</span>
+          <button class="report-revenge-btn" data-revenge-btn="${revengeId(s)}" data-revenge-name="${(s.name || '').replace(/"/g, '')}">${Farm.i18n.t('report_revenge')}</button>
         </div>
       `).join('');
 
       // 好消息（互助 / 抓贼）
       const helpedHtml = (events.helped || []).map((h) => {
         let txt;
-        if (h.kind === 'water') txt = Farm.i18n.t('report_help_water', { name: nameOf(h.aiId), crop: cropName(h.cropId) });
-        else if (h.kind === 'caught') txt = Farm.i18n.t('report_caught', { name: nameOf(h.aiId), crop: cropName(h.cropId) });
-        else txt = Farm.i18n.t('report_help_coins', { name: nameOf(h.aiId), amount: h.amount });
-        return `<div class="report-row report-good"><span class="report-ava">${avaOf(h.aiId)}</span><span class="report-text">${txt}</span></div>`;
+        if (h.kind === 'water') txt = Farm.i18n.t('report_help_water', { name: nameOf(h), crop: cropName(h.cropId) });
+        else if (h.kind === 'caught') txt = Farm.i18n.t('report_caught', { name: nameOf(h), crop: cropName(h.cropId) });
+        else txt = Farm.i18n.t('report_help_coins', { name: nameOf(h), amount: h.amount });
+        return `<div class="report-row report-good"><span class="report-ava">${avaOf(h)}</span><span class="report-text">${txt}</span></div>`;
       }).join('');
 
       const badSection = stolenHtml
@@ -96,14 +123,25 @@
       Farm.ui.showModal(html);
       if (Farm.audio) Farm.audio.play('tap');
 
-      // 去讨回来：直达该小贼农场，并给一次额外宽限（多顺一棵心安理得）
+      // 去讨回来：直达该小贼农场，并给一次额外宽限（多顺一棵心安理得）。
+      // AI 贼 → 名册卡片；真人贼 → 'real:'+uid，viewFarm 自己会拉真快照。
       document.querySelectorAll('[data-revenge-btn]').forEach(btn => {
         btn.onclick = () => {
-          const aiId = btn.dataset.revengeBtn;
+          const id = btn.dataset.revengeBtn;
           Farm.ui.hideModal();
-          if (Farm.steal && Farm.steal.grantGrace) Farm.steal.grantGrace(aiId, 1);
-          if (Farm.neighbors && Farm.aiNeighbors) {
-            Farm.neighbors.viewFarm(Farm.aiNeighbors.displayCard(aiId, Date.now()));
+          if (!id || !Farm.neighbors) return;
+          if (id.indexOf('real:') === 0) {
+            const uid = id.slice(5);
+            if (Farm.steal && Farm.steal.grantGrace) Farm.steal.grantGrace(uid, 1);
+            const emoji = (Farm.neighbors.avatarFor) ? Farm.neighbors.avatarFor(uid) : '🧑';
+            Farm.neighbors.viewFarm({
+              isReal: true, uid: uid, id: 'real_' + uid,
+              name: btn.dataset.revengeName || (Farm.state.data.language === 'en' ? 'Neighbor' : '邻居'),
+              emoji: emoji,
+            });
+          } else if (Farm.aiNeighbors) {
+            if (Farm.steal && Farm.steal.grantGrace) Farm.steal.grantGrace(id, 1);
+            Farm.neighbors.viewFarm(Farm.aiNeighbors.displayCard(id, Date.now()));
           }
         };
       });
