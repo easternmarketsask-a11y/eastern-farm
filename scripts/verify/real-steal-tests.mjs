@@ -102,6 +102,22 @@ console.log(await ev(`(async function(){
   const res2 = await Farm.steal.settleRealEvents();
   T('R5b watered plot still stealable', res2.stolen.length === 1 && P[5].crop === null);
 
+  // ===== R5c: 多季作物被偷只丢一茬（harvestsLeft 减1+重置，不清整株）=====
+  Farm.state.data.dailyClaims.lostToRealToday = 0;
+  // 找一个 multi_harvest 作物
+  const multi = (Farm.crops.all().find(c => c.multi_harvest)) || null;
+  if (multi) {
+    const gm = multi.grow_minutes * 60000;
+    const pm = Farm.state.data.plots[6];
+    pm.unlocked = true; pm.crop = multi.id; pm.plantedAt = Date.now() - gm - 9000; pm.harvestsLeft = 3;
+    serverEvents = [{ kind:'steal', thiefName:'阿测', thiefUid:'tA', plotIdx:6, cropId:multi.id, plantedAt:pm.plantedAt, at:20 }];
+    await Farm.steal.settleRealEvents();
+    T('R5c multi keeps plot', pm.crop === multi.id);
+    T('R5c multi harvestsLeft 3->2', pm.harvestsLeft === 2);
+  } else {
+    out.push('SKIP R5c (no multi_harvest crop in catalog)');
+  }
+
   // ===== R6: viewFarm renders real snapshot + stealable cells =====
   const nb = {
     isReal: true, uid: 'v9', id: 'real_v9', name: '快照户', emoji: '🧑',

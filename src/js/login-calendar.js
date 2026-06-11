@@ -79,6 +79,9 @@
     // 当天已签 → 永不自动弹（手动从「今日」面板仍可查看）。
     maybeAutoOpen() {
       if (this._autoOpened) return;
+      // 全新玩家先看新手教程，签到日历让到下次启动——免得两个开屏弹窗
+      // 在 600/700ms 互相覆盖。tutorialV1Done 未完成时本次不自动弹。
+      if (!Farm.state.data.tutorialV1Done) return;
       const cal = Farm.state.data.loginCalendar;
       const today = Farm.state.getDateString();
       if (cal.lastSignDate !== today) {

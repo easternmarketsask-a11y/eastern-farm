@@ -168,8 +168,18 @@
         if (!p || !p.unlocked || p.crop !== e.cropId) continue;
         if ((p.plantedAt || 0) > (e.plantedAt || 0)) continue;   // 新茬 → 旧事件作废
         if (!Farm.crops.isMature(p)) continue;   // 调性红线：只动已熟未收
-        // 清地块（等同被替你收走了；仓库永不被碰）
-        p.crop = null; p.plantedAt = 0; p.harvestsLeft = 0; p.watered = false; p.fertilized = false;
+        // 小偷只顺走"这一茬"——等同替你收了一次：
+        //   多季作物(harvestsLeft>1) → 减一茬 + 重置生长，剩余收成保留;
+        //   单季/最后一茬 → 清空地块。仓库永不被碰。施肥标记本就只作用本茬。
+        const def = Farm.crops.get(p.crop);
+        if (p.harvestsLeft > 1 && def) {
+          p.harvestsLeft -= 1;
+          const regrowMs = (def.regrow_minutes || def.grow_minutes) * 60000;
+          p.plantedAt = Date.now() - (def.grow_minutes * 60000 - regrowMs);
+          p.watered = false; p.fertilized = false;
+        } else {
+          p.crop = null; p.plantedAt = 0; p.harvestsLeft = 0; p.watered = false; p.fertilized = false;
+        }
         lostToday += 1;
         out.stolen.push({ kind: 'steal', name, cropId: e.cropId, count: 1, realUid: e.thiefUid });
       }

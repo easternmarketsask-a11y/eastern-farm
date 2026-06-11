@@ -673,9 +673,11 @@
           // 'sticker' carries no payout — it's a friendly hello (notice only,
           // surfaced by the reconcile toast in firebase-auth).
         }
-        // Clear server-side queue
+        // Clear ONLY the gifts we claimed (arrayRemove), so a gift that
+        // another player arrayUnion-appended between our get and this write
+        // isn't silently dropped (read-modify-write race).
         await Farm.fb.db.collection('farm_players').doc(uid).set(
-          { gameStats: { pendingGifts: [] } },
+          { gameStats: { pendingGifts: firebase.firestore.FieldValue.arrayRemove.apply(null, gifts) } },
           { merge: true }
         );
         return gifts;
@@ -839,8 +841,14 @@
         const steals = gs.stealEvents || [];
         const visits = gs.visitEvents || [];
         if (steals.length || visits.length) {
+          // arrayRemove 只删读到的这几条，而非 set []——避免 get 与 clear
+          // 之间别人 arrayUnion 新写入的事件被整片冲掉（读改写竞态丢事件）。
+          const AR = firebase.firestore.FieldValue.arrayRemove;
+          const upd = {};
+          if (steals.length) upd.stealEvents = AR.apply(null, steals);
+          if (visits.length) upd.visitEvents = AR.apply(null, visits);
           await Farm.fb.db.collection('farm_players').doc(uid).set(
-            { gameStats: { stealEvents: [], visitEvents: [] } },
+            { gameStats: upd },
             { merge: true }
           );
         }
@@ -862,7 +870,7 @@
         const evts = ((snap.data().gameStats) || {}).visitEvents || [];
         if (evts.length === 0) return [];
         await Farm.fb.db.collection('farm_players').doc(uid).set(
-          { gameStats: { visitEvents: [] } },
+          { gameStats: { visitEvents: firebase.firestore.FieldValue.arrayRemove.apply(null, evts) } },
           { merge: true }
         );
         return evts;
@@ -883,7 +891,7 @@
         const evts = ((snap.data().gameStats) || {}).stealEvents || [];
         if (evts.length === 0) return [];
         await Farm.fb.db.collection('farm_players').doc(uid).set(
-          { gameStats: { stealEvents: [] } },
+          { gameStats: { stealEvents: firebase.firestore.FieldValue.arrayRemove.apply(null, evts) } },
           { merge: true }
         );
         return evts;
