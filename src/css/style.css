@@ -2865,73 +2865,146 @@ body {
 }
 
 /* =============== EP SHOP =============== */
+/* ===== Farm Shop — premium restyle (2026-06-11, top-farm-game benchmark) ===== */
 .ep-shop-balance {
-  text-align: center;
-  background: linear-gradient(135deg, #f4e8ff, #e8d5ff);
-  padding: 10px 16px;
-  border-radius: var(--radius-md);
-  margin-bottom: 16px;
-  font-size: 14px;
-  color: var(--purple-points);
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 12px;
 }
-.ep-shop-section {
-  font-size: 14px;
-  color: var(--warm-text);
-  margin: 14px 0 8px;
-  font-weight: 600;
+.ep-shop-bal-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 15px;
+  font-weight: 800;
+  padding: 6px 14px;
+  border-radius: 999px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.7), 0 1px 3px rgba(120,80,20,0.12);
 }
+.ep-shop-bal-chip.coins  { background: linear-gradient(180deg,#fff6db,#ffe8a8); color: #8a6308; }
+.ep-shop-bal-chip.points { background: linear-gradient(180deg,#f4e8ff,#e3cbff); color: #6d3fa0; }
+
+/* Category tabs */
+.ep-shop-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+.ep-shop-tab {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 7px 2px 6px;
+  border: 1.5px solid var(--border-soft);
+  border-radius: 12px;
+  background: var(--cream-bg);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--warm-text-soft);
+  cursor: pointer;
+  transition: all 0.14s ease;
+}
+.ep-shop-tab-icon { font-size: 18px; line-height: 1; }
+.ep-shop-tab.active {
+  background: linear-gradient(180deg, #5bb874, #3f9657);
+  border-color: #2f7a45;
+  color: #fff;
+  box-shadow: 0 3px 0 #2a6038, inset 0 1px 0 rgba(255,255,255,0.35);
+}
+.ep-shop-tab:not(.active):active { transform: translateY(1px); }
+
 .ep-shop-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
+  gap: 12px;
 }
 .ep-shop-card {
-  background: var(--cream-bg);
-  border: 2px solid var(--border-soft);
-  border-radius: var(--radius-md);
-  padding: 12px 8px;
+  background: #fffdf6;
+  border: 1.5px solid #f0e4c8;
+  border-radius: 16px;
+  padding: 12px 8px 10px;
   text-align: center;
   position: relative;
-  transition: transform var(--transition);
+  box-shadow: 0 2px 5px rgba(120,80,30,0.07);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
-.ep-shop-card.disabled {
-  opacity: 0.55;
-}
+.ep-shop-card.disabled { opacity: 0.62; }
+/* Big icon in a category-tinted soft circle (premium "what you get" feel) */
 .ep-shop-icon {
-  font-size: 38px;
-  margin-bottom: 4px;
+  font-size: 36px;
   line-height: 1;
+  width: 60px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  margin-bottom: 6px;
+  box-shadow: inset 0 -3px 5px rgba(0,0,0,0.06), inset 0 2px 2px rgba(255,255,255,0.7);
 }
+.ep-shop-icon.cat-consumable { background: radial-gradient(circle at 50% 38%, #fff3d6, #ffe1a6); }
+.ep-shop-icon.cat-decoration { background: radial-gradient(circle at 50% 38%, #f1fae6, #d7efbf); }
+.ep-shop-icon.cat-pet        { background: radial-gradient(circle at 50% 38%, #eef7fd, #cfe8f7); }
+.ep-shop-icon.cat-upgrade    { background: radial-gradient(circle at 50% 38%, #fdeef0, #fad2da); }
 .ep-shop-name {
-  font-size: 13px;
-  font-weight: 700;
-  margin-bottom: 4px;
+  font-size: 13.5px;
+  font-weight: 800;
+  margin-bottom: 3px;
+  color: var(--warm-text);
 }
 .ep-shop-desc {
   font-size: 10px;
   color: var(--warm-text-soft);
-  line-height: 1.4;
-  margin-bottom: 8px;
+  line-height: 1.45;
+  margin-bottom: 9px;
   min-height: 28px;
 }
+/* Candy buy button — inviting green with a solid rim when affordable */
 .ep-shop-buy {
-  background: var(--purple-points);
-  color: white;
+  margin-top: auto;
+  background: linear-gradient(180deg, #5bb874 0%, #3f9657 52%, #34864a 100%);
+  color: #fff;
   border: none;
-  padding: 6px 12px;
-  border-radius: var(--radius-pill);
+  padding: 8px 12px;
+  border-radius: 13px;
   font-family: inherit;
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 13.5px;
+  font-weight: 800;
+  letter-spacing: 0.2px;
   cursor: pointer;
   width: 100%;
+  box-shadow: 0 3px 0 #2a6038, inset 0 1px 0 rgba(255,255,255,0.4);
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
 }
-.ep-shop-buy[disabled] {
-  background: #bbb;
+.ep-shop-buy:active {
+  transform: translateY(3px);
+  box-shadow: 0 0 0 #2a6038, inset 0 1px 0 rgba(255,255,255,0.3);
+}
+.ep-shop-buy .coin-icon, .ep-shop-buy .points-icon { vertical-align: -0.08em; }
+/* Can't afford yet — muted, still shows the price so the goal is visible */
+.ep-shop-buy--off {
+  background: #ddd6c6;
+  color: #8a8170;
+  box-shadow: 0 3px 0 #c4bca8;
   cursor: not-allowed;
 }
-.ep-shop-buy:not([disabled]):active {
-  transform: scale(0.96);
+.ep-shop-tag {
+  position: absolute;
+  top: -7px;
+  left: -5px;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 9px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.22);
+  z-index: 1;
 }
 .ep-shop-owned {
   position: absolute;
@@ -2946,6 +3019,7 @@ body {
   min-width: 18px;
   text-align: center;
   box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  z-index: 1;
 }
 
 /* =============== DAILY PANEL =============== */

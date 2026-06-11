@@ -163,91 +163,122 @@
     },
 
     // ============ View ============
-    open() {
-      const lang = Farm.state.data.language;
+    _shopTab: 'consumable',   // 当前分类 tab
+
+    // 精选/卖点徽章（按 item id，纯展示，制造购买欲望）。
+    _itemTag(id, lang) {
+      const T = {
+        fertilizer_pro:      { zh: '🔥 热门', en: '🔥 Hot',   c: '#e8522a' },
+        extra_plot_coins:    { zh: '⭐ 推荐', en: '⭐ Best',  c: '#3a8c50' },
+        extra_plot:          { zh: '⭐ 推荐', en: '⭐ Best',  c: '#3a8c50' },
+        guard_dog:           { zh: '🛡 护院', en: '🛡 Guard', c: '#5a7a2e' },
+        acceleration_ticket: { zh: '⚡ 超值', en: '⚡ Value', c: '#d68f00' },
+        festival_seed_pack:  { zh: '🌸 限定', en: '🌸 Ltd',   c: '#c0556a' },
+      };
+      const t = T[id];
+      return t ? { text: lang === 'en' ? t.en : t.zh, color: t.c } : null;
+    },
+
+    _ownedCount(it) {
+      if (it.kind === 'extra_plot') return Farm.state.data.extraPlots || 0;
+      if (it.stock_key) return Farm.state.data.activeEffects[it.stock_key] || 0;
+      if (it.kind === 'decoration') return Farm.state.data.decorations.filter(d => d.itemId === it.id).length;
+      return 0;
+    },
+
+    _cardHtml(it, lang) {
       const nameKey = lang === 'en' ? 'name_en' : 'name_zh';
       const descKey = lang === 'en' ? 'desc_en' : 'desc_zh';
-      const coins = Farm.state.data.coins;
-      const balance = Farm.state.data.eastPoints;
+      const can = this.canBuy(it);
+      const owned = this._ownedCount(it);
+      const ownedBadge = owned > 0 ? `<div class="ep-shop-owned">×${owned}</div>` : '';
+      const tag = this._itemTag(it.id, lang);
+      const tagBadge = tag ? `<div class="ep-shop-tag" style="background:${tag.color};">${tag.text}</div>` : '';
+      const price = this.priceOf(it);
+      const curIcon = price.currency === 'coins' ? 'coin-icon' : 'points-icon';
+      const affordable = can.ok;
+      const btnCls = affordable ? 'ep-shop-buy' : 'ep-shop-buy ep-shop-buy--off';
+      const buttonLabel = affordable
+        ? `${price.amount} <span class="${curIcon}"></span>`
+        : (can.reason === 'max_owned' ? (lang === 'en' ? '✓ MAX' : '✓ 已满')
+                                       : `${price.amount} <span class="${curIcon}"></span>`);
+      const dis = affordable ? '' : 'disabled';
+      const cat = it.category || 'consumable';
+      return `
+        <div class="ep-shop-card cat-${cat} ${affordable ? '' : 'disabled'}" data-id="${it.id}">
+          ${tagBadge}${ownedBadge}
+          <div class="ep-shop-icon cat-${cat}">${it.icon}</div>
+          <div class="ep-shop-name">${it[nameKey]}</div>
+          <div class="ep-shop-desc">${it[descKey]}</div>
+          <button class="${btnCls}" data-buy="${it.id}" ${dis}>${buttonLabel}</button>
+        </div>`;
+    },
 
-      const groups = { consumable: [], pet: [], decoration: [], upgrade: [] };
+    open(tab) {
+      const lang = Farm.state.data.language;
+      const EN = lang === 'en';
+      if (tab) this._shopTab = tab;
+      const coins = (Farm.state.data.coins || 0).toLocaleString();
+      const balance = (Farm.state.data.eastPoints || 0).toLocaleString();
+
+      const groups = { consumable: [], decoration: [], pet: [], upgrade: [] };
       this.items.forEach(it => {
         const cat = it.category || 'consumable';
         if (groups[cat]) groups[cat].push(it);
       });
+      const tabs = [
+        { key: 'consumable', icon: '⚡', zh: '道具',  en: 'Items' },
+        { key: 'decoration', icon: '🎍', zh: '装饰',  en: 'Decor' },
+        { key: 'pet',        icon: '🐾', zh: '宠物',  en: 'Pets' },
+        { key: 'upgrade',    icon: '🏞', zh: '扩建',  en: 'Expand' },
+      ].filter(t => (groups[t.key] || []).length > 0);
+      if (!tabs.some(t => t.key === this._shopTab)) this._shopTab = (tabs[0] || {}).key || 'consumable';
 
-      const renderItem = (it) => {
-        const can = this.canBuy(it);
-        const owned = it.kind === 'extra_plot'
-          ? Farm.state.data.extraPlots
-          : it.stock_key
-            ? Farm.state.data.activeEffects[it.stock_key] || 0
-            : (it.kind === 'decoration'
-                ? Farm.state.data.decorations.filter(d => d.itemId === it.id).length
-                : 0);
-        const ownedBadge = owned > 0
-          ? `<div class="ep-shop-owned">×${owned}</div>` : '';
-        const disabled = !can.ok ? 'disabled' : '';
-        const price = this.priceOf(it);
-        const curIcon = price.currency === 'coins' ? 'coin-icon' : 'points-icon';
-        const buttonLabel = can.ok
-          ? `${price.amount} <span class="${curIcon}"></span>`
-          : (can.reason === 'max_owned' ? (lang === 'en' ? 'MAX' : '已满')
-                                         : (lang === 'en' ? 'Not enough' : '不够'));
-        return `
-          <div class="ep-shop-card ${disabled}" data-id="${it.id}">
-            ${ownedBadge}
-            <div class="ep-shop-icon">${it.icon}</div>
-            <div class="ep-shop-name">${it[nameKey]}</div>
-            <div class="ep-shop-desc">${it[descKey]}</div>
-            <button class="ep-shop-buy" data-buy="${it.id}" ${disabled}>${buttonLabel}</button>
-          </div>
-        `;
-      };
+      const tabsHtml = tabs.map(t => `
+        <button class="ep-shop-tab ${t.key === this._shopTab ? 'active' : ''}" data-shop-tab="${t.key}">
+          <span class="ep-shop-tab-icon">${t.icon}</span>${EN ? t.en : t.zh}
+        </button>`).join('');
 
-      const sectionLabels = {
-        consumable: lang === 'en' ? '⚡ Consumables' : '⚡ 消耗品',
-        pet: lang === 'en' ? '🐾 Pets' : '🐾 宠物',
-        decoration: lang === 'en' ? '🎍 Decorations' : '🎍 装饰品',
-        upgrade: lang === 'en' ? '🏞 Upgrades' : '🏞 升级',
-      };
-
-      let body = '';
-      Object.keys(groups).forEach(cat => {
-        if (groups[cat].length === 0) return;
-        body += `<h3 class="ep-shop-section">${sectionLabels[cat]}</h3>`;
-        body += `<div class="ep-shop-grid">${groups[cat].map(renderItem).join('')}</div>`;
-      });
+      const list = groups[this._shopTab] || [];
+      const grid = list.length
+        ? `<div class="ep-shop-grid">${list.map(it => this._cardHtml(it, lang)).join('')}</div>`
+        : `<div class="muted" style="text-align:center;padding:26px;">${EN ? 'Nothing here yet' : '这个分类暂时空着～'}</div>`;
 
       const html = `
-        <h2 class="modal-title">🛍️ ${lang === 'en' ? 'Shop' : '商城'}</h2>
+        <h2 class="modal-title">🛍️ ${EN ? 'Farm Shop' : '农场商城'}</h2>
         <div class="ep-shop-balance">
-          <strong><span class="coin-icon"></span> ${coins}</strong>
-          &nbsp;&nbsp;
-          <strong><span class="points-icon"></span> ${balance}</strong>
+          <span class="ep-shop-bal-chip coins"><span class="coin-icon"></span> ${coins}</span>
+          <span class="ep-shop-bal-chip points"><span class="points-icon"></span> ${balance}</span>
         </div>
-        ${body}
-        <div class="btn-row">
-          <button class="btn secondary" onclick="Farm.ui.hideModal()">${Farm.i18n.t('btn_close')}</button>
+        <div class="ep-shop-tabs">${tabsHtml}</div>
+        <div id="epShopBody">${grid}</div>
+        <div class="btn-row" style="margin-top:14px;">
+          <button class="btn secondary" onclick="Farm.ui.hideModal()" style="width:100%;">${Farm.i18n.t('btn_close')}</button>
         </div>
       `;
       Farm.ui.showModal(html);
+      if (Farm.audio) Farm.audio.play('tap');
 
-      // Bind buy buttons
+      // Tab switch (re-render in place)
+      document.querySelectorAll('[data-shop-tab]').forEach(btn => {
+        btn.onclick = () => { if (Farm.audio) Farm.audio.play('tap'); this.open(btn.dataset.shopTab); };
+      });
+
+      // Buy buttons
       document.querySelectorAll('[data-buy]').forEach(btn => {
         if (btn.hasAttribute('disabled')) return;
         btn.onclick = (e) => {
           e.stopPropagation();
-          const itemId = btn.dataset.buy;
-          const r = this.buy(itemId);
+          const r = this.buy(btn.dataset.buy);
           if (!r.ok) {
-            Farm.ui.toast(lang === 'en' ? 'Cannot buy' : '无法购买');
+            Farm.ui.toast(r.reason === 'insufficient_coins' || r.reason === 'insufficient_ep'
+              ? (EN ? 'Not enough — keep farming!' : '余额不够，多卖点菜再来～')
+              : (EN ? 'Cannot buy' : '无法购买'), 2400);
+            if (Farm.audio) Farm.audio.play('error');
             return;
           }
-          // Show effect feedback
           this._showPurchaseFeedback(r.item, r.effect);
-          // Re-render shop with updated balance
-          setTimeout(() => this.open(), 350);
+          setTimeout(() => this.open(), 350);   // 保持当前 tab
         };
       });
     },
