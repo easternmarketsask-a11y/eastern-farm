@@ -1424,7 +1424,8 @@ body {
   bottom: 16px;          /* under the barn base, above the label */
   height: 16px;
   border-radius: 50%;
-  background: radial-gradient(ellipse at 50% 50%, rgba(45, 70, 12, 0.34) 0%, rgba(45, 70, 12, 0) 70%);
+  /* skirt 自带原图草地接地，椭圆影只留一点点托底 */
+  background: radial-gradient(ellipse at 50% 50%, rgba(45, 70, 12, 0.20) 0%, rgba(45, 70, 12, 0) 70%);
   pointer-events: none;
 }
 .warehouse-btn .warehouse-img {
