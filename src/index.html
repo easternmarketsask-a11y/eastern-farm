@@ -62,15 +62,26 @@
       <span class="splash-tagline-zh">好菜自己种</span>
       <span class="splash-tagline-en">Grow your own</span>
     </div>
-    <button class="splash-start" id="splashStart">
-      <span class="splash-start-icon">🌱</span>
-      <span class="splash-start-zh">开始游戏</span>
-      <span class="splash-start-en">Start</span>
-    </button>
-    <button class="splash-login" id="splashLogin">
+    <!-- Reward hook + perks: pull guests over the login line. Hidden once
+         signed in (see firebase-auth._renderSplash). -->
+    <div class="splash-reward" id="splashReward">
+      <span class="splash-reward-gift">🎁</span>
+      <span class="splash-reward-main">登录立得 <b>3000 农场币</b> 开局礼包</span>
+      <span class="splash-reward-en">Sign in → 3000 coins to start</span>
+    </div>
+    <ul class="splash-perks" id="splashPerks">
+      <li>🥬 攒超市积分，换东方超市真优惠</li>
+      <li>🏘 跟邻居互动、偷菜、互帮</li>
+      <li>☁️ 进度云端保存，换手机也不丢</li>
+    </ul>
+    <!-- PRIMARY: login (rewarded). SECONDARY: guest trial as a small link. -->
+    <button class="splash-login splash-login--hero" id="splashLogin">
       <span class="icon">📱</span>
-      <span>会员登录 · Sign in</span>
-      <span class="splash-login-tag">推荐</span>
+      <span>手机号登录 · 领礼包</span>
+    </button>
+    <button class="splash-start splash-start--ghost" id="splashStart">
+      <span class="splash-start-zh">先随便逛逛</span>
+      <span class="splash-start-en">Just look around ›</span>
     </button>
     <div class="splash-footer">
       <span>🏪 Saskatoon · 133-412 Willowgrove Square</span>

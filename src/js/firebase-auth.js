@@ -180,6 +180,19 @@
           const startBtn = document.getElementById('splashStart');
           if (startBtn) startBtn.click();
         };
+        // Already a member — drop the "sign in for 3000 coins" pitch and the
+        // perks list, and relabel the ghost link to a plain "enter".
+        const reward = document.getElementById('splashReward');
+        if (reward) reward.style.display = 'none';
+        const perks = document.getElementById('splashPerks');
+        if (perks) perks.style.display = 'none';
+        const startBtn = document.getElementById('splashStart');
+        if (startBtn) {
+          const zh = startBtn.querySelector('.splash-start-zh');
+          const en = startBtn.querySelector('.splash-start-en');
+          if (zh) zh.textContent = '进入农场';
+          if (en) en.textContent = 'Enter ›';
+        }
       } else {
         loginBtn.classList.remove('splash-login--logged-in');
       }
