@@ -74,6 +74,9 @@
     // 条件满足时调用：首次才展示。稍延迟，避开同时触发的庆祝/弹窗。
     fire(id, delayMs) {
       if (this.seen(id)) return;
+      // 新手聚光灯进行时别抢话——它正手把手教同样的几步。不标记 seen，
+      // 等之后第二次种/收/卖时 coach 再补讲（first_plant 是一次性除外）。
+      if (Farm.spotlight && Farm.spotlight._active) return;
       setTimeout(() => this.tip(id), delayMs == null ? 700 : delayMs);
     },
 

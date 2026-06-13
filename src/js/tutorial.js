@@ -75,6 +75,11 @@
           Farm.state.save();
           Farm.ui.hideModal();
           if (Farm.audio) Farm.audio.play('plant');
+          // Hand off to the spotlight: walk them through the first
+          // plant → harvest → sell once the welcome panel is gone.
+          if (Farm.spotlight && Farm.spotlight.maybeStart) {
+            setTimeout(() => Farm.spotlight.maybeStart(), 500);
+          }
         };
       }
     },

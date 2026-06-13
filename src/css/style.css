@@ -2805,6 +2805,71 @@ body {
   50%      { box-shadow: 0 2px 10px rgba(247, 201, 72, 0.7); }
 }
 
+/* =============== SPOTLIGHT ONBOARDING (hand-held first loop) =============== */
+/* Container is click-through (pointer-events:none) so the highlighted target
+   underneath stays tappable. Only the skip button re-enables pointer events. */
+#spotlightOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 99;            /* above the farm, below .modal (z 100) */
+  pointer-events: none;
+}
+/* The "hole": transparent box with a massive dim shadow spilling outward, plus
+   a pulsing brand ring so the eye lands on the target. */
+.sl-hole {
+  position: absolute;
+  border-radius: 16px;
+  box-shadow: 0 0 0 9999px rgba(30, 22, 12, 0.62);
+  outline: 3px solid #ffd54f;
+  outline-offset: 2px;
+  transition: all 0.25s ease;
+  animation: slRing 1.4s ease-in-out infinite;
+}
+@keyframes slRing {
+  0%, 100% { outline-color: rgba(255, 213, 79, 0.9); }
+  50%      { outline-color: rgba(255, 213, 79, 0.35); }
+}
+.sl-arrow {
+  position: absolute;
+  font-size: 30px;
+  transform: translateX(-50%);
+  animation: slBob 1s ease-in-out infinite;
+  filter: drop-shadow(0 2px 3px rgba(0,0,0,0.4));
+}
+@keyframes slBob {
+  0%, 100% { transform: translateX(-50%) translateY(0); }
+  50%      { transform: translateX(-50%) translateY(6px); }
+}
+.sl-bubble {
+  position: absolute;
+  max-width: 240px;
+  background: var(--cream-card, #fffdf7);
+  border: 2px solid #ffd54f;
+  border-radius: 16px;
+  padding: 12px 14px 10px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.28);
+  pointer-events: auto;
+  text-align: center;
+  animation: splashSlideUp 0.4s ease both;
+}
+.sl-bubble-text {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--warm-text, #4a3f2e);
+}
+.sl-skip {
+  margin-top: 8px;
+  background: none;
+  border: none;
+  color: var(--warm-text-soft, #9a8f7d);
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 2px 6px;
+}
+
 /* =============== GUIDE BUTTON (header ❓ 玩法) =============== */
 /* Calm green pill — present but doesn't compete with the pulsing 今日 button. */
 .guide-button {
