@@ -166,15 +166,16 @@
     // totalHarvests is monotonic, so it's a reliable "how far along" signal and
     // a 2-minute guest session can't overwrite a long-running account.
     async restoreFromCloud() {
-      if (!Farm.fb || !Farm.fb.available) return { restored: false, reason: 'offline' };
       if (!Farm.fbAuth || !Farm.fbAuth.isLoggedIn()) return { restored: false, reason: 'not_logged_in' };
-      if (!Farm.fbAuth.memberDoc || !Farm.fbAuth.memberDoc.id) return { restored: false, reason: 'member_doc_unresolved' };
-      const uid = meId();
-      if (!uid) return { restored: false, reason: 'no_uid' };
+      const md = Farm.fbAuth.memberDoc;
+      if (!md || !md.id) return { restored: false, reason: 'member_doc_unresolved' };
       try {
-        const snap = await Farm.fb.db.collection('members').doc(uid).get();
-        const data = snap.exists ? (snap.data() || {}) : {};
-        const save = data.gameSave;
+        // Read the blob from the ALREADY-FETCHED member doc, NOT a fresh get().
+        // Firestore rules only allow GET-by-id when auth.uid == docId, which is
+        // false for legacy ru_ members (doc id != auth uid). _loadMemberDoc
+        // fetched the full doc via the permitted list-where(firebase_uid) query,
+        // so md already carries gameSave for every member type.
+        const save = md.gameSave;
         if (!save || !save.blob) return { restored: false, reason: 'no_cloud_save' };
         let cloudState;
         try { cloudState = JSON.parse(save.blob); } catch (e) { return { restored: false, reason: 'bad_blob' }; }
