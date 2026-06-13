@@ -19,6 +19,7 @@
  */
 (function () {
   const SYNC_MIN_INTERVAL_MS = 60 * 1000;
+  const SAVE_BLOB_VERSION = 1;   // cloud save-blob schema version
   const PRIVACY_DEFAULT_VISIBLE = true;
   const DAILY_LIKE_CAP = 5;
   const DAILY_HELP_CAP = 5;       // help (water) up to 5 neighbors/day
@@ -113,11 +114,25 @@
       if (!uid) return { ok: false, reason: 'no_uid' };
       try {
         const payload = this._buildPayload();
+        // Full save blob for cloud restore (private — members/ only, NOT the
+        // public farm_players/ mirror). This is the lossless copy of local
+        // state that restoreFromCloud() pulls back on a new device / wiped
+        // storage. harvests + clientAt let the restore decide local-vs-cloud.
+        const s = Farm.state.data;
+        let gameSave = null;
+        try {
+          gameSave = {
+            blob: JSON.stringify(s),
+            harvests: s.totalHarvests || 0,
+            clientAt: s.lastSavedAt || Date.now(),
+            version: SAVE_BLOB_VERSION,
+          };
+        } catch (e) { gameSave = null; }
         // Merge so we never overwrite likesReceived (counter only) or other
         // server-managed fields. members/ keeps the gameStats mirror so the
         // StockWise admin game-management view (and points context) stay current.
         await Farm.fb.db.collection('members').doc(uid).set(
-          { gameStats: payload },
+          gameSave ? { gameStats: payload, gameSave: gameSave } : { gameStats: payload },
           { merge: true }
         );
         // Mirror the SAME game-safe stats to the public farm_players/ collection
@@ -138,6 +153,43 @@
       } catch (e) {
         console.warn('[gameSync] push failed', e);
         return { ok: false, reason: e.message };
+      }
+    },
+
+    // Cloud restore: pull the full save blob from members/{uid}.gameSave and,
+    // if the cloud copy is more advanced than local, replace local state.
+    // Called once on login BEFORE push() so we never overwrite a real account
+    // with a fresh/wiped local state (new device, cleared storage, iOS private
+    // mode loss). Decision rule (avoids clobbering active local play):
+    //   cloud wins if cloud.harvests > local.harvests, OR
+    //   (equal harvests AND cloud saved later than local).
+    // totalHarvests is monotonic, so it's a reliable "how far along" signal and
+    // a 2-minute guest session can't overwrite a long-running account.
+    async restoreFromCloud() {
+      if (!Farm.fb || !Farm.fb.available) return { restored: false, reason: 'offline' };
+      if (!Farm.fbAuth || !Farm.fbAuth.isLoggedIn()) return { restored: false, reason: 'not_logged_in' };
+      if (!Farm.fbAuth.memberDoc || !Farm.fbAuth.memberDoc.id) return { restored: false, reason: 'member_doc_unresolved' };
+      const uid = meId();
+      if (!uid) return { restored: false, reason: 'no_uid' };
+      try {
+        const snap = await Farm.fb.db.collection('members').doc(uid).get();
+        const data = snap.exists ? (snap.data() || {}) : {};
+        const save = data.gameSave;
+        if (!save || !save.blob) return { restored: false, reason: 'no_cloud_save' };
+        let cloudState;
+        try { cloudState = JSON.parse(save.blob); } catch (e) { return { restored: false, reason: 'bad_blob' }; }
+        const local = Farm.state.data;
+        const cloudH = (save.harvests != null ? save.harvests : (cloudState.totalHarvests || 0)) || 0;
+        const localH = local.totalHarvests || 0;
+        const cloudAt = save.clientAt || 0;
+        const localAt = local.lastSavedAt || 0;
+        const cloudWins = (cloudH > localH) || (cloudH === localH && cloudAt > localAt);
+        if (!cloudWins) return { restored: false, reason: 'local_current', cloudH: cloudH, localH: localH };
+        const ok = Farm.state.applyCloudSave(cloudState);
+        return { restored: !!ok, cloudH: cloudH, localH: localH };
+      } catch (e) {
+        console.warn('[gameSync] restoreFromCloud failed', e);
+        return { restored: false, reason: e.message };
       }
     },
 

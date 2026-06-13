@@ -51,6 +51,29 @@
           this._notify();
           this._renderTopbar();
           this._renderSplash();
+          // Cloud restore BEFORE push: if the cloud save is more advanced than
+          // local (new device, cleared storage, iOS private-mode loss), pull it
+          // back so the player sees their real farm — then push reconciles. The
+          // decision rule inside restoreFromCloud never clobbers active local play.
+          if (this.memberDoc && Farm.fbGameSync && Farm.fbGameSync.restoreFromCloud) {
+            try {
+              const r = await Farm.fbGameSync.restoreFromCloud();
+              if (r && r.restored) {
+                this._syncLocalBalance();   // re-apply real store points over the restored blob
+                if (Farm.farm && Farm.farm.renderGrid) Farm.farm.renderGrid();
+                if (Farm.ui && Farm.ui.refreshHUD) Farm.ui.refreshHUD();
+                if (Farm.harvestStatus && Farm.harvestStatus.render) Farm.harvestStatus.render();
+                if (Farm.seasons && Farm.seasons.apply) Farm.seasons.apply();
+                this._renderSplash();
+                const lang = (Farm.state.data.language) === 'en' ? 'en' : 'zh';
+                if (Farm.ui && Farm.ui.toast) {
+                  Farm.ui.toast(lang === 'en'
+                    ? '☁️ Farm restored from your account'
+                    : '☁️ 已从你的账号恢复农场进度', 3000);
+                }
+              }
+            } catch (e) { console.warn('[auth] cloud restore failed', e); }
+          }
           // Now that the REAL member doc has resolved, push gameStats to the
           // correct doc (members + farm_players). The push guard skipped any
           // earlier attempts while memberDoc was still unresolved.

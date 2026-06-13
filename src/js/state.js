@@ -160,6 +160,9 @@
     lastActiveAt: 0,
     // 最近一次离开期间的偷/帮事件（喂回家小报）。
     raidLog: null,
+    // 每次成功 save() 写入的本机时间戳。云端存档恢复时用它 + totalHarvests
+    // 比较本地与云端谁更新，决定是否从云端拉回（见 firebase-game-sync）。
+    lastSavedAt: 0,
   };
 
   function getDateString(d) {
@@ -330,6 +333,7 @@
       // and surface a clear warning instead of failing silently.
       let ok = false;
       try {
+        this.data.lastSavedAt = Date.now();   // stamp before serialize (cloud restore compares this)
         const json = JSON.stringify(this.data);
         localStorage.setItem(SAVE_KEY, json);
         ok = localStorage.getItem(SAVE_KEY) === json;
@@ -357,6 +361,47 @@
       this.data = JSON.parse(JSON.stringify(STARTER_STATE));
       this.data.sessionStats.date = getDateString();
       this.save();
+    },
+
+    // Replace local state with a cloud-restored snapshot (see firebase-game-sync
+    // restoreFromCloud). Caller already decided the cloud copy wins. We:
+    //  - fill any newer STARTER fields missing from the (possibly older) blob,
+    //  - PRESERVE store-owned balances (eastPoints/unsyncedEp) — those belong to
+    //    the member's real RewardUp account, never to an old game blob,
+    //  - roll over daily/session buckets if the blob is from a previous day,
+    //  - drop crops no longer in the catalog (migrateCrops),
+    //  - persist locally.
+    applyCloudSave(cloudState) {
+      if (!cloudState || typeof cloudState !== 'object') return false;
+      const keepEastPoints = this.data.eastPoints;
+      const keepUnsyncedEp = this.data.unsyncedEp;
+      const merged = Object.assign({}, STARTER_STATE, cloudState);
+      merged.dailyClaims = Object.assign({}, STARTER_STATE.dailyClaims, cloudState.dailyClaims || {});
+      merged.activeEffects = Object.assign({}, STARTER_STATE.activeEffects, cloudState.activeEffects || {});
+      merged.loginCalendar = Object.assign({}, STARTER_STATE.loginCalendar, cloudState.loginCalendar || {});
+      merged.aiRelationships = Object.assign({}, STARTER_STATE.aiRelationships, cloudState.aiRelationships || {});
+      if (keepEastPoints != null) merged.eastPoints = keepEastPoints;   // server owns this
+      if (keepUnsyncedEp != null) merged.unsyncedEp = keepUnsyncedEp;
+      this.data = merged;
+      // Daily/session rollover if the restored blob predates today.
+      const today = getDateString();
+      if (!this.data.sessionStats || this.data.sessionStats.date !== today) {
+        this.data.sessionStats = { date: today, planted: {}, harvested: {}, coinsEarned: 0, seedsBought: 0, coinsSpent: 0 };
+      }
+      if (!this.data.dailyClaims || this.data.dailyClaims.date !== today) {
+        this.data.dailyClaims = {
+          date: today, lotterySpunFree: false, neighborsVisited: [], newsRead: false,
+          firstHarvestDone: false, firstDeliveryDone: false, likesSentToday: [], helpSentToday: [],
+          stickersSentToday: [], stolenToday: 0, stolenFromTargets: {}, lostToRealToday: 0, visitFootprints: [],
+        };
+      }
+      // Drop crops/seeds no longer in the catalog (mirrors main.js boot migrate).
+      if (window.Farm && Farm.crops && Farm.crops.all) {
+        const ids = Farm.crops.all().map(c => c.id).concat(Object.keys(Farm.crops.festivalCrops || {}));
+        this.migrateCrops(ids);
+      }
+      this.save();
+      return true;
     },
 
     // Drop plot crops and seeds for IDs no longer in the catalog. Apply
