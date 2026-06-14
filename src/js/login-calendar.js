@@ -80,6 +80,18 @@
     // 没签就关掉的玩家每次重开都会被再弹一次 → 感觉「签到反复出现」。
     // 现在用持久化的 autoShownDate：当天弹过一次(签没签都算)就不再自动弹，
     // 想签仍可从「今日」面板进入。当天已签也不弹。
+    // 独立 localStorage 键,不在游戏存档 blob 里 → 云端恢复/每日重置/存档替换
+    // 都动不到它。这是"今天弹过没"的最终防线:无论存档状态怎么被覆盖,只要这个键
+    // 是今天,就不再自动弹。(签到反复弹被报了三次,这次彻底解耦。)
+    _shownKey: 'eastern_farm_signin_shown_v1',
+    _shownToday() {
+      try { return localStorage.getItem(this._shownKey) === Farm.state.getDateString(); }
+      catch (_) { return false; }
+    },
+    _markShownToday() {
+      try { localStorage.setItem(this._shownKey, Farm.state.getDateString()); } catch (_) {}
+    },
+
     maybeAutoOpen() {
       if (this._autoOpened) return;
       // 全新玩家先看新手教程，签到日历让到下次启动——免得两个开屏弹窗
@@ -88,9 +100,11 @@
       const cal = Farm.state.data.loginCalendar;
       const today = Farm.state.getDateString();
       if (cal.lastSignDate === today) return;   // 当天已签
-      if (cal.autoShownDate === today) return;   // 当天已自动弹过一次
+      if (cal.autoShownDate === today) return;   // 当天已自动弹过一次(存档内)
+      if (this._shownToday()) return;            // 当天已自动弹过一次(独立键,防存档被覆盖)
       this._autoOpened = true;
       cal.autoShownDate = today;
+      this._markShownToday();
       Farm.state.save();
       setTimeout(() => this.open(), 600);
     },

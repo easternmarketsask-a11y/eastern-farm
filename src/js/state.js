@@ -378,10 +378,17 @@
       if (!cloudState || typeof cloudState !== 'object') return false;
       const keepEastPoints = this.data.eastPoints;
       const keepUnsyncedEp = this.data.unsyncedEp;
+      const localCal = (this.data && this.data.loginCalendar) || {};
       const merged = Object.assign({}, STARTER_STATE, cloudState);
       merged.dailyClaims = Object.assign({}, STARTER_STATE.dailyClaims, cloudState.dailyClaims || {});
       merged.activeEffects = Object.assign({}, STARTER_STATE.activeEffects, cloudState.activeEffects || {});
-      merged.loginCalendar = Object.assign({}, STARTER_STATE.loginCalendar, cloudState.loginCalendar || {});
+      // 签到日历:别让旧云端存档把"今天已签/已弹"回退(否则签到卡反复弹 + 签到进度丢失)。
+      // 取 lastSignDate 更近的那份做基底,autoShownDate 取两者较大,弹窗已读绝不回退。
+      const cloudCal = cloudState.loginCalendar || {};
+      const newerCal = ((localCal.lastSignDate || '') >= (cloudCal.lastSignDate || '')) ? localCal : cloudCal;
+      merged.loginCalendar = Object.assign({}, STARTER_STATE.loginCalendar, newerCal);
+      merged.loginCalendar.autoShownDate =
+        [(localCal.autoShownDate || ''), (cloudCal.autoShownDate || '')].sort().pop();
       merged.aiRelationships = Object.assign({}, STARTER_STATE.aiRelationships, cloudState.aiRelationships || {});
       if (keepEastPoints != null) merged.eastPoints = keepEastPoints;   // server owns this
       if (keepUnsyncedEp != null) merged.unsyncedEp = keepUnsyncedEp;
