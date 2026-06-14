@@ -56,10 +56,25 @@
     // eviction), not something code can fully fix — so we surface it clearly.
     let _storageBroken = false;
     try {
-      const seenTab = sessionStorage.getItem('ef_tab_seen');
-      sessionStorage.setItem('ef_tab_seen', '1');
-      const hadSave = !!localStorage.getItem('eastern_farm_save_v1');
-      if (seenTab && !hadSave) _storageBroken = true;
+      let hadSave = false;
+      try { hadSave = !!localStorage.getItem('eastern_farm_save_v1'); } catch (_) { _storageBroken = true; }
+      // Method 1 (storage-independent): Navigation Timing. If THIS load is a
+      // reload (refresh) yet there's no save, storage didn't survive the reload.
+      // Works even when the browser wipes sessionStorage too. init() writes a
+      // fresh save on every no-save load, so a working browser always has a save
+      // after the first load — a reload missing it means it was wiped.
+      let navType = '';
+      try {
+        const nav = performance.getEntriesByType && performance.getEntriesByType('navigation')[0];
+        navType = (nav && nav.type) || (performance.navigation && performance.navigation.type === 1 ? 'reload' : '');
+      } catch (_) {}
+      if (navType === 'reload' && !hadSave) _storageBroken = true;
+      // Method 2 (belt): sessionStorage marker (catches cases the nav timing misses).
+      try {
+        const seenTab = sessionStorage.getItem('ef_tab_seen');
+        sessionStorage.setItem('ef_tab_seen', '1');
+        if (seenTab && !hadSave) _storageBroken = true;
+      } catch (_) { _storageBroken = true; }
     } catch (_) { _storageBroken = true; }
 
     // 1. Load data files in parallel
