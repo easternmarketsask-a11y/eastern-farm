@@ -32,7 +32,9 @@
 
   --font-zh: 'Noto Sans SC', 'PingFang SC', sans-serif;
   --font-en: 'Plus Jakarta Sans', 'Quicksand', sans-serif;
-  --font-display: 'ZCOOL KuaiLe', 'Plus Jakarta Sans', sans-serif;
+  /* Kawaii display font: ZCOOL KuaiLe (rounded playful CJK) + Fredoka (rounded
+     Latin). Used for titles, buttons, nav labels, currency. */
+  --font-display: 'ZCOOL KuaiLe', 'Fredoka', 'Plus Jakarta Sans', sans-serif;
 
   --radius-sm: 8px;
   --radius-md: 12px;
@@ -1988,6 +1990,7 @@ body {
   font-weight: 700;
   color: #6b5d52;
   letter-spacing: 0.2px;
+  font-family: var(--font-display);   /* kawaii rounded nav labels */
 }
 
 .task-badge {
@@ -2419,8 +2422,8 @@ body {
   color: #fff;
   border: none;
   padding: 12px 22px;
-  border-radius: 16px;
-  font-family: inherit;
+  border-radius: 18px;
+  font-family: var(--font-display);   /* kawaii rounded button text */
   font-weight: 700;
   font-size: 14px;
   letter-spacing: 0.2px;

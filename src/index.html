@@ -40,6 +40,13 @@
 <meta name="twitter:description" content="玩农场游戏、赚超市积分。免费玩，无下载，天天收获！">
 <meta name="twitter:image" content="https://farm.easternmarket.ca/src/assets/images/share-card.png">
 
+<!-- Kawaii display fonts (rounded, playful). The CSS already references
+     'ZCOOL KuaiLe' (--font-display) but the link was missing, so it silently
+     fell back to system fonts. Load it + Fredoka (rounded Latin) so headings/
+     buttons get the cute look. display=swap → graceful fallback if offline. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=ZCOOL+KuaiLe&display=swap">
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
