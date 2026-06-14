@@ -36,9 +36,15 @@
      Latin). Used for titles, buttons, nav labels, currency. */
   --font-display: 'ZCOOL KuaiLe', 'Fredoka', 'Plus Jakarta Sans', sans-serif;
 
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 20px;
+  /* Kawaii accent palette (Chris's refs): leaf green / pumpkin orange / amber. */
+  --kawaii-green: #4CAF50;
+  --kawaii-orange: #FF9800;
+  --kawaii-amber: #FFC107;
+
+  /* Rounder everything (kawaii). Bumped a touch from 8/12/20. */
+  --radius-sm: 10px;
+  --radius-md: 15px;
+  --radius-lg: 24px;
   --radius-pill: 999px;
 
   --transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
@@ -2040,15 +2046,15 @@ body {
 .modal-content {
   position: relative;
   background: var(--cream-card);
-  border: 2px solid #f0e4c8;
-  border-radius: 24px;
+  border: 2px solid #f6eed9;          /* kawaii: softer, lighter rim */
+  border-radius: 28px;                /* puffier marshmallow corners */
   padding: 24px 20px;
   max-width: 380px;
   width: calc(100% - 40px);
   max-height: 80vh;
   overflow-y: auto;
-  box-shadow: 0 6px 0 rgba(139, 90, 60, 0.18),
-              0 18px 40px rgba(60, 40, 20, 0.32);
+  box-shadow: 0 5px 0 rgba(139, 90, 60, 0.12),
+              0 16px 40px rgba(60, 40, 20, 0.24);   /* softer, more diffuse */
   animation: modalIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
