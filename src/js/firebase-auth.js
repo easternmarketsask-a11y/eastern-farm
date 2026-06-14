@@ -746,6 +746,7 @@
 
     _onLoginSuccess(lang) {
       Farm.ui.hideModal();
+      if (Farm.track) Farm.track('login');   // 漏斗:真实登录转化(仅主动登录成功时,非每次恢复)
       if (Farm.audio) Farm.audio.play('achievement');
       setTimeout(() => {
         const name = (this.memberDoc && (this.memberDoc.name || this.memberDoc.username))

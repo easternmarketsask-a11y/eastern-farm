@@ -360,6 +360,7 @@
       // deliver to Eastern Market next).
       if (isFirstHarvestEver) {
         Farm.state.data.firstHarvestCelebrated = true;
+        if (Farm.track) Farm.track('harvest_first');
         Farm.state.save();
         if (Farm.ui && Farm.ui.showConfetti) Farm.ui.showConfetti(28, 2400);
         setTimeout(() => {

@@ -182,6 +182,7 @@
 
           if (isFirstPlantEver) {
             Farm.state.data.firstPlantCelebrated = true;
+            if (Farm.track) Farm.track('plant_first');
             Farm.state.addCoins(10);
             Farm.ui.refreshHUD();
             // Replace the usual "已种下" toast with a louder first-time one

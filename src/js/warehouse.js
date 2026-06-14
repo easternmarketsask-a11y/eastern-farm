@@ -216,6 +216,8 @@
       }
       // 首次卖货：解释赚币 + 首单加成（晚于卖货庆祝 toast）
       if (Farm.coach) Farm.coach.fire('first_sell', 2000);
+      // 漏斗:首次卖货(totalDeliveries 刚自增到 1)
+      if (Farm.track && (Farm.state.data.totalDeliveries || 0) === 1) Farm.track('sell_first');
       // 游客刚赚到第一笔 = 最佳转化时机：一次性引导登录(领礼包+云端存档)。
       if (Farm.loginNudge) Farm.loginNudge.maybe();
     },

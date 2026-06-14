@@ -212,10 +212,12 @@
     },
 
     skip() {
+      if (Farm.track) Farm.track('spotlight_skip');
       this._teardown();
     },
 
     finish() {
+      if (Farm.track) Farm.track('spotlight_done');
       this._teardown();
       // Small completion reward + warm close — instant gratification for
       // finishing the loop. (Login bonus + first-plant bonus are separate.)

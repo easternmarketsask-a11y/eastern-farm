@@ -122,6 +122,16 @@
     setInterval(() => { Farm.state.data.lastActiveAt = Date.now(); Farm.state.save(); }, 60000);
 
     console.log('✅ Happy Farm ready.');
+
+    // 匿名漏斗:每次打开计一次;2.5s 后仍未登录 → 记为访客(auth 是异步恢复的)。
+    if (Farm.track) {
+      Farm.track('open');
+      setTimeout(function () {
+        if (!(Farm.fbAuth && Farm.fbAuth.isLoggedIn && Farm.fbAuth.isLoggedIn())) {
+          Farm.track('open_guest');
+        }
+      }, 2500);
+    }
   }
 
   function checkDailyLogin() {
