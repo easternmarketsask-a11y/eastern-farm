@@ -44,6 +44,44 @@
     if (ok) ok.onclick = () => Farm.ui.hideModal();
   }
 
+  // Temporary diagnostic overlay (?debug=1). Shows ground-truth state so a
+  // screenshot tells us exactly why sign-in/coins "revert on refresh".
+  function showDebugOverlay(diag) {
+    let el = document.getElementById('efDebug');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'efDebug';
+      el.style.cssText = 'position:fixed;left:8px;right:8px;top:8px;z-index:99999;background:rgba(20,20,20,0.92);color:#7CFC00;font:12px/1.5 monospace;padding:10px 12px;border-radius:10px;white-space:pre-wrap;box-shadow:0 4px 16px rgba(0,0,0,0.4);';
+      document.body.appendChild(el);
+      el.addEventListener('click', function () { el.remove(); });
+    }
+    function read(k) {
+      try { return localStorage.getItem(k); } catch (e) { return 'THROW'; }
+    }
+    function paint() {
+      const d = (Farm.state && Farm.state.data) || {};
+      const cal = d.loginCalendar || {};
+      const loggedIn = !!(Farm.fbAuth && Farm.fbAuth.isLoggedIn && Farm.fbAuth.isLoggedIn());
+      let saveNow = read('eastern_farm_save_v1');
+      let saveCoins = '?';
+      try { saveCoins = saveNow && saveNow !== 'THROW' ? (JSON.parse(saveNow).coins) : '(no save)'; } catch (e) { saveCoins = 'parseerr'; }
+      el.textContent =
+        '🔧 诊断(点我关闭)\n' +
+        '本次加载: ' + diag.navType + '  | 启动时有存档: ' + diag.saveAtBoot + '\n' +
+        '本会话能写读: ' + diag.writeReadOK + '  | sessionStorage续存: ' + diag.sessionSeen + '\n' +
+        (diag.err ? ('err: ' + diag.err + '\n') : '') +
+        '── 当前状态 ──\n' +
+        '登录: ' + (loggedIn ? 'YES' : 'guest') + '  | 内存金币: ' + (d.coins) + '\n' +
+        '存档里金币: ' + saveCoins + '\n' +
+        '签到 lastSignDate: ' + (cal.lastSignDate || '(空)') + '\n' +
+        'autoShownDate: ' + (cal.autoShownDate || '(空)') + '\n' +
+        '独立键 signin_shown_v1: ' + (read('eastern_farm_signin_shown_v1') || '(空)') + '\n' +
+        '今天: ' + (Farm.state && Farm.state.getDateString ? Farm.state.getDateString() : '?');
+    }
+    paint();
+    setInterval(paint, 1000);
+  }
+
   async function boot() {
     console.log('🌱 Happy Farm booting...');
 
@@ -55,27 +93,38 @@
     // a device setting (Private Browsing / Block All Cookies / storage
     // eviction), not something code can fully fix — so we surface it clearly.
     let _storageBroken = false;
+    const _diag = { navType: '?', saveAtBoot: '?', sessionSeen: '?', writeReadOK: '?', err: '' };
     try {
       let hadSave = false;
-      try { hadSave = !!localStorage.getItem('eastern_farm_save_v1'); } catch (_) { _storageBroken = true; }
+      try { hadSave = !!localStorage.getItem('eastern_farm_save_v1'); _diag.saveAtBoot = hadSave ? 'YES' : 'no'; }
+      catch (e) { _storageBroken = true; _diag.saveAtBoot = 'THROW'; _diag.err = String(e); }
+      // In-session write+read test: does localStorage even work right now?
+      try {
+        localStorage.setItem('ef_wtest', '1');
+        _diag.writeReadOK = (localStorage.getItem('ef_wtest') === '1') ? 'YES' : 'NO-READBACK';
+      } catch (e) { _diag.writeReadOK = 'THROW'; _diag.err = String(e); }
       // Method 1 (storage-independent): Navigation Timing. If THIS load is a
       // reload (refresh) yet there's no save, storage didn't survive the reload.
-      // Works even when the browser wipes sessionStorage too. init() writes a
-      // fresh save on every no-save load, so a working browser always has a save
-      // after the first load — a reload missing it means it was wiped.
       let navType = '';
       try {
         const nav = performance.getEntriesByType && performance.getEntriesByType('navigation')[0];
         navType = (nav && nav.type) || (performance.navigation && performance.navigation.type === 1 ? 'reload' : '');
       } catch (_) {}
+      _diag.navType = navType || '(none)';
       if (navType === 'reload' && !hadSave) _storageBroken = true;
-      // Method 2 (belt): sessionStorage marker (catches cases the nav timing misses).
+      // Method 2 (belt): sessionStorage marker (catches cases nav timing misses).
       try {
         const seenTab = sessionStorage.getItem('ef_tab_seen');
+        _diag.sessionSeen = seenTab ? 'YES' : 'no';
         sessionStorage.setItem('ef_tab_seen', '1');
         if (seenTab && !hadSave) _storageBroken = true;
-      } catch (_) { _storageBroken = true; }
+      } catch (_) { _storageBroken = true; _diag.sessionSeen = 'THROW'; }
     } catch (_) { _storageBroken = true; }
+    // Debug overlay (?debug=1): shows ground-truth state so we can diagnose the
+    // "sign-in / coins revert on refresh" report from a screenshot. Remove later.
+    try {
+      if (/[?&]debug=1/.test(location.search)) setTimeout(function () { showDebugOverlay(_diag); }, 3000);
+    } catch (_) {}
 
     // 1. Load data files in parallel
     await Promise.all([
