@@ -2903,6 +2903,14 @@ body {
 }
 .guide-button:active { transform: scale(0.94); }
 .guide-icon { font-size: 15px; line-height: 1; }
+/* Icon-only variant: a clean round "?" help button, no text label. */
+.guide-button--icon {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border-radius: 50%;
+}
+.guide-button--icon .guide-icon { font-size: 17px; }
 .guide-label {
   font-size: 11.5px;
   font-weight: 700;
@@ -2910,10 +2918,6 @@ body {
   margin-left: 4px;
   line-height: 1;
   letter-spacing: 0.3px;
-}
-/* On very narrow phones, drop the label so the header doesn't crowd. */
-@media (max-width: 360px) {
-  .guide-label { display: none; }
 }
 
 /* =============== GUIDE MODAL (怎么玩) =============== */
