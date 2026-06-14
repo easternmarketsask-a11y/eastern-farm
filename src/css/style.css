@@ -2805,6 +2805,20 @@ body {
   50%      { box-shadow: 0 2px 10px rgba(247, 201, 72, 0.7); }
 }
 
+/* =============== LOGIN NUDGE (guest → member conversion) =============== */
+.ln-modal { text-align: center; padding: 4px 2px; }
+.ln-emoji { font-size: 50px; line-height: 1; margin-bottom: 6px; }
+.ln-body {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--warm-text-soft, #7a6f5d);
+  margin: 6px 4px 0;
+}
+.ln-body b { color: #e8522a; font-weight: 800; }
+.ln-actions { margin-top: 16px; flex-direction: column; gap: 8px; }
+.ln-actions .btn { width: 100%; }
+.ln-actions #lnSignIn { font-size: 15px; padding: 13px; }
+
 /* =============== SPOTLIGHT ONBOARDING (hand-held first loop) =============== */
 /* Container is click-through (pointer-events:none) so the highlighted target
    underneath stays tappable. Only the skip button re-enables pointer events. */

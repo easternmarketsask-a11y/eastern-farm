@@ -145,6 +145,9 @@
     // Spotlight onboarding (hand-held first plant→harvest→sell). Once done or
     // skipped, never shows again. See spotlight.js. 2026-06-13.
     spotlightDone: false,
+    // Guest→login conversion nudge: shown ONCE to a not-logged-in player at an
+    // engaged moment (first sale). See login-nudge.js. 2026-06-14.
+    guestLoginPromptShown: false,
 
     // ============ Promotions (2026-06) ============
     // Claimed limited-time promos, keyed by promo id (e.g. lv3_week_202606).
