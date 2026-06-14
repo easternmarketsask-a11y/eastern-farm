@@ -325,6 +325,10 @@
         this.data.sessionStats.date = getDateString();
         this.data.epEarnedDate = getDateString();
         this.data.dailyClaims.date = getDateString();
+        // Persist the fresh state immediately so SAVE_KEY always exists after a
+        // load. The boot-time persistence probe (main.js) relies on this: if the
+        // key is gone on a later reload, the browser isn't persisting storage.
+        this.save();
       }
     },
 

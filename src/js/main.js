@@ -14,8 +14,53 @@
  * 10. Set tick interval (1s farm update, periodic storekeeper rotation)
  */
 (function() {
+  // Shown when the browser isn't persisting localStorage across reloads (so
+  // progress reverts every refresh). It's a device setting; tell the user how
+  // to fix it on their end.
+  function showStorageWarning() {
+    if (!Farm.ui || !Farm.ui.showModal) return;
+    const en = (Farm.state && Farm.state.data && Farm.state.data.language) === 'en';
+    const html = en ? `
+      <div style="text-align:center;padding:4px 2px;">
+        <div style="font-size:46px;line-height:1;margin-bottom:6px;">⚠️</div>
+        <h2 class="modal-title" style="margin-bottom:4px;">Progress isn't being saved</h2>
+        <p style="font-size:13.5px;line-height:1.6;color:var(--warm-text-soft);margin:6px 6px 0;text-align:left;">
+          This browser isn't keeping your save between page loads, so coins / sign-in / crops reset on every refresh. Usually one of:
+          <br>• <b>Private Browsing</b> is on → turn it off<br>• Settings → Safari → <b>Block All Cookies</b> is on → turn it off<br>• Or tap Share → <b>Add to Home Screen</b> and open from that icon
+        </p>
+        <div class="btn-row" style="margin-top:16px;"><button class="btn" id="stoOk" style="width:100%;">Got it</button></div>
+      </div>` : `
+      <div style="text-align:center;padding:4px 2px;">
+        <div style="font-size:46px;line-height:1;margin-bottom:6px;">⚠️</div>
+        <h2 class="modal-title" style="margin-bottom:4px;">进度没能保存</h2>
+        <p style="font-size:13.5px;line-height:1.7;color:var(--warm-text-soft);margin:6px 6px 0;text-align:left;">
+          这个浏览器没有在刷新之间保留存档，所以每次刷新金币 / 签到 / 作物都会退回。多半是下面之一：
+          <br>• 开了<b>「无痕浏览」</b> → 请关掉<br>• 设置 → Safari → <b>「阻止所有 Cookie」</b>开着 → 请关掉<br>• 或点分享 → <b>「添加到主屏幕」</b>，以后从那个图标打开
+        </p>
+        <div class="btn-row" style="margin-top:16px;"><button class="btn" id="stoOk" style="width:100%;">知道了</button></div>
+      </div>`;
+    Farm.ui.showModal(html);
+    const ok = document.getElementById('stoOk');
+    if (ok) ok.onclick = () => Farm.ui.hideModal();
+  }
+
   async function boot() {
     console.log('🌱 Happy Farm booting...');
+
+    // Storage-persistence probe — MUST run before Farm.state.init() writes.
+    // sessionStorage survives same-tab reloads; localStorage should too. If
+    // we've already loaded in this tab (marker present) yet the save key is
+    // GONE, the browser isn't persisting localStorage across reloads — every
+    // refresh wipes progress (coins/sign-in/crops appear to "revert"). This is
+    // a device setting (Private Browsing / Block All Cookies / storage
+    // eviction), not something code can fully fix — so we surface it clearly.
+    let _storageBroken = false;
+    try {
+      const seenTab = sessionStorage.getItem('ef_tab_seen');
+      sessionStorage.setItem('ef_tab_seen', '1');
+      const hadSave = !!localStorage.getItem('eastern_farm_save_v1');
+      if (seenTab && !hadSave) _storageBroken = true;
+    } catch (_) { _storageBroken = true; }
 
     // 1. Load data files in parallel
     await Promise.all([
@@ -122,6 +167,9 @@
     setInterval(() => { Farm.state.data.lastActiveAt = Date.now(); Farm.state.save(); }, 60000);
 
     console.log('✅ Happy Farm ready.');
+
+    // 存储不持久 → 明确告知用户(刷新就丢进度的根因)。延迟到开屏散去后弹。
+    if (_storageBroken) setTimeout(showStorageWarning, 1600);
 
     // 匿名漏斗:每次打开计一次;2.5s 后仍未登录 → 记为访客(auth 是异步恢复的)。
     if (Farm.track) {
