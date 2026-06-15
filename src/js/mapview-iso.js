@@ -20,6 +20,7 @@
   const ASSET_DIR = 'assets/images/map/';
   const ASSET_SRC = {
     barn: 'p_barn.png', house: 'p_house.png', greenhouse: 'p_greenhouse.png', coop: 'p_coop.png', well: 'p_well.png', stall: 'p_stall.png', tree: 'p_tree.png',
+    deco_bush: 'deco_bush.png', deco_lantern: 'deco_lantern.png', deco_fence: 'deco_fence.png', deco_wheel: 'deco_wheel.png', deco_bridge: 'deco_bridge.png',
     crop0: 'crop_qingcai_0.png', crop1: 'crop_qingcai_1.png', crop2: 'crop_qingcai_2.png', crop3: 'crop_qingcai_3.png',
     tile_grass: 'p_grass.png', tile_soil: 'p_soil.png', tile_path: 'p_path.png', tile_water: 'p_water.png',
   };
@@ -43,8 +44,15 @@
     stall: { img: 'stall', w: 2, h: 2, sc: 2.8, zh: '超市摊位', en: 'Stall' },
     well: { img: 'well', w: 1, h: 1, sc: 2.4, zh: '水井', en: 'Well' },
     tree: { img: 'tree', w: 1, h: 1, sc: 2.2, zh: '树', en: 'Tree' },
+    bush: { img: 'deco_bush', w: 1, h: 1, sc: 1.7, zh: '花丛', en: 'Flowers' },
+    lantern: { img: 'deco_lantern', w: 1, h: 1, sc: 2.6, zh: '灯笼', en: 'Lantern' },
+    fence: { img: 'deco_fence', w: 1, h: 1, sc: 1.9, zh: '篱笆', en: 'Fence' },
+    wheel: { img: 'deco_wheel', w: 2, h: 2, sc: 2.2, zh: '水车', en: 'Water Wheel' },
+    bridge: { img: 'deco_bridge', w: 2, h: 1, sc: 1.6, zh: '小桥', en: 'Bridge' },
   };
-  const PALETTE = ['barn', 'house', 'greenhouse', 'coop', 'stall', 'well', 'tree'];
+  const PALETTE = ['barn', 'house', 'greenhouse', 'coop', 'stall', 'well', 'tree', 'bush', 'lantern', 'fence', 'wheel', 'bridge'];
+  // EP-shop pets → painted iso animal sprites (replaces the emoji pet).
+  const ANIMALS = { pet_chick: 'animal_chicken', pet_cat: 'animal_cat', pet_rabbit: 'animal_rabbit', decoration_dog: 'animal_dog', guard_dog: 'animal_dog' };
   const BRUSHES = [
     { key: 'path', zh: '小路', en: 'Path', color: '#a8743a' },
     { key: 'water', zh: '水塘', en: 'Water', color: '#5aa0c8' },
@@ -448,7 +456,7 @@
       this._decoPlacements().forEach((d) => {
         const mv = this._moving && this._moving.kind === 'deco' && this._moving.idx === d.seed;
         const gx = mv ? this._moving.gx : d.gx, gy = mv ? this._moving.gy : d.gy;
-        draws.push({ d: gx + gy + 0.2, fn: () => this._drawDeco({ emoji: d.emoji, gx, gy, pet: d.pet, seed: d.seed }, mv) });
+        draws.push({ d: gx + gy + 0.2, fn: () => this._drawDeco({ emoji: d.emoji, itemId: d.itemId, gx, gy, pet: d.pet, seed: d.seed }, mv) });
       });
       draws.sort((a, c) => a.d - c.d); draws.forEach(x => x.fn());
 
@@ -530,14 +538,22 @@
         if (ch) Farm.state.save();
       }
       const out = [];
-      decos.forEach((d, i) => { if (!hp(d)) return; const it = Farm.epShop.items.find((x) => x.id === d.itemId); if (!it || !it.decoration_emoji) return; out.push({ emoji: it.decoration_emoji, gx: d.gx, gy: d.gy, pet: it.category === 'pet', seed: i }); });
+      decos.forEach((d, i) => { if (!hp(d)) return; const it = Farm.epShop.items.find((x) => x.id === d.itemId); if (!it || !it.decoration_emoji) return; out.push({ emoji: it.decoration_emoji, itemId: d.itemId, gx: d.gx, gy: d.gy, pet: it.category === 'pet', seed: i }); });
       return out;
     },
     _drawDeco(d, moving) {
       const ctx = this._ctx, tw = this._tw(), th = this._th(), c = this._cell(d.gx, d.gy);
       if (moving) { this._diamond(c.x, c.y, tw, th); ctx.fillStyle = this._moving && this._moving.valid ? 'rgba(76,175,80,0.34)' : 'rgba(220,60,60,0.36)'; ctx.fill(); }
-      let cx = c.x, by = c.y + th * 0.25;
-      if (d.pet && !moving) { const t = Date.now() / 1000; cx += Math.sin(t * 0.5 + d.seed) * tw * 0.18; by += Math.cos(t * 0.4 + d.seed * 1.3) * th * 0.18; }
+      let cx = c.x;
+      if (d.pet && !moving) { const t = Date.now() / 1000; cx += Math.sin(t * 0.5 + d.seed) * tw * 0.18; }
+      // painted iso animal sprite for pets, if available
+      const anim = d.itemId && ANIMALS[d.itemId];
+      if (anim) {
+        const im = this._lazyImg(anim);
+        if (im) { ctx.globalAlpha = moving ? 0.85 : 1; this._blit(im, cx, c.y + th * 0.6, tw * 0.95, th * 2.6); ctx.globalAlpha = 1; return; }
+      }
+      let by = c.y + th * 0.25;
+      if (d.pet && !moving) { const t = Date.now() / 1000; by += Math.cos(t * 0.4 + d.seed * 1.3) * th * 0.18; }
       ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic'; ctx.globalAlpha = moving ? 0.85 : 1; ctx.font = (th * 1.4) + 'px sans-serif';
       ctx.fillText(d.emoji, cx, by); ctx.globalAlpha = 1;
     },
