@@ -129,10 +129,19 @@
 
       // Advance on state change (independent of overlay visibility).
       if (this._step === 0) {
-        const plot = d.plots[this._targetIdx];
-        if (plot && plot.crop) {
+        // The overlay is click-through, so the player may plant in ANY plot, not
+        // just the highlighted one. Advance on whichever plot got a crop, and
+        // re-target the spotlight to it for the harvest step.
+        let idx = (d.plots[this._targetIdx] && d.plots[this._targetIdx].crop) ? this._targetIdx : -1;
+        if (idx < 0) {
+          for (let i = 0; i < d.plots.length; i++) {
+            if (d.plots[i] && d.plots[i].unlocked && d.plots[i].crop) { idx = i; break; }
+          }
+        }
+        if (idx >= 0) {
+          this._targetIdx = idx;
           // Planted! Magic-grow it instantly so the loop completes now.
-          forceMature(this._targetIdx);
+          forceMature(idx);
           if (Farm.audio) Farm.audio.play('achievement');
           Farm.ui.toast(L() === 'en' ? '✨ Magic growth — instantly ripe!' : '✨ 魔法生长，瞬间长大！', 2200);
           this._step = 1;

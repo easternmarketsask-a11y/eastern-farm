@@ -180,14 +180,27 @@
         let cloudState;
         try { cloudState = JSON.parse(save.blob); } catch (e) { return { restored: false, reason: 'bad_blob' }; }
         const local = Farm.state.data;
+        // SAVE IS SACRED: only restore onto a genuinely BLANK device (new device /
+        // cleared storage). Never overwrite a device that has ANY real progress —
+        // totalHarvests alone is too coarse (coins/plots/sign-in/purchases don't
+        // bump it), so an older-but-equal-harvest cloud blob must NOT clobber
+        // active local play. The primary use cases (fresh device, wiped storage)
+        // are blank, so this still recovers them.
+        const localFresh =
+          (local.totalHarvests || 0) === 0 &&
+          (local.totalDeliveries || 0) === 0 &&
+          (local.level || 1) <= 1 &&
+          (local.cropsEverGrown || []).length === 0 &&
+          !((local.loginCalendar || {}).lastSignDate);
         const cloudH = (save.harvests != null ? save.harvests : (cloudState.totalHarvests || 0)) || 0;
-        const localH = local.totalHarvests || 0;
-        const cloudAt = save.clientAt || 0;
-        const localAt = local.lastSavedAt || 0;
-        const cloudWins = (cloudH > localH) || (cloudH === localH && cloudAt > localAt);
-        if (!cloudWins) return { restored: false, reason: 'local_current', cloudH: cloudH, localH: localH };
+        const cloudHasProgress =
+          cloudH > 0 || (cloudState.level || 1) > 1 ||
+          (cloudState.cropsEverGrown || []).length > 0 ||
+          (cloudState.totalDeliveries || 0) > 0;
+        if (!localFresh) return { restored: false, reason: 'local_has_progress' };
+        if (!cloudHasProgress) return { restored: false, reason: 'cloud_blank' };
         const ok = Farm.state.applyCloudSave(cloudState);
-        return { restored: !!ok, cloudH: cloudH, localH: localH };
+        return { restored: !!ok, cloudH: cloudH };
       } catch (e) {
         console.warn('[gameSync] restoreFromCloud failed', e);
         return { restored: false, reason: e.message };

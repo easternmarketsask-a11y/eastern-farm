@@ -97,29 +97,27 @@
     try {
       let hadSave = false;
       try { hadSave = !!localStorage.getItem('eastern_farm_save_v1'); _diag.saveAtBoot = hadSave ? 'YES' : 'no'; }
-      catch (e) { _storageBroken = true; _diag.saveAtBoot = 'THROW'; _diag.err = String(e); }
-      // In-session write+read test: does localStorage even work right now?
+      catch (e) { _diag.saveAtBoot = 'THROW'; _diag.err = String(e); }
+      // In-session write+read test (diagnostic only, never used to warn).
       try {
         localStorage.setItem('ef_wtest', '1');
         _diag.writeReadOK = (localStorage.getItem('ef_wtest') === '1') ? 'YES' : 'NO-READBACK';
       } catch (e) { _diag.writeReadOK = 'THROW'; _diag.err = String(e); }
-      // Method 1 (storage-independent): Navigation Timing. If THIS load is a
-      // reload (refresh) yet there's no save, storage didn't survive the reload.
-      let navType = '';
       try {
         const nav = performance.getEntriesByType && performance.getEntriesByType('navigation')[0];
-        navType = (nav && nav.type) || (performance.navigation && performance.navigation.type === 1 ? 'reload' : '');
+        _diag.navType = (nav && nav.type) || (performance.navigation && performance.navigation.type === 1 ? 'reload' : '(none)');
       } catch (_) {}
-      _diag.navType = navType || '(none)';
-      if (navType === 'reload' && !hadSave) _storageBroken = true;
-      // Method 2 (belt): sessionStorage marker (catches cases nav timing misses).
+      // CONSERVATIVE trigger: only flag broken storage if a PRIOR boot fully
+      // completed in this tab (ef_boot_done set at end of boot) yet the save is
+      // now GONE. This avoids false-warning a first-ever visit that gets
+      // refreshed mid-load (no marker yet) — the earlier navType/seenTab triggers
+      // false-fired on that race. ef_boot_done is set after init()+save() below.
       try {
-        const seenTab = sessionStorage.getItem('ef_tab_seen');
-        _diag.sessionSeen = seenTab ? 'YES' : 'no';
-        sessionStorage.setItem('ef_tab_seen', '1');
-        if (seenTab && !hadSave) _storageBroken = true;
-      } catch (_) { _storageBroken = true; _diag.sessionSeen = 'THROW'; }
-    } catch (_) { _storageBroken = true; }
+        const bootDone = sessionStorage.getItem('ef_boot_done');
+        _diag.sessionSeen = bootDone ? 'YES' : 'no';
+        if (bootDone && !hadSave) _storageBroken = true;
+      } catch (_) { _diag.sessionSeen = 'THROW'; }
+    } catch (_) {}
     // Debug overlay (?debug=1): shows ground-truth state so we can diagnose the
     // "sign-in / coins revert on refresh" report from a screenshot. Remove later.
     try {
@@ -235,15 +233,18 @@
     // 存储不持久 → 明确告知用户(刷新就丢进度的根因)。延迟到开屏散去后弹。
     if (_storageBroken) setTimeout(showStorageWarning, 1600);
 
-    // 匿名漏斗:每次打开计一次;2.5s 后仍未登录 → 记为访客(auth 是异步恢复的)。
+    // 匿名漏斗:每次打开计一次。访客判定移到 firebase-auth 的 onAuthStateChanged
+    // 首次解析(无 user)时记 open_guest——避免慢网络下把登录会员误判为访客。
+    // Firebase 不可用(离线)时永远不会回调,这里兜底记一次访客。
     if (Farm.track) {
       Farm.track('open');
-      setTimeout(function () {
-        if (!(Farm.fbAuth && Farm.fbAuth.isLoggedIn && Farm.fbAuth.isLoggedIn())) {
-          Farm.track('open_guest');
-        }
-      }, 2500);
+      if (!Farm.fb || !Farm.fb.available) Farm.track('open_guest');
     }
+
+    // Mark a fully-completed boot in this tab. The storage probe (top of boot)
+    // only warns when this marker is present on a later load yet the save is
+    // gone — proving storage didn't persist (not just a mid-load refresh).
+    try { sessionStorage.setItem('ef_boot_done', '1'); } catch (_) {}
   }
 
   function checkDailyLogin() {

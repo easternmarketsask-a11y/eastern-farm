@@ -27,6 +27,10 @@
       if (Farm.fbAuth && Farm.fbAuth.isLoggedIn && Farm.fbAuth.isLoggedIn()) return;
       // No Firebase (offline / CDN blocked) → login impossible, don't tease.
       if (!Farm.fb || !Farm.fb.available) return;
+      // Don't collide with the spotlight onboarding's finish celebration (it
+      // completes on the same first-sell). Leave the flag UNset so the next sell
+      // (after onboarding) triggers it cleanly.
+      if (Farm.spotlight && Farm.spotlight._active) return;
       d.guestLoginPromptShown = true;
       Farm.state.save();
       if (Farm.track) Farm.track('login_nudge_shown');

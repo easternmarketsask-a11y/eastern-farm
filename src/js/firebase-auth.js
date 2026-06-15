@@ -45,6 +45,11 @@
         return;
       }
       Farm.fb.auth.onAuthStateChanged(async (user) => {
+        // Funnel: count a guest open only when auth has actually RESOLVED with no
+        // user (a fixed boot timer miscounts slow auth restores as guests).
+        const _firstResolve = !this._authResolvedOnce;
+        this._authResolvedOnce = true;
+        if (_firstResolve && !user && Farm.track) Farm.track('open_guest');
         if (user) {
           this.currentUser = user;
           await this._loadMemberDoc(user.uid);
@@ -218,6 +223,20 @@
         }
       } else {
         loginBtn.classList.remove('splash-login--logged-in');
+        // Restore the guest conversion pitch (in case we're re-rendering after a
+        // logout — the logged-in branch hid these / relabeled the ghost link).
+        const reward = document.getElementById('splashReward');
+        if (reward) reward.style.display = '';
+        const perks = document.getElementById('splashPerks');
+        if (perks) perks.style.display = '';
+        const startBtn = document.getElementById('splashStart');
+        if (startBtn) {
+          const en = (Farm.state && Farm.state.data && Farm.state.data.language) === 'en';
+          const zh = startBtn.querySelector('.splash-start-zh');
+          const enEl = startBtn.querySelector('.splash-start-en');
+          if (zh) zh.textContent = en ? 'Just look around' : '先随便逛逛';
+          if (enEl) enEl.textContent = en ? '' : 'Just look around ›';
+        }
       }
     },
 

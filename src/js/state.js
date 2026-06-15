@@ -333,28 +333,24 @@
     },
 
     save() {
-      // Verify the write actually persisted. iOS Safari Private Browsing throws
-      // on setItem (quota 0), and a full/evicted store can silently drop the
-      // write — both make progress "vanish on refresh" (planted → reload → gone,
-      // sign-in popup repeats because autoShownDate never sticks). Read it back
-      // and surface a clear warning instead of failing silently.
-      let ok = false;
+      // Warn ONLY when setItem genuinely throws (iOS Private Browsing quota=0,
+      // storage blocked/full). A read-back mismatch is NOT used as a trigger —
+      // a concurrent save (heartbeat/toast re-entry) can momentarily differ and
+      // would false-warn a healthy browser. Cross-session non-persistence is
+      // detected separately by the boot probe in main.js.
       try {
         this.data.lastSavedAt = Date.now();   // stamp before serialize (cloud restore compares this)
-        const json = JSON.stringify(this.data);
-        localStorage.setItem(SAVE_KEY, json);
-        ok = localStorage.getItem(SAVE_KEY) === json;
+        localStorage.setItem(SAVE_KEY, JSON.stringify(this.data));
       } catch (e) {
         console.error('Save failed', e);
-        ok = false;
-      }
-      if (!ok && !this._saveWarned) {
-        this._saveWarned = true;
-        const lang = (this.data && this.data.language) === 'en' ? 'en' : 'zh';
-        if (window.Farm && Farm.ui && Farm.ui.toast) {
-          Farm.ui.toast(lang === 'en'
-            ? '⚠️ This browser can’t save your progress (Private Browsing or storage full). Turn off Private Browsing / free up space, or your farm won’t be kept.'
-            : '⚠️ 这个浏览器存不了进度（可能是「无痕/隐私浏览」模式，或存储已满）。请关掉无痕模式或清理存储，否则农场不会被保存。', 8000);
+        if (!this._saveWarned) {
+          this._saveWarned = true;
+          const lang = (this.data && this.data.language) === 'en' ? 'en' : 'zh';
+          if (window.Farm && Farm.ui && Farm.ui.toast) {
+            Farm.ui.toast(lang === 'en'
+              ? '⚠️ This browser can’t save your progress (Private Browsing or storage full). Turn it off / free up space, or your farm won’t be kept.'
+              : '⚠️ 这个浏览器存不了进度（可能是「无痕/隐私浏览」模式，或存储已满）。请关掉无痕模式或清理存储，否则农场不会被保存。', 8000);
+          }
         }
       }
       // Phase-1 neighbor sync: piggyback on save() so any stat change
