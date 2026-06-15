@@ -64,6 +64,7 @@
     map: null,                  // buildable map layout [{type, gx, gy}] (?map=1; null until first use)
     mapTerrain: null,           // paintable terrain overrides {"gx,gy": "path"|"water"} (null until first use)
     mapBuildSeen: false,        // has the player opened build mode once? (gates the 建造-button hint pulse)
+    farmStyle: 'iso',           // chosen farm view: 'iso' (Hay Day) | 'topdown' (pixel) | 'classic' (vertical)
     extraPlots: 0,              // additional plots unlocked beyond the base 12 (max 4)
     ownedShopItems: {},         // {itemId: count} consumables remaining (acceleration tickets etc.)
     theme: 'default',           // 'default' | 'spring' | 'summer' | 'autumn' | 'winter' | 'festival'
@@ -367,6 +368,17 @@
       this.data = JSON.parse(JSON.stringify(STARTER_STATE));
       this.data.sessionStats.date = getDateString();
       this.save();
+    },
+
+    // Resolve the active farm view. URL param overrides (for shared links/testing),
+    // else the player's saved preference, else 'iso' (Hay Day default).
+    farmStyle() {
+      const s = location.search;
+      if (/[?&]classic=1/.test(s)) return 'classic';
+      if (/[?&](topdown=1|map=1)/.test(s)) return 'topdown';
+      if (/[?&]iso=1/.test(s)) return 'iso';
+      const p = this.data && this.data.farmStyle;
+      return (p === 'topdown' || p === 'classic') ? p : 'iso';
     },
 
     // Replace local state with a cloud-restored snapshot (see firebase-game-sync

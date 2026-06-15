@@ -81,7 +81,9 @@
     _sel: -1, _moving: null,
     _buildBtn: null, _palette: null, _hint: null, _modeTabs: null, _palBuild: null, _palTerrain: null,
 
-    active() { return /[?&]iso=1/.test(location.search); },
+    // DEFAULT farm view (Hay Day isometric). Chosen via Farm.state.farmStyle()
+    // (saved preference + URL override); players switch in the guide (ⓘ).
+    active() { return (Farm.state && Farm.state.farmStyle) ? Farm.state.farmStyle() === 'iso' : true; },
     _tw() { return TW * this._zoom; },
     _th() { return TH * this._zoom; },
     _lang() { return (Farm.state && Farm.state.data && Farm.state.data.language === 'en') ? 'en' : 'zh'; },

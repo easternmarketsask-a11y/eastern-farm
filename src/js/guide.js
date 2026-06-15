@@ -84,6 +84,7 @@
             ? 'Everything you can do on the farm — at a glance.'
             : '在农场里能做的事，一页看明白。'}</p>
           <div class="guide-list">${cards}</div>
+          ${this._styleSwitcherHtml(EN)}
           <div class="btn-row" style="margin-top:14px;">
             <button class="btn" id="guideStartBtn" style="flex:1;font-size:15px;padding:14px;">
               🌱 ${EN ? "Let's farm!" : '开始种菜'}
@@ -92,12 +93,42 @@
         </div>
       `;
       Farm.ui.showModal(html);
+      this._wireStyleSwitcher();
 
       const btn = document.getElementById('guideStartBtn');
       if (btn) btn.onclick = () => {
         Farm.ui.hideModal();
         if (Farm.audio) Farm.audio.play('tap');
       };
+    },
+
+    // In-game farm-style switcher (Hay Day iso / top-down pixel / classic).
+    _styleSwitcherHtml(EN) {
+      const cur = (Farm.state && Farm.state.farmStyle) ? Farm.state.farmStyle() : 'iso';
+      const opts = [
+        ['iso', EN ? 'Hay Day Iso' : 'Hay Day 等距'],
+        ['topdown', EN ? 'Top-down' : '俯视像素'],
+        ['classic', EN ? 'Classic' : '经典竖排'],
+      ];
+      const btns = opts.map(([k, label]) => {
+        const on = k === cur;
+        return '<button class="guide-style-btn" data-style="' + k + '" style="flex:1;min-width:84px;padding:9px 6px;border-radius:12px;cursor:pointer;font:600 12px/1.2 system-ui,sans-serif;border:2px solid ' +
+          (on ? '#FF9800' : '#e0e0e0') + ';background:' + (on ? '#FFF3E0' : '#fff') + ';color:' + (on ? '#E8522A' : '#666') + ';">' +
+          (on ? '✓ ' : '') + label + '</button>';
+      }).join('');
+      return '<div style="margin-top:14px;"><div style="font:600 13px/1 system-ui,sans-serif;color:#555;margin-bottom:7px;">🎨 ' +
+        (EN ? 'Farm style' : '农场画风') + '</div><div style="display:flex;gap:7px;flex-wrap:wrap;">' + btns + '</div></div>';
+    },
+    _wireStyleSwitcher() {
+      document.querySelectorAll('.guide-style-btn').forEach((b) => {
+        b.onclick = () => {
+          const k = b.dataset.style, cur = Farm.state.farmStyle();
+          if (k === cur) return;
+          Farm.state.data.farmStyle = k; Farm.state.save();
+          if (Farm.audio) Farm.audio.play('tap');
+          location.reload();   // re-boot into the chosen renderer
+        };
+      });
     },
   };
 

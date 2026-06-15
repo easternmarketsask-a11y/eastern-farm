@@ -62,9 +62,9 @@
       const d = Farm.state.data;
       if (!d || d.spotlightDone) return;
       // The spotlight points at .plot / .warehouse-img DOM, which the buildable
-      // map hides (it's a canvas). Skip it there — the guide modal + intuitive
-      // tap-to-plant cover onboarding. Classic view still gets the spotlight.
-      if (Farm.mapView && Farm.mapView._on) return;
+      // maps hide (they're a canvas). Skip it on either canvas view — the guide
+      // modal + intuitive tap-to-plant cover onboarding. Classic view keeps it.
+      if ((Farm.mapView && Farm.mapView._on) || (Farm.isoView && Farm.isoView._on)) return;
       // Only for genuine newcomers — never grown anything yet.
       if ((d.cropsEverGrown || []).length > 0) { d.spotlightDone = true; Farm.state.save(); return; }
       if (this._active) return;

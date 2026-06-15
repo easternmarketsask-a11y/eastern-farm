@@ -106,9 +106,8 @@
     _cropImg: {},           // cropId -> Image (per-crop mature sprite), or true(none)/false(loading)
     _w: 0, _h: 0,           // canvas CSS size (= the #farm box we overlay)
 
-    // Default farm view (2026-06-15). Opt OUT to the classic vertical farm with
-    // ?classic=1 (or ?map=0) — kept as an instant escape hatch / rollback.
-    active() { return !/[?&](classic=1|map=0|iso=1)/.test(location.search); },
+    // Top-down pixel map — one of the player-selectable styles (not default).
+    active() { return (Farm.state && Farm.state.farmStyle) ? Farm.state.farmStyle() === 'topdown' : false; },
     _ts() { return TILE * this._zoom; },
     _lang() { return (Farm.state && Farm.state.data && Farm.state.data.language === 'en') ? 'en' : 'zh'; },
     _map() { return (Farm.state.data.map = Farm.state.data.map || []); },
