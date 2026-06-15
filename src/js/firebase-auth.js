@@ -320,7 +320,10 @@
         // 'bronze' as a placeholder default). Use the game's own level
         // emoji which IS real (computed from XP earned).
         const safeName = String(name).replace(/[<>"&]/g, '');
-        slot.innerHTML = `<button class="member-btn member-btn--in" id="memberBtnInner" title="${lang === 'en' ? 'Member: ' : '会员: '}${safeName}">🌱<span class="member-name">${safeName}</span></button>`;
+        // Topbar shows only the FIRST name so the pill stays short and never
+        // crowds the weather chip. Full name remains in the tooltip + menu.
+        const shortName = safeName.split(/\s+/)[0] || safeName;
+        slot.innerHTML = `<button class="member-btn member-btn--in" id="memberBtnInner" title="${lang === 'en' ? 'Member: ' : '会员: '}${safeName}">🌱<span class="member-name">${shortName}</span></button>`;
         document.getElementById('memberBtnInner').onclick = () => this.openMenu();
       } else {
         const title = lang === 'en' ? 'Account' : '账户';
