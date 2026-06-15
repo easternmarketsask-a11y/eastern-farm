@@ -32,6 +32,9 @@ SRC = {
     "coop":      os.path.join(UP, "933144b7-IMG_1665.jpeg"),  # chicken coop (checkerboard)
     "tree":      os.path.join(UP, "d9bebf6b-IMG_1666.jpeg"),  # tree (near-white)
     "tomato":    os.path.join(UP, "2d6e3183-IMG_1667.jpeg"),  # tomato 4-stage (checkerboard)
+    # Isometric ground blocks (for ?iso=1 Hay-Day-style engine):
+    "iso_grass": os.path.join(UP, "26f9f41b-IMG_1661.jpeg"),  # iso grass cube (checkerboard)
+    "iso_dirt":  os.path.join(UP, "0788266c-IMG_1662.jpeg"),  # dirt/path block
 }
 
 
@@ -194,6 +197,14 @@ def main():
     tree = fit_w(autocrop(flood_alpha(Image.open(SRC["tree"]), "white")), 256)
     tree.save(os.path.join(OUT, "tree.png"), optimize=True)
     log.append(f"tree.png {tree.size}")
+
+    # --- isometric ground blocks ---
+    igrass = fit_w(autocrop(flood_alpha(Image.open(SRC["iso_grass"]), "checker")), 256)
+    igrass.save(os.path.join(OUT, "iso_grass.png"), optimize=True)
+    log.append(f"iso_grass.png {igrass.size}")
+    idirt = fit_w(autocrop(flood_alpha(Image.open(SRC["iso_dirt"]), "checker")), 256)
+    idirt.save(os.path.join(OUT, "iso_dirt.png"), optimize=True)
+    log.append(f"iso_dirt.png {idirt.size}")
 
     # --- grass color sample (no file saved; the engine uses the hex) ---
     grass = Image.open(SRC["grass"]).convert("RGB")

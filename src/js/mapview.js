@@ -108,7 +108,7 @@
 
     // Default farm view (2026-06-15). Opt OUT to the classic vertical farm with
     // ?classic=1 (or ?map=0) — kept as an instant escape hatch / rollback.
-    active() { return !/[?&](classic=1|map=0)/.test(location.search); },
+    active() { return !/[?&](classic=1|map=0|iso=1)/.test(location.search); },
     _ts() { return TILE * this._zoom; },
     _lang() { return (Farm.state && Farm.state.data && Farm.state.data.language === 'en') ? 'en' : 'zh'; },
     _map() { return (Farm.state.data.map = Farm.state.data.map || []); },

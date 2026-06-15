@@ -126,8 +126,11 @@
       Farm.warehouse.installButton();
     }
 
-    // 6c. POC: top-down tile map view (only when ?map=1, hides the vertical farm).
-    if (Farm.mapView && Farm.mapView.active && Farm.mapView.active()) {
+    // 6c. Buildable map view. Default = top-down (mapView); ?iso=1 = isometric
+    // preview (isoView); ?classic=1 = old vertical farm. Each self-gates.
+    if (Farm.isoView && Farm.isoView.active && Farm.isoView.active()) {
+      Farm.isoView.init();
+    } else if (Farm.mapView && Farm.mapView.active && Farm.mapView.active()) {
       Farm.mapView.init();
     }
 
