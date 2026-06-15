@@ -84,11 +84,7 @@
       cv.addEventListener('pointercancel', (e) => this._up(e));
       cv.addEventListener('wheel', (e) => this._wheel(e), { passive: false });
 
-      // center camera on the plot block
-      const u = (PLOT_OX + 1) - (PLOT_OY + 2), v = (PLOT_OX + 1) + (PLOT_OY + 2);
-      this._camX = u * this._tw() / 2;
-      this._camY = this._oy + v * this._th() / 2 - this._cssH() / 2;
-      this._clampCam();
+      this._autoFrame();
 
       requestAnimationFrame(() => { this._syncSize(); this.render(); });
       this._tick = setInterval(() => { this._syncSize(); this.render(); }, 1000);
@@ -121,6 +117,15 @@
       this._ctx.setTransform(this._dpr, 0, 0, this._dpr, 0, 0);
     },
     _syncSize() { const r = this._farmRect(); if (Math.abs(r.width - this._w) > 1 || Math.abs(r.height - this._h) > 1) { this._resize(); this._clampCam(); } },
+    // Fit the whole COLS×ROWS iso map within the canvas, centered, on load.
+    _autoFrame() {
+      const spanX = (COLS + ROWS) * TW / 2, spanY = (COLS + ROWS) * TH / 2 + TH * 4;
+      this._zoom = Math.min(ZMAX, Math.max(ZMIN, Math.min(this._cssW() / (spanX * 1.06), this._cssH() / (spanY * 1.0))));
+      const ccx = (COLS - 1) / 2, ccy = (ROWS - 1) / 2, u = ccx - ccy, v = ccx + ccy;
+      this._camX = u * this._tw() / 2;
+      this._camY = this._oy + v * this._th() / 2 - this._cssH() / 2;
+      this._clampCam();
+    },
 
     // ---- iso transforms ----
     _cell(gx, gy) {
