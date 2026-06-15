@@ -547,16 +547,22 @@
     _drawDeco(d, moving) {
       const ctx = this._ctx, tw = this._tw(), th = this._th(), c = this._cell(d.gx, d.gy);
       if (moving) { this._diamond(c.x, c.y, tw, th); ctx.fillStyle = this._moving && this._moving.valid ? 'rgba(76,175,80,0.34)' : 'rgba(220,60,60,0.36)'; ctx.fill(); }
-      let cx = c.x;
-      if (d.pet && !moving) { const t = Date.now() / 1000; cx += Math.sin(t * 0.5 + d.seed) * tw * 0.18; }
-      // painted iso animal sprite for pets, if available
+      // painted iso animal sprite for pets — a clean base-less animal that sits on
+      // the cell with a gentle idle bob + slight drift (a living pet, not a sliding card).
       const anim = d.itemId && ANIMALS[d.itemId];
       if (anim) {
         const im = this._lazyImg(anim);
-        if (im) { ctx.globalAlpha = moving ? 0.85 : 1; this._blit(im, cx, c.y + th * 0.6, tw * 0.95, th * 2.6); ctx.globalAlpha = 1; return; }
+        if (im) {
+          let cx = c.x, lift = 0;
+          if (!moving) { const t = Date.now() / 1000; cx += Math.sin(t * 0.6 + d.seed) * tw * 0.06; lift = Math.abs(Math.sin(t * 1.3 + d.seed)) * th * 0.12; }
+          ctx.globalAlpha = moving ? 0.85 : 1;
+          this._blit(im, cx, c.y + th * 0.5 - lift, tw * 0.9, th * 2.4);
+          ctx.globalAlpha = 1; return;
+        }
       }
-      let by = c.y + th * 0.25;
-      if (d.pet && !moving) { const t = Date.now() / 1000; by += Math.cos(t * 0.4 + d.seed * 1.3) * th * 0.18; }
+      // non-animal decorations (static objects) + emoji fallback
+      let cx = c.x, by = c.y + th * 0.25;
+      if (d.pet && !moving) { const t = Date.now() / 1000; cx += Math.sin(t * 0.6 + d.seed) * tw * 0.06; by -= Math.abs(Math.sin(t * 1.3 + d.seed)) * th * 0.12; }
       ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic'; ctx.globalAlpha = moving ? 0.85 : 1; ctx.font = (th * 1.4) + 'px sans-serif';
       ctx.fillText(d.emoji, cx, by); ctx.globalAlpha = 1;
     },

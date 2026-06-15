@@ -132,6 +132,49 @@ def autocrop(img):
     return img.crop(bbox) if bbox else img
 
 
+def corner_flood(img, tol=78):
+    """Background removal that ADAPTS to the actual corner colour (cream / beige /
+    vignette), flooding from the 4 corners and stopping at the sprite's dark
+    cartoon outline. Works even when the subject is the same hue as the bg
+    (e.g. a cream chicken on a cream background) because the outline blocks the
+    flood. tol = Manhattan RGB distance from a corner sample."""
+    from collections import deque
+    img = img.convert("RGBA")
+    w, h = img.size
+    px = img.load()
+    seeds = [(0, 0), (w - 1, 0), (0, h - 1), (w - 1, h - 1)]
+    refs = [px[x, y][:3] for x, y in seeds]
+
+    def near(c):
+        for r in refs:
+            if abs(c[0] - r[0]) + abs(c[1] - r[1]) + abs(c[2] - r[2]) <= tol:
+                return True
+        return False
+
+    visited = bytearray(w * h)
+    q = deque()
+
+    def consider(x, y):
+        i = y * w + x
+        if visited[i]:
+            return
+        visited[i] = 1
+        if near(px[x, y][:3]):
+            q.append((x, y))
+
+    for s in seeds:
+        consider(*s)
+    while q:
+        x, y = q.popleft()
+        r, g, b, a = px[x, y]
+        px[x, y] = (r, g, b, 0)
+        for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+            nx, ny = x + dx, y + dy
+            if 0 <= nx < w and 0 <= ny < h:
+                consider(nx, ny)
+    return img
+
+
 def fit_w(img, max_w):
     """Downscale so width <= max_w (keep aspect). Assets render at ~60-130px
     tiles, so big source PNGs are wasted bytes on a no-build mobile web game."""
@@ -288,10 +331,19 @@ def main():
                             ("d_fence", "deco_fence.png", "checker", 300), ("d_wheel", "deco_wheel.png", "sky", 280),
                             ("d_bridge", "deco_bridge.png", "checker", 280)]:
         save_iso(key, out, bg, w)
-    # animals (cream bg → 'white' catches it)
-    for key, out in [("a_chicken", "animal_chicken.png"), ("a_cat", "animal_cat.png"),
-                     ("a_rabbit", "animal_rabbit.png"), ("a_dog", "animal_dog.png")]:
-        save_iso(key, out, "white", 220)
+    # animals: adaptive corner-flood removes the cream/vignette bg (stops at the
+    # dark outline, so cream-on-cream works), then detect + crop off the baked
+    # grass-tile base so the pet stands on the REAL farm ground (no square card).
+    # Per-animal keep-fraction (the baked grass base is a different height in each
+    # source image; hand-tuned by screenshot so only the animal remains).
+    ACROP = {"a_chicken": ("animal_chicken.png", 0.73), "a_cat": ("animal_cat.png", 0.60),
+             "a_rabbit": ("animal_rabbit.png", 0.73), "a_dog": ("animal_dog.png", 0.74)}
+    for key, (out, frac) in ACROP.items():
+        im = corner_flood(Image.open(SRC[key]))
+        w, h = im.size
+        im = fit_w(autocrop(im.crop((0, 0, w, int(h * frac)))), 200)
+        im.save(os.path.join(OUT, out), optimize=True)
+        log.append(f"{out} {im.size}")
 
     # --- grass color sample (no file saved; the engine uses the hex) ---
     grass = Image.open(SRC["grass"]).convert("RGB")
