@@ -128,3 +128,59 @@ gaps between stages. Top-down 3/4 view, pixel-art, transparent background PNG wi
 2. Claude Code 跑 `scripts/process_map_assets.py` 同款流程：抠背景（若需要）+ 裁剪 + 降采样，
    存进 `src/assets/images/map/`，再把建筑加进 `BUILDINGS` 素材盘 / 作物对到 crop id。
 3. `?map=1` 截图验收 → 合并部署。
+
+---
+
+# 🟦 等距(2.5D Hay Day)素材包 — 2026-06-15 新增
+
+> Chris 拍板走「真·等距 Hay Day」。`?iso=1` 引擎已就绪(建造/地形/装饰全有),
+> 现在缺的是**一整套风格统一的等距素材**。这是"像不像 Hay Day"的唯一瓶颈。
+> 出图后发我,我把现在的「平菱形+3/4 立绘+emoji」混搭逐件替换掉。
+
+## ⚠️ 等距铁律(比之前更严,务必统一)
+1. **统一等距投影**:全部 **2:1 dimetric 等距**(菱形格,顶面宽:高 = 2:1)。
+   写 `isometric 2:1 dimetric projection, 30-degree, top face is a 2:1 diamond`。
+2. **统一光照**:全部 `light from top-left`,同一套阴影方向。
+3. **统一画风**:二选一并**全程只用一种** —— 推荐 `cozy painted isometric, soft rounded, Hay Day style`
+   (比像素更像 Hay Day);若想省事统一也可全用 `pixel-art isometric`。**别再混**。
+4. **透明 PNG**(同前):`transparent background PNG, NO checkerboard, NO white bg`。
+5. **统一尺寸基准**:地块顶面菱形 = **128×64 px**(再加底部泥土厚度,总高约 128×112)。
+   建筑/作物按这个格子对齐(2×2 建筑 = 256 宽的菱形底)。
+
+## 优先级 1 — 地形瓦片(等距菱形,最关键)
+一组同尺寸菱形顶面瓦片,**底部带一点泥土厚度**(像 Hay Day 的小岛):
+```
+A set of matching isometric 2:1 farm ground tiles, each a 128x64 top diamond with a
+short earth side skirt below (total ~128x112): (1) grass, (2) tilled dark soil with
+furrows, (3) dirt path, (4) water/pond with a lighter shoreline edge. Cozy painted
+isometric, soft rounded, warm light from top-left. Transparent PNG, no checkerboard.
+All tiles share the exact same diamond footprint so they tessellate seamlessly.
+```
+
+## 优先级 2 — 等距建筑(统一角度重出)
+现有谷仓/小屋/温室/鸡舍角度不完全一致。重出一套**同投影**的:
+```
+Isometric 2:1 buildings matching the ground-tile style and light, each sitting on a
+2x2 (256px-wide) diamond base, transparent PNG: 谷仓 barn / 小屋 cottage /
+温室 greenhouse / 鸡舍 chicken coop / 🛒 东方超市摊位 market stall(招牌留空) /
+水井 well / 仓库 storage shed. Same painted isometric style, light from top-left.
+```
+
+## 优先级 3 — 等距作物(4 阶段,立在菱形土块上)
+每种作物一条 4 阶段,**站在一块等距菜地菱形上**:
+```
+A horizontal strip of EXACTLY 4 isometric growth stages of {作物}, standing on a small
+isometric 2:1 tilled-soil diamond, left→right: tiny sprout → young → medium → mature.
+Same painted isometric style, light from top-left, equal spacing, transparent PNG, no
+checkerboard. Each stage on its own diamond, same baseline.
+```
+先出 V1 核心:上海青/番茄/黄瓜/辣椒/茄子/韭菜/香菜/大蒜(番茄记得同时在 crops.json 加 `tomato` id)。
+
+## 优先级 4 — 等距装饰/动物
+`Isometric 2:1, painted, transparent PNG`:树/花丛/篱笆(可拼接)/灯笼/水车/栅栏门/
+小桥;动物:鸡🐔/猫🐱/兔🐰/狗🐶(各 1~2 帧)。同投影同光照。
+
+## 接入流程
+1. 把成套图发我,标注每张是什么(顶面尺寸尽量按 128×64)。
+2. 我跑抠图+裁剪+按菱形对齐,替换 `mapview-iso.js` 里的程序化平菱形/3-4 立绘。
+3. `?iso=1` 截图验收 → 满意后把 `?iso` 设成默认、退役俯视版。
