@@ -395,7 +395,7 @@
     // ~2% overlap to hide seams), or a flat-diamond fallback while it loads.
     _tileImg(key, c) {
       const t = ISO_TILES[key], im = t && this._img[t.img], tw = this._tw(), th = this._th();
-      if (im) { const w = tw * 1.02, sc = w / im.width, dh = im.height * sc; this._ctx.drawImage(im, c.x - w / 2, c.y - dh * t.cy, w, dh); return; }
+      if (im) { const w = tw * 1.12, sc = w / im.width, dh = im.height * sc; this._ctx.drawImage(im, c.x - w / 2, c.y - dh * t.cy, w, dh); return; }
       this._diamond(c.x, c.y, tw, th);
       this._ctx.fillStyle = key === 'water' ? '#5aa0c8' : key === 'path' ? '#a8743a' : key === 'soil' ? SOIL_TOP : GRASS_A; this._ctx.fill();
     },
