@@ -237,6 +237,13 @@
       btn.onclick = () => this.toggleBuild();
       document.body.appendChild(btn);
       this._buildBtn = btn;
+      // First-timers: gently pulse the 建造 button so build/decorate is discoverable
+      // (the plot-tap spotlight is disabled on the map). Stops after first open.
+      if (!(Farm.state.data && Farm.state.data.mapBuildSeen) && btn.animate) {
+        this._buildPulse = btn.animate(
+          [{ transform: 'scale(1)' }, { transform: 'scale(1.09)' }, { transform: 'scale(1)' }],
+          { duration: 1300, iterations: Infinity, easing: 'ease-in-out' });
+      }
 
       const tray = document.createElement('div');
       tray.id = 'mapPalette';
@@ -346,6 +353,10 @@
     },
     toggleBuild() {
       this._build = !this._build;
+      if (this._build && Farm.state.data && !Farm.state.data.mapBuildSeen) {
+        Farm.state.data.mapBuildSeen = true; Farm.state.save();
+        if (this._buildPulse) { this._buildPulse.cancel(); this._buildPulse = null; }
+      }
       if (!this._build) { this._sel = -1; this._moving = null; this._painting = false; this._editMode = 'build'; Farm.state.save(); }
       this._refreshModeUI();
       this._layoutUI();

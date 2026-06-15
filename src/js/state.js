@@ -63,6 +63,7 @@
     decorations: [],            // [{itemId, x, y}] cosmetic placements
     map: null,                  // buildable map layout [{type, gx, gy}] (?map=1; null until first use)
     mapTerrain: null,           // paintable terrain overrides {"gx,gy": "path"|"water"} (null until first use)
+    mapBuildSeen: false,        // has the player opened build mode once? (gates the 建造-button hint pulse)
     extraPlots: 0,              // additional plots unlocked beyond the base 12 (max 4)
     ownedShopItems: {},         // {itemId: count} consumables remaining (acceleration tickets etc.)
     theme: 'default',           // 'default' | 'spring' | 'summer' | 'autumn' | 'winter' | 'festival'
