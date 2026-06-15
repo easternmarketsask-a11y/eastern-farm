@@ -23,12 +23,18 @@
     crop0: 'crop_qingcai_0.png', crop1: 'crop_qingcai_1.png', crop2: 'crop_qingcai_2.png', crop3: 'crop_qingcai_3.png',
   };
   const BUILDINGS = {
-    barn: { img: 'barn', w: 2, h: 2, sc: 2.2, tap: 'warehouse' },
-    house: { img: 'house', w: 2, h: 2, sc: 2.5, tap: 'shop' },
-    greenhouse: { img: 'greenhouse', w: 2, h: 2, sc: 2.1 },
-    coop: { img: 'coop', w: 2, h: 2, sc: 2.0 },
-    tree: { img: 'tree', w: 1, h: 1, sc: 1.7 },
+    barn: { img: 'barn', w: 2, h: 2, sc: 2.2, zh: '谷仓·仓库', en: 'Barn', tap: 'warehouse' },
+    house: { img: 'house', w: 2, h: 2, sc: 2.5, zh: '小屋·种子店', en: 'Cottage', tap: 'shop' },
+    greenhouse: { img: 'greenhouse', w: 2, h: 2, sc: 2.1, zh: '温室', en: 'Greenhouse' },
+    coop: { img: 'coop', w: 2, h: 2, sc: 2.0, zh: '鸡舍', en: 'Coop' },
+    tree: { img: 'tree', w: 1, h: 1, sc: 1.7, zh: '树', en: 'Tree' },
   };
+  const PALETTE = ['barn', 'house', 'greenhouse', 'coop', 'tree'];
+  const BRUSHES = [
+    { key: 'path', zh: '小路', en: 'Path', color: '#a8743a' },
+    { key: 'water', zh: '水塘', en: 'Water', color: '#5aa0c8' },
+    { key: 'grass', zh: '草地·擦除', en: 'Grass', color: '#8bbf5a' },
+  ];
   const SEASON_PARTICLES = {
     spring: ['🌸', '🌸', '🌷'], summer: ['🦋', '🦋', '🐝'],
     autumn: ['🍂', '🍁', '🍂'], winter: ['❄️', '❄️', '🌨'],
@@ -48,6 +54,9 @@
     _pointers: {}, _drag: null, _pinch: null,
     _tick: null, _raf: null, _lastFrame: 0,
     _cellToPlotN: -1,
+    _build: false, _editMode: 'build', _brush: 'path', _painting: false,
+    _sel: -1, _moving: null,
+    _buildBtn: null, _palette: null, _hint: null, _modeTabs: null, _palBuild: null, _palTerrain: null,
 
     active() { return /[?&]iso=1/.test(location.search); },
     _tw() { return TW * this._zoom; },
@@ -84,6 +93,7 @@
       cv.addEventListener('pointercancel', (e) => this._up(e));
       cv.addEventListener('wheel', (e) => this._wheel(e), { passive: false });
 
+      this._buildUI();
       this._autoFrame();
 
       requestAnimationFrame(() => { this._syncSize(); this.render(); });
@@ -161,7 +171,16 @@
     _down(e) {
       const p = this._local(e); this._pointers[e.pointerId] = p;
       const ids = Object.keys(this._pointers);
-      if (ids.length === 2) { const [a, b] = ids.map(k => this._pointers[k]); this._pinch = { dist: Math.hypot(a.x - b.x, a.y - b.y) || 1, zoom: this._zoom }; this._drag = null; return; }
+      if (ids.length === 2) { const [a, b] = ids.map(k => this._pointers[k]); this._pinch = { dist: Math.hypot(a.x - b.x, a.y - b.y) || 1, zoom: this._zoom }; this._drag = null; this._moving = null; this._painting = false; return; }
+      if (this._build && this._editMode === 'terrain') { const c = this._screenToCell(p.x, p.y); this._painting = true; this._paintCell(c.gx, c.gy); return; }
+      if (this._build) {
+        if (this._sel >= 0) { const ch = this._delChip((Farm.state.data.map)[this._sel]); if (Math.hypot(p.x - ch.x, p.y - ch.y) <= ch.r) { Farm.state.data.map.splice(this._sel, 1); this._sel = -1; Farm.state.save(); this.render(); return; } }
+        const c = this._screenToCell(p.x, p.y);
+        const bidx = this._buildingAt(c.gx, c.gy);
+        if (bidx >= 0) { const o = Farm.state.data.map[bidx]; this._sel = bidx; this._moving = { kind: 'building', idx: bidx, gx: o.gx, gy: o.gy, valid: true, sx: p.x, sy: p.y, moved: false }; this.render(); return; }
+        const didx = this._decoAt(c.gx, c.gy);
+        if (didx >= 0) { const d = Farm.state.data.decorations[didx]; this._sel = -1; this._moving = { kind: 'deco', idx: didx, gx: d.gx, gy: d.gy, valid: true, sx: p.x, sy: p.y, moved: false }; this.render(); return; }
+      }
       this._drag = { x: p.x, y: p.y, camX: this._camX, camY: this._camY, moved: false };
     },
     _move(e) {
@@ -173,8 +192,17 @@
         const dist = Math.hypot(a.x - b.x, a.y - b.y) || 1, mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
         this._zoomAt(mid.x, mid.y, this._pinch.zoom * (dist / this._pinch.dist)); return;
       }
+      const p = this._pointers[e.pointerId];
+      if (this._painting) { const c = this._screenToCell(p.x, p.y); this._paintCell(c.gx, c.gy); return; }
+      if (this._moving) {
+        if (Math.abs(p.x - this._moving.sx) + Math.abs(p.y - this._moving.sy) > 4) this._moving.moved = true;
+        const c = this._screenToCell(p.x, p.y);
+        if (this._moving.kind === 'deco') { this._moving.gx = c.gx; this._moving.gy = c.gy; this._moving.valid = this._decoCellFree(c.gx, c.gy, this._moving.idx); }
+        else { const o = Farm.state.data.map[this._moving.idx], b = BUILDINGS[o.type]; const gx = c.gx - (b.w >> 1), gy = c.gy - (b.h >> 1); this._moving.gx = gx; this._moving.gy = gy; this._moving.valid = this._footprintFree(gx, gy, o.type, this._moving.idx); }
+        this.render(); return;
+      }
       if (this._drag) {
-        const p = this._pointers[e.pointerId], dx = p.x - this._drag.x, dy = p.y - this._drag.y;
+        const dx = p.x - this._drag.x, dy = p.y - this._drag.y;
         if (Math.abs(dx) + Math.abs(dy) > 6) this._drag.moved = true;
         this._camX = this._drag.camX - dx; this._camY = this._drag.camY - dy; this._clampCam(); this.render();
       }
@@ -182,9 +210,22 @@
     _up(e) {
       const p = this._pointers[e.pointerId]; delete this._pointers[e.pointerId];
       if (Object.keys(this._pointers).length < 2) this._pinch = null;
+      if (this._painting) { this._painting = false; Farm.state.save(); this._drag = null; this.render(); return; }
+      if (this._moving) {
+        const m = this._moving; this._moving = null;
+        if (m.moved && m.valid) {
+          if (m.kind === 'deco') { const d = Farm.state.data.decorations[m.idx]; if (d) { d.gx = m.gx; d.gy = m.gy; Farm.state.save(); } }
+          else { const o = Farm.state.data.map[m.idx]; if (o) { o.gx = m.gx; o.gy = m.gy; Farm.state.save(); } }
+        }
+        this.render(); this._drag = null; return;
+      }
       const wasTap = this._drag && !this._drag.moved && !this._pinch; this._drag = null;
       if (!wasTap || !p) return;
-      const c = this._screenToCell(p.x, p.y); this._tapCell(c.gx, c.gy);
+      const c = this._screenToCell(p.x, p.y);
+      if (this._build) { this._sel = this._buildingAt(c.gx, c.gy); this.render(); return; }
+      const bidx = this._buildingAt(c.gx, c.gy);
+      if (bidx >= 0) { const o = Farm.state.data.map[bidx], b = BUILDINGS[o.type]; if (b.tap === 'warehouse' && Farm.warehouse && Farm.warehouse.open) Farm.warehouse.open(); else if (b.tap === 'shop' && Farm.shop && Farm.shop.open) Farm.shop.open(); else if (Farm.ui && Farm.ui.toast) Farm.ui.toast(this._lang() === 'en' ? b.en : b.zh); return; }
+      this._tapCell(c.gx, c.gy);
     },
     _wheel(e) { e.preventDefault(); const p = this._local(e); this._zoomAt(p.x, p.y, this._zoom * (e.deltaY < 0 ? 1.12 : 0.89)); },
     _tapCell(gx, gy) {
@@ -203,6 +244,108 @@
       const c = this._cell(gx, gy), r = this._cv.getBoundingClientRect(), th = this._th();
       const rect = { left: r.left + c.x - 10, top: r.top + c.y - th, width: 20, height: th };
       return { target: { getBoundingClientRect: () => rect } };
+    },
+
+    // ===== editor (build / terrain / decoration), iso-aware =====
+    _terrain() { return (Farm.state.data.mapTerrain = Farm.state.data.mapTerrain || {}); },
+    _plotCellSet() {
+      const s = {}, plots = Farm.state.data.plots || [];
+      for (let i = 0; i < plots.length; i++) s[(PLOT_OX + (i % PLOT_COLS)) + ',' + (PLOT_OY + Math.floor(i / PLOT_COLS))] = 1;
+      return s;
+    },
+    _inBounds(gx, gy) { return gx >= 0 && gy >= 0 && gx < COLS && gy < ROWS; },
+    _footprintFree(gx, gy, type, exceptIdx) {
+      const b = BUILDINGS[type];
+      if (gx < 0 || gy < 0 || gx + b.w > COLS || gy + b.h > ROWS) return false;
+      const plotCells = this._plotCellSet(), occ = {}, map = (Farm.state.data.map) || [], t = this._terrain();
+      for (let i = 0; i < map.length; i++) { if (i === exceptIdx) continue; const o = map[i], ob = BUILDINGS[o.type]; if (!ob) continue; for (let y = 0; y < ob.h; y++) for (let x = 0; x < ob.w; x++) occ[(o.gx + x) + ',' + (o.gy + y)] = 1; }
+      for (let y = 0; y < b.h; y++) for (let x = 0; x < b.w; x++) { const k = (gx + x) + ',' + (gy + y); if (plotCells[k] || occ[k] || t[k] === 'water') return false; }
+      return true;
+    },
+    _buildingAt(gx, gy) {
+      const map = (Farm.state.data.map) || []; let best = -1, bg = -1;
+      for (let i = 0; i < map.length; i++) { const o = map[i], b = BUILDINGS[o.type]; if (!b) continue; if (gx >= o.gx && gx < o.gx + b.w && gy >= o.gy && gy < o.gy + b.h && o.gy >= bg) { best = i; bg = o.gy; } }
+      return best;
+    },
+    _decoAt(gx, gy) { const d = (Farm.state.data.decorations) || []; for (let i = 0; i < d.length; i++) if (d[i].gx === gx && d[i].gy === gy) return i; return -1; },
+    _decoCellFree(gx, gy, exceptIdx) {
+      if (!this._inBounds(gx, gy)) return false;
+      if (this._plotCellSet()[gx + ',' + gy] || this._terrain()[gx + ',' + gy] === 'water' || this._buildingAt(gx, gy) >= 0) return false;
+      const d = (Farm.state.data.decorations) || []; for (let i = 0; i < d.length; i++) if (i !== exceptIdx && d[i].gx === gx && d[i].gy === gy) return false;
+      return true;
+    },
+    _delChip(o) { const b = BUILDINGS[o.type], c = this._cell(o.gx + b.w - 1, o.gy), th = this._th(); return { x: c.x + this._tw() / 2 * 0.5, y: c.y - th * 0.2, r: Math.max(12, th * 0.5) }; },
+    _addBuilding(type) {
+      const b = BUILDINGS[type], ctr = this._screenToCell(this._cssW() / 2, this._cssH() / 2);
+      const tries = [[ctr.gx - (b.w >> 1), ctr.gy - (b.h >> 1)]];
+      for (let gy = 0; gy + b.h <= ROWS; gy++) for (let gx = 0; gx + b.w <= COLS; gx++) tries.push([gx, gy]);
+      for (const [gx, gy] of tries) if (this._footprintFree(gx, gy, type, -1)) {
+        (Farm.state.data.map = Farm.state.data.map || []).push({ type, gx, gy }); this._sel = Farm.state.data.map.length - 1;
+        Farm.state.save(); this.render();
+        if (Farm.ui && Farm.ui.toast) Farm.ui.toast(this._lang() === 'en' ? ('Placed ' + b.en + ' — drag to move') : ('已放置' + b.zh + '，拖动可移动'));
+        return;
+      }
+      if (Farm.ui && Farm.ui.toast) Farm.ui.toast(this._lang() === 'en' ? 'No room' : '没有空位了');
+    },
+    _paintCell(gx, gy) {
+      if (!this._inBounds(gx, gy)) return;
+      const t = this._terrain(), k = gx + ',' + gy;
+      if (this._brush === 'grass') { if (t[k] != null) { delete t[k]; this.render(); } }
+      else if (t[k] !== this._brush) { t[k] = this._brush; this.render(); }
+    },
+
+    // ---- build-mode DOM UI (mirrors the top-down view) ----
+    _buildUI() {
+      const en = this._lang() === 'en';
+      const btn = document.createElement('button');
+      btn.id = 'isoBuildBtn';
+      btn.style.cssText = 'position:fixed;right:14px;z-index:20;border:none;border-radius:24px;padding:11px 16px;font:600 15px/1 "Fredoka",system-ui,sans-serif;color:#fff;background:#4CAF50;box-shadow:0 3px 10px rgba(0,0,0,.22);cursor:pointer;';
+      btn.onclick = () => this.toggleBuild();
+      document.body.appendChild(btn); this._buildBtn = btn;
+      if (!(Farm.state.data && Farm.state.data.mapBuildSeen) && btn.animate) this._buildPulse = btn.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.09)' }, { transform: 'scale(1)' }], { duration: 1300, iterations: Infinity, easing: 'ease-in-out' });
+
+      const tray = document.createElement('div'); tray.id = 'isoPalette';
+      tray.style.cssText = 'position:fixed;left:0;right:0;z-index:20;display:none;flex-direction:column;gap:8px;padding:9px 10px;background:rgba(255,255,255,.94);box-shadow:0 -3px 12px rgba(0,0,0,.12);';
+      const tabs = document.createElement('div'); tabs.style.cssText = 'display:flex;gap:6px;justify-content:center;';
+      [['build', en ? '🏠 Build' : '🏠 建筑'], ['terrain', en ? '🖌 Terrain' : '🖌 地形']].forEach(([m, label]) => { const t = document.createElement('button'); t.dataset.mode = m; t.textContent = label; t.style.cssText = 'border:none;border-radius:13px;padding:6px 16px;cursor:pointer;font:600 13px/1 "Fredoka",system-ui,sans-serif;'; t.onclick = () => this.setEditMode(m); tabs.appendChild(t); });
+      this._modeTabs = tabs; tray.appendChild(tabs);
+      const rowCss = 'display:flex;flex-wrap:wrap;gap:8px;justify-content:center;align-items:flex-end;';
+      const pb = document.createElement('div'); pb.style.cssText = rowCss;
+      PALETTE.forEach((type) => { const b = BUILDINGS[type]; const item = document.createElement('button'); item.style.cssText = 'border:1px solid #e0e0e0;border-radius:14px;background:#fff;padding:8px 10px 6px;min-width:72px;cursor:pointer;font:500 12px/1.3 "Fredoka",system-ui,sans-serif;color:#444;'; item.innerHTML = '<div style="font-size:11px;color:#888;margin-top:4px">＋ ' + (en ? b.en : b.zh) + '</div>'; const ic = document.createElement('div'); ic.style.cssText = 'width:44px;height:38px;margin:0 auto;background-size:contain;background-repeat:no-repeat;background-position:center;'; ic.style.backgroundImage = "url('" + ASSET_DIR + ASSET_SRC[b.img] + "')"; item.insertBefore(ic, item.firstChild); item.onclick = () => this._addBuilding(type); pb.appendChild(item); });
+      this._palBuild = pb; tray.appendChild(pb);
+      const pt = document.createElement('div'); pt.style.cssText = rowCss;
+      BRUSHES.forEach((br) => { const item = document.createElement('button'); item.dataset.brush = br.key; item.style.cssText = 'border:1px solid #e0e0e0;border-radius:14px;background:#fff;padding:8px 10px 6px;min-width:72px;cursor:pointer;font:500 12px/1.3 "Fredoka",system-ui,sans-serif;color:#444;'; item.innerHTML = '<div style="width:40px;height:30px;margin:0 auto;border-radius:8px;background:' + br.color + '"></div><div style="font-size:11px;color:#888;margin-top:4px">' + (en ? br.en : br.zh) + '</div>'; item.onclick = () => this.setBrush(br.key); pt.appendChild(item); });
+      this._palTerrain = pt; tray.appendChild(pt);
+      document.body.appendChild(tray); this._palette = tray;
+
+      const hint = document.createElement('div'); hint.id = 'isoBuildHint';
+      hint.style.cssText = 'position:fixed;left:0;right:0;z-index:19;text-align:center;display:none;pointer-events:none;font:500 13px/1.4 "Fredoka",system-ui,sans-serif;color:#fff;';
+      hint.innerHTML = '<span style="background:rgba(0,0,0,.45);padding:6px 14px;border-radius:16px"></span>';
+      document.body.appendChild(hint); this._hint = hint;
+      this._refreshModeUI(); this._layoutUI();
+    },
+    _layoutUI() {
+      const r = this._farmRect(), fromBottom = Math.max(0, window.innerHeight - (r.top + r.height)), en = this._lang() === 'en';
+      if (this._palette) { this._palette.style.display = this._build ? 'flex' : 'none'; this._palette.style.left = r.left + 'px'; this._palette.style.right = Math.max(0, window.innerWidth - (r.left + r.width)) + 'px'; this._palette.style.bottom = fromBottom + 'px'; }
+      if (this._buildBtn) { const ph = (this._build && this._palette) ? (this._palette.getBoundingClientRect().height || 74) : 0; this._buildBtn.style.right = (Math.max(0, window.innerWidth - (r.left + r.width)) + 14) + 'px'; this._buildBtn.style.bottom = (fromBottom + (this._build ? ph + 10 : 14)) + 'px'; this._buildBtn.textContent = this._build ? (en ? '✓ Done' : '✓ 完成') : (en ? '🔨 Build' : '🔨 建造'); this._buildBtn.style.background = this._build ? '#FF9800' : '#4CAF50'; }
+      if (this._hint) { this._hint.style.display = this._build ? 'block' : 'none'; this._hint.style.left = r.left + 'px'; this._hint.style.right = Math.max(0, window.innerWidth - (r.left + r.width)) + 'px'; this._hint.style.top = (r.top + 8) + 'px'; }
+    },
+    _refreshModeUI() {
+      const terr = this._editMode === 'terrain', en = this._lang() === 'en';
+      if (this._palBuild) this._palBuild.style.display = terr ? 'none' : 'flex';
+      if (this._palTerrain) this._palTerrain.style.display = terr ? 'flex' : 'none';
+      if (this._modeTabs) Array.from(this._modeTabs.children).forEach((t) => { const on = t.dataset.mode === this._editMode; t.style.background = on ? '#FF9800' : '#eee'; t.style.color = on ? '#fff' : '#777'; });
+      if (this._palTerrain) Array.from(this._palTerrain.children).forEach((it) => { it.style.outline = (it.dataset.brush === this._brush) ? '3px solid #FF9800' : 'none'; });
+      if (this._hint) { const s = this._hint.querySelector('span'); if (s) s.textContent = terr ? (en ? 'Tap / drag to paint terrain' : '点按或拖动涂刷地形（草地=擦除）') : (en ? 'Drag buildings & decorations · tap ✕ to remove' : '拖动摆放建筑/装饰 · 点 ✕ 移除建筑'); }
+      this._layoutUI();
+    },
+    setEditMode(m) { this._editMode = m; this._sel = -1; this._moving = null; this._refreshModeUI(); this.render(); },
+    setBrush(b) { this._brush = b; this._refreshModeUI(); },
+    toggleBuild() {
+      this._build = !this._build;
+      if (this._build && Farm.state.data && !Farm.state.data.mapBuildSeen) { Farm.state.data.mapBuildSeen = true; Farm.state.save(); if (this._buildPulse) { this._buildPulse.cancel(); this._buildPulse = null; } }
+      if (!this._build) { this._sel = -1; this._moving = null; this._painting = false; this._editMode = 'build'; Farm.state.save(); }
+      this._refreshModeUI(); this._layoutUI(); this.render();
     },
 
     // ---- render ----
@@ -257,6 +400,12 @@
         }
       }
 
+      // build-mode grid overlay
+      if (this._build) {
+        ctx.strokeStyle = 'rgba(255,255,255,0.22)'; ctx.lineWidth = 1;
+        for (let gy = 0; gy < ROWS; gy++) for (let gx = 0; gx < COLS; gx++) { const c = this._cell(gx, gy); this._diamond(c.x, c.y, tw, th); ctx.stroke(); }
+      }
+
       // depth-sorted objects: plots + buildings
       const draws = [];
       const plots = Farm.state.data.plots || [];
@@ -268,9 +417,15 @@
       const map = (Farm.state.data.map) || [];
       for (let i = 0; i < map.length; i++) {
         const o = map[i], b = BUILDINGS[o.type]; if (!b) continue;
-        draws.push({ d: (o.gx + o.gy) + (b.w - 1) + (b.h - 1) + 0.5, fn: () => this._drawBuilding(o, b) });
+        const mv = this._moving && this._moving.kind === 'building' && this._moving.idx === i;
+        const gx = mv ? this._moving.gx : o.gx, gy = mv ? this._moving.gy : o.gy;
+        draws.push({ d: (gx + gy) + (b.w - 1) + (b.h - 1) + 0.5, fn: () => this._drawBuilding({ type: o.type, gx, gy }, b, mv, i) });
       }
-      this._decoPlacements().forEach((d) => { draws.push({ d: d.gx + d.gy + 0.2, fn: () => this._drawDeco(d) }); });
+      this._decoPlacements().forEach((d) => {
+        const mv = this._moving && this._moving.kind === 'deco' && this._moving.idx === d.seed;
+        const gx = mv ? this._moving.gx : d.gx, gy = mv ? this._moving.gy : d.gy;
+        draws.push({ d: gx + gy + 0.2, fn: () => this._drawDeco({ emoji: d.emoji, gx, gy, pet: d.pet, seed: d.seed }, mv) });
+      });
       draws.sort((a, c) => a.d - c.d); draws.forEach(x => x.fn());
 
       this._drawParticles(tw); this._drawFestival();
@@ -314,12 +469,25 @@
         ctx.fillStyle = '#7bc043'; ctx.fillRect(bx, ybar, bw * Math.max(0.04, p), bh);
       }
     },
-    _drawBuilding(o, b) {
+    _drawBuilding(o, b, moving, idx) {
       const ctx = this._ctx, tw = this._tw(), th = this._th();
+      if (moving || (this._build && this._sel === idx && idx != null)) {   // footprint highlight diamonds
+        const ok = moving ? this._moving.valid : true;
+        ctx.fillStyle = moving ? (ok ? 'rgba(76,175,80,0.34)' : 'rgba(220,60,60,0.36)') : 'rgba(255,152,0,0.22)';
+        for (let y = 0; y < b.h; y++) for (let x = 0; x < b.w; x++) { const cc2 = this._cell(o.gx + x, o.gy + y); this._diamond(cc2.x, cc2.y, tw, th); ctx.fill(); }
+      }
       const cc = this._cell(o.gx + (b.w - 1) / 2, o.gy + (b.h - 1) / 2);
       const front = this._cell(o.gx + (b.w - 1), o.gy + (b.h - 1));
-      const by = front.y + th / 2 + th * 0.1;        // base sits on the front diamond
+      const by = front.y + th / 2 + th * 0.1;
+      ctx.globalAlpha = moving ? 0.82 : 1;
       if (!this._blit(this._img[b.img], cc.x, by, b.w * tw * 0.6, b.sc * th * 2.0)) { ctx.fillStyle = '#c0392b'; ctx.fillRect(cc.x - tw * 0.4, by - th, tw * 0.8, th); }
+      ctx.globalAlpha = 1;
+      if (this._build && this._sel === idx && idx != null && !moving) {   // delete chip
+        const ch = this._delChip(o);
+        ctx.beginPath(); ctx.arc(ch.x, ch.y, ch.r, 0, Math.PI * 2); ctx.fillStyle = '#e8522a'; ctx.fill();
+        ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+        ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = 'bold ' + (ch.r * 1.1) + 'px sans-serif'; ctx.fillText('✕', ch.x, ch.y + 0.5);
+      }
     },
     // Owned EP-shop decorations (shared state with the top-down view). Auto-place
     // any without a cell, then render upright; pets wander a little.
@@ -346,12 +514,13 @@
       decos.forEach((d, i) => { if (!hp(d)) return; const it = Farm.epShop.items.find((x) => x.id === d.itemId); if (!it || !it.decoration_emoji) return; out.push({ emoji: it.decoration_emoji, gx: d.gx, gy: d.gy, pet: it.category === 'pet', seed: i }); });
       return out;
     },
-    _drawDeco(d) {
-      const ctx = this._ctx, th = this._th(), c = this._cell(d.gx, d.gy);
+    _drawDeco(d, moving) {
+      const ctx = this._ctx, tw = this._tw(), th = this._th(), c = this._cell(d.gx, d.gy);
+      if (moving) { this._diamond(c.x, c.y, tw, th); ctx.fillStyle = this._moving && this._moving.valid ? 'rgba(76,175,80,0.34)' : 'rgba(220,60,60,0.36)'; ctx.fill(); }
       let cx = c.x, by = c.y + th * 0.25;
-      if (d.pet) { const t = Date.now() / 1000; cx += Math.sin(t * 0.5 + d.seed) * this._tw() * 0.18; by += Math.cos(t * 0.4 + d.seed * 1.3) * th * 0.18; }
-      ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic'; ctx.font = (th * 1.4) + 'px sans-serif';
-      ctx.fillText(d.emoji, cx, by);
+      if (d.pet && !moving) { const t = Date.now() / 1000; cx += Math.sin(t * 0.5 + d.seed) * tw * 0.18; by += Math.cos(t * 0.4 + d.seed * 1.3) * th * 0.18; }
+      ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic'; ctx.globalAlpha = moving ? 0.85 : 1; ctx.font = (th * 1.4) + 'px sans-serif';
+      ctx.fillText(d.emoji, cx, by); ctx.globalAlpha = 1;
     },
     _drawParticles(tw) {
       const season = (Farm.seasons && Farm.seasons.current) || monthSeason(), set = SEASON_PARTICLES[season];
