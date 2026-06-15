@@ -19,17 +19,26 @@
   const SOIL_TOP = '#9c6b3f', SOIL_FURROW = 'rgba(80,50,26,0.5)';
   const ASSET_DIR = 'assets/images/map/';
   const ASSET_SRC = {
-    barn: 'barn.png', house: 'house.png', greenhouse: 'greenhouse.png', coop: 'coop.png', tree: 'tree.png',
+    barn: 'p_barn.png', house: 'p_house.png', greenhouse: 'p_greenhouse.png', coop: 'p_coop.png', well: 'p_well.png', stall: 'p_stall.png', tree: 'p_tree.png',
     crop0: 'crop_qingcai_0.png', crop1: 'crop_qingcai_1.png', crop2: 'crop_qingcai_2.png', crop3: 'crop_qingcai_3.png',
+    tile_grass: 'p_grass.png', tile_soil: 'p_soil.png', tile_path: 'p_path.png', tile_water: 'p_water.png',
+  };
+  // Painted iso ground cube tiles. `cy` = fraction of the image height where the
+  // diamond-top CENTER sits (so it lands on the cell center; tuned by screenshot).
+  const ISO_TILES = {
+    grass: { img: 'tile_grass', cy: 0.42 }, soil: { img: 'tile_soil', cy: 0.40 },
+    path: { img: 'tile_path', cy: 0.34 }, water: { img: 'tile_water', cy: 0.40 },
   };
   const BUILDINGS = {
-    barn: { img: 'barn', w: 2, h: 2, sc: 2.2, zh: '谷仓·仓库', en: 'Barn', tap: 'warehouse' },
-    house: { img: 'house', w: 2, h: 2, sc: 2.5, zh: '小屋·种子店', en: 'Cottage', tap: 'shop' },
-    greenhouse: { img: 'greenhouse', w: 2, h: 2, sc: 2.1, zh: '温室', en: 'Greenhouse' },
-    coop: { img: 'coop', w: 2, h: 2, sc: 2.0, zh: '鸡舍', en: 'Coop' },
-    tree: { img: 'tree', w: 1, h: 1, sc: 1.7, zh: '树', en: 'Tree' },
+    barn: { img: 'barn', w: 2, h: 2, sc: 2.4, zh: '谷仓·仓库', en: 'Barn', tap: 'warehouse' },
+    house: { img: 'house', w: 2, h: 2, sc: 2.6, zh: '小屋·种子店', en: 'Cottage', tap: 'shop' },
+    greenhouse: { img: 'greenhouse', w: 2, h: 2, sc: 2.4, zh: '温室', en: 'Greenhouse' },
+    coop: { img: 'coop', w: 2, h: 2, sc: 2.3, zh: '鸡舍', en: 'Coop' },
+    stall: { img: 'stall', w: 2, h: 2, sc: 2.8, zh: '超市摊位', en: 'Stall' },
+    well: { img: 'well', w: 1, h: 1, sc: 2.4, zh: '水井', en: 'Well' },
+    tree: { img: 'tree', w: 1, h: 1, sc: 2.2, zh: '树', en: 'Tree' },
   };
-  const PALETTE = ['barn', 'house', 'greenhouse', 'coop', 'tree'];
+  const PALETTE = ['barn', 'house', 'greenhouse', 'coop', 'stall', 'well', 'tree'];
   const BRUSHES = [
     { key: 'path', zh: '小路', en: 'Path', color: '#a8743a' },
     { key: 'water', zh: '水塘', en: 'Water', color: '#5aa0c8' },
@@ -357,6 +366,14 @@
       this._cropImg[id] = false; const im = new Image(); im.onload = () => { this._cropImg[id] = im; if (this._on) this.render(); }; im.onerror = () => { this._cropImg[id] = true; }; im.src = url; return null;
     },
     _diamond(x, y, tw, th) { const c = this._ctx; c.beginPath(); c.moveTo(x, y - th / 2); c.lineTo(x + tw / 2, y); c.lineTo(x, y + th / 2); c.lineTo(x - tw / 2, y); c.closePath(); },
+    // Draw a painted cube ground tile centered on cell c (diamond width = TW,
+    // ~2% overlap to hide seams), or a flat-diamond fallback while it loads.
+    _tileImg(key, c) {
+      const t = ISO_TILES[key], im = t && this._img[t.img], tw = this._tw(), th = this._th();
+      if (im) { const w = tw * 1.02, sc = w / im.width, dh = im.height * sc; this._ctx.drawImage(im, c.x - w / 2, c.y - dh * t.cy, w, dh); return; }
+      this._diamond(c.x, c.y, tw, th);
+      this._ctx.fillStyle = key === 'water' ? '#5aa0c8' : key === 'path' ? '#a8743a' : key === 'soil' ? SOIL_TOP : GRASS_A; this._ctx.fill();
+    },
     _startLoop() {
       const loop = () => {
         this._raf = requestAnimationFrame(loop);
@@ -372,31 +389,19 @@
       const terrain = Farm.state.data.mapTerrain || {};
       ctx.clearRect(0, 0, W, H);
 
-      // ground diamonds (back-to-front) with a raised-island earth skirt on the
-      // front (east/south) boundary edges — the signature Hay Day "farm island".
-      const sk = th * 1.5;
+      // painted iso cube tiles, back-to-front (front rows cover the row behind's
+      // earth skirt → the Hay Day "farm island"). Plot cells use the soil tile.
+      const plotCells = this._plotCellSet();
       for (let s = 0; s <= (COLS - 1) + (ROWS - 1); s++) {
         for (let gx = 0; gx < COLS; gx++) {
           const gy = s - gx; if (gy < 0 || gy >= ROWS) continue;
           const c = this._cell(gx, gy);
-          if (c.x + tw < 0 || c.x - tw > W || c.y + th + sk < 0 || c.y - th > H) continue;
-          if (gx + 1 >= COLS) {   // east face (screen lower-right)
-            ctx.beginPath(); ctx.moveTo(c.x + tw / 2, c.y); ctx.lineTo(c.x, c.y + th / 2);
-            ctx.lineTo(c.x, c.y + th / 2 + sk); ctx.lineTo(c.x + tw / 2, c.y + sk); ctx.closePath();
-            ctx.fillStyle = '#9a6532'; ctx.fill();
-          }
-          if (gy + 1 >= ROWS) {   // south face (screen lower-left, darker)
-            ctx.beginPath(); ctx.moveTo(c.x, c.y + th / 2); ctx.lineTo(c.x - tw / 2, c.y);
-            ctx.lineTo(c.x - tw / 2, c.y + sk); ctx.lineTo(c.x, c.y + th / 2 + sk); ctx.closePath();
-            ctx.fillStyle = '#7d4f25'; ctx.fill();
-          }
-          this._diamond(c.x, c.y, tw, th);
-          const kind = terrain[gx + ',' + gy];
-          if (kind === 'water') ctx.fillStyle = '#5aa0c8';
-          else if (kind === 'path') ctx.fillStyle = '#a8743a';
-          else ctx.fillStyle = ((gx + gy) % 2 === 0) ? GRASS_A : GRASS_B;
-          ctx.fill();
-          ctx.strokeStyle = kind === 'water' ? 'rgba(40,86,116,0.45)' : GRASS_EDGE; ctx.lineWidth = 1; ctx.stroke();
+          if (c.x + tw < 0 || c.x - tw > W || c.y + th * 4 < 0 || c.y - th * 2 > H) continue;
+          const k = gx + ',' + gy;
+          let key = 'grass';
+          if (plotCells[k]) { const pl = Farm.state.data.plots[this._cellToPlot[k]]; if (pl && pl.unlocked) key = 'soil'; }
+          if (terrain[k] === 'water') key = 'water'; else if (terrain[k] === 'path') key = 'path';
+          this._tileImg(key, c);
         }
       }
 
@@ -432,22 +437,14 @@
     },
     _drawPlot(plot, gx, gy, idx) {
       const ctx = this._ctx, tw = this._tw(), th = this._th(), c = this._cell(gx, gy);
-      if (!plot.unlocked) {
-        this._diamond(c.x, c.y, tw * 0.94, th * 0.94); ctx.fillStyle = 'rgba(92,98,86,0.82)'; ctx.fill();
+      if (!plot.unlocked) {   // ground drew grass; overlay a grey lock plate
+        this._diamond(c.x, c.y, tw * 0.92, th * 0.92); ctx.fillStyle = 'rgba(70,78,66,0.62)'; ctx.fill();
         ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         ctx.font = (th * 0.55) + 'px sans-serif'; ctx.fillText('🔒', c.x, c.y - th * 0.1);
         ctx.font = 'bold ' + (th * 0.42) + 'px "Fredoka",sans-serif'; ctx.fillText('Lv' + (REQUIRED_LV[idx] || 2), c.x, c.y + th * 0.38);
         return;
       }
-      // tilled soil diamond + furrows
-      this._diamond(c.x, c.y, tw * 0.94, th * 0.94); ctx.fillStyle = SOIL_TOP; ctx.fill();
-      ctx.strokeStyle = SOIL_FURROW; ctx.lineWidth = Math.max(1, th * 0.06);
-      for (let k = -1; k <= 1; k++) {
-        ctx.beginPath();
-        ctx.moveTo(c.x - tw * 0.35 + k * tw * 0.16, c.y + k * th * 0.16 + th * 0.0);
-        ctx.lineTo(c.x + tw * 0.12 + k * tw * 0.16, c.y + k * th * 0.16 + th * 0.24);
-        ctx.stroke();
-      }
+      // ground already drew the tilled-soil tile for this cell.
       if (!plot.crop) {
         ctx.fillStyle = 'rgba(255,255,255,0.55)'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         ctx.font = 'bold ' + (th * 0.6) + 'px sans-serif'; ctx.fillText('+', c.x, c.y); return;
@@ -478,9 +475,9 @@
       }
       const cc = this._cell(o.gx + (b.w - 1) / 2, o.gy + (b.h - 1) / 2);
       const front = this._cell(o.gx + (b.w - 1), o.gy + (b.h - 1));
-      const by = front.y + th / 2 + th * 0.1;
+      const by = front.y + th / 2 + th * 0.18;
       ctx.globalAlpha = moving ? 0.82 : 1;
-      if (!this._blit(this._img[b.img], cc.x, by, b.w * tw * 0.6, b.sc * th * 2.0)) { ctx.fillStyle = '#c0392b'; ctx.fillRect(cc.x - tw * 0.4, by - th, tw * 0.8, th); }
+      if (!this._blit(this._img[b.img], cc.x, by, b.w * tw * 1.06, b.sc * th * 2.6)) { ctx.fillStyle = '#c0392b'; ctx.fillRect(cc.x - tw * 0.4, by - th, tw * 0.8, th); }
       ctx.globalAlpha = 1;
       if (this._build && this._sel === idx && idx != null && !moving) {   // delete chip
         const ch = this._delChip(o);

@@ -33,8 +33,22 @@ SRC = {
     "tree":      os.path.join(UP, "d9bebf6b-IMG_1666.jpeg"),  # tree (near-white)
     "tomato":    os.path.join(UP, "2d6e3183-IMG_1667.jpeg"),  # tomato 4-stage (checkerboard)
     # Isometric ground blocks (for ?iso=1 Hay-Day-style engine):
-    "iso_grass": os.path.join(UP, "26f9f41b-IMG_1661.jpeg"),  # iso grass cube (checkerboard)
-    "iso_dirt":  os.path.join(UP, "0788266c-IMG_1662.jpeg"),  # dirt/path block
+    "iso_grass": os.path.join(UP, "26f9f41b-IMG_1661.jpeg"),  # iso grass cube (pixel, checkerboard)
+    "iso_dirt":  os.path.join(UP, "0788266c-IMG_1662.jpeg"),  # dirt/path block (pixel)
+    # Painted iso tiles (batch 2026-06-15, matching Hay Day style):
+    "p_grass": os.path.join(UP, "f57f5a34-IMG_1672.jpeg"),   # painted grass cube
+    "p_soil":  os.path.join(UP, "a7c1ad54-IMG_1673.jpeg"),   # painted tilled soil
+    "p_path":  os.path.join(UP, "6eaf743e-IMG_1674.jpeg"),   # painted dirt/path
+    "p_water": os.path.join(UP, "7227589d-IMG_1675.jpeg"),   # painted water+shore
+    "p_stall": os.path.join(UP, "0139a402-IMG_1676.jpeg"),   # painted market stall
+    "p_greenhouse": os.path.join(UP, "2ad2b272-IMG_1677.jpeg"),
+    "p_coop": os.path.join(UP, "c8525963-IMG_1678.jpeg"),
+    "p_barn": os.path.join(UP, "ce969768-IMG_1679.jpeg"),
+    "p_house": os.path.join(UP, "cf002d91-IMG_1680.jpeg"),
+    "p_well": os.path.join(UP, "eb8cdba9-IMG_1681.jpeg"),
+    "p_tomato": os.path.join(UP, "468bf3ab-IMG_1682.jpeg"),   # iso tomato 4-stage
+    "p_cucumber": os.path.join(UP, "41b91da1-IMG_1683.jpeg"), # iso cucumber 4-stage
+    "p_tree": os.path.join(UP, "6e5c8b6f-IMG_1684.jpeg"),
 }
 
 
@@ -205,6 +219,30 @@ def main():
     idirt = fit_w(autocrop(flood_alpha(Image.open(SRC["iso_dirt"]), "checker")), 256)
     idirt.save(os.path.join(OUT, "iso_dirt.png"), optimize=True)
     log.append(f"iso_dirt.png {idirt.size}")
+
+    # --- painted iso batch (2026-06-15): ground tiles, buildings, crops, tree ---
+    def save_iso(key, out, bg, maxw):
+        im = fit_w(autocrop(flood_alpha(Image.open(SRC[key]), bg)), maxw)
+        im.save(os.path.join(OUT, out), optimize=True)
+        log.append(f"{out} {im.size}")
+    save_iso("p_grass", "p_grass.png", "checker", 220)
+    save_iso("p_soil", "p_soil.png", "checker", 220)
+    save_iso("p_path", "p_path.png", "checker", 220)
+    save_iso("p_water", "p_water.png", "checker", 220)
+    save_iso("p_stall", "p_stall.png", "checker", 360)
+    save_iso("p_greenhouse", "p_greenhouse.png", "white", 360)
+    save_iso("p_coop", "p_coop.png", "checker", 360)
+    save_iso("p_barn", "p_barn.png", "white", 360)
+    save_iso("p_house", "p_house.png", "checker", 360)
+    save_iso("p_well", "p_well.png", "checker", 320)
+    save_iso("p_tree", "p_tree.png", "checker", 260)
+    for key, out in [("p_tomato", "crop_tomato"), ("p_cucumber", "crop_cucumber")]:
+        st = split_stages(flood_alpha(Image.open(SRC[key]), "white"), 4)
+        tall = max(s.height for s in st) or 1
+        f = min(1.0, 300 / tall)
+        for i, s in enumerate(st):
+            scale(s, f).save(os.path.join(OUT, f"{out}_{i}.png"), optimize=True)
+        log.append(f"{out} stages={len(st)} f={f:.3f}")
 
     # --- grass color sample (no file saved; the engine uses the hex) ---
     grass = Image.open(SRC["grass"]).convert("RGB")
