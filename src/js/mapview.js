@@ -316,7 +316,7 @@
         const s = this._hint.querySelector('span');
         if (s) s.textContent = terr
           ? (en ? 'Tap / drag to paint terrain' : '点按或拖动涂刷地形（草地=擦除）')
-          : (en ? 'Drag to move · tap ✕ to remove · pick below to add' : '拖动摆放 · 点 ✕ 移除 · 下方选建筑添加');
+          : (en ? 'Drag buildings & decorations · tap ✕ to remove · pick below' : '拖动摆放建筑/装饰 · 点 ✕ 移除建筑 · 下方添加');
       }
       this._layoutUI();
     },
@@ -440,6 +440,48 @@
       }
       return true;
     },
+    // Cells blocked for decoration placement: plots, building footprints, water.
+    _occupied() {
+      const occ = this._plotCellSet();
+      this._map().forEach((o) => {
+        const b = BUILDINGS[o.type]; if (!b) return;
+        for (let yy = 0; yy < b.h; yy++) for (let xx = 0; xx < b.w; xx++) occ[(o.gx + xx) + ',' + (o.gy + yy)] = true;
+      });
+      const t = this._terrain();
+      Object.keys(t).forEach((k) => { if (t[k] === 'water') occ[k] = true; });
+      return occ;
+    },
+    _decoHasPos(d) { return Number.isInteger(d.gx) && Number.isInteger(d.gy) && d.gx >= 0 && d.gy >= 0 && d.gx < GROUND_COLS && d.gy < GROUND_ROWS; },
+    _decoAt(gx, gy) {
+      const decos = (Farm.state.data.decorations) || [];
+      for (let i = 0; i < decos.length; i++) if (decos[i].gx === gx && decos[i].gy === gy) return i;
+      return -1;
+    },
+    _decoCellFree(gx, gy, exceptIdx) {
+      if (gx < 0 || gy < 0 || gx >= GROUND_COLS || gy >= GROUND_ROWS) return false;
+      if (this._occupied()[gx + ',' + gy]) return false;
+      const decos = (Farm.state.data.decorations) || [];
+      for (let i = 0; i < decos.length; i++) if (i !== exceptIdx && decos[i].gx === gx && decos[i].gy === gy) return false;
+      return true;
+    },
+    // Assign stable cells to decorations lacking a valid (free) one, bottom-first.
+    _ensureDecoPositions() {
+      const decos = (Farm.state.data && Farm.state.data.decorations) || [];
+      if (!decos.length || !Farm.epShop || !Farm.epShop.items || !Farm.epShop.items.length) return;
+      const occ = this._occupied(), taken = {};
+      decos.forEach((d) => { if (this._decoHasPos(d) && !occ[d.gx + ',' + d.gy]) taken[d.gx + ',' + d.gy] = 1; });
+      const free = [];
+      for (let gy = GROUND_ROWS - 1; gy >= 0; gy--) for (let gx = 0; gx < GROUND_COLS; gx++) { const k = gx + ',' + gy; if (!occ[k] && !taken[k]) free.push(k); }
+      let fi = 0, changed = false;
+      decos.forEach((d) => {
+        const item = Farm.epShop.items.find((it) => it.id === d.itemId);
+        if (!item || !item.decoration_emoji) return;
+        if (this._decoHasPos(d) && !occ[d.gx + ',' + d.gy]) return;   // already valid
+        while (fi < free.length && taken[free[fi]]) fi++;
+        if (fi < free.length) { const k = free[fi++]; const c = k.split(','); d.gx = +c[0]; d.gy = +c[1]; taken[k] = 1; changed = true; }
+      });
+      if (changed) Farm.state.save();
+    },
     // Topmost (frontmost) building whose footprint contains (gx,gy); else -1.
     _buildingAt(gx, gy) {
       const map = this._map();
@@ -515,7 +557,16 @@
         if (idx >= 0) {
           const o = this._map()[idx];
           this._sel = idx;
-          this._moving = { idx, gx: o.gx, gy: o.gy, valid: true, startX: p.x, startY: p.y, moved: false };
+          this._moving = { kind: 'building', idx, gx: o.gx, gy: o.gy, valid: true, startX: p.x, startY: p.y, moved: false };
+          this.render();
+          return;
+        }
+        // 2b) grab a decoration to move?
+        const didx = this._decoAt(cell.gx, cell.gy);
+        if (didx >= 0) {
+          const d = Farm.state.data.decorations[didx];
+          this._sel = -1;
+          this._moving = { kind: 'deco', idx: didx, gx: d.gx, gy: d.gy, valid: true, startX: p.x, startY: p.y, moved: false };
           this.render();
           return;
         }
@@ -542,11 +593,16 @@
       }
       if (this._moving) {
         if (Math.abs(p.x - this._moving.startX) + Math.abs(p.y - this._moving.startY) > 4) this._moving.moved = true;
-        const o = this._map()[this._moving.idx], b = BUILDINGS[o.type];
         const cell = this._screenToCell(p.x, p.y);
-        const gx = cell.gx - (b.w >> 1), gy = cell.gy - (b.h >> 1);
-        this._moving.gx = gx; this._moving.gy = gy;
-        this._moving.valid = this._footprintFree(gx, gy, o.type, this._moving.idx);
+        if (this._moving.kind === 'deco') {
+          this._moving.gx = cell.gx; this._moving.gy = cell.gy;
+          this._moving.valid = this._decoCellFree(cell.gx, cell.gy, this._moving.idx);
+        } else {
+          const o = this._map()[this._moving.idx], b = BUILDINGS[o.type];
+          const gx = cell.gx - (b.w >> 1), gy = cell.gy - (b.h >> 1);
+          this._moving.gx = gx; this._moving.gy = gy;
+          this._moving.valid = this._footprintFree(gx, gy, o.type, this._moving.idx);
+        }
         this.render();
         return;
       }
@@ -568,8 +624,13 @@
       if (this._moving) {
         const m = this._moving; this._moving = null;
         if (m.moved && m.valid) {
-          const o = this._map()[m.idx];
-          o.gx = m.gx; o.gy = m.gy; Farm.state.save();
+          if (m.kind === 'deco') {
+            const d = Farm.state.data.decorations[m.idx];
+            if (d) { d.gx = m.gx; d.gy = m.gy; Farm.state.save(); }
+          } else {
+            const o = this._map()[m.idx];
+            if (o) { o.gx = m.gx; o.gy = m.gy; Farm.state.save(); }
+          }
         }
         this.render();
         this._drag = null;
@@ -688,53 +749,73 @@
       // Owned EP-shop decorations (auto-placed on free cells — brings the paid
       // cosmetics onto the map). Depth-sorted like everything else.
       this._decoPlacements().forEach((d) => {
-        draws.push({ base: (d.gy + 1) * ts, fn: () => this._drawDeco(d, ts) });
+        const mv = this._moving && this._moving.kind === 'deco' && this._moving.idx === d.decoIdx;
+        const gx = mv ? this._moving.gx : d.gx, gy = mv ? this._moving.gy : d.gy;
+        draws.push({ base: (gy + 1) * ts, fn: () => this._drawDeco({ emoji: d.emoji, gx, gy, pet: d.pet, seed: d.seed }, ts, mv) });
       });
       draws.sort((a, c) => a.base - c.base);
       draws.forEach(d => d.fn());
 
       this._drawParticles(ts);   // season ambiance on top
+      this._drawFestival(ts);    // festival overlay (lanterns / moon)
     },
-    // Map owned decorations to free cells (bottom-first so they sit in the front
-    // yard, like the classic layout). Deterministic: stable per decoration index.
+    // Festival overlay in screen space: 春节 → swaying lantern string along the
+    // top; 中秋 → a glowing moon top-right. Driven by Farm.events.
+    _drawFestival(ts) {
+      const id = Farm.events && Farm.events.getActiveFestivalId && Farm.events.getActiveFestivalId();
+      if (!id) return;
+      const ctx = this._ctx, W = this._cssW(), t = Date.now() / 1000;
+      if (id === 'spring_festival') {
+        const n = Math.max(3, Math.floor(W / 64));
+        ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+        ctx.font = '26px sans-serif';
+        for (let i = 0; i < n; i++) {
+          const x = (i + 0.5) * (W / n);
+          ctx.fillText('🏮', x, 1 + Math.sin(t * 1.2 + i) * 4);
+        }
+      } else if (id === 'mid_autumn') {
+        const x = W - 48, y = 48, r = 30;
+        ctx.save();
+        ctx.globalAlpha = 0.5; ctx.beginPath(); ctx.arc(x, y, r * 1.5, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255,245,200,0.55)'; ctx.fill();
+        ctx.restore();
+        ctx.font = '50px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText('🌕', x, y);
+      }
+    },
+    // Owned decorations with their stored cell (auto-assigned once, then drag-
+    // movable in build mode). Returns [{emoji,gx,gy,pet,seed,decoIdx}].
     _decoPlacements() {
       const decos = (Farm.state.data && Farm.state.data.decorations) || [];
       if (!decos.length || !Farm.epShop || !Farm.epShop.items || !Farm.epShop.items.length) return [];
-      const plotCells = this._plotCellSet(), terrain = this._terrain(), occ = {};
-      this._map().forEach((o) => {
-        const b = BUILDINGS[o.type]; if (!b) return;
-        for (let yy = 0; yy < b.h; yy++) for (let xx = 0; xx < b.w; xx++) occ[(o.gx + xx) + ',' + (o.gy + yy)] = 1;
-      });
-      const free = [];
-      for (let gy = GROUND_ROWS - 1; gy >= 0; gy--) {
-        for (let gx = 0; gx < GROUND_COLS; gx++) {
-          const k = gx + ',' + gy;
-          if (plotCells[k] || occ[k] || terrain[k] === 'water') continue;
-          free.push({ gx, gy });
-        }
-      }
-      if (!free.length) return [];
-      const out = [], used = {};
+      if (decos.some((d) => !this._decoHasPos(d))) this._ensureDecoPositions();
+      const out = [];
       decos.forEach((d, i) => {
+        if (!this._decoHasPos(d)) return;
         const item = Farm.epShop.items.find((it) => it.id === d.itemId);
         if (!item || !item.decoration_emoji) return;
-        let cell = free.find((c) => !used[c.gx + ',' + c.gy]) || free[i % free.length];
-        used[cell.gx + ',' + cell.gy] = 1;
-        out.push({ emoji: item.decoration_emoji, gx: cell.gx, gy: cell.gy, pet: item.category === 'pet', seed: i });
+        out.push({ emoji: item.decoration_emoji, gx: d.gx, gy: d.gy, pet: item.category === 'pet', seed: i, decoIdx: i });
       });
       return out;
     },
-    _drawDeco(d, ts) {
+    _drawDeco(d, ts, moving) {
       const ctx = this._ctx;
+      if (moving) {   // drop-cell validity highlight
+        const x = d.gx * ts - this._camX, y = d.gy * ts - this._camY;
+        ctx.fillStyle = this._moving && this._moving.valid ? 'rgba(76,175,80,0.30)' : 'rgba(220,60,60,0.32)';
+        ctx.fillRect(x, y, ts, ts);
+      }
       let cx = (d.gx + 0.5) * ts - this._camX, by = (d.gy + 0.92) * ts - this._camY;
-      if (d.pet) {   // pets wander in a small ellipse near their spot
+      if (d.pet && !moving) {   // pets wander in a small ellipse near their spot
         const t = Date.now() / 1000;
         cx += Math.sin(t * 0.5 + d.seed) * ts * 0.55;
         by += Math.cos(t * 0.4 + d.seed * 1.3) * ts * 0.22;
       }
       ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+      ctx.globalAlpha = moving ? 0.85 : 1;
       ctx.font = (ts * 0.6) + 'px sans-serif';
       ctx.fillText(d.emoji, cx, by);
+      ctx.globalAlpha = 1;
     },
     // Screen-space season ambiance: a few emoji drifting down + swaying.
     _drawParticles(ts) {
