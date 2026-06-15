@@ -730,9 +730,52 @@
       "recipe_en": "Bag on coffee table, eat while watching TV. One after another.",
       "real_sku": "EM-FRUIT-SUGARMAND",
       "stages": 3
+    },
+    "tomato": {
+      "id": "tomato",
+      "name_zh": "番茄",
+      "name_en": "Tomato",
+      "icon": "🍅",
+      "color": "#e74c3c",
+      "tier": 4,
+      "grow_minutes": 120,
+      "seed_cost": 25,
+      "sell_price": 150,
+      "xp_reward": 8,
+      "category": "fruit_vegetable",
+      "season": "summer",
+      "multi_harvest": false,
+      "unlock_level": 4,
+      "story_zh": "熟透的番茄沙瓤多汁，凉拌、炒蛋、煮汤都百搭。",
+      "story_en": "Vine-ripened tomatoes are juicy and sweet — great raw, scrambled with egg, or in soup.",
+      "recipe_zh": "番茄炒蛋：番茄切块炒出沙，下蛋液同炒，咸里带甜。",
+      "recipe_en": "Tomato & egg stir-fry: cook tomatoes till saucy, fold in beaten eggs.",
+      "real_sku": "EM-VEG-TOMATO",
+      "stages": 4
+    },
+    "cucumber": {
+      "id": "cucumber",
+      "name_zh": "黄瓜",
+      "name_en": "Cucumber",
+      "icon": "🥒",
+      "color": "#27ae60",
+      "tier": 3,
+      "grow_minutes": 90,
+      "seed_cost": 18,
+      "sell_price": 110,
+      "xp_reward": 7,
+      "category": "fruit_vegetable",
+      "season": "summer",
+      "multi_harvest": false,
+      "unlock_level": 3,
+      "story_zh": "脆嫩多汁的黄瓜，拍一拍拌蒜最爽口。",
+      "story_en": "Crisp, juicy cucumber — smash it and toss with garlic for the classic cold dish.",
+      "recipe_zh": "拍黄瓜：黄瓜拍碎，蒜末、香醋、香油一拌即成。",
+      "recipe_en": "Smashed cucumber: smash, then dress with garlic, vinegar and sesame oil.",
+      "real_sku": "EM-VEG-CUCUMBER",
+      "stages": 4
     }
   },
-
   "_festival_crops": {
     "_comment": "Only appear during festival windows. Not in main rotation.",
     "narcissus": {

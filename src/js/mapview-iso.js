@@ -29,6 +29,12 @@
     grass: { img: 'tile_grass', cy: 0.42 }, soil: { img: 'tile_soil', cy: 0.40 },
     path: { img: 'tile_path', cy: 0.34 }, water: { img: 'tile_water', cy: 0.40 },
   };
+  // Painted iso 4-stage crop sprites (each frame includes its own soil cube), keyed
+  // by crop id. shanghai_miao keeps its pixel sprite (no cube) — handled separately.
+  const ISO_CROPS = {
+    eggplant: 'crop_eggplant', cilantro: 'crop_cilantro', jiucai: 'crop_chives',
+    niu_jiao_jiao: 'crop_chili', suan_tai: 'crop_garlic', tomato: 'crop_tomato', cucumber: 'crop_cucumber',
+  };
   const BUILDINGS = {
     barn: { img: 'barn', w: 2, h: 2, sc: 2.4, zh: '谷仓·仓库', en: 'Barn', tap: 'warehouse' },
     house: { img: 'house', w: 2, h: 2, sc: 2.6, zh: '小屋·种子店', en: 'Cottage', tap: 'shop' },
@@ -365,6 +371,14 @@
       if (!url) { this._cropImg[id] = true; return null; }
       this._cropImg[id] = false; const im = new Image(); im.onload = () => { this._cropImg[id] = im; if (this._on) this.render(); }; im.onerror = () => { this._cropImg[id] = true; }; im.src = url; return null;
     },
+    // Lazy-load any map asset by file stem (e.g. 'crop_eggplant_2', 'animal_cat').
+    _lazyImg(name) {
+      const k = 'L_' + name, c = this._img[k];
+      if (c instanceof Image) return c; if (c === 'loading') return null;
+      this._img[k] = 'loading';
+      const im = new Image(); im.onload = () => { this._img[k] = im; if (this._on) this.render(); }; im.onerror = () => { this._img[k] = null; }; im.src = ASSET_DIR + name + '.png';
+      return null;
+    },
     _diamond(x, y, tw, th) { const c = this._ctx; c.beginPath(); c.moveTo(x, y - th / 2); c.lineTo(x + tw / 2, y); c.lineTo(x, y + th / 2); c.lineTo(x - tw / 2, y); c.closePath(); },
     // Draw a painted cube ground tile centered on cell c (diamond width = TW,
     // ~2% overlap to hide seams), or a flat-diamond fallback while it loads.
@@ -399,7 +413,12 @@
           if (c.x + tw < 0 || c.x - tw > W || c.y + th * 4 < 0 || c.y - th * 2 > H) continue;
           const k = gx + ',' + gy;
           let key = 'grass';
-          if (plotCells[k]) { const pl = Farm.state.data.plots[this._cellToPlot[k]]; if (pl && pl.unlocked) key = 'soil'; }
+          if (plotCells[k]) {
+            const pl = Farm.state.data.plots[this._cellToPlot[k]];
+            // empty plot or pixel bok choy → tilled soil tile; painted-crop plots
+            // stay grass (the crop sprite brings its own soil cube).
+            if (pl && pl.unlocked && !(pl.crop && ISO_CROPS[pl.crop])) key = 'soil';
+          }
           if (terrain[k] === 'water') key = 'water'; else if (terrain[k] === 'path') key = 'path';
           this._tileImg(key, c);
         }
@@ -453,8 +472,11 @@
       const by = c.y + th * 0.2;   // sprite stands on the diamond
       if (mature) { const t = Date.now() / 1000, ph = Math.sin(t * 2 + gx + gy); ctx.beginPath(); ctx.arc(c.x, c.y - th * 0.1, tw * (0.34 + ph * 0.02), 0, Math.PI * 2); ctx.fillStyle = 'rgba(255,214,79,' + (0.3 + ph * 0.08) + ')'; ctx.fill(); }
       ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
-      if (plot.crop === 'shanghai_miao') {
-        const fr = p >= 1 ? 3 : p >= 0.6 ? 2 : p >= 0.25 ? 1 : 0;
+      const fr = p >= 1 ? 3 : p >= 0.6 ? 2 : p >= 0.25 ? 1 : 0;
+      if (ISO_CROPS[plot.crop]) {   // painted iso 4-stage (sprite includes soil cube)
+        const im = this._lazyImg(ISO_CROPS[plot.crop] + '_' + fr);
+        if (!this._blit(im, c.x, c.y + th * 0.62, tw * 1.0, th * 3.2)) { const def = Farm.crops.get(plot.crop); ctx.font = (th * 1.1) + 'px sans-serif'; ctx.fillText((def && def.icon) || '🌿', c.x, by); }
+      } else if (plot.crop === 'shanghai_miao') {
         if (!this._blit(this._img['crop' + fr], c.x, by, tw * 0.8, th * (1.6 + fr * 0.9))) { ctx.font = (th) + 'px sans-serif'; ctx.fillText(mature ? '🥬' : '🌿', c.x, by); }
       } else if (mature) {
         const im = this._cropSprite(plot.crop);

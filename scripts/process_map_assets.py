@@ -49,6 +49,23 @@ SRC = {
     "p_tomato": os.path.join(UP, "468bf3ab-IMG_1682.jpeg"),   # iso tomato 4-stage
     "p_cucumber": os.path.join(UP, "41b91da1-IMG_1683.jpeg"), # iso cucumber 4-stage
     "p_tree": os.path.join(UP, "6e5c8b6f-IMG_1684.jpeg"),
+    # crop 4-stage strips (iso), batch 2:
+    "c_chili":    os.path.join(UP, "b3df3544-IMG_1685.jpeg"),
+    "c_eggplant": os.path.join(UP, "338d846b-IMG_1686.jpeg"),
+    "c_chives":   os.path.join(UP, "94cf3734-IMG_1687.jpeg"),
+    "c_cilantro": os.path.join(UP, "a254c5fa-IMG_1688.jpeg"),
+    "c_garlic":   os.path.join(UP, "acc3987d-IMG_1689.jpeg"),
+    # decorations (iso):
+    "d_bush":   os.path.join(UP, "16c4f234-IMG_1690.jpeg"),
+    "d_lantern":os.path.join(UP, "dfc5919d-IMG_1691.jpeg"),
+    "d_fence":  os.path.join(UP, "1dc72411-IMG_1692.jpeg"),
+    "d_wheel":  os.path.join(UP, "433a9873-IMG_1693.jpeg"),
+    "d_bridge": os.path.join(UP, "43a574e7-IMG_1694.jpeg"),
+    # animals (iso, on grass diamond):
+    "a_chicken":os.path.join(UP, "a406f4ab-IMG_1695.jpeg"),
+    "a_cat":    os.path.join(UP, "de98fca7-IMG_1696.jpeg"),
+    "a_rabbit": os.path.join(UP, "39ef730a-IMG_1697.jpeg"),
+    "a_dog":    os.path.join(UP, "a04783c4-IMG_1698.jpeg"),
 }
 
 
@@ -130,34 +147,46 @@ def scale(img, factor):
 
 
 def split_stages(img, n=4):
-    """Split a horizontal sprite strip into n sprites by transparent gutters.
-    Returns list of cropped sprite images, left-to-right."""
+    """Split a horizontal crop-growth strip into n stages, left-to-right.
+
+    Tall plants overhang the gaps between stages, so a full-height column scan
+    fails. Instead detect the SOIL CUBES in the bottom band (which never overhang
+    each other), then slice full-height at the midpoints between cube clusters."""
     w, h = img.size
     px = img.load()
-    # column has content if any pixel alpha>16
-    col_has = [False] * w
+    band_top = int(h * 0.62)          # bottom ~38% = where the soil cubes sit
+    col = [0] * w
     for x in range(w):
-        for y in range(h):
+        c = 0
+        for y in range(band_top, h):
             if px[x, y][3] > 16:
-                col_has[x] = True
-                break
-    # find runs of content columns
+                c += 1
+        col[x] = c
+    thr = max(col) * 0.18 if max(col) else 1
     runs = []
     x = 0
     while x < w:
-        if col_has[x]:
+        if col[x] >= thr:
             s = x
-            while x < w and col_has[x]:
+            while x < w and col[x] >= thr:
                 x += 1
             runs.append((s, x))
         else:
             x += 1
-    # merge tiny gaps: keep largest n runs by width
+    # keep the n widest cube-runs, ordered left→right
     runs.sort(key=lambda r: r[1] - r[0], reverse=True)
     runs = sorted(runs[:n], key=lambda r: r[0])
+    if len(runs) < 2:                 # detection failed → fall back to equal slices
+        runs = [(int(i * w / n), int((i + 1) * w / n)) for i in range(n)]
+    # split boundaries at midpoints between adjacent cube centers
+    centers = [(s + e) / 2 for (s, e) in runs]
+    bounds = [0]
+    for i in range(len(centers) - 1):
+        bounds.append(int((centers[i] + centers[i + 1]) / 2))
+    bounds.append(w)
     sprites = []
-    for (s, e) in runs:
-        sub = img.crop((s, 0, e, h))
+    for i in range(len(centers)):
+        sub = img.crop((bounds[i], 0, bounds[i + 1], h))
         sprites.append(autocrop(sub))
     return sprites
 
@@ -243,6 +272,26 @@ def main():
         for i, s in enumerate(st):
             scale(s, f).save(os.path.join(OUT, f"{out}_{i}.png"), optimize=True)
         log.append(f"{out} stages={len(st)} f={f:.3f}")
+
+    # crop 4-stage strips (batch 2) -> per-stage PNGs
+    for key, out in [("c_chili", "crop_chili"), ("c_eggplant", "crop_eggplant"), ("c_chives", "crop_chives"),
+                     ("c_cilantro", "crop_cilantro"), ("c_garlic", "crop_garlic")]:
+        st = split_stages(flood_alpha(Image.open(SRC[key]), "checker"), 4)
+        tall = max(s.height for s in st) or 1
+        f = min(1.0, 300 / tall)
+        for i, s in enumerate(st):
+            scale(s, f).save(os.path.join(OUT, f"{out}_{i}.png"), optimize=True)
+        log.append(f"{out} stages={len(st)} f={f:.3f}")
+
+    # decorations
+    for key, out, bg, w in [("d_bush", "deco_bush.png", "checker", 200), ("d_lantern", "deco_lantern.png", "sky", 200),
+                            ("d_fence", "deco_fence.png", "checker", 300), ("d_wheel", "deco_wheel.png", "sky", 280),
+                            ("d_bridge", "deco_bridge.png", "checker", 280)]:
+        save_iso(key, out, bg, w)
+    # animals (cream bg → 'white' catches it)
+    for key, out in [("a_chicken", "animal_chicken.png"), ("a_cat", "animal_cat.png"),
+                     ("a_rabbit", "animal_rabbit.png"), ("a_dog", "animal_dog.png")]:
+        save_iso(key, out, "white", 220)
 
     # --- grass color sample (no file saved; the engine uses the hex) ---
     grass = Image.open(SRC["grass"]).convert("RGB")
