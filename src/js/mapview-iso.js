@@ -79,6 +79,8 @@
     _cellToPlotN: -1,
     _build: false, _editMode: 'build', _brush: 'path', _painting: false,
     _sel: -1, _moving: null,
+    _pets: {},          // seed -> {fx,fy,tx,ty,pause,face,hx,hy} live walk state (not persisted)
+    _lastWalkT: 0,
     _buildBtn: null, _palette: null, _hint: null, _modeTabs: null, _palBuild: null, _palTerrain: null,
 
     // DEFAULT farm view (Hay Day isometric). Chosen via Farm.state.farmStyle()
@@ -456,10 +458,18 @@
         const gx = mv ? this._moving.gx : o.gx, gy = mv ? this._moving.gy : o.gy;
         draws.push({ d: (gx + gy) + (b.w - 1) + (b.h - 1) + 0.5, fn: () => this._drawBuilding({ type: o.type, gx, gy }, b, mv, i) });
       }
+      const nowW = Date.now();
+      const wdt = this._lastWalkT ? Math.min(0.25, (nowW - this._lastWalkT) / 1000) : 0;
+      this._lastWalkT = nowW;
       this._decoPlacements().forEach((d) => {
         const mv = this._moving && this._moving.kind === 'deco' && this._moving.idx === d.seed;
-        const gx = mv ? this._moving.gx : d.gx, gy = mv ? this._moving.gy : d.gy;
-        draws.push({ d: gx + gy + 0.2, fn: () => this._drawDeco({ emoji: d.emoji, itemId: d.itemId, gx, gy, pet: d.pet, seed: d.seed }, mv) });
+        if (d.itemId && ANIMALS[d.itemId] && !mv) {           // walking pet
+          const p = this._updatePet(d.seed, d.gx, d.gy, wdt);
+          draws.push({ d: p.fx + p.fy + 0.25, fn: () => this._drawAnimal(d, p.fx, p.fy, p.face) });
+        } else {                                              // static deco (or pet being dragged)
+          const gx = mv ? this._moving.gx : d.gx, gy = mv ? this._moving.gy : d.gy;
+          draws.push({ d: gx + gy + 0.2, fn: () => this._drawDeco({ emoji: d.emoji, itemId: d.itemId, gx, gy, pet: d.pet, seed: d.seed }, mv) });
+        }
       });
       draws.sort((a, c) => a.d - c.d); draws.forEach(x => x.fn());
 
@@ -569,6 +579,48 @@
       if (d.pet && !moving) { const t = Date.now() / 1000; cx += Math.sin(t * 0.6 + d.seed) * tw * 0.06; by -= Math.abs(Math.sin(t * 1.3 + d.seed)) * th * 0.12; }
       ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic'; ctx.globalAlpha = moving ? 0.85 : 1; ctx.font = (th * 1.4) + 'px sans-serif';
       ctx.fillText(d.emoji, cx, by); ctx.globalAlpha = 1;
+    },
+    // A pet may stand on grass/path — not on water, buildings, plots.
+    _walkablePet(gx, gy) {
+      if (gx < 0 || gy < 0 || gx >= COLS || gy >= ROWS) return false;
+      return !this._decoCells()[gx + ',' + gy];   // _decoCells = plots + buildings + water
+    },
+    // Advance one pet's wander (toward a random walkable spot near its home),
+    // dt seconds. Returns live {fx,fy,face}. Frozen while in build mode.
+    _updatePet(seed, hgx, hgy, dt) {
+      let p = this._pets[seed];
+      if (!p) p = this._pets[seed] = { fx: hgx, fy: hgy, tx: hgx, ty: hgy, pause: 0.4 + (seed % 5) * 0.25, face: 1, hx: hgx, hy: hgy };
+      if (Math.abs(hgx - p.hx) > 0.5 || Math.abs(hgy - p.hy) > 0.5) { p.fx = p.tx = hgx; p.fy = p.ty = hgy; }  // home dragged → teleport
+      p.hx = hgx; p.hy = hgy;
+      if (dt <= 0 || this._build) return p;     // freeze while editing
+      if (p.pause > 0) { p.pause -= dt; return p; }
+      const dx = p.tx - p.fx, dy = p.ty - p.fy, dist = Math.hypot(dx, dy);
+      if (dist < 0.06) {
+        p.pause = 0.6 + Math.random() * 1.8;     // idle, then pick a new nearby spot
+        for (let t = 0; t < 10; t++) {
+          const ngx = Math.max(0, Math.min(COLS - 1, Math.round(hgx + (Math.random() * 5 - 2.5))));
+          const ngy = Math.max(0, Math.min(ROWS - 1, Math.round(hgy + (Math.random() * 5 - 2.5))));
+          if (this._walkablePet(ngx, ngy)) { p.tx = ngx; p.ty = ngy; break; }
+        }
+      } else {
+        const step = Math.min(dist, 0.62 * dt);
+        p.fx += dx / dist * step; p.fy += dy / dist * step;
+        const sdir = dx - dy;                     // screen-x movement → face that way
+        if (Math.abs(sdir) > 0.02) p.face = sdir > 0 ? 1 : -1;
+      }
+      return p;
+    },
+    _drawAnimal(d, fx, fy, face) {
+      const ctx = this._ctx, tw = this._tw(), th = this._th(), c = this._cell(fx, fy);
+      const im = this._lazyImg(ANIMALS[d.itemId]);
+      if (!im) { ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic'; ctx.font = (th * 1.4) + 'px sans-serif'; ctx.fillText(d.emoji, c.x, c.y + th * 0.3); return; }
+      const t = Date.now() / 1000;
+      const moving = this._pets[d.seed] && (this._pets[d.seed].pause <= 0);
+      const lift = (moving ? Math.abs(Math.sin(t * 7 + d.seed)) : Math.abs(Math.sin(t * 1.4 + d.seed)) * 0.5) * th * 0.12;  // step-bounce when walking, gentle idle otherwise
+      const w = tw * 0.9, sc = Math.min(w / im.width, (th * 2.4) / im.height), dw = im.width * sc, dh = im.height * sc;
+      const by = c.y + th * 0.5 - lift;
+      if (face < 0) { ctx.save(); ctx.translate(c.x, 0); ctx.scale(-1, 1); ctx.drawImage(im, -dw / 2, by - dh, dw, dh); ctx.restore(); }
+      else ctx.drawImage(im, c.x - dw / 2, by - dh, dw, dh);
     },
     _drawParticles(tw) {
       const season = (Farm.seasons && Farm.seasons.current) || monthSeason(), set = SEASON_PARTICLES[season];
