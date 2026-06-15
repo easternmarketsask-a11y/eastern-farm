@@ -965,10 +965,7 @@
         if (!this._blit('crop' + frame, cx, y + ts * 0.96, ts * 0.9, maxH)) {
           ctx.font = (ts * 0.42) + 'px sans-serif'; ctx.fillText(mature ? '🥬' : '🌿', cx, cy);
         }
-        return;
-      }
-
-      if (mature) {
+      } else if (mature) {
         const im = this._cropSprite(plot.crop);
         if (!this._blitImage(im, cx, y + ts * 0.92, ts * 0.78, ts * 0.85)) {
           const def = Farm.crops.get(plot.crop);
@@ -978,6 +975,14 @@
       } else {   // generic sprout, grows a touch with progress
         ctx.font = (ts * (p >= 0.4 ? 0.4 : 0.3)) + 'px sans-serif';
         ctx.fillText(p >= 0.4 ? '🌿' : '🌱', cx, cy);
+      }
+
+      // Growth progress bar (drawn last so it's never hidden by the sprite),
+      // so maturity is readable on the map without tapping each plot.
+      if (!mature) {
+        const bw = ts * 0.62, bx = cx - bw / 2, byb = y + ts * 0.9, bh = Math.max(3, ts * 0.055);
+        ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.fillRect(bx, byb, bw, bh);
+        ctx.fillStyle = '#7bc043'; ctx.fillRect(bx, byb, bw * Math.max(0.04, p), bh);
       }
     },
     _roundRect(x, y, w, h, r) {
