@@ -535,7 +535,11 @@
       if (decos.some((d) => !hp(d))) {
         const occ = this._decoCells(), taken = {};
         decos.forEach((d) => { if (hp(d) && !occ[d.gx + ',' + d.gy]) taken[d.gx + ',' + d.gy] = 1; });
-        const free = []; for (let gy = ROWS - 1; gy >= 0; gy--) for (let gx = 0; gx < COLS; gx++) { const k = gx + ',' + gy; if (!occ[k] && !taken[k]) free.push(k); }
+        // Prefer the front-center "yard": rows front→back, columns center→out, so
+        // pets/decorations land in the open middle, not the awkward island corners.
+        const colOrder = []; const c0 = Math.floor(COLS / 2);
+        for (let dd = 0; colOrder.length < COLS; dd++) { if (c0 - dd >= 0) colOrder.push(c0 - dd); if (dd > 0 && c0 + dd < COLS) colOrder.push(c0 + dd); }
+        const free = []; for (let gy = ROWS - 1; gy >= 0; gy--) for (const gx of colOrder) { const k = gx + ',' + gy; if (!occ[k] && !taken[k]) free.push(k); }
         let fi = 0, ch = false;
         decos.forEach((d) => { const it = Farm.epShop.items.find((x) => x.id === d.itemId); if (!it || !it.decoration_emoji) return; if (hp(d) && !occ[d.gx + ',' + d.gy]) return; while (fi < free.length && taken[free[fi]]) fi++; if (fi < free.length) { const k = free[fi++].split(','); d.gx = +k[0]; d.gy = +k[1]; taken[k[0] + ',' + k[1]] = 1; ch = true; } });
         if (ch) Farm.state.save();
