@@ -226,6 +226,7 @@
     render() {
       if (!this._on) return;
       const ctx = this._ctx, tw = this._tw(), th = this._th(), W = this._cssW(), H = this._cssH();
+      const terrain = Farm.state.data.mapTerrain || {};
       ctx.clearRect(0, 0, W, H);
 
       // ground diamonds (back-to-front) with a raised-island earth skirt on the
@@ -247,8 +248,12 @@
             ctx.fillStyle = '#7d4f25'; ctx.fill();
           }
           this._diamond(c.x, c.y, tw, th);
-          ctx.fillStyle = ((gx + gy) % 2 === 0) ? GRASS_A : GRASS_B; ctx.fill();
-          ctx.strokeStyle = GRASS_EDGE; ctx.lineWidth = 1; ctx.stroke();
+          const kind = terrain[gx + ',' + gy];
+          if (kind === 'water') ctx.fillStyle = '#5aa0c8';
+          else if (kind === 'path') ctx.fillStyle = '#a8743a';
+          else ctx.fillStyle = ((gx + gy) % 2 === 0) ? GRASS_A : GRASS_B;
+          ctx.fill();
+          ctx.strokeStyle = kind === 'water' ? 'rgba(40,86,116,0.45)' : GRASS_EDGE; ctx.lineWidth = 1; ctx.stroke();
         }
       }
 
@@ -265,6 +270,7 @@
         const o = map[i], b = BUILDINGS[o.type]; if (!b) continue;
         draws.push({ d: (o.gx + o.gy) + (b.w - 1) + (b.h - 1) + 0.5, fn: () => this._drawBuilding(o, b) });
       }
+      this._decoPlacements().forEach((d) => { draws.push({ d: d.gx + d.gy + 0.2, fn: () => this._drawDeco(d) }); });
       draws.sort((a, c) => a.d - c.d); draws.forEach(x => x.fn());
 
       this._drawParticles(tw); this._drawFestival();
@@ -314,6 +320,38 @@
       const front = this._cell(o.gx + (b.w - 1), o.gy + (b.h - 1));
       const by = front.y + th / 2 + th * 0.1;        // base sits on the front diamond
       if (!this._blit(this._img[b.img], cc.x, by, b.w * tw * 0.6, b.sc * th * 2.0)) { ctx.fillStyle = '#c0392b'; ctx.fillRect(cc.x - tw * 0.4, by - th, tw * 0.8, th); }
+    },
+    // Owned EP-shop decorations (shared state with the top-down view). Auto-place
+    // any without a cell, then render upright; pets wander a little.
+    _decoCells() {
+      const occ = {}, plots = Farm.state.data.plots || [];
+      for (let i = 0; i < plots.length; i++) occ[(PLOT_OX + (i % PLOT_COLS)) + ',' + (PLOT_OY + Math.floor(i / PLOT_COLS))] = 1;
+      (Farm.state.data.map || []).forEach((o) => { const b = BUILDINGS[o.type]; if (!b) return; for (let y = 0; y < b.h; y++) for (let x = 0; x < b.w; x++) occ[(o.gx + x) + ',' + (o.gy + y)] = 1; });
+      const t = Farm.state.data.mapTerrain || {}; Object.keys(t).forEach((k) => { if (t[k] === 'water') occ[k] = 1; });
+      return occ;
+    },
+    _decoPlacements() {
+      const decos = (Farm.state.data && Farm.state.data.decorations) || [];
+      if (!decos.length || !Farm.epShop || !Farm.epShop.items || !Farm.epShop.items.length) return [];
+      const hp = (d) => Number.isInteger(d.gx) && Number.isInteger(d.gy) && d.gx >= 0 && d.gy >= 0 && d.gx < COLS && d.gy < ROWS;
+      if (decos.some((d) => !hp(d))) {
+        const occ = this._decoCells(), taken = {};
+        decos.forEach((d) => { if (hp(d) && !occ[d.gx + ',' + d.gy]) taken[d.gx + ',' + d.gy] = 1; });
+        const free = []; for (let gy = ROWS - 1; gy >= 0; gy--) for (let gx = 0; gx < COLS; gx++) { const k = gx + ',' + gy; if (!occ[k] && !taken[k]) free.push(k); }
+        let fi = 0, ch = false;
+        decos.forEach((d) => { const it = Farm.epShop.items.find((x) => x.id === d.itemId); if (!it || !it.decoration_emoji) return; if (hp(d) && !occ[d.gx + ',' + d.gy]) return; while (fi < free.length && taken[free[fi]]) fi++; if (fi < free.length) { const k = free[fi++].split(','); d.gx = +k[0]; d.gy = +k[1]; taken[k[0] + ',' + k[1]] = 1; ch = true; } });
+        if (ch) Farm.state.save();
+      }
+      const out = [];
+      decos.forEach((d, i) => { if (!hp(d)) return; const it = Farm.epShop.items.find((x) => x.id === d.itemId); if (!it || !it.decoration_emoji) return; out.push({ emoji: it.decoration_emoji, gx: d.gx, gy: d.gy, pet: it.category === 'pet', seed: i }); });
+      return out;
+    },
+    _drawDeco(d) {
+      const ctx = this._ctx, th = this._th(), c = this._cell(d.gx, d.gy);
+      let cx = c.x, by = c.y + th * 0.25;
+      if (d.pet) { const t = Date.now() / 1000; cx += Math.sin(t * 0.5 + d.seed) * this._tw() * 0.18; by += Math.cos(t * 0.4 + d.seed * 1.3) * th * 0.18; }
+      ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic'; ctx.font = (th * 1.4) + 'px sans-serif';
+      ctx.fillText(d.emoji, cx, by);
     },
     _drawParticles(tw) {
       const season = (Farm.seasons && Farm.seasons.current) || monthSeason(), set = SEASON_PARTICLES[season];
