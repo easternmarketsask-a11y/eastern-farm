@@ -65,6 +65,20 @@
     for (let gy = 8; gy <= 9; gy++) for (let gx = 7; gx <= 8; gx++) t[gx + ',' + gy] = 'water';
     return t;
   }
+  // Season ambiance particles (mirror of seasons.js PARTICLES; the classic
+  // overlay renders into #farm which is hidden in map mode, so we draw our own).
+  const SEASON_PARTICLES = {
+    spring: ['🌸', '🌸', '🌷'], summer: ['🦋', '🦋', '🐝'],
+    autumn: ['🍂', '🍁', '🍂'], winter: ['❄️', '❄️', '🌨'],
+  };
+  function monthSeason() {
+    const m = new Date().getMonth() + 1;
+    if (m >= 3 && m <= 5) return 'spring';
+    if (m >= 6 && m <= 8) return 'summer';
+    if (m >= 9 && m <= 11) return 'autumn';
+    return 'winter';
+  }
+
   // Terrain brushes for the 地形 sub-mode.
   const BRUSHES = [
     { key: 'path', zh: '小路', en: 'Path', tile: 'tpath' },
@@ -160,7 +174,29 @@
       // #farm box a few px after first paint), then keep the canvas glued to it.
       requestAnimationFrame(() => { this._syncSize(); this.render(); });
       this._tick = setInterval(() => { this._syncSize(); this.render(); }, 1000);
+      this._startLoop();
       this.render();
+    },
+
+    // ~15fps animation loop for living ambiance (drifting season particles +
+    // wandering pets). Pauses when the tab is hidden or a modal is open; rAF
+    // itself parks while the tab is backgrounded, so it's battery-friendly.
+    _startLoop() {
+      const loop = () => {
+        this._raf = requestAnimationFrame(loop);
+        if (!this._on || !this._animActive()) return;
+        const now = Date.now();
+        if (now - (this._lastFrame || 0) < 66) return;
+        this._lastFrame = now;
+        this.render();
+      };
+      this._raf = requestAnimationFrame(loop);
+    },
+    _animActive() {
+      if (document.hidden) return false;
+      const modal = document.getElementById('modal');
+      if (modal && !modal.classList.contains('hidden')) return false;
+      return true;
     },
 
     // Re-fit the canvas to the #farm box if it changed (cheap; only reallocates
@@ -656,6 +692,8 @@
       });
       draws.sort((a, c) => a.base - c.base);
       draws.forEach(d => d.fn());
+
+      this._drawParticles(ts);   // season ambiance on top
     },
     // Map owned decorations to free cells (bottom-first so they sit in the front
     // yard, like the classic layout). Deterministic: stable per decoration index.
@@ -682,16 +720,39 @@
         if (!item || !item.decoration_emoji) return;
         let cell = free.find((c) => !used[c.gx + ',' + c.gy]) || free[i % free.length];
         used[cell.gx + ',' + cell.gy] = 1;
-        out.push({ emoji: item.decoration_emoji, gx: cell.gx, gy: cell.gy });
+        out.push({ emoji: item.decoration_emoji, gx: cell.gx, gy: cell.gy, pet: item.category === 'pet', seed: i });
       });
       return out;
     },
     _drawDeco(d, ts) {
       const ctx = this._ctx;
-      const cx = (d.gx + 0.5) * ts - this._camX, by = (d.gy + 0.92) * ts - this._camY;
+      let cx = (d.gx + 0.5) * ts - this._camX, by = (d.gy + 0.92) * ts - this._camY;
+      if (d.pet) {   // pets wander in a small ellipse near their spot
+        const t = Date.now() / 1000;
+        cx += Math.sin(t * 0.5 + d.seed) * ts * 0.55;
+        by += Math.cos(t * 0.4 + d.seed * 1.3) * ts * 0.22;
+      }
       ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
       ctx.font = (ts * 0.6) + 'px sans-serif';
       ctx.fillText(d.emoji, cx, by);
+    },
+    // Screen-space season ambiance: a few emoji drifting down + swaying.
+    _drawParticles(ts) {
+      const season = (Farm.seasons && Farm.seasons.current) || monthSeason();
+      const set = SEASON_PARTICLES[season];
+      if (!set || !set.length) return;
+      const ctx = this._ctx, W = this._cssW(), H = this._cssH(), t = Date.now() / 1000;
+      const N = 18;
+      ctx.save(); ctx.globalAlpha = 0.8;
+      for (let i = 0; i < N; i++) {
+        const sp = 16 + (i % 5) * 7;                 // fall speed (px/s)
+        const x = (i * 53.7) % W;
+        const sway = Math.sin(t * 0.8 + i) * 13;
+        const y = ((t * sp + i * 41) % (H + 40)) - 20;
+        ctx.font = (ts * 0.26 + (i % 3) * 3) + 'px sans-serif';
+        ctx.fillText(set[i % set.length], x + sway, y);
+      }
+      ctx.restore();
     },
     // Darker rim on terrain-cell sides that border a different terrain — reads
     // as a shoreline (water) / worn path edge. Works for any painted shape.
