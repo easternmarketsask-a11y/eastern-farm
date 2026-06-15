@@ -97,6 +97,14 @@
       // 全新玩家先看新手教程，签到日历让到下次启动——免得两个开屏弹窗
       // 在 600/700ms 互相覆盖。tutorialV1Done 未完成时本次不自动弹。
       if (!Farm.state.data.tutorialV1Done) return;
+      // ⚠️ 反复弹出的真正根因（2026-06-15 定位）：localStorage 没持久化的设备
+      // （微信内置浏览器 / iOS 存储回收 / 隐私模式）每次打开都是「空存档」加载——
+      // 真正已登录的会员，其「今天已签」状态只在异步「云端恢复」回来后才有。
+      // 若在云恢复完成前就判断，就会把卡片弹出来 → 每次打开都弹。
+      // 所以：有 Firebase 且 auth 尚未 settle 时先不弹，等 auth+云恢复结束再判断
+      // （firebase-auth 在 onAuthStateChanged 末尾回调；main.js 有 5s 兜底）。
+      // 访客 / 无 Firebase 不等待。
+      if (window.Farm && Farm.fb && Farm.fb.auth && Farm.fbAuth && !Farm.fbAuth.authSettled) return;
       const cal = Farm.state.data.loginCalendar;
       const today = Farm.state.getDateString();
       if (cal.lastSignDate === today) return;   // 当天已签

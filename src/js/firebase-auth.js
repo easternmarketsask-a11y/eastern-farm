@@ -177,6 +177,11 @@
           this._renderTopbar();
           this._renderSplash();
         }
+        // Auth (and, for members, the cloud restore above) has now settled.
+        // Release the deferred sign-in auto-open so it decides on the REAL state
+        // — fixes the card popping every load on flaky-storage signed-in devices.
+        this.authSettled = true;
+        if (Farm.loginCalendar && Farm.loginCalendar.maybeAutoOpen) Farm.loginCalendar.maybeAutoOpen();
       });
     },
 

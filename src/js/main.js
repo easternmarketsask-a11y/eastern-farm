@@ -224,7 +224,14 @@
     // The 7-day sign-in calendar delivers the actual reward + celebration UI.
     // It auto-opens only if the player hasn't signed in today (checked inside).
     if (Farm.loginCalendar && Farm.loginCalendar.maybeAutoOpen) {
+      // Defers itself until Firebase auth + cloud restore settle (see
+      // login-calendar.js / firebase-auth.js). Fallback: if auth never resolves
+      // (Firebase blocked/offline), force-open after 5s using local state.
       Farm.loginCalendar.maybeAutoOpen();
+      setTimeout(() => {
+        if (Farm.fbAuth) Farm.fbAuth.authSettled = true;
+        if (Farm.loginCalendar) Farm.loginCalendar.maybeAutoOpen();
+      }, 5000);
     }
   }
 
