@@ -395,6 +395,8 @@
       const keepUnsyncedEp = this.data.unsyncedEp;
       const localMap = (this.data && Array.isArray(this.data.map)) ? this.data.map : null;
       const localTerrain = (this.data && this.data.mapTerrain && typeof this.data.mapTerrain === 'object') ? this.data.mapTerrain : null;
+      const localStyle = (this.data && this.data.farmStyle) || null;        // chosen view (device pref)
+      const localBuildSeen = !!(this.data && this.data.mapBuildSeen);
       const localCal = (this.data && this.data.loginCalendar) || {};
       const merged = Object.assign({}, STARTER_STATE, cloudState);
       merged.dailyClaims = Object.assign({}, STARTER_STATE.dailyClaims, cloudState.dailyClaims || {});
@@ -413,6 +415,11 @@
       // (already-seeded) layout so an older cloud blob doesn't wipe the buildings.
       if (!Array.isArray(cloudState.map) && localMap) merged.map = localMap;
       if ((!cloudState.mapTerrain || typeof cloudState.mapTerrain !== 'object') && localTerrain) merged.mapTerrain = localTerrain;
+      // View preference + build-hint flag: cloud wins if it has them; else keep
+      // local so an older cloud blob doesn't bounce the player out of their chosen
+      // style or re-trigger the one-time build-button hint.
+      if (cloudState.farmStyle == null && localStyle) merged.farmStyle = localStyle;
+      if (cloudState.mapBuildSeen == null && localBuildSeen) merged.mapBuildSeen = true;
       this.data = merged;
       // Daily/session rollover if the restored blob predates today.
       const today = getDateString();

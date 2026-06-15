@@ -122,7 +122,7 @@
       this._autoFrame();
 
       requestAnimationFrame(() => { this._syncSize(); this.render(); });
-      this._tick = setInterval(() => { this._syncSize(); this.render(); }, 1000);
+      this._tick = setInterval(() => { if (document.hidden) return; this._syncSize(); this.render(); }, 1000);
       this._startLoop();
       this.render();
     },
@@ -384,9 +384,10 @@
     // Lazy-load any map asset by file stem (e.g. 'crop_eggplant_2', 'animal_cat').
     _lazyImg(name) {
       const k = 'L_' + name, c = this._img[k];
-      if (c instanceof Image) return c; if (c === 'loading') return null;
+      if (c instanceof Image) return c;
+      if (c === 'loading' || c === 'failed') return null;   // 'failed' is sticky → no per-frame retry storm on a 404
       this._img[k] = 'loading';
-      const im = new Image(); im.onload = () => { this._img[k] = im; if (this._on) this.render(); }; im.onerror = () => { this._img[k] = null; }; im.src = ASSET_DIR + name + '.png';
+      const im = new Image(); im.onload = () => { this._img[k] = im; if (this._on) this.render(); }; im.onerror = () => { this._img[k] = 'failed'; }; im.src = ASSET_DIR + name + '.png';
       return null;
     },
     _diamond(x, y, tw, th) { const c = this._ctx; c.beginPath(); c.moveTo(x, y - th / 2); c.lineTo(x + tw / 2, y); c.lineTo(x, y + th / 2); c.lineTo(x - tw / 2, y); c.closePath(); },
