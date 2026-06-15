@@ -22,7 +22,7 @@
   const REQUIRED_LV = { 4: 2, 5: 2, 6: 3, 7: 3, 8: 4, 9: 4, 10: 5, 11: 5 };
 
   // Grass tones sampled from the pixel-art reference (IMG_1656).
-  const GRASS_A = '#849b55', GRASS_B = '#7c9350';
+  const GRASS_A = '#849b55', GRASS_B = '#819853';   // near-identical: subtle variation, not a checkerboard
   const ASSET_DIR = 'assets/images/map/';
   const ASSET_SRC = {
     soil: 'soil.png',
@@ -31,6 +31,9 @@
     greenhouse: 'greenhouse.png',
     coop: 'coop.png',
     tree: 'tree.png',
+    tgrass: 'terrain/grass.png',
+    tpath: 'terrain/path.png',
+    twater: 'terrain/water.png',
     crop0: 'crop_qingcai_0.png',
     crop1: 'crop_qingcai_1.png',
     crop2: 'crop_qingcai_2.png',
@@ -52,6 +55,11 @@
     { type: 'barn', gx: 5, gy: 1 },
     { type: 'house', gx: 6, gy: 4 },
   ];
+
+  // Fixed terrain decoration (under plots/buildings). A dirt "lane" across the
+  // farm + a small pond bottom-right. Pond cells block building placement.
+  const PATH_CELLS = (() => { const s = {}; for (let gx = 0; gx < GROUND_COLS; gx++) s[gx + ',6'] = 1; return s; })();
+  const POND_CELLS = (() => { const s = {}; for (let gy = 8; gy <= 9; gy++) for (let gx = 7; gx <= 8; gx++) s[gx + ',' + gy] = 1; return s; })();
 
   const mapView = {
     _on: false,
@@ -312,7 +320,7 @@
       for (let yy = 0; yy < b.h; yy++) {
         for (let xx = 0; xx < b.w; xx++) {
           const key = (gx + xx) + ',' + (gy + yy);
-          if (plotCells[key] || occ[key]) return false;
+          if (plotCells[key] || occ[key] || POND_CELLS[key]) return false;   // not on plots/buildings/pond
         }
       }
       return true;
@@ -514,13 +522,19 @@
       const W = this._cssW(), H = this._cssH();
       ctx.clearRect(0, 0, W, H);
 
-      // ground
+      // ground: checker grass tone + a seamless grass-texture overlay; pond and
+      // path cells get their own tiles on top.
+      const gt = this._img.tgrass, pt = this._img.tpath, wt = this._img.twater;
       for (let gy = 0; gy < GROUND_ROWS; gy++) {
         for (let gx = 0; gx < GROUND_COLS; gx++) {
           const x = gx * ts - this._camX, y = gy * ts - this._camY;
           if (x > W || y > H || x + ts < 0 || y + ts < 0) continue;
+          const key = gx + ',' + gy;
           ctx.fillStyle = ((gx + gy) % 2 === 0) ? GRASS_A : GRASS_B;
           ctx.fillRect(x, y, ts, ts);
+          if (gt) ctx.drawImage(gt, x, y, ts, ts);            // texture flecks
+          if (PATH_CELLS[key] && pt) ctx.drawImage(pt, x, y, ts, ts);
+          if (POND_CELLS[key] && wt) ctx.drawImage(wt, x, y, ts, ts);
         }
       }
       if (this._build) this._drawGrid(ts, W, H);
