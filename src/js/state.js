@@ -379,6 +379,7 @@
       if (!cloudState || typeof cloudState !== 'object') return false;
       const keepEastPoints = this.data.eastPoints;
       const keepUnsyncedEp = this.data.unsyncedEp;
+      const localMap = (this.data && Array.isArray(this.data.map)) ? this.data.map : null;
       const localCal = (this.data && this.data.loginCalendar) || {};
       const merged = Object.assign({}, STARTER_STATE, cloudState);
       merged.dailyClaims = Object.assign({}, STARTER_STATE.dailyClaims, cloudState.dailyClaims || {});
@@ -393,6 +394,9 @@
       merged.aiRelationships = Object.assign({}, STARTER_STATE.aiRelationships, cloudState.aiRelationships || {});
       if (keepEastPoints != null) merged.eastPoints = keepEastPoints;   // server owns this
       if (keepUnsyncedEp != null) merged.unsyncedEp = keepUnsyncedEp;
+      // Map layout: use the cloud copy if it has one; otherwise keep the local
+      // (already-seeded) layout so an older cloud blob doesn't wipe the buildings.
+      if (!Array.isArray(cloudState.map) && localMap) merged.map = localMap;
       this.data = merged;
       // Daily/session rollover if the restored blob predates today.
       const today = getDateString();

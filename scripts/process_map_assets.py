@@ -26,6 +26,12 @@ SRC = {
     "barn":   os.path.join(UP, "94afb22e-IMG_1658.jpeg"),  # red barn (near-white bg)
     "house":  os.path.join(UP, "c71048cc-IMG_1659.jpeg"),  # cottage (tan sky scene)
     "grass":  os.path.join(UP, "b30529fa-IMG_1656.jpeg"),  # grass scene (reference)
+    # Batch 2 (2026-06-15):
+    "stall":     os.path.join(UP, "140e2c0a-IMG_1663.jpeg"),  # market stall (tan scene)
+    "greenhouse":os.path.join(UP, "7ed11bbf-IMG_1664.jpeg"),  # greenhouse (checkerboard)
+    "coop":      os.path.join(UP, "933144b7-IMG_1665.jpeg"),  # chicken coop (checkerboard)
+    "tree":      os.path.join(UP, "d9bebf6b-IMG_1666.jpeg"),  # tree (near-white)
+    "tomato":    os.path.join(UP, "2d6e3183-IMG_1667.jpeg"),  # tomato 4-stage (checkerboard)
 }
 
 
@@ -168,6 +174,26 @@ def main():
         s = scale(s, factor)
         s.save(os.path.join(OUT, f"crop_qingcai_{i}.png"), optimize=True)
         log.append(f"  crop_qingcai_{i}.png {s.size}")
+
+    # --- batch 2 buildings ---
+    # NOTE: stall (IMG_1663) and tomato (IMG_1667) are NOT exported:
+    #   - stall's tan background is too close to its own colours to flood-cut;
+    #     needs a re-gen with a real transparent PNG background.
+    #   - tomato's 4 stages share a connected soil base so they won't split,
+    #     and there is no 'tomato' crop id in data/crops.json yet.
+    # Re-enable here once Chris provides a transparent-bg stall / a tomato crop.
+
+    gh = fit_w(autocrop(flood_alpha(Image.open(SRC["greenhouse"]), "checker")), 512)
+    gh.save(os.path.join(OUT, "greenhouse.png"), optimize=True)
+    log.append(f"greenhouse.png {gh.size}")
+
+    coop = fit_w(autocrop(flood_alpha(Image.open(SRC["coop"]), "checker")), 512)
+    coop.save(os.path.join(OUT, "coop.png"), optimize=True)
+    log.append(f"coop.png {coop.size}")
+
+    tree = fit_w(autocrop(flood_alpha(Image.open(SRC["tree"]), "white")), 256)
+    tree.save(os.path.join(OUT, "tree.png"), optimize=True)
+    log.append(f"tree.png {tree.size}")
 
     # --- grass color sample (no file saved; the engine uses the hex) ---
     grass = Image.open(SRC["grass"]).convert("RGB")

@@ -28,6 +28,9 @@
     soil: 'soil.png',
     barn: 'barn.png',
     house: 'house.png',
+    greenhouse: 'greenhouse.png',
+    coop: 'coop.png',
+    tree: 'tree.png',
     crop0: 'crop_qingcai_0.png',
     crop1: 'crop_qingcai_1.png',
     crop2: 'crop_qingcai_2.png',
@@ -36,11 +39,15 @@
 
   // Placeable building catalog. footprint w/h in cells; img = asset key; the
   // sprite may render taller than the footprint (anchored to its base row).
+  // `tap` = action when tapped outside build mode (barn=仓库, house=种子店).
   const BUILDINGS = {
-    barn: { img: 'barn', w: 2, h: 2, maxHCells: 2.2, zh: '谷仓', en: 'Barn' },
-    house: { img: 'house', w: 2, h: 2, maxHCells: 2.7, zh: '小屋', en: 'Cottage' },
+    barn: { img: 'barn', w: 2, h: 2, maxHCells: 2.2, zh: '谷仓·仓库', en: 'Barn', tap: 'warehouse' },
+    house: { img: 'house', w: 2, h: 2, maxHCells: 2.7, zh: '小屋·种子店', en: 'Cottage', tap: 'shop' },
+    greenhouse: { img: 'greenhouse', w: 2, h: 2, maxHCells: 2.0, zh: '温室', en: 'Greenhouse' },
+    coop: { img: 'coop', w: 2, h: 2, maxHCells: 2.0, zh: '鸡舍', en: 'Coop' },
+    tree: { img: 'tree', w: 1, h: 1, maxHCells: 1.9, zh: '树', en: 'Tree' },
   };
-  const PALETTE = ['barn', 'house'];
+  const PALETTE = ['barn', 'house', 'greenhouse', 'coop', 'tree'];
   const DEFAULT_MAP = [
     { type: 'barn', gx: 5, gy: 1 },
     { type: 'house', gx: 6, gy: 4 },
@@ -60,8 +67,12 @@
     _sel: -1,               // selected building index in state.map, or -1
     _moving: null,          // {idx, gx, gy, valid} live drag preview
     _buildBtn: null, _palette: null, _hint: null,
+    _cropImg: {},           // cropId -> Image (per-crop mature sprite), or true(none)/false(loading)
+    _w: 0, _h: 0,           // canvas CSS size (= the #farm box we overlay)
 
-    active() { return /[?&]map=1/.test(location.search); },
+    // Default farm view (2026-06-15). Opt OUT to the classic vertical farm with
+    // ?classic=1 (or ?map=0) — kept as an instant escape hatch / rollback.
+    active() { return !/[?&](classic=1|map=0)/.test(location.search); },
     _ts() { return TILE * this._zoom; },
     _lang() { return (Farm.state && Farm.state.data && Farm.state.data.language === 'en') ? 'en' : 'zh'; },
     _map() { return (Farm.state.data.map = Farm.state.data.map || []); },
@@ -69,8 +80,21 @@
     init() {
       if (!this.active() || this._on) return;
       this._on = true;
-      const farm = document.getElementById('farm');
-      if (farm) farm.style.display = 'none';
+      // body.mapmode hides the vertical farm's CONTENTS (grid/scene/decorations/
+      // storekeeper/warehouse btn) but keeps #farm as a flex spacer so the topbar,
+      // Lv/XP statusbar and bottom nav stay in place. The canvas overlays the
+      // #farm box (see _resize), so all the surrounding chrome remains usable.
+      document.body.classList.add('mapmode');
+      // Belt-and-suspenders (the stylesheet can be a cache-tick behind on the
+      // update that first ships map mode): collapse the farm box's in-flow
+      // content directly so nothing renders/scrolls under the canvas even before
+      // the CSS lands. The storekeeper is intentionally left visible (onboarding).
+      const farmEl = document.getElementById('farm');
+      if (farmEl) { farmEl.style.padding = '0'; farmEl.style.overflow = 'hidden'; }
+      ['farmGrid', 'farmDecorations'].forEach((idd) => {
+        const e = document.getElementById(idd); if (e) e.style.display = 'none';
+      });
+      const sc = document.querySelector('.farm-scene'); if (sc) sc.style.display = 'none';
 
       // Seed a default layout the first time the buildable map is opened.
       if (!Array.isArray(Farm.state.data.map)) {
@@ -80,7 +104,7 @@
 
       const cv = document.createElement('canvas');
       cv.id = 'mapCanvas';
-      cv.style.cssText = 'position:fixed;left:0;right:0;z-index:5;touch-action:none;display:block;background:#849b55;';
+      cv.style.cssText = 'position:fixed;z-index:5;touch-action:none;display:block;background:#849b55;';
       document.body.appendChild(cv);
       this._cv = cv;
       this._ctx = cv.getContext('2d');
@@ -102,8 +126,20 @@
       this._camY = c.y - this._cssH() / 2 + this._ts() / 2;
       this._clampCam();
 
-      this._tick = setInterval(() => this.render(), 1000);
+      // Re-sync once layout settles (fonts / PWA banner / safe-area can shift the
+      // #farm box a few px after first paint), then keep the canvas glued to it.
+      requestAnimationFrame(() => { this._syncSize(); this.render(); });
+      this._tick = setInterval(() => { this._syncSize(); this.render(); }, 1000);
       this.render();
+    },
+
+    // Re-fit the canvas to the #farm box if it changed (cheap; only reallocates
+    // the backing store when dimensions actually differ).
+    _syncSize() {
+      const r = this._farmRect();
+      if (Math.abs(r.width - this._w) > 1 || Math.abs(r.height - this._h) > 1) {
+        this._resize(); this._clampCam();
+      }
     },
 
     _loadAssets() {
@@ -138,8 +174,8 @@
 
       const tray = document.createElement('div');
       tray.id = 'mapPalette';
-      tray.style.cssText = 'position:fixed;left:0;right:0;z-index:20;display:none;gap:10px;' +
-        'justify-content:center;align-items:flex-end;padding:10px 12px;' +
+      tray.style.cssText = 'position:fixed;left:0;right:0;z-index:20;display:none;gap:8px;' +
+        'flex-wrap:wrap;justify-content:center;align-items:flex-end;padding:9px 10px;' +
         'background:rgba(255,255,255,.94);box-shadow:0 -3px 12px rgba(0,0,0,.12);';
       PALETTE.forEach((type) => {
         const b = BUILDINGS[type];
@@ -170,23 +206,27 @@
       this._layoutUI();
     },
     _layoutUI() {
-      const bottom = document.getElementById('bottombar');
-      const bh = bottom ? bottom.getBoundingClientRect().height : 64;
+      const r = this._farmRect();
+      const fromBottom = Math.max(0, window.innerHeight - (r.top + r.height));
+      const en = this._lang() === 'en';
+      if (this._palette) {
+        this._palette.style.display = this._build ? 'flex' : 'none';
+        this._palette.style.left = r.left + 'px';
+        this._palette.style.right = Math.max(0, window.innerWidth - (r.left + r.width)) + 'px';
+        this._palette.style.bottom = fromBottom + 'px';
+      }
       if (this._buildBtn) {
-        this._buildBtn.style.bottom = (bh + (this._build ? 78 : 14)) + 'px';
-        const en = this._lang() === 'en';
+        const paletteH = (this._build && this._palette) ? (this._palette.getBoundingClientRect().height || 74) : 0;
+        this._buildBtn.style.right = (Math.max(0, window.innerWidth - (r.left + r.width)) + 14) + 'px';
+        this._buildBtn.style.bottom = (fromBottom + (this._build ? paletteH + 10 : 14)) + 'px';
         this._buildBtn.textContent = this._build ? (en ? '✓ Done' : '✓ 完成') : (en ? '🔨 Build' : '🔨 建造');
         this._buildBtn.style.background = this._build ? '#FF9800' : '#4CAF50';
       }
-      if (this._palette) {
-        this._palette.style.display = this._build ? 'flex' : 'none';
-        this._palette.style.bottom = bh + 'px';
-      }
       if (this._hint) {
         this._hint.style.display = this._build ? 'block' : 'none';
-        const top = document.getElementById('topbar');
-        const t = top ? top.getBoundingClientRect().height : 56;
-        this._hint.style.top = (t + 10) + 'px';
+        this._hint.style.left = r.left + 'px';
+        this._hint.style.right = Math.max(0, window.innerWidth - (r.left + r.width)) + 'px';
+        this._hint.style.top = (r.top + 8) + 'px';
       }
     },
     toggleBuild() {
@@ -197,22 +237,27 @@
     },
 
     // ---- sizing / coords ----
-    _cssW() { return window.innerWidth; },
-    _cssH() {
-      const top = document.getElementById('topbar');
-      const bottom = document.getElementById('bottombar');
+    // The canvas overlays the #farm element's box exactly (cached in _resize).
+    _farmRect() {
+      const f = document.getElementById('farm');
+      if (f) { const r = f.getBoundingClientRect(); if (r.width > 10 && r.height > 10) return r; }
+      const top = document.getElementById('topbar'), bottom = document.getElementById('bottombar');
       const t = top ? top.getBoundingClientRect().height : 56;
       const b = bottom ? bottom.getBoundingClientRect().height : 64;
-      return Math.max(120, window.innerHeight - t - b);
+      return { left: 0, top: t, width: window.innerWidth, height: Math.max(120, window.innerHeight - t - b) };
     },
+    _cssW() { return this._w; },
+    _cssH() { return this._h; },
     _resize() {
-      const top = document.getElementById('topbar');
-      const t = top ? top.getBoundingClientRect().height : 56;
-      this._cv.style.top = t + 'px';
-      this._cv.style.height = this._cssH() + 'px';
+      const r = this._farmRect();
+      this._w = r.width; this._h = r.height;
+      this._cv.style.left = r.left + 'px';
+      this._cv.style.top = r.top + 'px';
+      this._cv.style.width = r.width + 'px';
+      this._cv.style.height = r.height + 'px';
       this._dpr = Math.min(2, window.devicePixelRatio || 1);
-      this._cv.width = this._cssW() * this._dpr;
-      this._cv.height = this._cssH() * this._dpr;
+      this._cv.width = r.width * this._dpr;
+      this._cv.height = r.height * this._dpr;
       this._ctx.setTransform(this._dpr, 0, 0, this._dpr, 0, 0);
       this._layoutUI();
     },
@@ -407,7 +452,16 @@
         return;
       }
       const cell = this._screenToCell(p.x, p.y);
+      const bidx = this._buildingAt(cell.gx, cell.gy);
+      if (bidx >= 0) { this._buildingAction(bidx); return; }
       this._tapCell(cell.gx, cell.gy);
+    },
+    _buildingAction(idx) {
+      const o = this._map()[idx], b = o && BUILDINGS[o.type];
+      if (!b) return;
+      if (b.tap === 'warehouse' && Farm.warehouse && Farm.warehouse.open) Farm.warehouse.open();
+      else if (b.tap === 'shop' && Farm.shop && Farm.shop.open) Farm.shop.open();
+      else if (Farm.ui && Farm.ui.toast) Farm.ui.toast(this._lang() === 'en' ? b.en : b.zh);
     },
     _wheel(e) {
       e.preventDefault();
@@ -431,13 +485,28 @@
     },
 
     // ---- render ----
-    _blit(key, cx, by, maxW, maxH) {
-      const im = this._img[key];
+    _blitImage(im, cx, by, maxW, maxH) {
       if (!im) return false;
       const s = Math.min(maxW / im.width, maxH / im.height);
       const w = im.width * s, h = im.height * s;
       this._ctx.drawImage(im, cx - w / 2, by - h, w, h);
       return true;
+    },
+    _blit(key, cx, by, maxW, maxH) { return this._blitImage(this._img[key], cx, by, maxW, maxH); },
+    // Lazy-load a crop's mature illustration (shared app art, assets/crops/{id}.png).
+    // Returns the Image once ready, else null (and triggers a re-render on load).
+    _cropSprite(id) {
+      const c = this._cropImg[id];
+      if (c instanceof Image) return c;
+      if (c === true || c === false) return null;   // none / loading
+      const url = (Farm.cropArt && Farm.cropArt.spriteUrl) ? Farm.cropArt.spriteUrl(id) : null;
+      if (!url) { this._cropImg[id] = true; return null; }
+      this._cropImg[id] = false;
+      const im = new Image();
+      im.onload = () => { this._cropImg[id] = im; if (this._on) this.render(); };
+      im.onerror = () => { this._cropImg[id] = true; };
+      im.src = url;
+      return null;
     },
     render() {
       if (!this._on) return;
@@ -460,6 +529,8 @@
       // screen y of the bottom row, so nearer (lower) sprites draw on top.
       const draws = [];
       const plots = Farm.state.data.plots || [];
+      // Rebuild the cell→plot tap map when a level-up appends a new plot.
+      if (this._cellToPlotN !== plots.length) { this._buildLayout(); this._cellToPlotN = plots.length; }
       for (let i = 0; i < plots.length; i++) {
         const gx = PLOT_OX + (i % PLOT_COLS), gy = PLOT_OY + Math.floor(i / PLOT_COLS);
         draws.push({ base: (gy + 1) * ts, fn: () => this._drawPlot(plots[i], gx, gy, i, ts) });
@@ -547,18 +618,36 @@
         return;
       }
 
-      // Crop sprite: pick 1 of 4 growth frames by progress; grows taller.
+      // Crop visuals:
+      //  - 上海青 (shanghai_miao): dedicated pixel 4-stage sprite (extra polish).
+      //  - every other crop: generic sprout while growing → the crop's own mature
+      //    illustration (assets/crops/{id}.png) so nothing is misrepresented.
       const p = Farm.crops.getProgress ? Farm.crops.getProgress(plot) : 1;
-      const frame = p >= 1 ? 3 : p >= 0.6 ? 2 : p >= 0.25 ? 1 : 0;
       const mature = Farm.crops.isMature(plot);
       if (mature) {   // ready glow halo behind the sprite
         ctx.beginPath(); ctx.arc(cx, cy, ts * 0.42, 0, Math.PI * 2);
         ctx.fillStyle = 'rgba(255,214,79,0.30)'; ctx.fill();
       }
-      const maxH = ts * (0.5 + frame * 0.27);   // 0.50 → 1.31 tiles tall
-      if (!this._blit('crop' + frame, cx, y + ts * 0.96, ts * 0.9, maxH)) {
-        ctx.font = (ts * 0.42) + 'px sans-serif';
-        ctx.fillText(mature ? '🥬' : '🌿', cx, cy);
+
+      if (plot.crop === 'shanghai_miao') {
+        const frame = p >= 1 ? 3 : p >= 0.6 ? 2 : p >= 0.25 ? 1 : 0;
+        const maxH = ts * (0.5 + frame * 0.27);
+        if (!this._blit('crop' + frame, cx, y + ts * 0.96, ts * 0.9, maxH)) {
+          ctx.font = (ts * 0.42) + 'px sans-serif'; ctx.fillText(mature ? '🥬' : '🌿', cx, cy);
+        }
+        return;
+      }
+
+      if (mature) {
+        const im = this._cropSprite(plot.crop);
+        if (!this._blitImage(im, cx, y + ts * 0.92, ts * 0.78, ts * 0.85)) {
+          const def = Farm.crops.get(plot.crop);
+          ctx.font = (ts * 0.5) + 'px sans-serif';
+          ctx.fillText((def && def.icon) || '🥬', cx, cy);
+        }
+      } else {   // generic sprout, grows a touch with progress
+        ctx.font = (ts * (p >= 0.4 ? 0.4 : 0.3)) + 'px sans-serif';
+        ctx.fillText(p >= 0.4 ? '🌿' : '🌱', cx, cy);
       }
     },
     _roundRect(x, y, w, h, r) {

@@ -720,6 +720,18 @@ body {
   background-repeat: no-repeat;
 }
 
+/* ============ Buildable map mode (default farm view, 2026-06-15) ============ */
+/* The map canvas (#mapCanvas) overlays the #farm box. Keep #farm as a flex
+   spacer so the topbar, Lv/XP statusbar and bottom nav stay laid out, but strip
+   its padding/scroll and hide its in-flow contents. Opt out with ?classic=1. */
+body.mapmode #farm { padding: 0; overflow: hidden; background: #849b55; }
+body.mapmode #farmGrid,
+body.mapmode .farm-scene,
+body.mapmode #farmDecorations,
+body.mapmode #seasonParticles,
+body.mapmode #warehouseBtn { display: none !important; }
+/* Storekeeper stays visible — it carries the tap-a-plot onboarding hint. */
+
 /* =============== FARM SCENE BAND =============== */
 /* Backdrop strip: real illustration jpg (cropped from the Gemini reference)
    + cartoon SVG fence below it in the same style. Negative margins pull it
