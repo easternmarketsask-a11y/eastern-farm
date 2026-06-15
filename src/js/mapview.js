@@ -13,9 +13,23 @@
   const GROUND_ROWS = 11;
   const PLOT_OX = 1, PLOT_OY = 2, PLOT_COLS = 3;
   const BARN = { gx: 5, gy: 1 };
+  const HOUSE = { gx: 6, gy: 4 };   // shop/cottage (decorative in POC)
   const ZMIN = 0.6, ZMAX = 1.8;
   // Mirror of farm.js plot-unlock levels (by plot index).
   const REQUIRED_LV = { 4: 2, 5: 2, 6: 3, 7: 3, 8: 4, 9: 4, 10: 5, 11: 5 };
+
+  // Grass tones sampled from the pixel-art reference (IMG_1656).
+  const GRASS_A = '#849b55', GRASS_B = '#7c9350';
+  const ASSET_DIR = 'assets/images/map/';
+  const ASSET_SRC = {
+    soil: 'soil.png',
+    barn: 'barn.png',
+    house: 'house.png',
+    crop0: 'crop_qingcai_0.png',
+    crop1: 'crop_qingcai_1.png',
+    crop2: 'crop_qingcai_2.png',
+    crop3: 'crop_qingcai_3.png',
+  };
 
   const mapView = {
     _on: false,
@@ -26,6 +40,25 @@
     _pointers: {},          // pointerId -> {x,y} (canvas-local)
     _drag: null,            // single-pointer pan/tap state
     _pinch: null,           // {dist, zoom} when 2 pointers down
+    _img: {},               // key -> HTMLImageElement (ready ones only)
+
+    _loadAssets() {
+      Object.keys(ASSET_SRC).forEach((key) => {
+        const im = new Image();
+        im.onload = () => { this._img[key] = im; if (this._on) this.render(); };
+        im.src = ASSET_DIR + ASSET_SRC[key];
+      });
+    },
+    // Draw img scaled to fit (maxW,maxH) preserving aspect, anchored at
+    // bottom-center (cx, by). Returns false if not loaded yet.
+    _blit(key, cx, by, maxW, maxH) {
+      const im = this._img[key];
+      if (!im) return false;
+      const s = Math.min(maxW / im.width, maxH / im.height);
+      const w = im.width * s, h = im.height * s;
+      this._ctx.drawImage(im, cx - w / 2, by - h, w, h);
+      return true;
+    },
 
     active() { return /[?&]map=1/.test(location.search); },
     _ts() { return TILE * this._zoom; },
@@ -43,6 +76,7 @@
       this._cv = cv;
       this._ctx = cv.getContext('2d');
 
+      this._loadAssets();
       this._buildLayout();
       this._resize();
       window.addEventListener('resize', () => { this._resize(); this._clampCam(); this.render(); });
@@ -194,11 +228,12 @@
         for (let gx = 0; gx < GROUND_COLS; gx++) {
           const x = gx * ts - this._camX, y = gy * ts - this._camY;
           if (x > W || y > H || x + ts < 0 || y + ts < 0) continue;
-          ctx.fillStyle = ((gx + gy) % 2 === 0) ? '#9cd36a' : '#94cc63';
+          ctx.fillStyle = ((gx + gy) % 2 === 0) ? GRASS_A : GRASS_B;
           ctx.fillRect(x, y, ts, ts);
         }
       }
       this._drawBarn(ts);
+      this._drawHouse(ts);
       const plots = Farm.state.data.plots || [];
       for (let i = 0; i < plots.length; i++) {
         const gx = PLOT_OX + (i % PLOT_COLS), gy = PLOT_OY + Math.floor(i / PLOT_COLS);
@@ -206,45 +241,60 @@
       }
     },
     _drawBarn(ts) {
-      const ctx = this._ctx;
       const x = BARN.gx * ts - this._camX, y = BARN.gy * ts - this._camY;
-      const w = ts * 1.6, h = ts * 1.4;
-      ctx.fillStyle = '#c0392b'; ctx.fillRect(x, y + h * 0.4, w, h * 0.6);
-      ctx.fillStyle = '#7a2218';
-      ctx.beginPath(); ctx.moveTo(x - 4, y + h * 0.42); ctx.lineTo(x + w / 2, y); ctx.lineTo(x + w + 4, y + h * 0.42); ctx.closePath(); ctx.fill();
-      ctx.fillStyle = '#f3e3b3'; ctx.fillRect(x + w * 0.38, y + h * 0.62, w * 0.24, h * 0.38);
+      const cx = x + ts, by = y + ts * 1.7;   // span ~2 cells, anchored low
+      if (this._blit('barn', cx, by, ts * 2.1, ts * 1.9)) return;
+      const ctx = this._ctx;            // fallback while image loads
+      ctx.fillStyle = '#c0392b'; ctx.fillRect(x, y + ts * 0.6, ts * 1.6, ts * 0.9);
+    },
+    _drawHouse(ts) {
+      const x = HOUSE.gx * ts - this._camX, y = HOUSE.gy * ts - this._camY;
+      this._blit('house', x + ts, y + ts * 1.8, ts * 2.2, ts * 2.4);
     },
     _drawPlot(plot, gx, gy, idx, ts) {
       const ctx = this._ctx;
       const x = gx * ts - this._camX, y = gy * ts - this._camY;
-      const pad = ts * 0.085, r = ts * 0.17;
-      this._roundRect(x + pad, y + pad, ts - pad * 2, ts - pad * 2, r);
-      ctx.fillStyle = plot.unlocked ? '#a86b35' : '#8a8f80';
-      ctx.fill();
-      ctx.lineWidth = 2; ctx.strokeStyle = plot.unlocked ? '#6f3d24' : '#6f7466'; ctx.stroke();
       const cx = x + ts / 2, cy = y + ts / 2;
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+
+      // Locked plot: dim grayed soil + lock + required level.
       if (!plot.unlocked) {
-        ctx.font = (ts * 0.32) + 'px sans-serif';
+        const pad = ts * 0.07, r = ts * 0.16;
+        this._roundRect(x + pad, y + pad, ts - pad * 2, ts - pad * 2, r);
+        ctx.fillStyle = 'rgba(90,96,84,0.78)'; ctx.fill();
+        ctx.font = (ts * 0.3) + 'px sans-serif'; ctx.fillStyle = '#fff';
         ctx.fillText('🔒', cx, cy - ts * 0.08);
-        ctx.fillStyle = '#fff'; ctx.font = 'bold ' + (ts * 0.18) + 'px sans-serif';
+        ctx.font = 'bold ' + (ts * 0.18) + 'px sans-serif';
         ctx.fillText('Lv' + (REQUIRED_LV[idx] || 2), cx, cy + ts * 0.24);
         return;
       }
+
+      // Soil tile (image, or brown fallback).
+      const pad = ts * 0.06;
+      if (!this._blit('soil', cx, y + ts - pad, ts - pad * 2, ts - pad * 2)) {
+        this._roundRect(x + pad, y + pad, ts - pad * 2, ts - pad * 2, ts * 0.16);
+        ctx.fillStyle = '#a86b35'; ctx.fill();
+      }
+
       if (!plot.crop) {
-        ctx.fillStyle = 'rgba(255,255,255,0.55)'; ctx.font = 'bold ' + (ts * 0.37) + 'px sans-serif';
+        ctx.fillStyle = 'rgba(255,255,255,0.6)';
+        ctx.font = 'bold ' + (ts * 0.34) + 'px sans-serif';
         ctx.fillText('+', cx, cy);
         return;
       }
+
+      // Crop sprite: pick 1 of 4 growth frames by progress; grows taller.
+      const p = Farm.crops.getProgress ? Farm.crops.getProgress(plot) : 1;
+      const frame = p >= 1 ? 3 : p >= 0.6 ? 2 : p >= 0.25 ? 1 : 0;
       const mature = Farm.crops.isMature(plot);
-      const stage = Farm.crops.getStage ? Farm.crops.getStage(plot) : (mature ? 2 : 1);
-      if (mature) {
-        ctx.beginPath(); ctx.arc(cx, cy, ts * 0.34, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(255,214,79,0.35)'; ctx.fill();
-        ctx.font = (ts * 0.5) + 'px sans-serif'; ctx.fillText('🥬', cx, cy);
-      } else {
-        ctx.font = (ts * (stage >= 1 ? 0.4 : 0.3)) + 'px sans-serif';
-        ctx.fillText(stage >= 1 ? '🌿' : '🌱', cx, cy);
+      if (mature) {   // ready glow halo behind the sprite
+        ctx.beginPath(); ctx.arc(cx, cy, ts * 0.42, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255,214,79,0.30)'; ctx.fill();
+      }
+      const maxH = ts * (0.5 + frame * 0.27);   // 0.50 → 1.31 tiles tall
+      if (!this._blit('crop' + frame, cx, y + ts * 0.96, ts * 0.9, maxH)) {
+        ctx.font = (ts * 0.42) + 'px sans-serif';
+        ctx.fillText(mature ? '🥬' : '🌿', cx, cy);
       }
     },
     _roundRect(x, y, w, h, r) {
