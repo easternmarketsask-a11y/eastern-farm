@@ -56,10 +56,21 @@
     { type: 'house', gx: 6, gy: 4 },
   ];
 
-  // Fixed terrain decoration (under plots/buildings). A dirt "lane" across the
-  // farm + a small pond bottom-right. Pond cells block building placement.
-  const PATH_CELLS = (() => { const s = {}; for (let gx = 0; gx < GROUND_COLS; gx++) s[gx + ',6'] = 1; return s; })();
-  const POND_CELLS = (() => { const s = {}; for (let gy = 8; gy <= 9; gy++) for (let gx = 7; gx <= 8; gx++) s[gx + ',' + gy] = 1; return s; })();
+  // Paintable terrain lives in Farm.state.data.mapTerrain = {"gx,gy": "path"|"water"}
+  // (grass = absent). Seeded once with a dirt "lane" + a small pond, then editable
+  // in build mode's 地形 brush. Water cells block building placement.
+  function defaultTerrain() {
+    const t = {};
+    for (let gx = 0; gx < GROUND_COLS; gx++) t[gx + ',6'] = 'path';
+    for (let gy = 8; gy <= 9; gy++) for (let gx = 7; gx <= 8; gx++) t[gx + ',' + gy] = 'water';
+    return t;
+  }
+  // Terrain brushes for the 地形 sub-mode.
+  const BRUSHES = [
+    { key: 'path', zh: '小路', en: 'Path', tile: 'tpath' },
+    { key: 'water', zh: '水塘', en: 'Water', tile: 'twater' },
+    { key: 'grass', zh: '草地·擦除', en: 'Grass·Erase', tile: 'tgrass' },
+  ];
 
   const mapView = {
     _on: false,
@@ -72,9 +83,12 @@
     _drag: null,            // single-pointer pan/tap state
     _pinch: null,           // {dist, zoom} when 2 pointers down
     _build: false,          // build (edit) mode on?
+    _editMode: 'build',     // 'build' (place/move buildings) | 'terrain' (paint)
+    _brush: 'path',         // active terrain brush in 地形 mode
+    _painting: false,       // mid drag-paint
     _sel: -1,               // selected building index in state.map, or -1
     _moving: null,          // {idx, gx, gy, valid} live drag preview
-    _buildBtn: null, _palette: null, _hint: null,
+    _buildBtn: null, _palette: null, _hint: null, _modeTabs: null,
     _cropImg: {},           // cropId -> Image (per-crop mature sprite), or true(none)/false(loading)
     _w: 0, _h: 0,           // canvas CSS size (= the #farm box we overlay)
 
@@ -84,6 +98,8 @@
     _ts() { return TILE * this._zoom; },
     _lang() { return (Farm.state && Farm.state.data && Farm.state.data.language === 'en') ? 'en' : 'zh'; },
     _map() { return (Farm.state.data.map = Farm.state.data.map || []); },
+    _terrain() { return (Farm.state.data.mapTerrain = Farm.state.data.mapTerrain || {}); },
+    _terrainAt(gx, gy) { return this._terrain()[gx + ',' + gy] || 'grass'; },
 
     init() {
       if (!this.active() || this._on) return;
@@ -104,11 +120,17 @@
       });
       const sc = document.querySelector('.farm-scene'); if (sc) sc.style.display = 'none';
 
-      // Seed a default layout the first time the buildable map is opened.
+      // Seed a default layout + terrain the first time the buildable map opens.
+      let seeded = false;
       if (!Array.isArray(Farm.state.data.map)) {
         Farm.state.data.map = DEFAULT_MAP.map(b => ({ type: b.type, gx: b.gx, gy: b.gy }));
-        Farm.state.save();
+        seeded = true;
       }
+      if (!Farm.state.data.mapTerrain || typeof Farm.state.data.mapTerrain !== 'object') {
+        Farm.state.data.mapTerrain = defaultTerrain();
+        seeded = true;
+      }
+      if (seeded) Farm.state.save();
 
       const cv = document.createElement('canvas');
       cv.id = 'mapCanvas';
@@ -182,24 +204,52 @@
 
       const tray = document.createElement('div');
       tray.id = 'mapPalette';
-      tray.style.cssText = 'position:fixed;left:0;right:0;z-index:20;display:none;gap:8px;' +
-        'flex-wrap:wrap;justify-content:center;align-items:flex-end;padding:9px 10px;' +
-        'background:rgba(255,255,255,.94);box-shadow:0 -3px 12px rgba(0,0,0,.12);';
-      PALETTE.forEach((type) => {
-        const b = BUILDINGS[type];
+      tray.style.cssText = 'position:fixed;left:0;right:0;z-index:20;display:none;flex-direction:column;gap:8px;' +
+        'padding:9px 10px;background:rgba(255,255,255,.94);box-shadow:0 -3px 12px rgba(0,0,0,.12);';
+
+      // mode tabs: 建筑 (place buildings) / 地形 (paint terrain)
+      const tabs = document.createElement('div');
+      tabs.style.cssText = 'display:flex;gap:6px;justify-content:center;';
+      [['build', en ? '🏠 Build' : '🏠 建筑'], ['terrain', en ? '🖌 Terrain' : '🖌 地形']].forEach(([m, label]) => {
+        const t = document.createElement('button');
+        t.dataset.mode = m; t.textContent = label;
+        t.style.cssText = 'border:none;border-radius:13px;padding:6px 16px;cursor:pointer;font:600 13px/1 "Fredoka",system-ui,sans-serif;';
+        t.onclick = () => this.setEditMode(m);
+        tabs.appendChild(t);
+      });
+      this._modeTabs = tabs; tray.appendChild(tabs);
+
+      const rowCss = 'display:flex;flex-wrap:wrap;gap:8px;justify-content:center;align-items:flex-end;';
+      const mkItem = (label, bgUrl) => {
         const item = document.createElement('button');
         item.style.cssText = 'border:1px solid #e0e0e0;border-radius:14px;background:#fff;' +
           'padding:8px 10px 6px;min-width:74px;cursor:pointer;font:500 12px/1.3 "Fredoka",system-ui,sans-serif;color:#444;';
-        item.innerHTML = '<div style="font-size:11px;color:#888;margin-top:4px">＋ ' +
-          (en ? b.en : b.zh) + '</div>';
+        item.innerHTML = '<div style="font-size:11px;color:#888;margin-top:4px">' + label + '</div>';
         const ic = document.createElement('div');
-        ic.style.cssText = 'width:46px;height:40px;margin:0 auto;background-size:contain;' +
-          'background-repeat:no-repeat;background-position:center bottom;';
-        ic.style.backgroundImage = "url('" + ASSET_DIR + ASSET_SRC[b.img] + "')";
+        ic.style.cssText = 'width:46px;height:40px;margin:0 auto;background-size:contain;background-repeat:no-repeat;background-position:center;';
+        ic.style.backgroundImage = "url('" + bgUrl + "')";
         item.insertBefore(ic, item.firstChild);
+        return item;
+      };
+
+      const pb = document.createElement('div'); pb.style.cssText = rowCss;
+      PALETTE.forEach((type) => {
+        const b = BUILDINGS[type];
+        const item = mkItem('＋ ' + (en ? b.en : b.zh), ASSET_DIR + ASSET_SRC[b.img]);
         item.onclick = () => this._addBuilding(type);
-        tray.appendChild(item);
+        pb.appendChild(item);
       });
+      this._palBuild = pb; tray.appendChild(pb);
+
+      const pt = document.createElement('div'); pt.style.cssText = rowCss;
+      BRUSHES.forEach((br) => {
+        const item = mkItem(en ? br.en : br.zh, ASSET_DIR + ASSET_SRC[br.tile]);
+        item.dataset.brush = br.key;
+        item.onclick = () => this.setBrush(br.key);
+        pt.appendChild(item);
+      });
+      this._palTerrain = pt; tray.appendChild(pt);
+
       document.body.appendChild(tray);
       this._palette = tray;
 
@@ -207,10 +257,31 @@
       hint.id = 'mapBuildHint';
       hint.style.cssText = 'position:fixed;left:0;right:0;z-index:19;text-align:center;display:none;' +
         'pointer-events:none;font:500 13px/1.4 "Fredoka",system-ui,sans-serif;color:#fff;';
-      hint.innerHTML = '<span style="background:rgba(0,0,0,.45);padding:6px 14px;border-radius:16px">' +
-        (en ? 'Drag to move · tap ✕ to remove · pick below to add' : '拖动摆放 · 点 ✕ 移除 · 下方选建筑添加') + '</span>';
+      hint.innerHTML = '<span style="background:rgba(0,0,0,.45);padding:6px 14px;border-radius:16px"></span>';
       document.body.appendChild(hint);
       this._hint = hint;
+      this._refreshModeUI();
+      this._layoutUI();
+    },
+    setEditMode(m) { this._editMode = m; this._sel = -1; this._moving = null; this._refreshModeUI(); this.render(); },
+    setBrush(b) { this._brush = b; this._refreshModeUI(); },
+    _refreshModeUI() {
+      const terr = this._editMode === 'terrain', en = this._lang() === 'en';
+      if (this._palBuild) this._palBuild.style.display = terr ? 'none' : 'flex';
+      if (this._palTerrain) this._palTerrain.style.display = terr ? 'flex' : 'none';
+      if (this._modeTabs) Array.from(this._modeTabs.children).forEach((t) => {
+        const on = t.dataset.mode === this._editMode;
+        t.style.background = on ? '#FF9800' : '#eee'; t.style.color = on ? '#fff' : '#777';
+      });
+      if (this._palTerrain) Array.from(this._palTerrain.children).forEach((it) => {
+        it.style.outline = (it.dataset.brush === this._brush) ? '3px solid #FF9800' : 'none';
+      });
+      if (this._hint) {
+        const s = this._hint.querySelector('span');
+        if (s) s.textContent = terr
+          ? (en ? 'Tap / drag to paint terrain' : '点按或拖动涂刷地形（草地=擦除）')
+          : (en ? 'Drag to move · tap ✕ to remove · pick below to add' : '拖动摆放 · 点 ✕ 移除 · 下方选建筑添加');
+      }
       this._layoutUI();
     },
     _layoutUI() {
@@ -239,9 +310,16 @@
     },
     toggleBuild() {
       this._build = !this._build;
-      if (!this._build) { this._sel = -1; this._moving = null; Farm.state.save(); }
+      if (!this._build) { this._sel = -1; this._moving = null; this._painting = false; this._editMode = 'build'; Farm.state.save(); }
+      this._refreshModeUI();
       this._layoutUI();
       this.render();
+    },
+    _paintCell(gx, gy) {
+      if (gx < 0 || gy < 0 || gx >= GROUND_COLS || gy >= GROUND_ROWS) return;
+      const t = this._terrain(), key = gx + ',' + gy;
+      if (this._brush === 'grass') { if (t[key] != null) { delete t[key]; this.render(); } }
+      else if (t[key] !== this._brush) { t[key] = this._brush; this.render(); }
     },
 
     // ---- sizing / coords ----
@@ -317,10 +395,11 @@
         for (let yy = 0; yy < ob.h; yy++)
           for (let xx = 0; xx < ob.w; xx++) occ[(o.gx + xx) + ',' + (o.gy + yy)] = true;
       }
+      const terrain = this._terrain();
       for (let yy = 0; yy < b.h; yy++) {
         for (let xx = 0; xx < b.w; xx++) {
           const key = (gx + xx) + ',' + (gy + yy);
-          if (plotCells[key] || occ[key] || POND_CELLS[key]) return false;   // not on plots/buildings/pond
+          if (plotCells[key] || occ[key] || terrain[key] === 'water') return false;   // not on plots/buildings/water
         }
       }
       return true;
@@ -375,7 +454,13 @@
       if (ids.length === 2) {
         const [a, b] = ids.map(k => this._pointers[k]);
         this._pinch = { dist: Math.hypot(a.x - b.x, a.y - b.y) || 1, zoom: this._zoom };
-        this._drag = null; this._moving = null;
+        this._drag = null; this._moving = null; this._painting = false;
+        return;
+      }
+      if (this._build && this._editMode === 'terrain') {
+        const cell = this._screenToCell(p.x, p.y);
+        this._painting = true;
+        this._paintCell(cell.gx, cell.gy);
         return;
       }
       if (this._build) {
@@ -414,6 +499,11 @@
         return;
       }
       const p = this._pointers[e.pointerId];
+      if (this._painting) {
+        const cell = this._screenToCell(p.x, p.y);
+        this._paintCell(cell.gx, cell.gy);
+        return;
+      }
       if (this._moving) {
         if (Math.abs(p.x - this._moving.startX) + Math.abs(p.y - this._moving.startY) > 4) this._moving.moved = true;
         const o = this._map()[this._moving.idx], b = BUILDINGS[o.type];
@@ -438,6 +528,7 @@
       delete this._pointers[e.pointerId];
       if (Object.keys(this._pointers).length < 2) this._pinch = null;
 
+      if (this._painting) { this._painting = false; Farm.state.save(); this._drag = null; this.render(); return; }
       if (this._moving) {
         const m = this._moving; this._moving = null;
         if (m.moved && m.valid) {
@@ -522,19 +613,21 @@
       const W = this._cssW(), H = this._cssH();
       ctx.clearRect(0, 0, W, H);
 
-      // ground: checker grass tone + a seamless grass-texture overlay; pond and
-      // path cells get their own tiles on top.
+      // ground: checker grass tone + a seamless grass-texture overlay; painted
+      // path/water cells get their own tile + a darker rim on exposed edges.
       const gt = this._img.tgrass, pt = this._img.tpath, wt = this._img.twater;
+      const terrain = Farm.state.data.mapTerrain || {};
       for (let gy = 0; gy < GROUND_ROWS; gy++) {
         for (let gx = 0; gx < GROUND_COLS; gx++) {
           const x = gx * ts - this._camX, y = gy * ts - this._camY;
           if (x > W || y > H || x + ts < 0 || y + ts < 0) continue;
-          const key = gx + ',' + gy;
           ctx.fillStyle = ((gx + gy) % 2 === 0) ? GRASS_A : GRASS_B;
           ctx.fillRect(x, y, ts, ts);
           if (gt) ctx.drawImage(gt, x, y, ts, ts);            // texture flecks
-          if (PATH_CELLS[key] && pt) ctx.drawImage(pt, x, y, ts, ts);
-          if (POND_CELLS[key] && wt) ctx.drawImage(wt, x, y, ts, ts);
+          const kind = terrain[gx + ',' + gy];
+          if (kind === 'path' && pt) ctx.drawImage(pt, x, y, ts, ts);
+          else if (kind === 'water' && wt) ctx.drawImage(wt, x, y, ts, ts);
+          if (kind === 'path' || kind === 'water') this._terrainEdges(kind, gx, gy, x, y, ts, terrain);
         }
       }
       if (this._build) this._drawGrid(ts, W, H);
@@ -556,8 +649,60 @@
         const gy = (this._moving && this._moving.idx === i) ? this._moving.gy : o.gy;
         draws.push({ base: (gy + b.h) * ts, fn: () => this._drawBuilding(i, ts) });
       }
+      // Owned EP-shop decorations (auto-placed on free cells — brings the paid
+      // cosmetics onto the map). Depth-sorted like everything else.
+      this._decoPlacements().forEach((d) => {
+        draws.push({ base: (d.gy + 1) * ts, fn: () => this._drawDeco(d, ts) });
+      });
       draws.sort((a, c) => a.base - c.base);
       draws.forEach(d => d.fn());
+    },
+    // Map owned decorations to free cells (bottom-first so they sit in the front
+    // yard, like the classic layout). Deterministic: stable per decoration index.
+    _decoPlacements() {
+      const decos = (Farm.state.data && Farm.state.data.decorations) || [];
+      if (!decos.length || !Farm.epShop || !Farm.epShop.items || !Farm.epShop.items.length) return [];
+      const plotCells = this._plotCellSet(), terrain = this._terrain(), occ = {};
+      this._map().forEach((o) => {
+        const b = BUILDINGS[o.type]; if (!b) return;
+        for (let yy = 0; yy < b.h; yy++) for (let xx = 0; xx < b.w; xx++) occ[(o.gx + xx) + ',' + (o.gy + yy)] = 1;
+      });
+      const free = [];
+      for (let gy = GROUND_ROWS - 1; gy >= 0; gy--) {
+        for (let gx = 0; gx < GROUND_COLS; gx++) {
+          const k = gx + ',' + gy;
+          if (plotCells[k] || occ[k] || terrain[k] === 'water') continue;
+          free.push({ gx, gy });
+        }
+      }
+      if (!free.length) return [];
+      const out = [], used = {};
+      decos.forEach((d, i) => {
+        const item = Farm.epShop.items.find((it) => it.id === d.itemId);
+        if (!item || !item.decoration_emoji) return;
+        let cell = free.find((c) => !used[c.gx + ',' + c.gy]) || free[i % free.length];
+        used[cell.gx + ',' + cell.gy] = 1;
+        out.push({ emoji: item.decoration_emoji, gx: cell.gx, gy: cell.gy });
+      });
+      return out;
+    },
+    _drawDeco(d, ts) {
+      const ctx = this._ctx;
+      const cx = (d.gx + 0.5) * ts - this._camX, by = (d.gy + 0.92) * ts - this._camY;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+      ctx.font = (ts * 0.6) + 'px sans-serif';
+      ctx.fillText(d.emoji, cx, by);
+    },
+    // Darker rim on terrain-cell sides that border a different terrain — reads
+    // as a shoreline (water) / worn path edge. Works for any painted shape.
+    _terrainEdges(kind, gx, gy, x, y, ts, terrain) {
+      const ctx = this._ctx;
+      ctx.fillStyle = kind === 'water' ? 'rgba(40,86,116,0.5)' : 'rgba(108,72,32,0.4)';
+      const w = Math.max(2, ts * 0.12);
+      if (terrain[gx + ',' + (gy - 1)] !== kind) ctx.fillRect(x, y, ts, w);
+      if (terrain[gx + ',' + (gy + 1)] !== kind) ctx.fillRect(x, y + ts - w, ts, w);
+      if (terrain[(gx - 1) + ',' + gy] !== kind) ctx.fillRect(x, y, w, ts);
+      if (terrain[(gx + 1) + ',' + gy] !== kind) ctx.fillRect(x + ts - w, y, w, ts);
     },
     _drawGrid(ts, W, H) {
       const ctx = this._ctx;

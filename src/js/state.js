@@ -62,6 +62,7 @@
     // ============ EP shop + daily features ============
     decorations: [],            // [{itemId, x, y}] cosmetic placements
     map: null,                  // buildable map layout [{type, gx, gy}] (?map=1; null until first use)
+    mapTerrain: null,           // paintable terrain overrides {"gx,gy": "path"|"water"} (null until first use)
     extraPlots: 0,              // additional plots unlocked beyond the base 12 (max 4)
     ownedShopItems: {},         // {itemId: count} consumables remaining (acceleration tickets etc.)
     theme: 'default',           // 'default' | 'spring' | 'summer' | 'autumn' | 'winter' | 'festival'
@@ -380,6 +381,7 @@
       const keepEastPoints = this.data.eastPoints;
       const keepUnsyncedEp = this.data.unsyncedEp;
       const localMap = (this.data && Array.isArray(this.data.map)) ? this.data.map : null;
+      const localTerrain = (this.data && this.data.mapTerrain && typeof this.data.mapTerrain === 'object') ? this.data.mapTerrain : null;
       const localCal = (this.data && this.data.loginCalendar) || {};
       const merged = Object.assign({}, STARTER_STATE, cloudState);
       merged.dailyClaims = Object.assign({}, STARTER_STATE.dailyClaims, cloudState.dailyClaims || {});
@@ -397,6 +399,7 @@
       // Map layout: use the cloud copy if it has one; otherwise keep the local
       // (already-seeded) layout so an older cloud blob doesn't wipe the buildings.
       if (!Array.isArray(cloudState.map) && localMap) merged.map = localMap;
+      if ((!cloudState.mapTerrain || typeof cloudState.mapTerrain !== 'object') && localTerrain) merged.mapTerrain = localTerrain;
       this.data = merged;
       // Daily/session rollover if the restored blob predates today.
       const today = getDateString();
