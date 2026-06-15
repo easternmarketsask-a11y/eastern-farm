@@ -276,9 +276,18 @@
     // ===== editor (build / terrain / decoration), iso-aware =====
     _terrain() { return (Farm.state.data.mapTerrain = Farm.state.data.mapTerrain || {}); },
     _plotCellSet() {
-      const s = {}, plots = Farm.state.data.plots || [];
+      const plots = Farm.state.data.plots || [];
+      if (this._pcs && this._pcsN === plots.length) return this._pcs;   // cache; rebuild only when a plot unlocks
+      const s = {};
       for (let i = 0; i < plots.length; i++) s[(PLOT_OX + (i % PLOT_COLS)) + ',' + (PLOT_OY + Math.floor(i / PLOT_COLS))] = 1;
+      this._pcs = s; this._pcsN = plots.length;
       return s;
+    },
+    _shopItem(itemId) {   // index EP-shop items once instead of .find scanning every frame
+      if (!this._itemIndex && Farm.epShop && Farm.epShop.items && Farm.epShop.items.length) {
+        this._itemIndex = {}; Farm.epShop.items.forEach((it) => { this._itemIndex[it.id] = it; });
+      }
+      return this._itemIndex ? this._itemIndex[itemId] : null;
     },
     _inBounds(gx, gy) { return gx >= 0 && gy >= 0 && gx < COLS && gy < ROWS; },
     _footprintFree(gx, gy, type, exceptIdx) {
@@ -406,7 +415,7 @@
         this._raf = requestAnimationFrame(loop);
         if (!this._on || document.hidden) return;
         const modal = document.getElementById('modal'); if (modal && !modal.classList.contains('hidden')) return;
-        const now = Date.now(); if (now - this._lastFrame < 66) return; this._lastFrame = now; this.render();
+        const now = Date.now(); if (now - this._lastFrame < 33) return; this._lastFrame = now; this.render();  // ~30fps for smooth pet walking
       };
       this._raf = requestAnimationFrame(loop);
     },
@@ -551,11 +560,11 @@
         for (let dd = 0; colOrder.length < COLS; dd++) { if (c0 - dd >= 0) colOrder.push(c0 - dd); if (dd > 0 && c0 + dd < COLS) colOrder.push(c0 + dd); }
         const free = []; for (let gy = ROWS - 1; gy >= 0; gy--) for (const gx of colOrder) { const k = gx + ',' + gy; if (!occ[k] && !taken[k]) free.push(k); }
         let fi = 0, ch = false;
-        decos.forEach((d) => { const it = Farm.epShop.items.find((x) => x.id === d.itemId); if (!it || !it.decoration_emoji) return; if (hp(d) && !occ[d.gx + ',' + d.gy]) return; while (fi < free.length && taken[free[fi]]) fi++; if (fi < free.length) { const k = free[fi++].split(','); d.gx = +k[0]; d.gy = +k[1]; taken[k[0] + ',' + k[1]] = 1; ch = true; } });
+        decos.forEach((d) => { const it = this._shopItem(d.itemId); if (!it || !it.decoration_emoji) return; if (hp(d) && !occ[d.gx + ',' + d.gy]) return; while (fi < free.length && taken[free[fi]]) fi++; if (fi < free.length) { const k = free[fi++].split(','); d.gx = +k[0]; d.gy = +k[1]; taken[k[0] + ',' + k[1]] = 1; ch = true; } });
         if (ch) Farm.state.save();
       }
       const out = [];
-      decos.forEach((d, i) => { if (!hp(d)) return; const it = Farm.epShop.items.find((x) => x.id === d.itemId); if (!it || !it.decoration_emoji) return; out.push({ emoji: it.decoration_emoji, itemId: d.itemId, gx: d.gx, gy: d.gy, pet: it.category === 'pet', seed: i }); });
+      decos.forEach((d, i) => { if (!hp(d)) return; const it = this._shopItem(d.itemId); if (!it || !it.decoration_emoji) return; out.push({ emoji: it.decoration_emoji, itemId: d.itemId, gx: d.gx, gy: d.gy, pet: it.category === 'pet', seed: i }); });
       return out;
     },
     _drawDeco(d, moving) {
