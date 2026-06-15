@@ -676,8 +676,19 @@
         return;
       }
       if (!plot.crop) { Farm.shop.openSeedPickerForPlot(idx); return; }
-      if (Farm.crops.isMature(plot)) { Farm.farm.harvestPlot(idx); setTimeout(() => this.render(), 50); return; }
+      if (Farm.crops.isMature(plot)) {
+        Farm.farm.harvestPlot(idx, this._fakeEvtForCell(gx, gy));   // gives harvest juice the plot's on-screen position
+        setTimeout(() => this.render(), 50);
+        return;
+      }
       Farm.farm.openPlotCare(idx, plot, Farm.crops.get(plot.crop));
+    },
+    // A synthetic event whose target rect is the cell's page-space rect, so the
+    // farm's harvest feedback (float text / leaf burst) lands on the map plot.
+    _fakeEvtForCell(gx, gy) {
+      const ts = this._ts(), r = this._cv.getBoundingClientRect();
+      const rect = { left: r.left + gx * ts - this._camX, top: r.top + gy * ts - this._camY, width: ts, height: ts };
+      return { target: { getBoundingClientRect: () => rect } };
     },
 
     // ---- render ----
@@ -723,7 +734,13 @@
           if (gt) ctx.drawImage(gt, x, y, ts, ts);            // texture flecks
           const kind = terrain[gx + ',' + gy];
           if (kind === 'path' && pt) ctx.drawImage(pt, x, y, ts, ts);
-          else if (kind === 'water' && wt) ctx.drawImage(wt, x, y, ts, ts);
+          else if (kind === 'water' && wt) {
+            ctx.drawImage(wt, x, y, ts, ts);
+            const t = Date.now() / 1000;                 // subtle drifting shimmer
+            const gy2 = y + (((t * 9 + gx * 17 + gy * 23) % ts));
+            ctx.fillStyle = 'rgba(190,225,245,0.22)';
+            ctx.fillRect(x + ts * 0.12, gy2, ts * 0.42, Math.max(1, ts * 0.03));
+          }
           if (kind === 'path' || kind === 'water') this._terrainEdges(kind, gx, gy, x, y, ts, terrain);
         }
       }
@@ -925,9 +942,10 @@
       //    illustration (assets/crops/{id}.png) so nothing is misrepresented.
       const p = Farm.crops.getProgress ? Farm.crops.getProgress(plot) : 1;
       const mature = Farm.crops.isMature(plot);
-      if (mature) {   // ready glow halo behind the sprite
-        ctx.beginPath(); ctx.arc(cx, cy, ts * 0.42, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(255,214,79,0.30)'; ctx.fill();
+      if (mature) {   // ready glow halo behind the sprite — gently pulses ("tap me")
+        const t = Date.now() / 1000, ph = Math.sin(t * 2 + gx + gy);
+        ctx.beginPath(); ctx.arc(cx, cy, ts * (0.40 + ph * 0.03), 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255,214,79,' + (0.30 + ph * 0.08) + ')'; ctx.fill();
       }
 
       if (plot.crop === 'shanghai_miao') {

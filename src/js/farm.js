@@ -279,9 +279,14 @@
         harvestedEl.classList.add('harvesting');
         // 采摘爆裂：叶子+星光从地块中心炸开（juice 2026-06-11）
         const hr = harvestedEl.getBoundingClientRect();
-        if (Farm.ui && Farm.ui.burst) {
-          Farm.ui.burst(hr.left + hr.width / 2, hr.top + hr.height / 2, ['🍃', '✨', '🌿'], 8);
+        // In map mode the plot DOM is hidden (rect is 0×0) — fall back to the
+        // event's on-screen rect so the burst lands on the map plot, not (0,0).
+        let bx = hr.left + hr.width / 2, by = hr.top + hr.height / 2;
+        if ((hr.width === 0 || hr.height === 0) && evt && evt.target) {
+          const er = evt.target.getBoundingClientRect();
+          bx = er.left + er.width / 2; by = er.top + er.height / 2;
         }
+        if (Farm.ui && Farm.ui.burst) Farm.ui.burst(bx, by, ['🍃', '✨', '🌿'], 8);
       }
 
       // Update warehouse badge with new count
