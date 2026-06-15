@@ -228,12 +228,24 @@
       const ctx = this._ctx, tw = this._tw(), th = this._th(), W = this._cssW(), H = this._cssH();
       ctx.clearRect(0, 0, W, H);
 
-      // ground diamonds (back-to-front)
+      // ground diamonds (back-to-front) with a raised-island earth skirt on the
+      // front (east/south) boundary edges — the signature Hay Day "farm island".
+      const sk = th * 1.5;
       for (let s = 0; s <= (COLS - 1) + (ROWS - 1); s++) {
         for (let gx = 0; gx < COLS; gx++) {
           const gy = s - gx; if (gy < 0 || gy >= ROWS) continue;
           const c = this._cell(gx, gy);
-          if (c.x + tw < 0 || c.x - tw > W || c.y + th < 0 || c.y - th > H) continue;
+          if (c.x + tw < 0 || c.x - tw > W || c.y + th + sk < 0 || c.y - th > H) continue;
+          if (gx + 1 >= COLS) {   // east face (screen lower-right)
+            ctx.beginPath(); ctx.moveTo(c.x + tw / 2, c.y); ctx.lineTo(c.x, c.y + th / 2);
+            ctx.lineTo(c.x, c.y + th / 2 + sk); ctx.lineTo(c.x + tw / 2, c.y + sk); ctx.closePath();
+            ctx.fillStyle = '#9a6532'; ctx.fill();
+          }
+          if (gy + 1 >= ROWS) {   // south face (screen lower-left, darker)
+            ctx.beginPath(); ctx.moveTo(c.x, c.y + th / 2); ctx.lineTo(c.x - tw / 2, c.y);
+            ctx.lineTo(c.x - tw / 2, c.y + sk); ctx.lineTo(c.x, c.y + th / 2 + sk); ctx.closePath();
+            ctx.fillStyle = '#7d4f25'; ctx.fill();
+          }
           this._diamond(c.x, c.y, tw, th);
           ctx.fillStyle = ((gx + gy) % 2 === 0) ? GRASS_A : GRASS_B; ctx.fill();
           ctx.strokeStyle = GRASS_EDGE; ctx.lineWidth = 1; ctx.stroke();
