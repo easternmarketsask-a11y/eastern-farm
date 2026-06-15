@@ -61,6 +61,7 @@
 
     // ============ EP shop + daily features ============
     decorations: [],            // [{itemId, x, y}] cosmetic placements
+    map: null,                  // buildable map layout [{type, gx, gy}] (?map=1; null until first use)
     extraPlots: 0,              // additional plots unlocked beyond the base 12 (max 4)
     ownedShopItems: {},         // {itemId: count} consumables remaining (acceleration tickets etc.)
     theme: 'default',           // 'default' | 'spring' | 'summer' | 'autumn' | 'winter' | 'festival'
