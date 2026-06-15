@@ -126,6 +126,11 @@
       Farm.warehouse.installButton();
     }
 
+    // 6c. POC: top-down tile map view (only when ?map=1, hides the vertical farm).
+    if (Farm.mapView && Farm.mapView.active && Farm.mapView.active()) {
+      Farm.mapView.init();
+    }
+
     // 7. Storekeeper
     Farm.storekeeper.refresh();
 
