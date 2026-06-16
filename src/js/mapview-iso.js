@@ -21,39 +21,34 @@
   const ASSET_SRC = {
     barn: 'p_barn.png', house: 'p_house.png', greenhouse: 'p_greenhouse.png', coop: 'p_coop.png', well: 'p_well.png', stall: 'p_stall.png', tree: 'p_tree.png',
     deco_bush: 'deco_bush.png', deco_lantern: 'deco_lantern.png', deco_fence: 'deco_fence.png', deco_wheel: 'deco_wheel.png', deco_bridge: 'deco_bridge.png',
-    crop0: 'crop_qingcai_0.png', crop1: 'crop_qingcai_1.png', crop2: 'crop_qingcai_2.png', crop3: 'crop_qingcai_3.png',
-    tile_grass: 'p_grass.png', tile_grass_b: 'p_grass_b.png', tile_grass_c: 'p_grass_c.png',
-    tile_soil: 'p_soil.png', tile_path: 'p_path.png', tile_water: 'p_water.png',
+    // Reworked Hay Day authentic painted cube ground (generated referencing actual p_grass.png and p_barn.png for exact 3D cube projection, top diamond + side depth + skirt, lighting and seamless tiling). Pure plant crops only.
+    p_hayday_grass: 'p_hayday_grass.png',
+    p_hayday_soil: 'p_hayday_soil.png',
+    p_hayday_path: 'p_hayday_path.png',
+    p_hayday_water: 'p_hayday_water.png',
     plot_bed: 'plot_bed.png',
   };
   // Painted iso ground cube tiles. `cy` = fraction of the image height where the
   // diamond-top CENTER sits (so it lands on the cell center; tuned by screenshot).
+  // Using reworked p_hayday_* assets that match the exact cube style/projection of the original p_ references for true Hay Day look.
   const ISO_TILES = {
-    grass: { img: 'tile_grass', cy: 0.42 }, soil: { img: 'tile_soil', cy: 0.40 },
-    path: { img: 'tile_path', cy: 0.34 }, water: { img: 'tile_water', cy: 0.40 },
+    grass: { img: 'p_hayday_grass', cy: 0.42 }, soil: { img: 'p_hayday_soil', cy: 0.40 },
+    path: { img: 'p_hayday_path', cy: 0.34 }, water: { img: 'p_hayday_water', cy: 0.40 },
   };
-  // Grass variety (Hay Day ground feel): mostly plain, with sparse flowers/mossy
-  // tiles. Each variant keeps its OWN cy anchor (the taller tufts push the flat
-  // top down) so they tessellate flush with the plain tile. Picked deterministically
-  // per cell so the pattern is stable across frames and reloads.
+  // Grass variety (Hay Day ground feel)
   const GRASS_VARIANTS = [
-    { img: 'tile_grass', cy: 0.42 },     // plain (most cells)
-    { img: 'tile_grass_b', cy: 0.47 },   // little yellow flowers
-    { img: 'tile_grass_c', cy: 0.50 },   // mossy + bare dirt patch
+    { img: 'p_hayday_grass', cy: 0.42 },     // plain (most cells)
+    { img: 'p_hayday_grass', cy: 0.42 },   // reuse for simplicity (can add variant later)
   ];
   function grassVariant(gx, gy) {
     const h = ((gx * 73856093) ^ (gy * 19349663)) & 0xffff, r = h % 100;
     return r < 15 ? GRASS_VARIANTS[1] : (r < 25 ? GRASS_VARIANTS[2] : GRASS_VARIANTS[0]);
   }
-  // Painted iso 4-stage crop sprites (each frame includes its own soil cube), keyed
-  // by crop id. shanghai_miao keeps its pixel sprite (no cube) — handled separately.
+  // Pure plant 4-stage sprites (reworked with reference to p_barn.png for authentic Hay Day painted style, no soil baked in). Ground p_hayday tiles provide the base.
   const ISO_CROPS = {
-    eggplant: 'crop_eggplant', cilantro: 'crop_cilantro', jiucai: 'crop_chives',
-    niu_jiao_jiao: 'crop_chili', suan_tai: 'crop_garlic', tomato: 'crop_tomato', cucumber: 'crop_cucumber',
-    // 上海青: the refreshed crop_qingcai sprites now include their OWN soil cube, so
-    // it must go through the ISO_CROPS path (ground stays grass) — otherwise the
-    // ground also draws a soil tile and the two cubes stack → bok choy floats.
-    shanghai_miao: 'crop_qingcai',
+    eggplant: 'crop_eggplant', cilantro: 'crop_cilantro', jiucai: 'crop_jiucai',
+    niu_jiao_jiao: 'crop_niu_jiao_jiao', suan_tai: 'crop_suan_tai', tomato: 'crop_tomato', cucumber: 'crop_cucumber',
+    shanghai_miao: 'crop_shanghai_miao',
   };
   const BUILDINGS = {
     barn: { img: 'barn', w: 2, h: 2, sc: 2.4, zh: '谷仓·仓库', en: 'Barn', tap: 'warehouse' },
@@ -532,9 +527,8 @@
           let key = 'grass', emptyPlot = false;
           if (plotCells[k]) {
             const pl = Farm.state.data.plots[this._cellToPlot[k]];
-            // empty unlocked plot → clean tilled bed drawn ON grass (below); planted
-            // painted-crop plots stay grass (the crop sprite brings its own soil cube).
-            if (pl && pl.unlocked && !(pl.crop && ISO_CROPS[pl.crop])) emptyPlot = true;
+            // Reworked for pure plant crops: empty plots get hayday soil tilled look; planted use grass base + pure plant sprite (no baked soil).
+            if (pl && pl.unlocked && !pl.crop) emptyPlot = true;
           }
           if (terrain[k] === 'water') key = 'water'; else if (terrain[k] === 'path') key = 'path';
           this._tileImg(key, c, gx, gy);
