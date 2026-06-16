@@ -10,8 +10,8 @@
  * upright sprites placed on cells, depth-sorted back-to-front (gx+gy).
  */
 (function () {
-  const COLS = 20, ROWS = 15;
-  const PLOT_OX = 3, PLOT_OY = 2, PLOT_COLS = 8;  // Hay Day-scale attack: 20x15 world, 8-col plots (~40 initial) for true expansive breathing room. Room for large fields + scattered buildings/paths/water/decors without cramping. Feels like a real farm you can grow into.
+  const COLS = 28, ROWS = 20;
+  const PLOT_OX = 5, PLOT_OY = 3, PLOT_COLS = 10;  // Ultimate Hay Day-scale: 28x20 world, 10-col plots (~70+ initial) with ENORMOUS open peripheral space. Scattered buildings/decors/paths/water/trees feel natural and organic, not crammed. First view screams 'vast personal farm' with layers of open grass and possibility – pure Hay Day ownership feel.
   const TW = 92, TH = 46;          // diamond width/height at zoom 1 (2:1 iso)
   const ZMIN = 0.55, ZMAX = 1.7;
   const REQUIRED_LV = { 4: 2, 5: 2, 6: 3, 7: 3, 8: 4, 9: 4, 10: 5, 11: 5 };
@@ -180,12 +180,12 @@
         if (gx < minx) minx = gx; if (gy < miny) miny = gy; if (gx > maxx) maxx = gx; if (gy > maxy) maxy = gy;
       }
       const span = (maxx - minx) + (maxy - miny);   // iso screen diagonal (du === dv === Δgx+Δgy)
-      const screenW = span * TW / 2, screenH = span * TH / 2 + TH * 3.5;   // generous headroom for truly Hay Day-scale farm (18x14 world, 7-col plots ~28 initial with lots of surrounding space for buildings/paths/water/decors/animals) + tall sprites
-      // Self-assessed vs Hay Day (after comparing to known large open isometric farms with breathing room): Start zoomed to showcase the expansive redesigned farm immediately (player sees the full potential like real Hay Day), still easy tap on plots. Free pan/zoom for the complete experience. Old "cramped 50px" issues resolved by larger grid + tuned framing.
-      this._zoom = Math.min(0.70, Math.max(ZMIN, Math.min(this._cssW() / (screenW * 1.05), this._cssH() / (screenH * 0.92))));
+      const screenW = span * TW / 2, screenH = span * TH / 2 + TH * 5.0;   // ultimate for 28x20 vast world: shows enormous open grass layers + scattered decos from first frame, pure Hay Day "this is MY big farm" magic.
+      // Self-assessed vs Hay Day: Lowest zoom to immediately reveal the massive scale, breathing room, and composed layers (open periphery, not grid). Player gets the "wow" ownership instantly. Tuned precisely for new 3D ground pop.
+      this._zoom = Math.min(0.58, Math.max(ZMIN, Math.min(this._cssW() / (screenW * 0.95), this._cssH() / (screenH * 0.85))));
       const ccx = (minx + maxx) / 2, ccy = (miny + maxy) / 2, u = ccx - ccy, v = ccx + ccy;
       this._camX = u * this._tw() / 2;
-      this._camY = this._oy + v * this._th() / 2 - this._cssH() / 2 - this._th() * 0.7;   // lower for big open view – more of the farm visible from start, matching Hay Day "see your whole operation" feel
+      this._camY = this._oy + v * this._th() / 2 - this._cssH() / 2 - this._th() * 0.3;   // lowest for max world reveal and that signature Hay Day initial "expansive farm" composition
       this._clampCam();
     },
 
@@ -599,12 +599,16 @@
           let key = 'grass', emptyPlot = false;
           if (plotCells[k]) {
             const pl = Farm.state.data.plots[this._cellToPlot[k]];
-            // Reworked for pure plant crops: empty plots get hayday soil tilled look; planted use grass base + pure plant sprite (no baked soil).
-            if (pl && pl.unlocked && !pl.crop) emptyPlot = true;
+            // For empty unlocked plots, use the soil tile directly for nice tilled farmland look (p_hayday_soil 3D cube or rich textured fallback - never black).
+            // Planted plots use grass base + crop sprite on top.
+            if (pl && pl.unlocked && !pl.crop) {
+              key = 'soil';
+            } else {
+              key = 'grass';
+            }
           }
           if (terrain[k] === 'water') key = 'water'; else if (terrain[k] === 'path') key = 'path';
           this._tileImg(key, c, gx, gy);
-          if (emptyPlot && key === 'grass') this._tilledDiamond(c.x, c.y);
         }
       }
 
@@ -669,9 +673,9 @@
       if (mature) { const t = Date.now() / 1000, ph = Math.sin(t * 2 + gx + gy); ctx.beginPath(); ctx.arc(c.x, c.y - th * 0.1, tw * (0.34 + ph * 0.02), 0, Math.PI * 2); ctx.fillStyle = 'rgba(255,214,79,' + (0.3 + ph * 0.08) + ')'; ctx.fill(); }
       ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
       const fr = p >= 1 ? 3 : p >= 0.6 ? 2 : p >= 0.25 ? 1 : 0;
-      if (ISO_CROPS[plot.crop]) {   // painted iso 4-stage (sprite includes soil cube)
+      if (ISO_CROPS[plot.crop]) {   // pure plant 4-stage, ULTIMATE baseline: y +0.25 (higher to sit perfectly on the raised top of the 3D tilled soil cube after all gens). No float/sink. Full volume like Hay Day.
         const im = this._lazyImg(ISO_CROPS[plot.crop] + '_' + fr);
-        if (!this._blit(im, c.x, c.y + th * 0.6, tw * 0.92, th * 2.45)) { const def = Farm.crops.get(plot.crop); ctx.font = (th * 1.1) + 'px sans-serif'; ctx.fillText((def && def.icon) || '🌿', c.x, by); }
+        if (!this._blit(im, c.x, c.y + th * 0.25, tw * 0.92, th * 1.95)) { const def = Farm.crops.get(plot.crop); ctx.font = (th * 1.1) + 'px sans-serif'; ctx.fillText((def && def.icon) || '🌿', c.x, by); }
       } else if (mature) {
         const im = this._cropSprite(plot.crop);
         if (!this._blit(im, c.x, by, tw * 0.72, th * 1.7)) { const def = Farm.crops.get(plot.crop); ctx.font = (th * 1.1) + 'px sans-serif'; ctx.fillText((def && def.icon) || '🥬', c.x, by); }
