@@ -30,21 +30,20 @@
   };
   // Painted iso ground cube tiles. `cy` = fraction of the image height where the
   // diamond-top CENTER sits (so it lands on the cell center; tuned by screenshot).
-  // Using reworked p_hayday_* assets that match the exact cube style/projection of the original p_ references for true Hay Day look.
+  // Fresh high-quality assets generated with Grok + p_barn/p_grass references for authentic Hay Day painted cube look (3D depth, top diamond + sides, lighting). 
   const ISO_TILES = {
-    grass: { img: 'p_hayday_grass', cy: 0.42 }, soil: { img: 'p_hayday_soil', cy: 0.40 },
-    path: { img: 'p_hayday_path', cy: 0.34 }, water: { img: 'p_hayday_water', cy: 0.40 },
+    grass: { img: 'p_hayday_grass', cy: 0.40 }, soil: { img: 'p_hayday_soil', cy: 0.38 },
+    path: { img: 'p_hayday_path', cy: 0.32 }, water: { img: 'p_hayday_water', cy: 0.38 },
   };
-  // Grass variety (Hay Day ground feel)
+  // Grass variety (Hay Day ground feel) - using the new high quality grass
   const GRASS_VARIANTS = [
-    { img: 'p_hayday_grass', cy: 0.42 },     // plain (most cells)
-    { img: 'p_hayday_grass', cy: 0.42 },   // reuse for simplicity (can add variant later)
+    { img: 'p_hayday_grass', cy: 0.40 },
   ];
   function grassVariant(gx, gy) {
     const h = ((gx * 73856093) ^ (gy * 19349663)) & 0xffff, r = h % 100;
     return r < 15 ? GRASS_VARIANTS[1] : (r < 25 ? GRASS_VARIANTS[2] : GRASS_VARIANTS[0]);
   }
-  // Pure plant 4-stage sprites (reworked with reference to p_barn.png for authentic Hay Day painted style, no soil baked in). Ground p_hayday tiles provide the base.
+  // High-quality pure plant 4-stage sprites (fresh Grok generation with p_barn/p_grass references for consistent Hay Day painted style across ground and objects, no soil baked in at all). Ground p_hayday tiles provide the base.
   const ISO_CROPS = {
     eggplant: 'crop_eggplant', cilantro: 'crop_cilantro', jiucai: 'crop_jiucai',
     niu_jiao_jiao: 'crop_niu_jiao_jiao', suan_tai: 'crop_suan_tai', tomato: 'crop_tomato', cucumber: 'crop_cucumber',
