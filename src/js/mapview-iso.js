@@ -250,6 +250,8 @@
       if (!wasTap || !p) return;
       const c = this._screenToCell(p.x, p.y);
       if (this._build) { this._sel = this._buildingAt(c.gx, c.gy); this.render(); return; }
+      const ps = this._petAt(p.x, p.y);   // tap a roaming pet → ❤️ + sound + hop
+      if (ps != null) { this._pettedReact(ps, p.x, p.y); return; }
       const bidx = this._buildingAt(c.gx, c.gy);
       if (bidx >= 0) { const o = Farm.state.data.map[bidx], b = BUILDINGS[o.type]; if (b.tap === 'warehouse' && Farm.warehouse && Farm.warehouse.open) Farm.warehouse.open(); else if (b.tap === 'shop' && Farm.shop && Farm.shop.open) Farm.shop.open(); else if (Farm.ui && Farm.ui.toast) Farm.ui.toast(this._lang() === 'en' ? b.en : b.zh); return; }
       this._tapCell(c.gx, c.gy);
@@ -605,13 +607,19 @@
       if (p.pause > 0) { p.pause -= dt; return p; }
       const dx = p.tx - p.fx, dy = p.ty - p.fy, dist = Math.hypot(dx, dy);
       if (dist < 0.06) {
-        p.pause = 0.6 + Math.random() * 1.8;     // idle, then pick a new nearby spot
-        for (let t = 0; t < 10; t++) {
+        // arrived: if standing next to a crop, this pause is a nuzzle/peck.
+        p.nuzzle = this._nearCrop(Math.round(p.fx), Math.round(p.fy));
+        p.pause = (p.nuzzle ? 1.1 : 0.6) + Math.random() * 1.6;
+        // ~45% of the time stroll over to a crop, else wander near home.
+        let set = false;
+        if (Math.random() < 0.45) { const cc = this._cropAdjacentWalkable(); if (cc.length) { const c = cc[(Math.random() * cc.length) | 0]; p.tx = c[0]; p.ty = c[1]; set = true; } }
+        if (!set) for (let t = 0; t < 10; t++) {
           const ngx = Math.max(0, Math.min(COLS - 1, Math.round(hgx + (Math.random() * 5 - 2.5))));
           const ngy = Math.max(0, Math.min(ROWS - 1, Math.round(hgy + (Math.random() * 5 - 2.5))));
           if (this._walkablePet(ngx, ngy)) { p.tx = ngx; p.ty = ngy; break; }
         }
       } else {
+        p.nuzzle = false;
         const step = Math.min(dist, 0.62 * dt);
         p.fx += dx / dist * step; p.fy += dy / dist * step;
         const sdir = dx - dy;                     // screen-x movement → face that way
@@ -619,17 +627,61 @@
       }
       return p;
     },
+    // Is cell (gx,gy) next to (or on) a planted plot? → pet nuzzles there.
+    _nearCrop(gx, gy) {
+      const plots = Farm.state.data.plots || [];
+      const N = [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]];
+      for (const [dx, dy] of N) { const idx = this._cellToPlot[(gx + dx) + ',' + (gy + dy)]; if (idx != null && plots[idx] && plots[idx].crop) return true; }
+      return false;
+    },
+    // Walkable cells adjacent to a planted plot (so a pet can stroll over to nibble).
+    _cropAdjacentWalkable() {
+      const plots = Farm.state.data.plots || [], out = [], seen = {};
+      for (let i = 0; i < plots.length; i++) {
+        if (!plots[i] || !plots[i].crop) continue;
+        const gx = PLOT_OX + (i % PLOT_COLS), gy = PLOT_OY + Math.floor(i / PLOT_COLS);
+        for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const nx = gx + dx, ny = gy + dy, k = nx + ',' + ny; if (!seen[k] && this._walkablePet(nx, ny)) { seen[k] = 1; out.push([nx, ny]); } }
+      }
+      return out;
+    },
+    // Pet under a screen tap (animals float between cells), or null.
+    _petAt(sx, sy) {
+      const th = this._th(), tw = this._tw(); let best = null, bd = tw * 0.6;
+      for (const seed in this._pets) {
+        const p = this._pets[seed], c = this._cell(p.fx, p.fy);
+        const d = Math.hypot(sx - c.x, sy - (c.y - th * 0.45));
+        if (d < bd) { bd = d; best = +seed; }
+      }
+      return best;
+    },
+    _pettedReact(seed, sx, sy) {
+      const p = this._pets[seed]; if (!p) return;
+      p.pause = Math.max(p.pause, 0.9); p.react = Date.now() + 750;   // pause + excited window
+      const r = this._cv.getBoundingClientRect();
+      if (Farm.ui && Farm.ui.floatText) Farm.ui.floatText('❤️', r.left + sx - 10, r.top + sy - 24, '#e8522a');
+      if (Farm.audio) Farm.audio.play('tap');
+      this.render();
+    },
     _drawAnimal(d, fx, fy, face) {
-      const ctx = this._ctx, tw = this._tw(), th = this._th(), c = this._cell(fx, fy);
+      const ctx = this._ctx, tw = this._tw(), th = this._th(), c = this._cell(fx, fy), p = this._pets[d.seed];
       const im = this._lazyImg(ANIMALS[d.itemId]);
       if (!im) { ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic'; ctx.font = (th * 1.4) + 'px sans-serif'; ctx.fillText(d.emoji, c.x, c.y + th * 0.3); return; }
-      const t = Date.now() / 1000;
-      const moving = this._pets[d.seed] && (this._pets[d.seed].pause <= 0);
-      const lift = (moving ? Math.abs(Math.sin(t * 7 + d.seed)) : Math.abs(Math.sin(t * 1.4 + d.seed)) * 0.5) * th * 0.12;  // step-bounce when walking, gentle idle otherwise
+      const t = Date.now() / 1000, now = Date.now();
+      const reacting = p && p.react && now < p.react;
+      const nuzzling = p && p.pause > 0 && p.nuzzle && !reacting;
+      const moving = p && p.pause <= 0;
+      let lift;
+      if (reacting) lift = Math.abs(Math.sin(t * 9)) * th * 0.22;            // excited hop
+      else if (nuzzling) lift = -Math.abs(Math.sin(t * 6 + d.seed)) * th * 0.05;  // dip down to peck
+      else if (moving) lift = Math.abs(Math.sin(t * 7 + d.seed)) * th * 0.12;     // walk bounce
+      else lift = Math.abs(Math.sin(t * 1.4 + d.seed)) * th * 0.06;          // gentle idle
       const w = tw * 0.9, sc = Math.min(w / im.width, (th * 2.4) / im.height), dw = im.width * sc, dh = im.height * sc;
       const by = c.y + th * 0.5 - lift;
       if (face < 0) { ctx.save(); ctx.translate(c.x, 0); ctx.scale(-1, 1); ctx.drawImage(im, -dw / 2, by - dh, dw, dh); ctx.restore(); }
       else ctx.drawImage(im, c.x - dw / 2, by - dh, dw, dh);
+      // emote above the head: ❤️ when petted, ✨ while nuzzling a crop
+      let emote = reacting ? '❤️' : (nuzzling && Math.sin(t * 3 + d.seed) > 0.6 ? '✨' : '');
+      if (emote) { ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic'; ctx.font = (th * 0.7) + 'px sans-serif'; ctx.fillText(emote, c.x, by - dh - th * 0.1); }
     },
     _drawParticles(tw) {
       const season = (Farm.seasons && Farm.seasons.current) || monthSeason(), set = SEASON_PARTICLES[season];
