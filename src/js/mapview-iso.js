@@ -574,8 +574,15 @@
       }
       // ground already drew the tilled-soil tile for this cell.
       if (!plot.crop) {
-        ctx.fillStyle = 'rgba(255,255,255,0.55)'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.font = 'bold ' + (th * 0.6) + 'px sans-serif'; ctx.fillText('+', c.x, c.y); return;
+        // Empty plot → soft pulsing green "+" on a white halo: a clear "tap to
+        // plant here" affordance (the old flat faint "+" was easy to miss).
+        const t = Date.now() / 1000, pulse = 0.5 + 0.5 * Math.sin(t * 2 + gx + gy);
+        ctx.beginPath(); ctx.arc(c.x, c.y - th * 0.04, tw * 0.17, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255,255,255,' + (0.2 + pulse * 0.12) + ')'; ctx.fill();
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillStyle = 'rgba(58,140,80,' + (0.72 + pulse * 0.28) + ')';
+        ctx.font = 'bold ' + (th * 0.5) + 'px "Fredoka",sans-serif';
+        ctx.fillText('+', c.x, c.y - th * 0.04); return;
       }
       const p = Farm.crops.getProgress ? Farm.crops.getProgress(plot) : 1, mature = Farm.crops.isMature(plot);
       const by = c.y + th * 0.2;   // sprite stands on the diamond
