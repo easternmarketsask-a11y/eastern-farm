@@ -24,6 +24,7 @@
     crop0: 'crop_qingcai_0.png', crop1: 'crop_qingcai_1.png', crop2: 'crop_qingcai_2.png', crop3: 'crop_qingcai_3.png',
     tile_grass: 'p_grass.png', tile_grass_b: 'p_grass_b.png', tile_grass_c: 'p_grass_c.png',
     tile_soil: 'p_soil.png', tile_path: 'p_path.png', tile_water: 'p_water.png',
+    plot_bed: 'plot_bed.png',
   };
   // Painted iso ground cube tiles. `cy` = fraction of the image height where the
   // diamond-top CENTER sits (so it lands on the cell center; tuned by screenshot).
@@ -484,6 +485,17 @@
       return null;
     },
     _diamond(x, y, tw, th) { const c = this._ctx; c.beginPath(); c.moveTo(x, y - th / 2); c.lineTo(x + tw / 2, y); c.lineTo(x, y + th / 2); c.lineTo(x - tw / 2, y); c.closePath(); },
+    // Clean procedural tilled-soil bed (replaces the muddy p_soil cube tile, which
+    // tiled with dark seams). A flat inset diamond + furrows + a soft raised rim →
+    // neat, distinct Hay-Day plots that tessellate seamlessly.
+    // Empty-plot soil bed: a painted soil cube EXTRACTED from a crop sprite, so it
+    // matches the crops' own baked soil exactly → every plot (empty or planted) is a
+    // consistent raised tilled bed. Bottom-anchored like the crops so heights line up.
+    _tilledDiamond(cx, cy) {
+      const im = this._img.plot_bed, ctx = this._ctx, tw = this._tw(), th = this._th();
+      if (im && im.width) { const w = tw * 1.04, s = w / im.width, hh = im.height * s; ctx.drawImage(im, cx - w / 2, cy + th * 0.6 - hh, w, hh); return; }
+      this._diamond(cx, cy, tw, th); ctx.fillStyle = '#a9743f'; ctx.fill();
+    },
     // Draw a painted cube ground tile centered on cell c (diamond width = TW,
     // ~2% overlap to hide seams), or a flat-diamond fallback while it loads.
     _tileImg(key, c, gx, gy) {
@@ -517,15 +529,16 @@
           const c = this._cell(gx, gy);
           if (c.x + tw < 0 || c.x - tw > W || c.y + th * 4 < 0 || c.y - th * 2 > H) continue;
           const k = gx + ',' + gy;
-          let key = 'grass';
+          let key = 'grass', emptyPlot = false;
           if (plotCells[k]) {
             const pl = Farm.state.data.plots[this._cellToPlot[k]];
-            // empty plot or pixel bok choy → tilled soil tile; painted-crop plots
-            // stay grass (the crop sprite brings its own soil cube).
-            if (pl && pl.unlocked && !(pl.crop && ISO_CROPS[pl.crop])) key = 'soil';
+            // empty unlocked plot → clean tilled bed drawn ON grass (below); planted
+            // painted-crop plots stay grass (the crop sprite brings its own soil cube).
+            if (pl && pl.unlocked && !(pl.crop && ISO_CROPS[pl.crop])) emptyPlot = true;
           }
           if (terrain[k] === 'water') key = 'water'; else if (terrain[k] === 'path') key = 'path';
           this._tileImg(key, c, gx, gy);
+          if (emptyPlot && key === 'grass') this._tilledDiamond(c.x, c.y);
         }
       }
 
@@ -576,17 +589,14 @@
         ctx.font = 'bold ' + (th * 0.42) + 'px "Fredoka",sans-serif'; ctx.fillText('Lv' + (REQUIRED_LV[idx] || 2), c.x, c.y + th * 0.38);
         return;
       }
-      // ground already drew the tilled-soil tile for this cell.
+      // ground already drew the clean tilled bed for this cell; add a small, soft
+      // pulsing "+" hint that you can plant here (subtle — the bed itself reads).
       if (!plot.crop) {
-        // Empty plot → soft pulsing green "+" on a white halo: a clear "tap to
-        // plant here" affordance (the old flat faint "+" was easy to miss).
         const t = Date.now() / 1000, pulse = 0.5 + 0.5 * Math.sin(t * 2 + gx + gy);
-        ctx.beginPath(); ctx.arc(c.x, c.y - th * 0.04, tw * 0.17, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(255,255,255,' + (0.2 + pulse * 0.12) + ')'; ctx.fill();
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.fillStyle = 'rgba(58,140,80,' + (0.72 + pulse * 0.28) + ')';
-        ctx.font = 'bold ' + (th * 0.5) + 'px "Fredoka",sans-serif';
-        ctx.fillText('+', c.x, c.y - th * 0.04); return;
+        ctx.fillStyle = 'rgba(255,248,232,' + (0.34 + pulse * 0.22) + ')';
+        ctx.font = 'bold ' + (th * 0.42) + 'px "Fredoka",sans-serif';
+        ctx.fillText('+', c.x, c.y); return;
       }
       const p = Farm.crops.getProgress ? Farm.crops.getProgress(plot) : 1, mature = Farm.crops.isMature(plot);
       const by = c.y + th * 0.2;   // sprite stands on the diamond
@@ -595,7 +605,7 @@
       const fr = p >= 1 ? 3 : p >= 0.6 ? 2 : p >= 0.25 ? 1 : 0;
       if (ISO_CROPS[plot.crop]) {   // painted iso 4-stage (sprite includes soil cube)
         const im = this._lazyImg(ISO_CROPS[plot.crop] + '_' + fr);
-        if (!this._blit(im, c.x, c.y + th * 0.62, tw * 1.0, th * 3.2)) { const def = Farm.crops.get(plot.crop); ctx.font = (th * 1.1) + 'px sans-serif'; ctx.fillText((def && def.icon) || '🌿', c.x, by); }
+        if (!this._blit(im, c.x, c.y + th * 0.6, tw * 0.92, th * 2.45)) { const def = Farm.crops.get(plot.crop); ctx.font = (th * 1.1) + 'px sans-serif'; ctx.fillText((def && def.icon) || '🌿', c.x, by); }
       } else if (mature) {
         const im = this._cropSprite(plot.crop);
         if (!this._blit(im, c.x, by, tw * 0.72, th * 1.7)) { const def = Farm.crops.get(plot.crop); ctx.font = (th * 1.1) + 'px sans-serif'; ctx.fillText((def && def.icon) || '🥬', c.x, by); }
