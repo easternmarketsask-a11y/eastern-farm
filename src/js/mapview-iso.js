@@ -49,6 +49,10 @@
   const ISO_CROPS = {
     eggplant: 'crop_eggplant', cilantro: 'crop_cilantro', jiucai: 'crop_chives',
     niu_jiao_jiao: 'crop_chili', suan_tai: 'crop_garlic', tomato: 'crop_tomato', cucumber: 'crop_cucumber',
+    // 上海青: the refreshed crop_qingcai sprites now include their OWN soil cube, so
+    // it must go through the ISO_CROPS path (ground stays grass) — otherwise the
+    // ground also draws a soil tile and the two cubes stack → bok choy floats.
+    shanghai_miao: 'crop_qingcai',
   };
   const BUILDINGS = {
     barn: { img: 'barn', w: 2, h: 2, sc: 2.4, zh: '谷仓·仓库', en: 'Barn', tap: 'warehouse' },
@@ -592,8 +596,6 @@
       if (ISO_CROPS[plot.crop]) {   // painted iso 4-stage (sprite includes soil cube)
         const im = this._lazyImg(ISO_CROPS[plot.crop] + '_' + fr);
         if (!this._blit(im, c.x, c.y + th * 0.62, tw * 1.0, th * 3.2)) { const def = Farm.crops.get(plot.crop); ctx.font = (th * 1.1) + 'px sans-serif'; ctx.fillText((def && def.icon) || '🌿', c.x, by); }
-      } else if (plot.crop === 'shanghai_miao') {
-        if (!this._blit(this._img['crop' + fr], c.x, by, tw * 0.8, th * (1.6 + fr * 0.9))) { ctx.font = (th) + 'px sans-serif'; ctx.fillText(mature ? '🥬' : '🌿', c.x, by); }
       } else if (mature) {
         const im = this._cropSprite(plot.crop);
         if (!this._blit(im, c.x, by, tw * 0.72, th * 1.7)) { const def = Farm.crops.get(plot.crop); ctx.font = (th * 1.1) + 'px sans-serif'; ctx.fillText((def && def.icon) || '🥬', c.x, by); }
