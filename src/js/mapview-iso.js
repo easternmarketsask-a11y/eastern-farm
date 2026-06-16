@@ -168,13 +168,29 @@
       this._ctx.setTransform(this._dpr, 0, 0, this._dpr, 0, 0);
     },
     _syncSize() { const r = this._farmRect(); if (Math.abs(r.width - this._w) > 1 || Math.abs(r.height - this._h) > 1) { this._resize(); this._clampCam(); } },
-    // Fit the whole COLS×ROWS iso map within the canvas, centered, on load.
+    // Frame the PLOTS (where ~all taps go), not the whole 9×11 grid. The old code
+    // sized zoom off (COLS+ROWS) — but the on-screen iso width of content is only
+    // its (Δgx+Δgy) diagonal, far less than COLS+ROWS, so it over-shrank to ZMIN
+    // and plots became too small/cramped to tap on phones. Framing the compact plot
+    // block with its REAL screen extent more than doubles tile size (50→110px on a
+    // phone). Buildings sit just off the initial view; a short pan reveals them.
     _autoFrame() {
-      const spanX = (COLS + ROWS) * TW / 2, spanY = (COLS + ROWS) * TH / 2 + TH * 4;
-      this._zoom = Math.min(ZMAX, Math.max(ZMIN, Math.min(this._cssW() / (spanX * 1.06), this._cssH() / (spanY * 1.0))));
-      const ccx = (COLS - 1) / 2, ccy = (ROWS - 1) / 2, u = ccx - ccy, v = ccx + ccy;
+      const plots = Farm.state.data.plots || [];
+      const n = Math.max(1, plots.length);
+      let minx = Infinity, miny = Infinity, maxx = -Infinity, maxy = -Infinity;
+      for (let i = 0; i < n; i++) {
+        const gx = PLOT_OX + (i % PLOT_COLS), gy = PLOT_OY + Math.floor(i / PLOT_COLS);
+        if (gx < minx) minx = gx; if (gy < miny) miny = gy; if (gx > maxx) maxx = gx; if (gy > maxy) maxy = gy;
+      }
+      const span = (maxx - minx) + (maxy - miny);   // iso screen diagonal (du === dv === Δgx+Δgy)
+      const screenW = span * TW / 2, screenH = span * TH / 2 + TH * 2.5;   // +headroom for tall sprites
+      // Cap initial zoom at 0.85: big enough to tap easily (≈78px tiles vs the old
+      // 50px), small enough that all plots + cute crops fit without crowding. Players
+      // can still pinch up to ZMAX or out to ZMIN.
+      this._zoom = Math.min(0.85, Math.max(ZMIN, Math.min(this._cssW() / (screenW * 1.15), this._cssH() / (screenH * 1.05))));
+      const ccx = (minx + maxx) / 2, ccy = (miny + maxy) / 2, u = ccx - ccy, v = ccx + ccy;
       this._camX = u * this._tw() / 2;
-      this._camY = this._oy + v * this._th() / 2 - this._cssH() / 2;
+      this._camY = this._oy + v * this._th() / 2 - this._cssH() / 2 - this._th() * 1.2;   // smaller camY → content sits lower → headroom above
       this._clampCam();
     },
 
@@ -268,7 +284,25 @@
       if (ps != null) { this._pettedReact(ps, p.x, p.y); return; }
       const bidx = this._buildingAt(c.gx, c.gy);
       if (bidx >= 0) { const o = Farm.state.data.map[bidx], b = BUILDINGS[o.type]; if (b.tap === 'warehouse' && Farm.warehouse && Farm.warehouse.open) Farm.warehouse.open(); else if (b.tap === 'shop' && Farm.shop && Farm.shop.open) Farm.shop.open(); else if (Farm.ui && Farm.ui.toast) Farm.ui.toast(this._lang() === 'en' ? b.en : b.zh); return; }
+      // Tap forgiveness: small iso plots are hard to hit dead-center, so if the
+      // tapped cell isn't itself a plot, snap to the nearest plot whose on-screen
+      // center is within reach. Makes planting/harvesting feel reliable on phones.
+      if (this._cellToPlot[c.gx + ',' + c.gy] == null) {
+        const near = this._nearestPlotCell(p.x, p.y);
+        if (near) { this._tapCell(near.gx, near.gy); return; }
+      }
       this._tapCell(c.gx, c.gy);
+    },
+    _nearestPlotCell(px, py) {
+      const plots = Farm.state.data.plots || [];
+      let best = null, bd = Infinity;
+      const reach = this._tw() * 0.62;   // ~half a tile; beyond this it's clearly empty grass
+      for (let i = 0; i < plots.length; i++) {
+        const gx = PLOT_OX + (i % PLOT_COLS), gy = PLOT_OY + Math.floor(i / PLOT_COLS), c = this._cell(gx, gy);
+        const d = Math.hypot(px - c.x, py - c.y);
+        if (d < bd) { bd = d; best = { gx, gy }; }
+      }
+      return bd <= reach ? best : null;
     },
     _wheel(e) { e.preventDefault(); const p = this._local(e); this._zoomAt(p.x, p.y, this._zoom * (e.deltaY < 0 ? 1.12 : 0.89)); },
     _tapCell(gx, gy) {
