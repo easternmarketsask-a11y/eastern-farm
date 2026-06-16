@@ -125,6 +125,8 @@
       cv.style.cssText = 'position:fixed;z-index:5;touch-action:none;display:block;background:#86b030;';
       document.body.appendChild(cv);
       this._cv = cv; this._ctx = cv.getContext('2d');
+      // Match the base grass color so any uncovered edges or background look like nice green field, not black or jarring.
+      cv.style.background = '#a3d977';
 
       Object.keys(ASSET_SRC).forEach((k) => { const im = new Image(); im.onload = () => { this._img[k] = im; if (this._on) this.render(); }; im.src = ASSET_DIR + ASSET_SRC[k]; });
       this._buildLayout();
@@ -586,6 +588,13 @@
       const ctx = this._ctx, tw = this._tw(), th = this._th(), W = this._cssW(), H = this._cssH();
       const terrain = Farm.state.data.mapTerrain || {};
       ctx.clearRect(0, 0, W, H);
+
+      // Base lush green fill (#a3d977) to cover ANY black gaps, steps, voids, or "under" the isometric terraces/cubes.
+      // This makes the entire visible farm sit on a continuous, pretty, vibrant green field like Hay Day — no ugly black "boards" or holes inserted between plots.
+      // The individual p_hayday tiles and tilled overlays add the 3D texture and tilled detail ON TOP of this nice base.
+      // Fixes the "每一块地都插一块黑色板" first impression issue completely. Players will see inviting green land and want to plant.
+      ctx.fillStyle = '#a3d977';
+      ctx.fillRect(0, 0, W, H);
 
       // painted iso cube tiles, back-to-front (front rows cover the row behind's
       // earth skirt → the Hay Day "farm island"). Plot cells use the soil tile.
