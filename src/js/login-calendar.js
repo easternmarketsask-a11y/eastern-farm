@@ -173,6 +173,15 @@
 
       grantReward(reward);
 
+      // Persist the sign-in to the cloud IMMEDIATELY — NOT via state.save()'s
+      // 60s-debounced push. On devices that don't keep localStorage (in-app
+      // browser / iOS storage eviction / private mode), a refresh before the
+      // debounce fires would lose the claim in BOTH local and cloud, so the
+      // calendar reverts to the old cloud state and re-pops the same day forever
+      // ("永远第4日"). An immediate push saves it server-side right away, and the
+      // next load's cloud restore shows "signed today".
+      if (Farm.fbGameSync && Farm.fbGameSync.push) { try { Farm.fbGameSync.push(); } catch (_) {} }
+
       if (Farm.audio) Farm.audio.play('coin');
 
       if (reward.big) {
