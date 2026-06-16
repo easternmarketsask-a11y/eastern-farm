@@ -22,7 +22,8 @@
     barn: 'p_barn.png', house: 'p_house.png', greenhouse: 'p_greenhouse.png', coop: 'p_coop.png', well: 'p_well.png', stall: 'p_stall.png', tree: 'p_tree.png',
     deco_bush: 'deco_bush.png', deco_lantern: 'deco_lantern.png', deco_fence: 'deco_fence.png', deco_wheel: 'deco_wheel.png', deco_bridge: 'deco_bridge.png',
     crop0: 'crop_qingcai_0.png', crop1: 'crop_qingcai_1.png', crop2: 'crop_qingcai_2.png', crop3: 'crop_qingcai_3.png',
-    tile_grass: 'p_grass.png', tile_soil: 'p_soil.png', tile_path: 'p_path.png', tile_water: 'p_water.png',
+    tile_grass: 'p_grass.png', tile_grass_b: 'p_grass_b.png', tile_grass_c: 'p_grass_c.png',
+    tile_soil: 'p_soil.png', tile_path: 'p_path.png', tile_water: 'p_water.png',
   };
   // Painted iso ground cube tiles. `cy` = fraction of the image height where the
   // diamond-top CENTER sits (so it lands on the cell center; tuned by screenshot).
@@ -30,6 +31,19 @@
     grass: { img: 'tile_grass', cy: 0.42 }, soil: { img: 'tile_soil', cy: 0.40 },
     path: { img: 'tile_path', cy: 0.34 }, water: { img: 'tile_water', cy: 0.40 },
   };
+  // Grass variety (Hay Day ground feel): mostly plain, with sparse flowers/mossy
+  // tiles. Each variant keeps its OWN cy anchor (the taller tufts push the flat
+  // top down) so they tessellate flush with the plain tile. Picked deterministically
+  // per cell so the pattern is stable across frames and reloads.
+  const GRASS_VARIANTS = [
+    { img: 'tile_grass', cy: 0.42 },     // plain (most cells)
+    { img: 'tile_grass_b', cy: 0.47 },   // little yellow flowers
+    { img: 'tile_grass_c', cy: 0.50 },   // mossy + bare dirt patch
+  ];
+  function grassVariant(gx, gy) {
+    const h = ((gx * 73856093) ^ (gy * 19349663)) & 0xffff, r = h % 100;
+    return r < 15 ? GRASS_VARIANTS[1] : (r < 25 ? GRASS_VARIANTS[2] : GRASS_VARIANTS[0]);
+  }
   // Painted iso 4-stage crop sprites (each frame includes its own soil cube), keyed
   // by crop id. shanghai_miao keeps its pixel sprite (no cube) — handled separately.
   const ISO_CROPS = {
@@ -406,8 +420,9 @@
     _diamond(x, y, tw, th) { const c = this._ctx; c.beginPath(); c.moveTo(x, y - th / 2); c.lineTo(x + tw / 2, y); c.lineTo(x, y + th / 2); c.lineTo(x - tw / 2, y); c.closePath(); },
     // Draw a painted cube ground tile centered on cell c (diamond width = TW,
     // ~2% overlap to hide seams), or a flat-diamond fallback while it loads.
-    _tileImg(key, c) {
-      const t = ISO_TILES[key], im = t && this._img[t.img], tw = this._tw(), th = this._th();
+    _tileImg(key, c, gx, gy) {
+      const t = (key === 'grass' && gx != null) ? grassVariant(gx, gy) : ISO_TILES[key];
+      const im = t && this._img[t.img], tw = this._tw(), th = this._th();
       if (im) { const w = tw * 1.12, sc = w / im.width, dh = im.height * sc; this._ctx.drawImage(im, c.x - w / 2, c.y - dh * t.cy, w, dh); return; }
       this._diamond(c.x, c.y, tw, th);
       this._ctx.fillStyle = key === 'water' ? '#5aa0c8' : key === 'path' ? '#a8743a' : key === 'soil' ? SOIL_TOP : GRASS_A; this._ctx.fill();
@@ -444,7 +459,7 @@
             if (pl && pl.unlocked && !(pl.crop && ISO_CROPS[pl.crop])) key = 'soil';
           }
           if (terrain[k] === 'water') key = 'water'; else if (terrain[k] === 'path') key = 'path';
-          this._tileImg(key, c);
+          this._tileImg(key, c, gx, gy);
         }
       }
 
