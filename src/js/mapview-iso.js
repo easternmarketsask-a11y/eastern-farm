@@ -21,39 +21,35 @@
   const ASSET_SRC = {
     barn: 'p_barn.png', house: 'p_house.png', greenhouse: 'p_greenhouse.png', coop: 'p_coop.png', well: 'p_well.png', stall: 'p_stall.png', tree: 'p_tree.png',
     deco_bush: 'deco_bush.png', deco_lantern: 'deco_lantern.png', deco_fence: 'deco_fence.png', deco_wheel: 'deco_wheel.png', deco_bridge: 'deco_bridge.png',
-    crop0: 'crop_qingcai_0.png', crop1: 'crop_qingcai_1.png', crop2: 'crop_qingcai_2.png', crop3: 'crop_qingcai_3.png',
-    tile_grass: 'p_grass.png', tile_grass_b: 'p_grass_b.png', tile_grass_c: 'p_grass_c.png',
-    tile_soil: 'p_soil.png', tile_path: 'p_path.png', tile_water: 'p_water.png',
+    // Hay Day highest-quality assets (AI-generated per ART-SPEC-HAYDAY.md, pure plants no soil, consistent style)
+    tile_hayday_grass: 'tile_hayday_grass.png', tile_hayday_grass_b: 'tile_hayday_grass_b.png',
+    tile_hayday_soil: 'tile_hayday_soil.png', tile_hayday_path: 'tile_hayday_path.png', tile_hayday_water: 'tile_hayday_water.png',
     plot_bed: 'plot_bed.png',
   };
   // Painted iso ground cube tiles. `cy` = fraction of the image height where the
   // diamond-top CENTER sits (so it lands on the cell center; tuned by screenshot).
   const ISO_TILES = {
-    grass: { img: 'tile_grass', cy: 0.42 }, soil: { img: 'tile_soil', cy: 0.40 },
-    path: { img: 'tile_path', cy: 0.34 }, water: { img: 'tile_water', cy: 0.40 },
+    // Hay Day quality ground tiles (AI-generated, seamless-tiled diamond style, consistent top-left light)
+    grass: { img: 'tile_hayday_grass', cy: 0.42 }, soil: { img: 'tile_hayday_soil', cy: 0.40 },
+    path: { img: 'tile_hayday_path', cy: 0.34 }, water: { img: 'tile_hayday_water', cy: 0.40 },
   };
   // Grass variety (Hay Day ground feel): mostly plain, with sparse flowers/mossy
-  // tiles. Each variant keeps its OWN cy anchor (the taller tufts push the flat
-  // top down) so they tessellate flush with the plain tile. Picked deterministically
-  // per cell so the pattern is stable across frames and reloads.
+  // tiles. Each variant keeps its OWN cy anchor so they tessellate flush.
   const GRASS_VARIANTS = [
-    { img: 'tile_grass', cy: 0.42 },     // plain (most cells)
-    { img: 'tile_grass_b', cy: 0.47 },   // little yellow flowers
-    { img: 'tile_grass_c', cy: 0.50 },   // mossy + bare dirt patch
+    { img: 'tile_hayday_grass', cy: 0.42 },     // plain (most cells)
+    { img: 'tile_hayday_grass_b', cy: 0.47 },   // little yellow flowers
   ];
   function grassVariant(gx, gy) {
     const h = ((gx * 73856093) ^ (gy * 19349663)) & 0xffff, r = h % 100;
     return r < 15 ? GRASS_VARIANTS[1] : (r < 25 ? GRASS_VARIANTS[2] : GRASS_VARIANTS[0]);
   }
-  // Painted iso 4-stage crop sprites (each frame includes its own soil cube), keyed
-  // by crop id. shanghai_miao keeps its pixel sprite (no cube) — handled separately.
+  // Hay Day highest quality pure-plant 4-stage sprites (AI-generated, NO soil baked in per ART-SPEC-HAYDAY.md).
+  // Ground tiles (tile_hayday_*) always provide the base (grass for world, soil for empty plots).
+  // All 8 core crops now use clean pure plant assets for perfect consistency.
   const ISO_CROPS = {
-    eggplant: 'crop_eggplant', cilantro: 'crop_cilantro', jiucai: 'crop_chives',
-    niu_jiao_jiao: 'crop_chili', suan_tai: 'crop_garlic', tomato: 'crop_tomato', cucumber: 'crop_cucumber',
-    // 上海青: the refreshed crop_qingcai sprites now include their OWN soil cube, so
-    // it must go through the ISO_CROPS path (ground stays grass) — otherwise the
-    // ground also draws a soil tile and the two cubes stack → bok choy floats.
-    shanghai_miao: 'crop_qingcai',
+    eggplant: 'crop_eggplant', cilantro: 'crop_cilantro', jiucai: 'crop_jiucai',
+    niu_jiao_jiao: 'crop_niu_jiao_jiao', suan_tai: 'crop_suan_tai', tomato: 'crop_tomato', cucumber: 'crop_cucumber',
+    shanghai_miao: 'crop_shanghai_miao',
   };
   const BUILDINGS = {
     barn: { img: 'barn', w: 2, h: 2, sc: 2.4, zh: '谷仓·仓库', en: 'Barn', tap: 'warehouse' },
@@ -485,12 +481,8 @@
       return null;
     },
     _diamond(x, y, tw, th) { const c = this._ctx; c.beginPath(); c.moveTo(x, y - th / 2); c.lineTo(x + tw / 2, y); c.lineTo(x, y + th / 2); c.lineTo(x - tw / 2, y); c.closePath(); },
-    // Clean procedural tilled-soil bed (replaces the muddy p_soil cube tile, which
-    // tiled with dark seams). A flat inset diamond + furrows + a soft raised rim →
-    // neat, distinct Hay-Day plots that tessellate seamlessly.
-    // Empty-plot soil bed: a painted soil cube EXTRACTED from a crop sprite, so it
-    // matches the crops' own baked soil exactly → every plot (empty or planted) is a
-    // consistent raised tilled bed. Bottom-anchored like the crops so heights line up.
+    // Hay Day quality tilled bed support (updated for pure-plant assets). Ground tiles
+    // now provide consistent base per ART-SPEC. Procedural kept for enhancement.
     _tilledDiamond(cx, cy) {
       const im = this._img.plot_bed, ctx = this._ctx, tw = this._tw(), th = this._th();
       if (im && im.width) { const w = tw * 1.04, s = w / im.width, hh = im.height * s; ctx.drawImage(im, cx - w / 2, cy + th * 0.6 - hh, w, hh); return; }
@@ -533,8 +525,10 @@
           if (plotCells[k]) {
             const pl = Farm.state.data.plots[this._cellToPlot[k]];
             // empty unlocked plot → clean tilled bed drawn ON grass (below); planted
-            // painted-crop plots stay grass (the crop sprite brings its own soil cube).
-            if (pl && pl.unlocked && !(pl.crop && ISO_CROPS[pl.crop])) emptyPlot = true;
+            // pure plant crops: grass base for planted plots, hayday soil tile for empty tilled look (no baked soil).
+            // Pure plant crops (all 8): empty unlocked plots get hayday soil tile for clear tilled look.
+          // Planted plots use grass base + pure plant sprite on top (no baked soil in crop images).
+          if (pl && pl.unlocked && !pl.crop) emptyPlot = true;
           }
           if (terrain[k] === 'water') key = 'water'; else if (terrain[k] === 'path') key = 'path';
           this._tileImg(key, c, gx, gy);
@@ -603,9 +597,15 @@
       if (mature) { const t = Date.now() / 1000, ph = Math.sin(t * 2 + gx + gy); ctx.beginPath(); ctx.arc(c.x, c.y - th * 0.1, tw * (0.34 + ph * 0.02), 0, Math.PI * 2); ctx.fillStyle = 'rgba(255,214,79,' + (0.3 + ph * 0.08) + ')'; ctx.fill(); }
       ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
       const fr = p >= 1 ? 3 : p >= 0.6 ? 2 : p >= 0.25 ? 1 : 0;
-      if (ISO_CROPS[plot.crop]) {   // painted iso 4-stage (sprite includes soil cube)
+      if (ISO_CROPS[plot.crop]) {   // pure plant 4-stage (NO soil) - highest quality Hay Day style
         const im = this._lazyImg(ISO_CROPS[plot.crop] + '_' + fr);
-        if (!this._blit(im, c.x, c.y + th * 0.6, tw * 0.92, th * 2.45)) { const def = Farm.crops.get(plot.crop); ctx.font = (th * 1.1) + 'px sans-serif'; ctx.fillText((def && def.icon) || '🌿', c.x, by); }
+        // slight y offset tuned for new compact pure plants to sit nicely on the ground tile
+        if (!this._blit(im, c.x, c.y + th * 0.55, tw * 0.92, th * 2.3)) { const def = Farm.crops.get(plot.crop); ctx.font = (th * 1.1) + 'px sans-serif'; ctx.fillText((def && def.icon) || '🌿', c.x, by); }
+        // extra mature glow for premium Hay Day juicy feel (highest quality feedback)
+        if (p >= 1) {
+          ctx.save(); ctx.fillStyle = 'rgba(247,201,72,0.25)'; ctx.beginPath();
+          ctx.arc(c.x, c.y - th * 0.4, tw * 0.28, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+        }
       } else if (mature) {
         const im = this._cropSprite(plot.crop);
         if (!this._blit(im, c.x, by, tw * 0.72, th * 1.7)) { const def = Farm.crops.get(plot.crop); ctx.font = (th * 1.1) + 'px sans-serif'; ctx.fillText((def && def.icon) || '🥬', c.x, by); }
