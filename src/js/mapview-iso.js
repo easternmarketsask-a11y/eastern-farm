@@ -289,7 +289,7 @@
       // chili harvests the right plot. Also gives empty/locked plots a forgiving box.
       const hit = this._plotAtPoint(p.x, p.y);
       if (hit) { this._tapCell(hit.gx, hit.gy); return; }
-      const bidx = this._buildingAt(c.gx, c.gy);
+      const bidx = this._buildingAtPoint(p.x, p.y);
       if (bidx >= 0) { const o = Farm.state.data.map[bidx], b = BUILDINGS[o.type]; if (b.tap === 'warehouse' && Farm.warehouse && Farm.warehouse.open) Farm.warehouse.open(); else if (b.tap === 'shop' && Farm.shop && Farm.shop.open) Farm.shop.open(); else if (Farm.ui && Farm.ui.toast) Farm.ui.toast(this._lang() === 'en' ? b.en : b.zh); return; }
       this._tapCell(c.gx, c.gy);
     },
@@ -361,6 +361,25 @@
       const map = (Farm.state.data.map) || []; let best = -1, bg = -1;
       for (let i = 0; i < map.length; i++) { const o = map[i], b = BUILDINGS[o.type]; if (!b) continue; if (gx >= o.gx && gx < o.gx + b.w && gy >= o.gy && gy < o.gy + b.h && o.gy >= bg) { best = i; bg = o.gy; } }
       return best;
+    },
+    // Frontmost building whose ACTUAL drawn sprite box contains (px,py). Buildings
+    // are very tall (roofs rise far above the footprint), so a cell hit-test misses
+    // roof taps. Mirrors _drawBuilding's anchor + _blit's fit math for an exact box.
+    _buildingAtPoint(px, py) {
+      const map = (Farm.state.data.map) || [], tw = this._tw(), th = this._th();
+      const list = [];
+      for (let i = 0; i < map.length; i++) { const b = BUILDINGS[map[i].type]; if (b) list.push({ o: map[i], i, b }); }
+      list.sort((a, c) => (c.o.gx + c.b.w + c.o.gy + c.b.h) - (a.o.gx + a.b.w + a.o.gy + a.b.h));   // frontmost first
+      for (const { o, i, b } of list) {
+        const cc = this._cell(o.gx + (b.w - 1) / 2, o.gy + (b.h - 1) / 2);
+        const front = this._cell(o.gx + (b.w - 1), o.gy + (b.h - 1));
+        const by = front.y + th / 2 + th * 0.18;
+        const im = this._img[b.img]; let w, h;
+        if (im && im.width) { const s = Math.min(b.w * tw * 1.06 / im.width, b.sc * th * 2.6 / im.height); w = im.width * s; h = im.height * s; }
+        else { w = b.w * tw * 1.06; h = b.sc * th * 2.0; }
+        if (px >= cc.x - w / 2 && px <= cc.x + w / 2 && py >= by - h && py <= by) return i;
+      }
+      return -1;
     },
     _decoAt(gx, gy) { const d = (Farm.state.data.decorations) || []; for (let i = 0; i < d.length; i++) if (d[i].gx === gx && d[i].gy === gy) return i; return -1; },
     _decoCellFree(gx, gy, exceptIdx) {
