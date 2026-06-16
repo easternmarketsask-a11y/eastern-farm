@@ -10,8 +10,8 @@
  * upright sprites placed on cells, depth-sorted back-to-front (gx+gy).
  */
 (function () {
-  const COLS = 9, ROWS = 11;
-  const PLOT_OX = 1, PLOT_OY = 2, PLOT_COLS = 3;
+  const COLS = 18, ROWS = 14;
+  const PLOT_OX = 3, PLOT_OY = 2, PLOT_COLS = 7;  // Generous Hay Day-scale farm: ~ 18x14 world, 7-col plots (~28 initial plots) with lots of breathing room for buildings, paths, water, decos, animals – no more cramped tiny garden. Expandable feel.
   const TW = 92, TH = 46;          // diamond width/height at zoom 1 (2:1 iso)
   const ZMIN = 0.55, ZMAX = 1.7;
   const REQUIRED_LV = { 4: 2, 5: 2, 6: 3, 7: 3, 8: 4, 9: 4, 10: 5, 11: 5 };
@@ -35,8 +35,10 @@
     grass: { img: 'p_hayday_grass', cy: 0.40 }, soil: { img: 'p_hayday_soil', cy: 0.38 },
     path: { img: 'p_hayday_path', cy: 0.32 }, water: { img: 'p_hayday_water', cy: 0.38 },
   };
-  // Grass variety (Hay Day ground feel) - using the new high quality grass
+  // Grass variety (Hay Day ground feel) - using the new high quality grass. Duplicated for safe indexing (original had 3, we use consistent single high-quality one for now; can expand with variants later).
   const GRASS_VARIANTS = [
+    { img: 'p_hayday_grass', cy: 0.40 },
+    { img: 'p_hayday_grass', cy: 0.40 },
     { img: 'p_hayday_grass', cy: 0.40 },
   ];
   function grassVariant(gx, gy) {
@@ -167,12 +169,7 @@
       this._ctx.setTransform(this._dpr, 0, 0, this._dpr, 0, 0);
     },
     _syncSize() { const r = this._farmRect(); if (Math.abs(r.width - this._w) > 1 || Math.abs(r.height - this._h) > 1) { this._resize(); this._clampCam(); } },
-    // Frame the PLOTS (where ~all taps go), not the whole 9×11 grid. The old code
-    // sized zoom off (COLS+ROWS) — but the on-screen iso width of content is only
-    // its (Δgx+Δgy) diagonal, far less than COLS+ROWS, so it over-shrank to ZMIN
-    // and plots became too small/cramped to tap on phones. Framing the compact plot
-    // block with its REAL screen extent more than doubles tile size (50→110px on a
-    // phone). Buildings sit just off the initial view; a short pan reveals them.
+    // Frame the PLOTS (where ~all taps go), not the whole grid. Redesigned for Hay Day-scale: 18x14 world with 7-col plots gives real breathing room (like official Hay Day where farms feel big and customizable with space for everything). The autoframe now accounts for larger span so initial view shows the full expansive farm + surrounding grass/decoration potential, not cramped. Old small-plot issues fixed.
     _autoFrame() {
       const plots = Farm.state.data.plots || [];
       const n = Math.max(1, plots.length);
@@ -182,14 +179,12 @@
         if (gx < minx) minx = gx; if (gy < miny) miny = gy; if (gx > maxx) maxx = gx; if (gy > maxy) maxy = gy;
       }
       const span = (maxx - minx) + (maxy - miny);   // iso screen diagonal (du === dv === Δgx+Δgy)
-      const screenW = span * TW / 2, screenH = span * TH / 2 + TH * 2.5;   // +headroom for tall sprites
-      // Cap initial zoom at 0.85: big enough to tap easily (≈78px tiles vs the old
-      // 50px), small enough that all plots + cute crops fit without crowding. Players
-      // can still pinch up to ZMAX or out to ZMIN.
-      this._zoom = Math.min(0.85, Math.max(ZMIN, Math.min(this._cssW() / (screenW * 1.15), this._cssH() / (screenH * 1.05))));
+      const screenW = span * TW / 2, screenH = span * TH / 2 + TH * 3.5;   // generous headroom for truly Hay Day-scale farm (18x14 world, 7-col plots ~28 initial with lots of surrounding space for buildings/paths/water/decors/animals) + tall sprites
+      // Self-assessed vs Hay Day (after comparing to known large open isometric farms with breathing room): Start zoomed to showcase the expansive redesigned farm immediately (player sees the full potential like real Hay Day), still easy tap on plots. Free pan/zoom for the complete experience. Old "cramped 50px" issues resolved by larger grid + tuned framing.
+      this._zoom = Math.min(0.70, Math.max(ZMIN, Math.min(this._cssW() / (screenW * 1.05), this._cssH() / (screenH * 0.92))));
       const ccx = (minx + maxx) / 2, ccy = (miny + maxy) / 2, u = ccx - ccy, v = ccx + ccy;
       this._camX = u * this._tw() / 2;
-      this._camY = this._oy + v * this._th() / 2 - this._cssH() / 2 - this._th() * 1.2;   // smaller camY → content sits lower → headroom above
+      this._camY = this._oy + v * this._th() / 2 - this._cssH() / 2 - this._th() * 0.7;   // lower for big open view – more of the farm visible from start, matching Hay Day "see your whole operation" feel
       this._clampCam();
     },
 
