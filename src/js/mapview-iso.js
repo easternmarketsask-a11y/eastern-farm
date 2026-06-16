@@ -282,27 +282,36 @@
       if (this._build) { this._sel = this._buildingAt(c.gx, c.gy); this.render(); return; }
       const ps = this._petAt(p.x, p.y);   // tap a roaming pet → ❤️ + sound + hop
       if (ps != null) { this._pettedReact(ps, p.x, p.y); return; }
+      // Depth-aware plot pick: crops are ~3 tiles TALL, so players tap the visible
+      // plant (high up), not its base cell — a plain cell hit-test would land on the
+      // cell BEHIND the plant. Test each plot's on-screen sprite box front-to-back
+      // (frontmost = drawn last = what you actually see) so tapping a tall tomato/
+      // chili harvests the right plot. Also gives empty/locked plots a forgiving box.
+      const hit = this._plotAtPoint(p.x, p.y);
+      if (hit) { this._tapCell(hit.gx, hit.gy); return; }
       const bidx = this._buildingAt(c.gx, c.gy);
       if (bidx >= 0) { const o = Farm.state.data.map[bidx], b = BUILDINGS[o.type]; if (b.tap === 'warehouse' && Farm.warehouse && Farm.warehouse.open) Farm.warehouse.open(); else if (b.tap === 'shop' && Farm.shop && Farm.shop.open) Farm.shop.open(); else if (Farm.ui && Farm.ui.toast) Farm.ui.toast(this._lang() === 'en' ? b.en : b.zh); return; }
-      // Tap forgiveness: small iso plots are hard to hit dead-center, so if the
-      // tapped cell isn't itself a plot, snap to the nearest plot whose on-screen
-      // center is within reach. Makes planting/harvesting feel reliable on phones.
-      if (this._cellToPlot[c.gx + ',' + c.gy] == null) {
-        const near = this._nearestPlotCell(p.x, p.y);
-        if (near) { this._tapCell(near.gx, near.gy); return; }
-      }
       this._tapCell(c.gx, c.gy);
     },
-    _nearestPlotCell(px, py) {
+    // Frontmost plot whose on-screen sprite box contains (px,py). Planted plots get
+    // a tall box (the plant rises ~3 tiles above the base); empty/locked plots get a
+    // ~1-tile box around the diamond. Front-to-back so overlapping crops pick the one
+    // drawn on top.
+    _plotAtPoint(px, py) {
       const plots = Farm.state.data.plots || [];
-      let best = null, bd = Infinity;
-      const reach = this._tw() * 0.62;   // ~half a tile; beyond this it's clearly empty grass
-      for (let i = 0; i < plots.length; i++) {
-        const gx = PLOT_OX + (i % PLOT_COLS), gy = PLOT_OY + Math.floor(i / PLOT_COLS), c = this._cell(gx, gy);
-        const d = Math.hypot(px - c.x, py - c.y);
-        if (d < bd) { bd = d; best = { gx, gy }; }
+      const tw = this._tw(), th = this._th();
+      const list = [];
+      for (let i = 0; i < plots.length; i++) list.push({ i, gx: PLOT_OX + (i % PLOT_COLS), gy: PLOT_OY + Math.floor(i / PLOT_COLS) });
+      list.sort((a, b) => (b.gx + b.gy) - (a.gx + a.gy));   // frontmost first
+      for (const o of list) {
+        const c = this._cell(o.gx, o.gy), pl = plots[o.i];
+        const planted = pl && pl.unlocked && pl.crop;
+        const halfW = tw * (planted ? 0.5 : 0.58);
+        const bot = c.y + th * 0.7;                          // base of the diamond/sprite
+        const top = planted ? c.y - th * 2.8 : c.y - th * 0.6;
+        if (px >= c.x - halfW && px <= c.x + halfW && py >= top && py <= bot) return o;
       }
-      return bd <= reach ? best : null;
+      return null;
     },
     _wheel(e) { e.preventDefault(); const p = this._local(e); this._zoomAt(p.x, p.y, this._zoom * (e.deltaY < 0 ? 1.12 : 0.89)); },
     _tapCell(gx, gy) {
