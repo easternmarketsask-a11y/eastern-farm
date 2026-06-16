@@ -15,8 +15,9 @@
   const TW = 92, TH = 46;          // diamond width/height at zoom 1 (2:1 iso)
   const ZMIN = 0.55, ZMAX = 1.7;
   const REQUIRED_LV = { 4: 2, 5: 2, 6: 3, 7: 3, 8: 4, 9: 4, 10: 5, 11: 5 };
-  const GRASS_A = '#8bbf5a', GRASS_B = '#83b653', GRASS_EDGE = 'rgba(60,90,40,0.18)';
-  const SOIL_TOP = '#9c6b3f', SOIL_FURROW = 'rgba(80,50,26,0.5)';
+  const GRASS_A = '#a3d977', GRASS_B = '#7cb342', GRASS_C = '#5a9c2e'; // brighter, more inviting Hay Day green
+  const SOIL_TOP = '#c9a06e', SOIL_FURROW = '#8b5a3c', SOIL_HIGHLIGHT = '#e8d4a8'; // warm, rich, not dark/black tilled soil
+  const GRASS_EDGE = 'rgba(60,90,40,0.18)';
   const ASSET_DIR = 'assets/images/map/';
   const ASSET_SRC = {
     barn: 'p_barn.png', house: 'p_house.png', greenhouse: 'p_greenhouse.png', coop: 'p_coop.png', well: 'p_well.png', stall: 'p_stall.png', tree: 'p_tree.png',
@@ -481,18 +482,95 @@
     // matches the crops' own baked soil exactly → every plot (empty or planted) is a
     // consistent raised tilled bed. Bottom-anchored like the crops so heights line up.
     _tilledDiamond(cx, cy) {
-      const im = this._img.plot_bed, ctx = this._ctx, tw = this._tw(), th = this._th();
-      if (im && im.width) { const w = tw * 1.04, s = w / im.width, hh = im.height * s; ctx.drawImage(im, cx - w / 2, cy + th * 0.6 - hh, w, hh); return; }
-      this._diamond(cx, cy, tw, th); ctx.fillStyle = '#a9743f'; ctx.fill();
+      const ctx = this._ctx, tw = this._tw(), th = this._th();
+      // Always draw a rich, attractive Hay Day-style tilled bed – never black or flat ugly.
+      // Base warm soil
+      this._diamond(cx, cy, tw, th);
+      ctx.fillStyle = '#c9a06e'; // warm inviting brown
+      ctx.fill();
+
+      // Furrows for tilled look (horizontal lines, slightly darker)
+      ctx.fillStyle = 'rgba(139, 90, 60, 0.55)';
+      for (let i = -3; i <= 3; i++) {
+        const y = cy + i * th * 0.14;
+        ctx.fillRect(cx - tw * 0.38, y - 1, tw * 0.76, 2);
+      }
+
+      // Lighter top rim / highlight for 3D pop and to avoid "black" flat look
+      ctx.fillStyle = 'rgba(232, 212, 168, 0.45)';
+      ctx.fillRect(cx - tw * 0.38, cy - th * 0.42, tw * 0.76, th * 0.12);
+
+      // Small texture dots for soil realism (not solid)
+      ctx.fillStyle = 'rgba(100, 60, 30, 0.35)';
+      for (let i = 0; i < 18; i++) {
+        const rx = cx - tw * 0.35 + Math.random() * tw * 0.7;
+        const ry = cy - th * 0.35 + Math.random() * th * 0.7;
+        ctx.fillRect(rx, ry, 1.8, 1.8);
+      }
+
+      // If the plot_bed image loads, layer it on top for extra 3D painted detail (non-destructive)
+      const im = this._img.plot_bed;
+      if (im && im.width) {
+        const w = tw * 1.04, s = w / im.width, hh = im.height * s;
+        ctx.drawImage(im, cx - w / 2, cy + th * 0.55 - hh, w, hh);
+      }
     },
-    // Draw a painted cube ground tile centered on cell c (diamond width = TW,
-    // ~2% overlap to hide seams), or a flat-diamond fallback while it loads.
+    // Draw a painted cube ground tile (the p_hayday 3D ones for premium volume) or a rich textured fallback.
+    // The fallback is now always attractive (Hay Day-like) so land never looks black/ugly/solid even if images slow or fail.
     _tileImg(key, c, gx, gy) {
       const t = (key === 'grass' && gx != null) ? grassVariant(gx, gy) : ISO_TILES[key];
       const im = t && this._img[t.img], tw = this._tw(), th = this._th();
-      if (im) { const w = tw * 1.12, sc = w / im.width, dh = im.height * sc; this._ctx.drawImage(im, c.x - w / 2, c.y - dh * t.cy, w, dh); return; }
+      if (im && im.width) { const w = tw * 1.12, sc = w / im.width, dh = im.height * sc; this._ctx.drawImage(im, c.x - w / 2, c.y - dh * t.cy, w, dh); return; }
+      // === Robust beautiful fallback (the land will always look good and inviting) ===
       this._diamond(c.x, c.y, tw, th);
-      this._ctx.fillStyle = key === 'water' ? '#5aa0c8' : key === 'path' ? '#a8743a' : key === 'soil' ? SOIL_TOP : GRASS_A; this._ctx.fill();
+      if (key === 'grass') {
+        this._ctx.fillStyle = GRASS_A; this._ctx.fill();
+        // lush blade texture - random small strokes for organic Hay Day grass feel
+        this._ctx.fillStyle = GRASS_B;
+        for (let i = 0; i < 35; i++) {
+          const rx = c.x - tw * 0.45 + Math.random() * tw * 0.9;
+          const ry = c.y - th * 0.45 + Math.random() * th * 0.9;
+          this._ctx.fillRect(rx, ry, 1.5, 3 + Math.random() * 2);
+        }
+        this._ctx.fillStyle = GRASS_C;
+        for (let i = 0; i < 12; i++) {
+          const rx = c.x - tw * 0.4 + Math.random() * tw * 0.8;
+          const ry = c.y - th * 0.4 + Math.random() * th * 0.8;
+          this._ctx.fillRect(rx, ry, 2, 4);
+        }
+      } else if (key === 'soil') {
+        this._ctx.fillStyle = SOIL_TOP; this._ctx.fill();
+        // tilled furrows and texture - rich, not black, inviting to plant
+        this._ctx.fillStyle = SOIL_FURROW;
+        for (let i = 0; i < 5; i++) {
+          const y = c.y - th * 0.35 + i * th * 0.18;
+          this._ctx.fillRect(c.x - tw * 0.42, y, tw * 0.84, 2);
+        }
+        // small dots for soil detail
+        this._ctx.fillStyle = 'rgba(139,90,60,0.4)';
+        for (let i = 0; i < 25; i++) {
+          const rx = c.x - tw * 0.4 + Math.random() * tw * 0.8;
+          const ry = c.y - th * 0.4 + Math.random() * th * 0.8;
+          this._ctx.fillRect(rx, ry, 1.5, 1.5);
+        }
+      } else if (key === 'path') {
+        this._ctx.fillStyle = '#c9a06e'; this._ctx.fill();
+        this._ctx.fillStyle = 'rgba(139,90,60,0.5)';
+        for (let i = 0; i < 18; i++) {
+          const rx = c.x - tw * 0.4 + Math.random() * tw * 0.8;
+          const ry = c.y - th * 0.4 + Math.random() * th * 0.8;
+          this._ctx.fillRect(rx, ry, 2, 2);
+        }
+      } else if (key === 'water') {
+        this._ctx.fillStyle = '#5aa0c8'; this._ctx.fill();
+        this._ctx.fillStyle = 'rgba(255,255,255,0.25)';
+        for (let i = 0; i < 4; i++) {
+          const y = c.y - th * 0.2 + i * th * 0.25;
+          this._ctx.fillRect(c.x - tw * 0.35, y, tw * 0.7, 1.5);
+        }
+      } else {
+        this._ctx.fillStyle = GRASS_A; this._ctx.fill();
+      }
     },
     _startLoop() {
       const loop = () => {
