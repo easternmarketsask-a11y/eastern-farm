@@ -10,8 +10,8 @@
  * upright sprites placed on cells, depth-sorted back-to-front (gx+gy).
  */
 (function () {
-  const COLS = 18, ROWS = 14;
-  const PLOT_OX = 3, PLOT_OY = 2, PLOT_COLS = 7;  // Generous Hay Day-scale farm: ~ 18x14 world, 7-col plots (~28 initial plots) with lots of breathing room for buildings, paths, water, decos, animals – no more cramped tiny garden. Expandable feel.
+  const COLS = 20, ROWS = 15;
+  const PLOT_OX = 3, PLOT_OY = 2, PLOT_COLS = 8;  // Hay Day-scale attack: 20x15 world, 8-col plots (~40 initial) for true expansive breathing room. Room for large fields + scattered buildings/paths/water/decors without cramping. Feels like a real farm you can grow into.
   const TW = 92, TH = 46;          // diamond width/height at zoom 1 (2:1 iso)
   const ZMIN = 0.55, ZMAX = 1.7;
   const REQUIRED_LV = { 4: 2, 5: 2, 6: 3, 7: 3, 8: 4, 9: 4, 10: 5, 11: 5 };
@@ -21,8 +21,9 @@
   const ASSET_SRC = {
     barn: 'p_barn.png', house: 'p_house.png', greenhouse: 'p_greenhouse.png', coop: 'p_coop.png', well: 'p_well.png', stall: 'p_stall.png', tree: 'p_tree.png',
     deco_bush: 'deco_bush.png', deco_lantern: 'deco_lantern.png', deco_fence: 'deco_fence.png', deco_wheel: 'deco_wheel.png', deco_bridge: 'deco_bridge.png',
-    // Reworked Hay Day authentic painted cube ground (generated referencing actual p_grass.png and p_barn.png for exact 3D cube projection, top diamond + side depth + skirt, lighting and seamless tiling). Pure plant crops only.
+    // 3D VOLUME UPGRADE: New refined p_hayday_* ground tiles with proper painted cube projection (top + sides + skirt) generated from p_grass/p_barn refs for authentic Hay Day 3D pop when drawn with cy offset. 
     p_hayday_grass: 'p_hayday_grass.png',
+    p_hayday_grass_b: 'p_hayday_grass_b.png',
     p_hayday_soil: 'p_hayday_soil.png',
     p_hayday_path: 'p_hayday_path.png',
     p_hayday_water: 'p_hayday_water.png',
@@ -32,14 +33,13 @@
   // diamond-top CENTER sits (so it lands on the cell center; tuned by screenshot).
   // Fresh high-quality assets generated with Grok + p_barn/p_grass references for authentic Hay Day painted cube look (3D depth, top diamond + sides, lighting). 
   const ISO_TILES = {
-    grass: { img: 'p_hayday_grass', cy: 0.40 }, soil: { img: 'p_hayday_soil', cy: 0.38 },
-    path: { img: 'p_hayday_path', cy: 0.32 }, water: { img: 'p_hayday_water', cy: 0.38 },
+    grass: { img: 'p_hayday_grass', cy: 0.42 }, soil: { img: 'p_hayday_soil', cy: 0.39 },
+    path: { img: 'p_hayday_path', cy: 0.33 }, water: { img: 'p_hayday_water', cy: 0.39 },
   };
   // Grass variety (Hay Day ground feel) - using the new high quality grass. Duplicated for safe indexing (original had 3, we use consistent single high-quality one for now; can expand with variants later).
   const GRASS_VARIANTS = [
-    { img: 'p_hayday_grass', cy: 0.40 },
-    { img: 'p_hayday_grass', cy: 0.40 },
-    { img: 'p_hayday_grass', cy: 0.40 },
+    { img: 'p_hayday_grass', cy: 0.42 },
+    { img: 'p_hayday_grass_b', cy: 0.43 },
   ];
   function grassVariant(gx, gy) {
     const h = ((gx * 73856093) ^ (gy * 19349663)) & 0xffff, r = h % 100;
@@ -169,7 +169,7 @@
       this._ctx.setTransform(this._dpr, 0, 0, this._dpr, 0, 0);
     },
     _syncSize() { const r = this._farmRect(); if (Math.abs(r.width - this._w) > 1 || Math.abs(r.height - this._h) > 1) { this._resize(); this._clampCam(); } },
-    // Frame the PLOTS (where ~all taps go), not the whole grid. Redesigned for Hay Day-scale: 18x14 world with 7-col plots gives real breathing room (like official Hay Day where farms feel big and customizable with space for everything). The autoframe now accounts for larger span so initial view shows the full expansive farm + surrounding grass/decoration potential, not cramped. Old small-plot issues fixed.
+    // Frame the PLOTS for the big Hay Day-scale farm (20x15 world, 8-col plots). Autoframe prioritizes showing generous open space around the action area so it feels like a living, expandable farm rather than a tight grid. Extra headroom for the new 3D ground tiles' visual volume.
     _autoFrame() {
       const plots = Farm.state.data.plots || [];
       const n = Math.max(1, plots.length);
