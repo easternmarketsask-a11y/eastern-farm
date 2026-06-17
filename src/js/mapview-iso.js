@@ -46,6 +46,18 @@
     const h = ((gx * 73856093) ^ (gy * 19349663)) & 0xffff, r = h % 100;
     return r < 18 ? GRASS_VARIANTS[1] : GRASS_VARIANTS[0];
   }
+
+  // Stable seeded "random" for ground textures. Math.random() every frame
+  // caused the grass to sparkle/flicker (very glaring). Using gx,gy,salt
+  // makes every blade/dot position fixed per cell → calm, tile-like, no strobe.
+  function seeded(gx, gy, salt) {
+    gx = gx | 0; gy = gy | 0; salt = salt | 0;
+    let h = (gx * 374761393) ^ (gy * 668265263) ^ (salt * 2147483647);
+    h = (h ^ (h >>> 13)) >>> 0;
+    h = Math.imul(h, 1274126177) >>> 0;
+    return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+  }
+
   // High-quality pure plant 4-stage sprites (fresh Grok generation with p_barn/p_grass references for consistent Hay Day painted style across ground and objects, no soil baked in at all). Ground p_hayday tiles provide the base.
   const ISO_CROPS = {
     eggplant: 'crop_eggplant', cilantro: 'crop_cilantro', jiucai: 'crop_jiucai',
@@ -505,8 +517,8 @@
       // Small texture dots for soil realism (not solid)
       ctx.fillStyle = 'rgba(100, 60, 30, 0.35)';
       for (let i = 0; i < 18; i++) {
-        const rx = cx - tw * 0.35 + Math.random() * tw * 0.7;
-        const ry = cy - th * 0.35 + Math.random() * th * 0.7;
+        const rx = cx - tw * 0.35 + seeded(cx / tw | 0, cy / th | 0, i + 800) * tw * 0.7;
+        const ry = cy - th * 0.35 + seeded(cx / tw | 0, cy / th | 0, i + 900) * th * 0.7;
         ctx.fillRect(rx, ry, 1.8, 1.8);
       }
 
@@ -572,16 +584,19 @@
       // continuous vibrant land (no black boards/gaps), Hay Day chunky 3D pop.
       if (key === 'grass') {
         this._ctx.fillStyle = GRASS_B;
-        for (let i = 0; i < 35; i++) {
-          const rx = c.x - tw * 0.45 + Math.random() * tw * 0.9;
-          const ry = c.y - th * 0.45 + Math.random() * th * 0.9;
-          this._ctx.fillRect(rx, ry, 1.5, 3 + Math.random() * 2);
+        // Reduced count + seeded (no per-frame random) → calm solid grass,
+        // no sparkling or glare. The p_hayday flat top already gives painted
+        // variation; these are just subtle accent blades.
+        for (let i = 0; i < 18; i++) {
+          const rx = c.x - tw * 0.45 + seeded(gx, gy, i) * tw * 0.9;
+          const ry = c.y - th * 0.45 + seeded(gx, gy, i + 100) * th * 0.9;
+          this._ctx.fillRect(rx, ry, 1.5, 2.8);
         }
         this._ctx.fillStyle = GRASS_C;
-        for (let i = 0; i < 15; i++) {
-          const rx = c.x - tw * 0.4 + Math.random() * tw * 0.8;
-          const ry = c.y - th * 0.4 + Math.random() * th * 0.8;
-          this._ctx.fillRect(rx, ry, 2, 4);
+        for (let i = 0; i < 7; i++) {
+          const rx = c.x - tw * 0.4 + seeded(gx, gy, i + 200) * tw * 0.8;
+          const ry = c.y - th * 0.4 + seeded(gx, gy, i + 300) * th * 0.8;
+          this._ctx.fillRect(rx, ry, 2, 3.5);
         }
       } else if (key === 'soil') {
         this._ctx.fillStyle = 'rgba(139,90,60,0.55)';
@@ -590,16 +605,16 @@
           this._ctx.fillRect(c.x - tw * 0.4, y, tw * 0.8, 2.5);
         }
         this._ctx.fillStyle = 'rgba(100,60,30,0.4)';
-        for (let i = 0; i < 30; i++) {
-          const rx = c.x - tw * 0.38 + Math.random() * tw * 0.76;
-          const ry = c.y - th * 0.38 + Math.random() * th * 0.76;
+        for (let i = 0; i < 12; i++) {
+          const rx = c.x - tw * 0.38 + seeded(gx, gy, i + 400) * tw * 0.76;
+          const ry = c.y - th * 0.38 + seeded(gx, gy, i + 500) * th * 0.76;
           this._ctx.fillRect(rx, ry, 2, 2);
         }
       } else if (key === 'path') {
         this._ctx.fillStyle = 'rgba(139,90,60,0.5)';
-        for (let i = 0; i < 20; i++) {
-          const rx = c.x - tw * 0.4 + Math.random() * tw * 0.8;
-          const ry = c.y - th * 0.4 + Math.random() * th * 0.8;
+        for (let i = 0; i < 10; i++) {
+          const rx = c.x - tw * 0.4 + seeded(gx, gy, i + 600) * tw * 0.8;
+          const ry = c.y - th * 0.4 + seeded(gx, gy, i + 700) * th * 0.8;
           this._ctx.fillRect(rx, ry, 2.5, 2.5);
         }
       } else if (key === 'water') {
