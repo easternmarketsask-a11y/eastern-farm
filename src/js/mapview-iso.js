@@ -25,6 +25,7 @@
     tile_grass: 'p_grass.png', tile_grass_b: 'p_grass_b.png', tile_grass_c: 'p_grass_c.png',
     tile_soil: 'p_soil.png', tile_path: 'p_path.png', tile_water: 'p_water.png',
     plot_bed: 'plot_bed.png',
+    hd_grass: 'hd_grass.png', hd_soil: 'hd_soil.png',   // flat 1:1 diamond tiles (Grok) → clean Hay-Day field
   };
   // Painted iso ground cube tiles. `cy` = fraction of the image height where the
   // diamond-top CENTER sits (so it lands on the cell center; tuned by screenshot).
@@ -498,12 +499,24 @@
     },
     // Draw a painted cube ground tile centered on cell c (diamond width = TW,
     // ~2% overlap to hide seams), or a flat-diamond fallback while it loads.
-    _tileImg(key, c, gx, gy) {
-      const t = (key === 'grass' && gx != null) ? grassVariant(gx, gy) : ISO_TILES[key];
-      const im = t && this._img[t.img], tw = this._tw(), th = this._th();
-      if (im) { const w = tw * 1.12, sc = w / im.width, dh = im.height * sc; this._ctx.drawImage(im, c.x - w / 2, c.y - dh * t.cy, w, dh); return; }
+    _tileImg(key, c) {
+      const ctx = this._ctx, tw = this._tw(), th = this._th();
+      // grass & soil = flat 1:1 diamond images, squished to the 2:1 cell and centered
+      // → they tessellate edge-to-edge into a clean continuous field (no cube skirts /
+      // black "boards" / quilt). overlap a hair to hide anti-aliased seams.
+      if (key === 'grass') return;   // grass = the smooth solid base fill (drawn in render); no per-tile quilt
+      if (key === 'soil') {
+        // Chris's painted tilled-soil bed (raised cube). Drawn per plot → distinct
+        // raised beds on the green field, Hay-Day style. cy = top-face center fraction.
+        const im = this._img.hd_soil;
+        if (im) { const w = tw * 1.18, sc = w / im.width, dh = im.height * sc; ctx.drawImage(im, c.x - w / 2, c.y - dh * 0.42, w, dh); return; }
+        this._diamond(c.x, c.y, tw, th); ctx.fillStyle = SOIL_TOP; ctx.fill(); return;
+      }
+      // path / water keep the painted cube tiles
+      const t = ISO_TILES[key], im = t && this._img[t.img];
+      if (im) { const w = tw * 1.12, sc = w / im.width, dh = im.height * sc; ctx.drawImage(im, c.x - w / 2, c.y - dh * t.cy, w, dh); return; }
       this._diamond(c.x, c.y, tw, th);
-      this._ctx.fillStyle = key === 'water' ? '#5aa0c8' : key === 'path' ? '#a8743a' : key === 'soil' ? SOIL_TOP : GRASS_A; this._ctx.fill();
+      ctx.fillStyle = key === 'water' ? '#5aa0c8' : key === 'path' ? '#a8743a' : GRASS_A; ctx.fill();
     },
     _startLoop() {
       const loop = () => {
@@ -519,9 +532,14 @@
       const ctx = this._ctx, tw = this._tw(), th = this._th(), W = this._cssW(), H = this._cssH();
       const terrain = Farm.state.data.mapTerrain || {};
       ctx.clearRect(0, 0, W, H);
+      // Smooth solid grass base (gentle top→bottom gradient) — no tiled grass, so no
+      // quilt/checkerboard. Soil beds, terrain, crops, buildings draw on top.
+      const bg = ctx.createLinearGradient(0, 0, 0, H);
+      bg.addColorStop(0, '#9ccb5b'); bg.addColorStop(1, '#84ba48');
+      ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
 
-      // painted iso cube tiles, back-to-front (front rows cover the row behind's
-      // earth skirt → the Hay Day "farm island"). Plot cells use the soil tile.
+      // Soil beds (plots) + terrain tiles, back-to-front. Grass cells draw nothing
+      // (the base shows through). Plot cells use the raised soil bed.
       const plotCells = this._plotCellSet();
       for (let s = 0; s <= (COLS - 1) + (ROWS - 1); s++) {
         for (let gx = 0; gx < COLS; gx++) {
@@ -529,16 +547,15 @@
           const c = this._cell(gx, gy);
           if (c.x + tw < 0 || c.x - tw > W || c.y + th * 4 < 0 || c.y - th * 2 > H) continue;
           const k = gx + ',' + gy;
-          let key = 'grass', emptyPlot = false;
+          let key = 'grass';
           if (plotCells[k]) {
             const pl = Farm.state.data.plots[this._cellToPlot[k]];
-            // empty unlocked plot → clean tilled bed drawn ON grass (below); planted
-            // painted-crop plots stay grass (the crop sprite brings its own soil cube).
-            if (pl && pl.unlocked && !(pl.crop && ISO_CROPS[pl.crop])) emptyPlot = true;
+            // every UNLOCKED plot (empty or planted) gets the soil bed → a uniform
+            // tilled field; pure-plant crops sit on top. Locked plots stay grass.
+            if (pl && pl.unlocked) key = 'soil';
           }
           if (terrain[k] === 'water') key = 'water'; else if (terrain[k] === 'path') key = 'path';
-          this._tileImg(key, c, gx, gy);
-          if (emptyPlot && key === 'grass') this._tilledDiamond(c.x, c.y);
+          if (key !== 'grass') this._tileImg(key, c);
         }
       }
 
@@ -603,9 +620,9 @@
       if (mature) { const t = Date.now() / 1000, ph = Math.sin(t * 2 + gx + gy); ctx.beginPath(); ctx.arc(c.x, c.y - th * 0.1, tw * (0.34 + ph * 0.02), 0, Math.PI * 2); ctx.fillStyle = 'rgba(255,214,79,' + (0.3 + ph * 0.08) + ')'; ctx.fill(); }
       ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
       const fr = p >= 1 ? 3 : p >= 0.6 ? 2 : p >= 0.25 ? 1 : 0;
-      if (ISO_CROPS[plot.crop]) {   // painted iso 4-stage (sprite includes soil cube)
+      if (ISO_CROPS[plot.crop]) {   // pure-plant 4-stage sprite — sits IN the soil bed
         const im = this._lazyImg(ISO_CROPS[plot.crop] + '_' + fr);
-        if (!this._blit(im, c.x, c.y + th * 0.6, tw * 0.92, th * 2.45)) { const def = Farm.crops.get(plot.crop); ctx.font = (th * 1.1) + 'px sans-serif'; ctx.fillText((def && def.icon) || '🌿', c.x, by); }
+        if (!this._blit(im, c.x, c.y + th * 0.34, tw * 0.92, th * 2.6)) { const def = Farm.crops.get(plot.crop); ctx.font = (th * 1.1) + 'px sans-serif'; ctx.fillText((def && def.icon) || '🌿', c.x, by); }
       } else if (mature) {
         const im = this._cropSprite(plot.crop);
         if (!this._blit(im, c.x, by, tw * 0.72, th * 1.7)) { const def = Farm.crops.get(plot.crop); ctx.font = (th * 1.1) + 'px sans-serif'; ctx.fillText((def && def.icon) || '🥬', c.x, by); }
