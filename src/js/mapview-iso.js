@@ -34,17 +34,17 @@
   // diamond-top CENTER sits (so it lands on the cell center; tuned by screenshot).
   // Fresh high-quality assets generated with Grok + p_barn/p_grass references for authentic Hay Day painted cube look (3D depth, top diamond + sides, lighting). 
   const ISO_TILES = {
-    grass: { img: 'p_hayday_grass', cy: 0.42 }, soil: { img: 'p_hayday_soil', cy: 0.39 },
-    path: { img: 'p_hayday_path', cy: 0.33 }, water: { img: 'p_hayday_water', cy: 0.39 },
+    grass: { img: 'p_hayday_grass', cy: 0.40 }, soil: { img: 'p_hayday_soil', cy: 0.38 },
+    path: { img: 'p_hayday_path', cy: 0.32 }, water: { img: 'p_hayday_water', cy: 0.38 },
   };
-  // Grass variety (Hay Day ground feel) - using the new high quality grass. Duplicated for safe indexing (original had 3, we use consistent single high-quality one for now; can expand with variants later).
+  // Grass variety (Hay Day ground feel)
   const GRASS_VARIANTS = [
-    { img: 'p_hayday_grass', cy: 0.42 },
-    { img: 'p_hayday_grass_b', cy: 0.43 },
+    { img: 'p_hayday_grass', cy: 0.40 },
+    { img: 'p_hayday_grass_b', cy: 0.41 },
   ];
   function grassVariant(gx, gy) {
     const h = ((gx * 73856093) ^ (gy * 19349663)) & 0xffff, r = h % 100;
-    return r < 15 ? GRASS_VARIANTS[1] : (r < 25 ? GRASS_VARIANTS[2] : GRASS_VARIANTS[0]);
+    return r < 18 ? GRASS_VARIANTS[1] : GRASS_VARIANTS[0];
   }
   // High-quality pure plant 4-stage sprites (fresh Grok generation with p_barn/p_grass references for consistent Hay Day painted style across ground and objects, no soil baked in at all). Ground p_hayday tiles provide the base.
   const ISO_CROPS = {
@@ -182,12 +182,12 @@
         if (gx < minx) minx = gx; if (gy < miny) miny = gy; if (gx > maxx) maxx = gx; if (gy > maxy) maxy = gy;
       }
       const span = (maxx - minx) + (maxy - miny);   // iso screen diagonal (du === dv === Δgx+Δgy)
-      const screenW = span * TW / 2, screenH = span * TH / 2 + TH * 5.0;   // ultimate for 28x20 vast world: shows enormous open grass layers + scattered decos from first frame, pure Hay Day "this is MY big farm" magic.
+      const screenW = span * TW / 2, screenH = span * TH / 2 + TH * 6.5;   // ultimate for 28x20 vast world: shows enormous open grass layers + scattered decos from first frame, pure Hay Day "this is MY big farm" magic.
       // Self-assessed vs Hay Day: Lowest zoom to immediately reveal the massive scale, breathing room, and composed layers (open periphery, not grid). Player gets the "wow" ownership instantly. Tuned precisely for new 3D ground pop.
-      this._zoom = Math.min(0.58, Math.max(ZMIN, Math.min(this._cssW() / (screenW * 0.95), this._cssH() / (screenH * 0.85))));
+      this._zoom = Math.min(0.52, Math.max(ZMIN, Math.min(this._cssW() / (screenW * 0.92), this._cssH() / (screenH * 0.88))));
       const ccx = (minx + maxx) / 2, ccy = (miny + maxy) / 2, u = ccx - ccy, v = ccx + ccy;
       this._camX = u * this._tw() / 2;
-      this._camY = this._oy + v * this._th() / 2 - this._cssH() / 2 - this._th() * 0.3;   // lowest for max world reveal and that signature Hay Day initial "expansive farm" composition
+      this._camY = this._oy + v * this._th() / 2 - this._cssH() / 2 - this._th() * 0.15;   // lowest for max world reveal and that signature Hay Day initial "expansive farm" composition
       this._clampCam();
     },
 
@@ -517,13 +517,17 @@
         ctx.drawImage(im, cx - w / 2, cy + th * 0.55 - hh, w, hh);
       }
     },
-    // Draw a painted cube ground tile (the p_hayday 3D ones for premium volume) or a rich textured fallback.
-    // The fallback is now always attractive (Hay Day-like) so land never looks black/ugly/solid even if images slow or fail.
+    // Draw a painted cube ground tile (p_hayday_* for premium Hay Day 3D volume) + always-bright base + top texture.
+    // Clipped image draw + diamond fill guarantees ZERO black boards/gaps between plots — continuous painted land.
+    // Textures layered on top give the final chunky pop and life. Fallbacks are rich so never ugly/black.
     _tileImg(key, c, gx, gy) {
       const t = (key === 'grass' && gx != null) ? grassVariant(gx, gy) : ISO_TILES[key];
       const im = t && this._img[t.img], tw = this._tw(), th = this._th();
       // Always draw bright base diamond first to kill black.
-      this._diamond(c.x, c.y, tw, th);
+      // Slightly oversized (1.02x) so adjacent tiles overlap 1px and wipe any
+      // sub-pixel seams or gaps — continuous solid land like Hay Day, never
+      // stepped black boards.
+      this._diamond(c.x, c.y, tw * 1.02, th * 1.02);
       let baseColor = GRASS_A;
       if (key === 'soil') baseColor = '#c9a06e';
       else if (key === 'path') baseColor = '#d4a574';
@@ -531,7 +535,23 @@
       this._ctx.fillStyle = baseColor;
       this._ctx.fill();
 
-      // Rich texture on base.
+      if (im && im.width) {
+        const w = tw * 1.12, sc = w / im.width, dh = im.height * sc;
+        // Clip draw to exact diamond: guarantees perfect tessellation with no
+        // black boards/gaps from image borders or skirts (the PNG black/white
+        // corners are now outside the clip and never paint). The painted cube
+        // interior still delivers 3D top/side volume pop *inside* the cell.
+        this._ctx.save();
+        this._diamond(c.x, c.y, tw, th);
+        this._ctx.clip();
+        this._ctx.drawImage(im, c.x - w / 2, c.y - dh * t.cy, w, dh);
+        this._ctx.restore();
+      }
+
+      // Re-apply rich texture ON TOP of the (clipped) painted image so grass
+      // blades / soil furrows / path dots / water highlights read clearly.
+      // Base bright color + clipped painted 3D image + top texture =
+      // continuous vibrant land (no black boards/gaps), Hay Day chunky 3D pop.
       if (key === 'grass') {
         this._ctx.fillStyle = GRASS_B;
         for (let i = 0; i < 35; i++) {
@@ -558,8 +578,6 @@
           this._ctx.fillRect(rx, ry, 2, 2);
         }
       } else if (key === 'path') {
-        this._ctx.fillStyle = '#d4a574';
-        this._ctx.fill();
         this._ctx.fillStyle = 'rgba(139,90,60,0.5)';
         for (let i = 0; i < 20; i++) {
           const rx = c.x - tw * 0.4 + Math.random() * tw * 0.8;
@@ -567,21 +585,11 @@
           this._ctx.fillRect(rx, ry, 2.5, 2.5);
         }
       } else if (key === 'water') {
-        this._ctx.fillStyle = '#5aa0c8';
-        this._ctx.fill();
         this._ctx.fillStyle = 'rgba(255,255,255,0.3)';
         for (let i = 0; i < 5; i++) {
           const y = c.y - th * 0.25 + i * th * 0.2;
           this._ctx.fillRect(c.x - tw * 0.35, y, tw * 0.7, 2);
         }
-      }
-
-      if (im && im.width) {
-        const w = tw * 1.12, sc = w / im.width, dh = im.height * sc;
-        this._ctx.drawImage(im, c.x - w / 2, c.y - dh * t.cy, w, dh);
-        // Overpaint lower skirt with base to hide black board.
-        this._ctx.fillStyle = baseColor;
-        this._ctx.fillRect(c.x - tw * 0.5, c.y + th * 0.08, tw, th * 0.6);
       }
     },
     _startLoop() {
