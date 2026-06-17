@@ -536,16 +536,34 @@
       this._ctx.fill();
 
       if (im && im.width) {
-        const w = tw * 1.12, sc = w / im.width, dh = im.height * sc;
-        // Clip draw to exact diamond: guarantees perfect tessellation with no
-        // black boards/gaps from image borders or skirts (the PNG black/white
-        // corners are now outside the clip and never paint). The painted cube
-        // interior still delivers 3D top/side volume pop *inside* the cell.
-        this._ctx.save();
-        this._diamond(c.x, c.y, tw, th);
-        this._ctx.clip();
-        this._ctx.drawImage(im, c.x - w / 2, c.y - dh * t.cy, w, dh);
-        this._ctx.restore();
+        const w = tw * 1.15;
+        const sc = w / im.width;
+        if (key === 'grass' || key === 'soil') {
+          // FLAT TOP FACE ONLY for grass/soil.
+          // Hay Day style: the land is a continuous painted carpet (bright,
+          // unified, no dark skirts or "boards" between rows). We take only the
+          // upper portion of the p_hayday cube image (the flat top diamond)
+          // and stamp it on the solid base slab + texture. 3D volume comes from
+          // crops, buildings, animals and subtle highlights. No more terraced black.
+          const topFrac = 0.55;
+          const srcH = im.height * topFrac;
+          const dstH = im.height * sc * topFrac;
+          const dx = c.x - w / 2;
+          const dy = c.y - dstH * 0.58;
+          this._ctx.save();
+          this._diamond(c.x, c.y, tw, th);
+          this._ctx.clip();
+          this._ctx.drawImage(im, 0, 0, im.width, srcH, dx, dy, w, dstH);
+          this._ctx.restore();
+        } else {
+          // path/water keep more of their volume if desired
+          const dh = im.height * sc;
+          this._ctx.save();
+          this._diamond(c.x, c.y, tw, th);
+          this._ctx.clip();
+          this._ctx.drawImage(im, c.x - w / 2, c.y - dh * t.cy, w, dh);
+          this._ctx.restore();
+        }
       }
 
       // Re-apply rich texture ON TOP of the (clipped) painted image so grass
@@ -613,6 +631,24 @@
       // Fixes the "每一块地都插一块黑色板" first impression issue completely. Players will see inviting green land and want to plant.
       ctx.fillStyle = '#a3d977';
       ctx.fillRect(0, 0, W, H);
+
+      // Solid land mass slab for the ENTIRE world grid.
+      // This paints one continuous vibrant green field under everything so there
+      // are ZERO black steps, trenches, voids or "boards" between iso rows — exactly
+      // the continuous painted farm look in Hay Day. Tile images + texture add
+      // the nice painted variation and detail on top of the solid slab.
+      const c0 = this._cell(0, 0);
+      const c1 = this._cell(COLS-1, 0);
+      const c2 = this._cell(COLS-1, ROWS-1);
+      const c3 = this._cell(0, ROWS-1);
+      ctx.fillStyle = '#a3d977';
+      ctx.beginPath();
+      ctx.moveTo(c0.x, c0.y - th * 0.65);
+      ctx.lineTo(c1.x + tw * 0.6, c1.y);
+      ctx.lineTo(c2.x, c2.y + th * 0.6);
+      ctx.lineTo(c3.x - tw * 0.6, c3.y);
+      ctx.closePath();
+      ctx.fill();
 
       // painted iso cube tiles, back-to-front (front rows cover the row behind's
       // earth skirt → the Hay Day "farm island"). Plot cells use the soil tile.
