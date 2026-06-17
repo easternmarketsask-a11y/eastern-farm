@@ -126,13 +126,8 @@
       Farm.warehouse.installButton();
     }
 
-    // 6c. Buildable map view. Default = top-down (mapView); ?iso=1 = isometric
-    // preview (isoView); ?classic=1 = old vertical farm. Each self-gates.
-    if (Farm.isoView && Farm.isoView.active && Farm.isoView.active()) {
-      Farm.isoView.init();
-    } else if (Farm.mapView && Farm.mapView.active && Farm.mapView.active()) {
-      Farm.mapView.init();
-    }
+    // 6c. Buildable map view init is now deferred until after splash dismiss (see wireSplash),
+    // so the entry buttons are guaranteed responsive and no early canvas overlay conflicts.
 
     // 7. Storekeeper
     Farm.storekeeper.refresh();
@@ -153,6 +148,14 @@
       });
     }
     wireSplash(() => {
+      // Defer the main farm view (iso or map) until after splash, to guarantee
+      // splash entry buttons always work and avoid any early overlay conflicts.
+      if (Farm.isoView && Farm.isoView.active && Farm.isoView.active()) {
+        Farm.isoView.init();
+      } else if (Farm.mapView && Farm.mapView.active && Farm.mapView.active()) {
+        Farm.mapView.init();
+      }
+
       checkDailyLogin();
       Farm.achievements.checkAll();
       refreshTodayBadge();
