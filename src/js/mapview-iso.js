@@ -203,28 +203,25 @@
     _syncSize() { const r = this._farmRect(); if (Math.abs(r.width - this._w) > 1 || Math.abs(r.height - this._h) > 1) { this._resize(); this._clampCam(); } },
     // Frame the PLOTS for the big Hay Day-scale farm (20x15 world, 8-col plots). Autoframe prioritizes showing generous open space around the action area so it feels like a living, expandable farm rather than a tight grid. Extra headroom for the new 3D ground tiles' visual volume.
     _autoFrame() {
-      const plots = Farm.state.data.plots || [];
-      const n = Math.max(1, plots.length);
-      let minx = Infinity, miny = Infinity, maxx = -Infinity, maxy = -Infinity;
-      for (let i = 0; i < n; i++) {
-        const gx = PLOT_OX + (i % PLOT_COLS), gy = PLOT_OY + Math.floor(i / PLOT_COLS);
-        if (gx < minx) minx = gx; if (gy < miny) miny = gy; if (gx > maxx) maxx = gx; if (gy > maxy) maxy = gy;
-      }
+      // Frame the *visual* farm rectangle (using current plotRows from render scope or recompute),
+      // not just populated plots. This ensures the whole prepared tilled area is
+      // prominently visible and substantial, even if only a few plots are unlocked yet.
+      const plotCount = (Farm.state.data.plots || []).length || 12;
+      const pr = Math.max(6, Math.ceil(plotCount / PLOT_COLS));
+      const minx = PLOT_OX, maxx = PLOT_OX + PLOT_COLS - 1;
+      const miny = PLOT_OY, maxy = PLOT_OY + pr - 1;
+
       const span = (maxx - minx) + (maxy - miny);
 
-      // Highest standard framing for operation: make the actual plot block feel substantial
-      // and comfortable to work with (Hay Day standard). Target ~70-80px diamonds on phone.
-      // Generous but not excessive open space around the working area.
+      // Highest standard framing: substantial plots area front and center (Hay Day feel).
       const screenW = span * TW / 2;
-      const screenH = span * TH / 2 + TH * 2.2;   // reduced headroom — plots are the hero, not drowned in empty
+      const screenH = span * TH / 2 + TH * 2.2;
       const fitW = this._cssW() / (screenW * 0.95);
       const fitH = this._cssH() / (screenH * 0.90);
-      // Bias toward larger plots for great tap/drag UX, while still revealing nice peripheral grass.
       this._zoom = Math.max(ZMIN, Math.min(fitW, fitH, 0.82));
 
       const ccx = (minx + maxx) / 2, ccy = (miny + maxy) / 2, u = ccx - ccy, v = ccx + ccy;
       this._camX = u * this._tw() / 2;
-      // Bias cam so that sky + distant hills stay nicely visible above the (now larger) working plot area.
       this._camY = this._oy + v * this._th() / 2 - this._cssH() / 2 - this._th() * 0.55;
       this._clampCam();
     },
@@ -735,6 +732,11 @@
       if (!this._on) return;
       const ctx = this._ctx, tw = this._tw(), th = this._th(), W = this._cssW(), H = this._cssH();
       const terrain = Farm.state.data.mapTerrain || {};
+
+      // Precompute early for all boundary/perimeter/peripheral code in this render
+      const plotCount = (Farm.state.data.plots || []).length || 80;
+      const plotRows = Math.max(6, Math.ceil(plotCount / PLOT_COLS));
+
       ctx.clearRect(0, 0, W, H);
 
       // === BEAUTIFUL HAY DAY-STYLE BACKGROUND LAYERS ===
@@ -927,9 +929,6 @@
 
       // painted iso cube tiles, back-to-front (front rows cover the row behind's
       // earth skirt → the Hay Day "farm island"). Plot cells use the soil tile.
-      // Precompute plotRows for boundary / perimeter use
-      const plotCount = (Farm.state.data.plots || []).length || 80;
-      const plotRows = Math.max(6, Math.ceil(plotCount / PLOT_COLS));
 
       const plotCells = this._plotCellSet();
       for (let s = 0; s <= (COLS - 1) + (ROWS - 1); s++) {
@@ -938,19 +937,25 @@
           const c = this._cell(gx, gy);
           if (c.x + tw < 0 || c.x - tw > W || c.y + th * 4 < 0 || c.y - th * 2 > H) continue;
           const k = gx + ',' + gy;
-          let key = 'grass', emptyPlot = false;
+          let key = 'grass';
 
-          // Phase 2 boundary: outside the main cultivated rectangle, use wilder grass
+          // Phase 2: the entire visual farm rectangle (12x at least 6) shows as
+          // prepared tilled soil, so it doesn't disappear into background grass.
+          // Only actually planted crops get grass under them.
           const inMainFarm = gx >= PLOT_OX && gx < PLOT_OX + PLOT_COLS &&
                              gy >= PLOT_OY && gy < PLOT_OY + plotRows;
           if (!inMainFarm) {
-            key = 'wildGrass';  // special handling below
-          } else if (plotCells[k]) {
-            const pl = Farm.state.data.plots[this._cellToPlot[k]];
-            if (pl && pl.unlocked && !pl.crop) {
-              key = 'soil';
+            key = 'wildGrass';
+          } else {
+            let pl = null;
+            if (plotCells[k]) {
+              const idx = this._cellToPlot[k];
+              pl = (idx != null) ? Farm.state.data.plots[idx] : null;
+            }
+            if (pl && pl.unlocked && pl.crop) {
+              key = 'grass';   // planted → grass base + crop on top
             } else {
-              key = 'grass';
+              key = 'soil';    // empty unlocked, locked, or virtual future slots → tilled soil
             }
           }
           if (terrain[k] === 'water') key = 'water'; else if (terrain[k] === 'path') key = 'path';
