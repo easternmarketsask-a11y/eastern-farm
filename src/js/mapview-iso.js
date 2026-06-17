@@ -134,11 +134,11 @@
 
       const cv = document.createElement('canvas');
       cv.id = 'isoCanvas';
-      cv.style.cssText = 'position:fixed;z-index:5;touch-action:none;display:block;background:#86b030;';
+      cv.style.cssText = 'position:fixed;z-index:5;touch-action:none;display:block;background:#9fd0ff;';
       document.body.appendChild(cv);
       this._cv = cv; this._ctx = cv.getContext('2d');
-      // Match the base grass color so any uncovered edges or background look like nice green field, not black or jarring.
-      cv.style.background = '#a3d977';
+      // Sky color as default background (we draw full layered sky + land every frame).
+      cv.style.background = '#9fd0ff';
 
       Object.keys(ASSET_SRC).forEach((k) => { const im = new Image(); im.onload = () => { this._img[k] = im; if (this._on) this.render(); }; im.src = ASSET_DIR + ASSET_SRC[k]; });
       this._buildLayout();
@@ -650,17 +650,17 @@
       // continuous vibrant land (no black boards/gaps), Hay Day chunky 3D pop.
       if (key === 'grass') {
         this._ctx.fillStyle = GRASS_B;
-        // Reduced count + seeded (no per-frame random) → calm solid grass,
-        // no sparkling or glare. The p_hayday flat top already gives painted
-        // variation; these are just subtle accent blades.
+        // Gentle wind using slow time + seeded base (stable positions).
+        // Very subtle so it feels alive without the old harsh flicker.
+        const wind = Math.sin(Date.now() / 1400 + gx * 0.7) * 1.2;
         for (let i = 0; i < 18; i++) {
-          const rx = c.x - tw * 0.45 + seeded(gx, gy, i) * tw * 0.9;
+          const rx = c.x - tw * 0.45 + seeded(gx, gy, i) * tw * 0.9 + wind * (i % 3 - 1) * 0.3;
           const ry = c.y - th * 0.45 + seeded(gx, gy, i + 100) * th * 0.9;
           this._ctx.fillRect(rx, ry, 1.5, 2.8);
         }
         this._ctx.fillStyle = GRASS_C;
         for (let i = 0; i < 7; i++) {
-          const rx = c.x - tw * 0.4 + seeded(gx, gy, i + 200) * tw * 0.8;
+          const rx = c.x - tw * 0.4 + seeded(gx, gy, i + 200) * tw * 0.8 + wind * (i % 2) * 0.4;
           const ry = c.y - th * 0.4 + seeded(gx, gy, i + 300) * th * 0.8;
           this._ctx.fillRect(rx, ry, 2, 3.5);
         }
@@ -706,12 +706,43 @@
       const terrain = Farm.state.data.mapTerrain || {};
       ctx.clearRect(0, 0, W, H);
 
-      // Base lush green fill (#a3d977) to cover ANY black gaps, steps, voids, or "under" the isometric terraces/cubes.
-      // This makes the entire visible farm sit on a continuous, pretty, vibrant green field like Hay Day — no ugly black "boards" or holes inserted between plots.
-      // The individual p_hayday tiles and tilled overlays add the 3D texture and tilled detail ON TOP of this nice base.
-      // Fixes the "每一块地都插一块黑色板" first impression issue completely. Players will see inviting green land and want to plant.
+      // === BEAUTIFUL HAY DAY-STYLE BACKGROUND LAYERS ===
+      // Sky gradient + distant soft hills. This is what makes the view feel alive
+      // and "worth opening" instead of a flat green rectangle.
+      const skyH = Math.min(H * 0.42, 260);
+      const skyGrad = ctx.createLinearGradient(0, 0, 0, skyH);
+      skyGrad.addColorStop(0, '#a1d4ff');
+      skyGrad.addColorStop(0.45, '#c5e0f5');
+      skyGrad.addColorStop(0.75, '#d4e8d0');
+      skyGrad.addColorStop(1, '#a3d977');
+      ctx.fillStyle = skyGrad;
+      ctx.fillRect(0, 0, W, skyH);
+
+      // Distant rolling hills (soft, behind everything)
+      ctx.fillStyle = '#6ea83a';
+      ctx.beginPath();
+      ctx.moveTo(0, skyH - 8);
+      ctx.quadraticCurveTo(W * 0.18, skyH - 52, W * 0.42, skyH - 18);
+      ctx.quadraticCurveTo(W * 0.68, skyH - 58, W, skyH - 12);
+      ctx.lineTo(W, skyH + 25);
+      ctx.lineTo(0, skyH + 25);
+      ctx.closePath();
+      ctx.fill();
+
+      // Farther softer hill layer for depth
+      ctx.fillStyle = 'rgba(85, 125, 55, 0.55)';
+      ctx.beginPath();
+      ctx.moveTo(0, skyH + 2);
+      ctx.quadraticCurveTo(W * 0.28, skyH + 28, W * 0.55, skyH + 8);
+      ctx.quadraticCurveTo(W * 0.82, skyH + 35, W, skyH + 18);
+      ctx.lineTo(W, skyH + 55);
+      ctx.lineTo(0, skyH + 55);
+      ctx.closePath();
+      ctx.fill();
+
+      // Base lush green fill for the close ground (kept for compatibility with existing slabs)
       ctx.fillStyle = '#a3d977';
-      ctx.fillRect(0, 0, W, H);
+      ctx.fillRect(0, skyH - 5, W, H - skyH + 5);
 
       // Solid land mass slab for the ENTIRE world grid.
       // This paints one continuous vibrant green field under everything so there
@@ -728,6 +759,17 @@
       ctx.lineTo(c1.x + tw * 0.6, c1.y);
       ctx.lineTo(c2.x, c2.y + th * 0.6);
       ctx.lineTo(c3.x - tw * 0.6, c3.y);
+      ctx.closePath();
+      ctx.fill();
+
+      // Very soft shadow under the whole farm land — makes it sit in the world
+      // instead of floating on flat color (big part of "not monotonous").
+      ctx.fillStyle = 'rgba(35, 65, 25, 0.16)';
+      ctx.beginPath();
+      ctx.moveTo(c0.x + 6, c0.y - th * 0.65 + 10);
+      ctx.lineTo(c1.x + tw * 0.6 + 6, c1.y + 6);
+      ctx.lineTo(c2.x + 4, c2.y + th * 0.6 + 8);
+      ctx.lineTo(c3.x - tw * 0.6 + 2, c3.y + 6);
       ctx.closePath();
       ctx.fill();
 
@@ -749,6 +791,36 @@
       ctx.lineTo(p3.x - tw * 0.5, p3.y);
       ctx.closePath();
       ctx.fill();
+
+      // === AMBIENT BACKGROUND DETAILS (wild trees, bushes) ===
+      // These live in the huge open peripheral space. Seeded positions = stable,
+      // drawn at reduced scale + alpha so they feel "far away" and give the farm
+      // a real sense of place instead of floating on a green void.
+      // Uses existing assets, zero extra memory.
+      const ambientProps = [
+        {type: 'tree', count: 7, scale: 0.55, alpha: 0.45, yBias: -1},
+        {type: 'bush', count: 5, scale: 0.7, alpha: 0.35, yBias: 0},
+      ];
+      ambientProps.forEach((prop) => {
+        const key = (prop.type === 'bush') ? 'deco_bush' : prop.type;
+        const im = this._img[key];
+        if (!im) return;
+        for (let i = 0; i < prop.count; i++) {
+          // Seeded around the outer edges of the big world (not on the central farm)
+          const seed = i + (prop.type === 'tree' ? 0 : 100);
+          const gx = ((seed * 11) % (COLS - 2)) + 1;
+          const gy = Math.min(ROWS-2, Math.max(1, Math.floor((seed * 7) % 5) + prop.yBias));
+          // Bias some to top and sides for nice framing
+          const cc = this._cell(gx, gy);
+          const sc = prop.scale * (0.85 + (seed % 3) * 0.1);
+          const w = tw * 1.6 * sc;
+          const h = w * (im.height / im.width);
+          ctx.save();
+          ctx.globalAlpha = prop.alpha;
+          ctx.drawImage(im, cc.x - w/2, cc.y - h * 0.7, w, h);
+          ctx.restore();
+        }
+      });
 
       // painted iso cube tiles, back-to-front (front rows cover the row behind's
       // earth skirt → the Hay Day "farm island"). Plot cells use the soil tile.
@@ -1016,11 +1088,33 @@
       const season = (Farm.seasons && Farm.seasons.current) || monthSeason(), set = SEASON_PARTICLES[season];
       if (!set) return;
       const ctx = this._ctx, W = this._cssW(), H = this._cssH(), t = Date.now() / 1000;
-      ctx.save(); ctx.globalAlpha = 0.8; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      for (let i = 0; i < 16; i++) {
-        const sp = 16 + (i % 5) * 7, x = (i * 53.7) % W, sway = Math.sin(t * 0.8 + i) * 13, y = ((t * sp + i * 41) % (H + 40)) - 20;
-        ctx.font = (this._th() * 0.5 + (i % 3) * 3) + 'px sans-serif'; ctx.fillText(set[i % set.length], x + sway, y);
+
+      ctx.save();
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+
+      // Layered particles for depth (Hay Day feel)
+      // Far layer (sky bugs / high) — smaller, slower, fainter
+      ctx.globalAlpha = 0.45;
+      for (let i = 0; i < 9; i++) {
+        const sp = 9 + (i % 3) * 2;
+        const x = ((i * 67.3) % (W * 1.1)) - 20;
+        const sway = Math.sin(t * 0.4 + i) * 8;
+        const y = ((t * sp + i * 27) % (H * 0.6)) + 10;
+        ctx.font = (tw * 0.22 + (i % 2) * 1) + 'px sans-serif';
+        ctx.fillText(set[i % set.length], x + sway, y);
       }
+
+      // Near layer (ground level butterflies / petals) — larger, more noticeable
+      ctx.globalAlpha = 0.75;
+      for (let i = 0; i < 12; i++) {
+        const sp = 14 + (i % 4) * 3;
+        const x = (i * 41.2) % W;
+        const sway = Math.sin(t * 1.1 + i * 1.3) * (10 + (i % 2) * 4);
+        const y = ((t * sp + i * 19) % (H * 0.85)) + H * 0.12;
+        ctx.font = (tw * 0.38 + (i % 3) * 2) + 'px sans-serif';
+        ctx.fillText(set[(i + 2) % set.length], x + sway, y);
+      }
+
       ctx.restore();
     },
     _drawFestival() {
