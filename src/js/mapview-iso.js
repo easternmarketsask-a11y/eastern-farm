@@ -522,12 +522,17 @@
     _tileImg(key, c, gx, gy) {
       const t = (key === 'grass' && gx != null) ? grassVariant(gx, gy) : ISO_TILES[key];
       const im = t && this._img[t.img], tw = this._tw(), th = this._th();
-      if (im && im.width) { const w = tw * 1.12, sc = w / im.width, dh = im.height * sc; this._ctx.drawImage(im, c.x - w / 2, c.y - dh * t.cy, w, dh); return; }
-      // === Robust beautiful fallback (the land will always look good and inviting) ===
+      // Always draw bright base diamond first to kill black.
       this._diamond(c.x, c.y, tw, th);
+      let baseColor = GRASS_A;
+      if (key === 'soil') baseColor = '#c9a06e';
+      else if (key === 'path') baseColor = '#d4a574';
+      else if (key === 'water') baseColor = '#5aa0c8';
+      this._ctx.fillStyle = baseColor;
+      this._ctx.fill();
+
+      // Rich texture on base.
       if (key === 'grass') {
-        this._ctx.fillStyle = GRASS_A; this._ctx.fill();
-        // lush blade texture - random small strokes for organic Hay Day grass feel
         this._ctx.fillStyle = GRASS_B;
         for (let i = 0; i < 35; i++) {
           const rx = c.x - tw * 0.45 + Math.random() * tw * 0.9;
@@ -535,43 +540,48 @@
           this._ctx.fillRect(rx, ry, 1.5, 3 + Math.random() * 2);
         }
         this._ctx.fillStyle = GRASS_C;
-        for (let i = 0; i < 12; i++) {
+        for (let i = 0; i < 15; i++) {
           const rx = c.x - tw * 0.4 + Math.random() * tw * 0.8;
           const ry = c.y - th * 0.4 + Math.random() * th * 0.8;
           this._ctx.fillRect(rx, ry, 2, 4);
         }
       } else if (key === 'soil') {
-        this._ctx.fillStyle = SOIL_TOP; this._ctx.fill();
-        // tilled furrows and texture - rich, not black, inviting to plant
-        this._ctx.fillStyle = SOIL_FURROW;
-        for (let i = 0; i < 5; i++) {
-          const y = c.y - th * 0.35 + i * th * 0.18;
-          this._ctx.fillRect(c.x - tw * 0.42, y, tw * 0.84, 2);
+        this._ctx.fillStyle = 'rgba(139,90,60,0.55)';
+        for (let i = 0; i < 6; i++) {
+          const y = c.y - th * 0.35 + i * th * 0.15;
+          this._ctx.fillRect(c.x - tw * 0.4, y, tw * 0.8, 2.5);
         }
-        // small dots for soil detail
-        this._ctx.fillStyle = 'rgba(139,90,60,0.4)';
-        for (let i = 0; i < 25; i++) {
-          const rx = c.x - tw * 0.4 + Math.random() * tw * 0.8;
-          const ry = c.y - th * 0.4 + Math.random() * th * 0.8;
-          this._ctx.fillRect(rx, ry, 1.5, 1.5);
-        }
-      } else if (key === 'path') {
-        this._ctx.fillStyle = '#c9a06e'; this._ctx.fill();
-        this._ctx.fillStyle = 'rgba(139,90,60,0.5)';
-        for (let i = 0; i < 18; i++) {
-          const rx = c.x - tw * 0.4 + Math.random() * tw * 0.8;
-          const ry = c.y - th * 0.4 + Math.random() * th * 0.8;
+        this._ctx.fillStyle = 'rgba(100,60,30,0.4)';
+        for (let i = 0; i < 30; i++) {
+          const rx = c.x - tw * 0.38 + Math.random() * tw * 0.76;
+          const ry = c.y - th * 0.38 + Math.random() * th * 0.76;
           this._ctx.fillRect(rx, ry, 2, 2);
         }
-      } else if (key === 'water') {
-        this._ctx.fillStyle = '#5aa0c8'; this._ctx.fill();
-        this._ctx.fillStyle = 'rgba(255,255,255,0.25)';
-        for (let i = 0; i < 4; i++) {
-          const y = c.y - th * 0.2 + i * th * 0.25;
-          this._ctx.fillRect(c.x - tw * 0.35, y, tw * 0.7, 1.5);
+      } else if (key === 'path') {
+        this._ctx.fillStyle = '#d4a574';
+        this._ctx.fill();
+        this._ctx.fillStyle = 'rgba(139,90,60,0.5)';
+        for (let i = 0; i < 20; i++) {
+          const rx = c.x - tw * 0.4 + Math.random() * tw * 0.8;
+          const ry = c.y - th * 0.4 + Math.random() * th * 0.8;
+          this._ctx.fillRect(rx, ry, 2.5, 2.5);
         }
-      } else {
-        this._ctx.fillStyle = GRASS_A; this._ctx.fill();
+      } else if (key === 'water') {
+        this._ctx.fillStyle = '#5aa0c8';
+        this._ctx.fill();
+        this._ctx.fillStyle = 'rgba(255,255,255,0.3)';
+        for (let i = 0; i < 5; i++) {
+          const y = c.y - th * 0.25 + i * th * 0.2;
+          this._ctx.fillRect(c.x - tw * 0.35, y, tw * 0.7, 2);
+        }
+      }
+
+      if (im && im.width) {
+        const w = tw * 1.12, sc = w / im.width, dh = im.height * sc;
+        this._ctx.drawImage(im, c.x - w / 2, c.y - dh * t.cy, w, dh);
+        // Overpaint lower skirt with base to hide black board.
+        this._ctx.fillStyle = baseColor;
+        this._ctx.fillRect(c.x - tw * 0.5, c.y + th * 0.08, tw, th * 0.6);
       }
     },
     _startLoop() {
