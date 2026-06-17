@@ -91,8 +91,10 @@
     { key: 'grass', zh: '草地·擦除', en: 'Grass', color: '#8bbf5a' },
   ];
   const SEASON_PARTICLES = {
-    spring: ['🌸', '🌸', '🌷'], summer: ['🦋', '🦋', '🐝'],
-    autumn: ['🍂', '🍁', '🍂'], winter: ['❄️', '❄️', '🌨'],
+    spring: ['🌸', '🌸', '🌷', '🦋'], 
+    summer: ['🦋', '🦋', '🐝', '🌼'],
+    autumn: ['🍂', '🍁', '🍂', '🌰'], 
+    winter: ['❄️', '❄️', '🌨', '❅'],
   };
   function monthSeason() {
     const m = new Date().getMonth() + 1;
@@ -658,22 +660,37 @@
         }
       }
 
+      // Phase 2: Subtle global lighting (top-left highlight / bottom-right shadow)
+      // Applied to ground after base/image for Hay Day painted depth without breaking flat tiling.
+      if (key === 'grass' || key === 'wildGrass' || key === 'soil') {
+        const light = 0.12;
+        const shade = 0.18;
+        // Simple directional based on cell position for variation
+        const dir = ((gx + gy) % 5) / 5 - 0.5;
+        ctx.fillStyle = `rgba(255,255,240,${light + dir * 0.04})`;
+        ctx.fillRect(c.x - tw * 0.48, c.y - th * 0.48, tw * 0.96, th * 0.35); // top-left highlight
+        ctx.fillStyle = `rgba(40,55,30,${shade - dir * 0.03})`;
+        ctx.fillRect(c.x - tw * 0.48, c.y + th * 0.1, tw * 0.96, th * 0.42); // bottom-right shadow
+      }
+
       // Re-apply rich texture ON TOP of the (clipped) painted image so grass
       // blades / soil furrows / path dots / water highlights read clearly.
       // Base bright color + clipped painted 3D image + top texture =
       // continuous vibrant land (no black boards/gaps), Hay Day chunky 3D pop.
-      if (key === 'grass') {
-        this._ctx.fillStyle = GRASS_B;
+      if (key === 'grass' || key === 'wildGrass') {
+        this._ctx.fillStyle = (key === 'wildGrass') ? '#7cb05a' : GRASS_B;
         // Gentle wind using slow time + seeded base (stable positions).
         // Very subtle so it feels alive without the old harsh flicker.
         const wind = Math.sin(Date.now() / 1400 + gx * 0.7) * 1.2;
-        for (let i = 0; i < 18; i++) {
+        const bladeCount = (key === 'wildGrass') ? 26 : 18;  // denser wild grass
+        for (let i = 0; i < bladeCount; i++) {
           const rx = c.x - tw * 0.45 + seeded(gx, gy, i) * tw * 0.9 + wind * (i % 3 - 1) * 0.3;
           const ry = c.y - th * 0.45 + seeded(gx, gy, i + 100) * th * 0.9;
           this._ctx.fillRect(rx, ry, 1.5, 2.8);
         }
-        this._ctx.fillStyle = GRASS_C;
-        for (let i = 0; i < 7; i++) {
+        this._ctx.fillStyle = (key === 'wildGrass') ? '#5a9c3a' : GRASS_C;
+        const highlightCount = (key === 'wildGrass') ? 11 : 7;
+        for (let i = 0; i < highlightCount; i++) {
           const rx = c.x - tw * 0.4 + seeded(gx, gy, i + 200) * tw * 0.8 + wind * (i % 2) * 0.4;
           const ry = c.y - th * 0.4 + seeded(gx, gy, i + 300) * th * 0.8;
           this._ctx.fillRect(rx, ry, 2, 3.5);
@@ -790,11 +807,19 @@
       // Soil slab for the cultivated plot rectangle (makes the active farm field
       // a single solid tilled carpet like a real planted area in Hay Day, instead
       // of individual stepped tiles with gaps). Grass slab is under everything.
+
+      // Phase 2: Soften the hard polygon edges for natural fusion.
+      // Draw a slightly larger, feathered outer grass layer with variation.
+      ctx.fillStyle = '#8fbf5a';  // slightly wilder outer green
+      ctx.beginPath();
+      ctx.moveTo(c0.x - 12, c0.y - th * 0.75);
+      ctx.lineTo(c1.x + tw * 0.7, c1.y - 8);
+      ctx.lineTo(c2.x + 12, c2.y + th * 0.7);
+      ctx.lineTo(c3.x - tw * 0.7, c3.y - 8);
+      ctx.closePath();
+      ctx.fill();
       const p0 = this._cell(PLOT_OX, PLOT_OY);
       const p1 = this._cell(PLOT_OX + PLOT_COLS - 1, PLOT_OY);
-      // Estimate plot rows from current unlocked plots (fall back to ~8 rows for big field)
-      const plotCount = (Farm.state.data.plots || []).length || 80;
-      const plotRows = Math.max(6, Math.ceil(plotCount / PLOT_COLS));
       const p2 = this._cell(PLOT_OX + PLOT_COLS - 1, PLOT_OY + plotRows - 1);
       const p3 = this._cell(PLOT_OX, PLOT_OY + plotRows - 1);
       ctx.fillStyle = '#c9a06e';
@@ -805,6 +830,25 @@
       ctx.lineTo(p3.x - tw * 0.5, p3.y);
       ctx.closePath();
       ctx.fill();
+
+      // Phase 2/3: Soft organic perimeter for the farm "island".
+      // Light fence-like dots + rocks along plot boundary (seeded, subtle).
+      ctx.strokeStyle = 'rgba(85,70,50,0.35)';
+      ctx.lineWidth = 1.5;
+      for (let i = 0; i < 28; i++) {
+        const seed = i + 900;
+        const side = i % 4;
+        let gx, gy;
+        if (side === 0) { gx = PLOT_OX + (seed % PLOT_COLS); gy = PLOT_OY - 1; }
+        else if (side === 1) { gx = PLOT_OX + PLOT_COLS; gy = PLOT_OY + (seed % plotRows); }
+        else if (side === 2) { gx = PLOT_OX + (seed % PLOT_COLS); gy = PLOT_OY + plotRows; }
+        else { gx = PLOT_OX - 1; gy = PLOT_OY + (seed % plotRows); }
+        if (gx < 0 || gy < 0) continue;
+        const cc = this._cell(gx, gy);
+        ctx.beginPath();
+        ctx.arc(cc.x, cc.y + th * 0.15, tw * 0.18, 0, Math.PI * 2);
+        ctx.stroke();
+      }
 
       // === AMBIENT BACKGROUND DETAILS (wild trees, bushes) ===
       // These live in the huge open peripheral space. Seeded positions = stable,
@@ -836,8 +880,57 @@
         }
       });
 
+      // Phase 2: More static peripheral environment decorations (seeded, only outer)
+      // Flower patches, small rocks, logs in the wild grass areas.
+      const outerCount = 22;
+      for (let i = 0; i < outerCount; i++) {
+        const seed = i + 500;
+        const gx = (seed * 13 % (COLS - 1)) + 1;
+        const gy = Math.floor((seed * 9) % (ROWS - 2)) + 1;
+        const inMain = gx >= PLOT_OX && gx < PLOT_OX + PLOT_COLS &&
+                       gy >= PLOT_OY && gy < PLOT_OY + plotRows;
+        if (inMain) continue;
+
+        const cc = this._cell(gx, gy);
+        const type = seed % 5;
+
+        if (type === 0) {
+          // Flower patch (small colored dots)
+          ctx.fillStyle = (seed % 3 === 0) ? '#ff9bb3' : (seed % 2 === 0 ? '#fff08a' : '#a8e6cf');
+          for (let f = 0; f < 5; f++) {
+            const fx = cc.x - tw * 0.25 + seeded(gx, gy, f + 10) * tw * 0.5;
+            const fy = cc.y - th * 0.2 + seeded(gx, gy, f + 20) * th * 0.4;
+            ctx.beginPath();
+            ctx.arc(fx, fy, 2.5, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        } else if (type === 1) {
+          // Small rock
+          ctx.fillStyle = '#6b6b5a';
+          ctx.beginPath();
+          ctx.ellipse(cc.x, cc.y + th * 0.1, tw * 0.22, th * 0.12, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = '#525247';
+          ctx.fillRect(cc.x - tw * 0.08, cc.y + th * 0.02, tw * 0.16, th * 0.06);
+        } else {
+          // Log or extra bush at very low opacity (reuse bush)
+          const im = this._img.deco_bush;
+          if (im) {
+            ctx.save();
+            ctx.globalAlpha = 0.25;
+            const sw = tw * 0.7;
+            ctx.drawImage(im, cc.x - sw / 2, cc.y - sw * 0.6, sw, sw * 0.8);
+            ctx.restore();
+          }
+        }
+      }
+
       // painted iso cube tiles, back-to-front (front rows cover the row behind's
       // earth skirt → the Hay Day "farm island"). Plot cells use the soil tile.
+      // Precompute plotRows for boundary / perimeter use
+      const plotCount = (Farm.state.data.plots || []).length || 80;
+      const plotRows = Math.max(6, Math.ceil(plotCount / PLOT_COLS));
+
       const plotCells = this._plotCellSet();
       for (let s = 0; s <= (COLS - 1) + (ROWS - 1); s++) {
         for (let gx = 0; gx < COLS; gx++) {
@@ -846,10 +939,14 @@
           if (c.x + tw < 0 || c.x - tw > W || c.y + th * 4 < 0 || c.y - th * 2 > H) continue;
           const k = gx + ',' + gy;
           let key = 'grass', emptyPlot = false;
-          if (plotCells[k]) {
+
+          // Phase 2 boundary: outside the main cultivated rectangle, use wilder grass
+          const inMainFarm = gx >= PLOT_OX && gx < PLOT_OX + PLOT_COLS &&
+                             gy >= PLOT_OY && gy < PLOT_OY + plotRows;
+          if (!inMainFarm) {
+            key = 'wildGrass';  // special handling below
+          } else if (plotCells[k]) {
             const pl = Farm.state.data.plots[this._cellToPlot[k]];
-            // For empty unlocked plots, use the soil tile directly for nice tilled farmland look (p_hayday_soil 3D cube or rich textured fallback - never black).
-            // Planted plots use grass base + crop sprite on top.
             if (pl && pl.unlocked && !pl.crop) {
               key = 'soil';
             } else {
@@ -898,6 +995,13 @@
       draws.sort((a, c) => a.d - c.d); draws.forEach(x => x.fn());
 
       this._drawParticles(tw); this._drawFestival();
+
+      // Phase 3: Soft vignette to focus attention on the cultivated farm area (Hay Day trick)
+      const vig = ctx.createRadialGradient(W/2, H/2, Math.min(W, H) * 0.35, W/2, H/2, Math.max(W, H) * 0.72);
+      vig.addColorStop(0, 'rgba(0,0,0,0)');
+      vig.addColorStop(1, 'rgba(30,45,20,0.22)');
+      ctx.fillStyle = vig;
+      ctx.fillRect(0, 0, W, H);
     },
     _drawPlot(plot, gx, gy, idx) {
       const ctx = this._ctx, tw = this._tw(), th = this._th(), c = this._cell(gx, gy);
@@ -1106,27 +1210,40 @@
       ctx.save();
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
 
-      // Layered particles for depth (Hay Day feel)
-      // Far layer (sky bugs / high) — smaller, slower, fainter
-      ctx.globalAlpha = 0.45;
-      for (let i = 0; i < 9; i++) {
-        const sp = 9 + (i % 3) * 2;
-        const x = ((i * 67.3) % (W * 1.1)) - 20;
-        const sway = Math.sin(t * 0.4 + i) * 8;
-        const y = ((t * sp + i * 27) % (H * 0.6)) + 10;
-        ctx.font = (tw * 0.22 + (i % 2) * 1) + 'px sans-serif';
+      // Phase 3 richer particles (Hay Day style depth + variety)
+      // Far layer (high sky insects)
+      ctx.globalAlpha = 0.38;
+      for (let i = 0; i < 8; i++) {
+        const sp = 8 + (i % 3);
+        const x = ((i * 71) % (W * 1.05)) - 15;
+        const sway = Math.sin(t * 0.35 + i) * 6;
+        const y = ((t * sp + i * 31) % (H * 0.55)) + 5;
+        ctx.font = (tw * 0.18) + 'px sans-serif';
         ctx.fillText(set[i % set.length], x + sway, y);
       }
 
-      // Near layer (ground level butterflies / petals) — larger, more noticeable
-      ctx.globalAlpha = 0.75;
-      for (let i = 0; i < 12; i++) {
-        const sp = 14 + (i % 4) * 3;
-        const x = (i * 41.2) % W;
-        const sway = Math.sin(t * 1.1 + i * 1.3) * (10 + (i % 2) * 4);
-        const y = ((t * sp + i * 19) % (H * 0.85)) + H * 0.12;
-        ctx.font = (tw * 0.38 + (i % 3) * 2) + 'px sans-serif';
-        ctx.fillText(set[(i + 2) % set.length], x + sway, y);
+      // Mid layer (floating petals / leaves)
+      ctx.globalAlpha = 0.55;
+      for (let i = 0; i < 10; i++) {
+        const sp = 11 + (i % 4);
+        const x = (i * 47 + 30) % W;
+        const sway = Math.sin(t * 0.7 + i * 0.8) * 9;
+        const y = ((t * sp + i * 23) % (H * 0.78)) + H * 0.08;
+        ctx.font = (tw * 0.28 + (i % 2)) + 'px sans-serif';
+        const emoji = (i % 3 === 0) ? '🍃' : set[(i + 1) % set.length];
+        ctx.fillText(emoji, x + sway, y);
+      }
+
+      // Near layer (ground butterflies / dandelion fluff)
+      ctx.globalAlpha = 0.78;
+      for (let i = 0; i < 14; i++) {
+        const sp = 13 + (i % 5) * 2;
+        const x = (i * 39) % W;
+        const sway = Math.sin(t * 1.2 + i) * 12;
+        const y = ((t * sp + i * 17) % (H * 0.92)) + H * 0.15;
+        ctx.font = (tw * 0.42) + 'px sans-serif';
+        const emoji = (i % 4 === 0) ? '✨' : set[(i + 3) % set.length];
+        ctx.fillText(emoji, x + sway, y);
       }
 
       ctx.restore();
