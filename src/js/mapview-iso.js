@@ -10,63 +10,50 @@
  * upright sprites placed on cells, depth-sorted back-to-front (gx+gy).
  */
 (function () {
-  const COLS = 28, ROWS = 20;
-  // Playable farm area made substantially larger and chunkier for satisfying operation.
-  // Each plot must feel meaty on phone (target ~70-80px diamonds) so tapping, harvesting,
-  // dragging in build is comfortable. Vast open space preserved via large COLS/ROWS,
-  // but framing now prioritizes the working plot area at good scale (Hay Day balance).
-  const PLOT_OX = 4, PLOT_OY = 2, PLOT_COLS = 12;
-  const TW = 112, TH = 56;          // larger base tiles for chunky, readable, tappable plots
-  const ZMIN = 0.65, ZMAX = 1.8;
+  const COLS = 9, ROWS = 11;
+  const PLOT_OX = 1, PLOT_OY = 2, PLOT_COLS = 3;
+  const TW = 92, TH = 46;          // diamond width/height at zoom 1 (2:1 iso)
+  const ZMIN = 0.55, ZMAX = 1.7;
   const REQUIRED_LV = { 4: 2, 5: 2, 6: 3, 7: 3, 8: 4, 9: 4, 10: 5, 11: 5 };
-  const GRASS_A = '#a3d977', GRASS_B = '#7cb342', GRASS_C = '#5a9c2e'; // brighter, more inviting Hay Day green
-  const SOIL_TOP = '#c9a06e', SOIL_FURROW = '#8b5a3c', SOIL_HIGHLIGHT = '#e8d4a8'; // warm, rich, not dark/black tilled soil
-  const GRASS_EDGE = 'rgba(60,90,40,0.18)';
+  const GRASS_A = '#8bbf5a', GRASS_B = '#83b653', GRASS_EDGE = 'rgba(60,90,40,0.18)';
+  const SOIL_TOP = '#9c6b3f', SOIL_FURROW = 'rgba(80,50,26,0.5)';
   const ASSET_DIR = 'assets/images/map/';
   const ASSET_SRC = {
     barn: 'p_barn.png', house: 'p_house.png', greenhouse: 'p_greenhouse.png', coop: 'p_coop.png', well: 'p_well.png', stall: 'p_stall.png', tree: 'p_tree.png',
     deco_bush: 'deco_bush.png', deco_lantern: 'deco_lantern.png', deco_fence: 'deco_fence.png', deco_wheel: 'deco_wheel.png', deco_bridge: 'deco_bridge.png',
-    // 3D VOLUME UPGRADE: New refined p_hayday_* ground tiles with proper painted cube projection (top + sides + skirt) generated from p_grass/p_barn refs for authentic Hay Day 3D pop when drawn with cy offset. 
-    p_hayday_grass: 'p_hayday_grass.png',
-    p_hayday_grass_b: 'p_hayday_grass_b.png',
-    p_hayday_soil: 'p_hayday_soil.png',
-    p_hayday_path: 'p_hayday_path.png',
-    p_hayday_water: 'p_hayday_water.png',
+    crop0: 'crop_qingcai_0.png', crop1: 'crop_qingcai_1.png', crop2: 'crop_qingcai_2.png', crop3: 'crop_qingcai_3.png',
+    tile_grass: 'p_grass.png', tile_grass_b: 'p_grass_b.png', tile_grass_c: 'p_grass_c.png',
+    tile_soil: 'p_soil.png', tile_path: 'p_path.png', tile_water: 'p_water.png',
     plot_bed: 'plot_bed.png',
   };
   // Painted iso ground cube tiles. `cy` = fraction of the image height where the
   // diamond-top CENTER sits (so it lands on the cell center; tuned by screenshot).
-  // Fresh high-quality assets generated with Grok + p_barn/p_grass references for authentic Hay Day painted cube look (3D depth, top diamond + sides, lighting). 
   const ISO_TILES = {
-    grass: { img: 'p_hayday_grass', cy: 0.38 }, soil: { img: 'p_hayday_soil', cy: 0.36 },
-    path: { img: 'p_hayday_path', cy: 0.30 }, water: { img: 'p_hayday_water', cy: 0.36 },
+    grass: { img: 'tile_grass', cy: 0.42 }, soil: { img: 'tile_soil', cy: 0.40 },
+    path: { img: 'tile_path', cy: 0.34 }, water: { img: 'tile_water', cy: 0.40 },
   };
-  // Grass variety (Hay Day ground feel)
+  // Grass variety (Hay Day ground feel): mostly plain, with sparse flowers/mossy
+  // tiles. Each variant keeps its OWN cy anchor (the taller tufts push the flat
+  // top down) so they tessellate flush with the plain tile. Picked deterministically
+  // per cell so the pattern is stable across frames and reloads.
   const GRASS_VARIANTS = [
-    { img: 'p_hayday_grass', cy: 0.38 },
-    { img: 'p_hayday_grass_b', cy: 0.39 },
+    { img: 'tile_grass', cy: 0.42 },     // plain (most cells)
+    { img: 'tile_grass_b', cy: 0.47 },   // little yellow flowers
+    { img: 'tile_grass_c', cy: 0.50 },   // mossy + bare dirt patch
   ];
   function grassVariant(gx, gy) {
     const h = ((gx * 73856093) ^ (gy * 19349663)) & 0xffff, r = h % 100;
-    return r < 18 ? GRASS_VARIANTS[1] : GRASS_VARIANTS[0];
+    return r < 15 ? GRASS_VARIANTS[1] : (r < 25 ? GRASS_VARIANTS[2] : GRASS_VARIANTS[0]);
   }
-
-  // Stable seeded "random" for ground textures. Math.random() every frame
-  // caused the grass to sparkle/flicker (very glaring). Using gx,gy,salt
-  // makes every blade/dot position fixed per cell → calm, tile-like, no strobe.
-  function seeded(gx, gy, salt) {
-    gx = gx | 0; gy = gy | 0; salt = salt | 0;
-    let h = (gx * 374761393) ^ (gy * 668265263) ^ (salt * 2147483647);
-    h = (h ^ (h >>> 13)) >>> 0;
-    h = Math.imul(h, 1274126177) >>> 0;
-    return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
-  }
-
-  // High-quality pure plant 4-stage sprites (fresh Grok generation with p_barn/p_grass references for consistent Hay Day painted style across ground and objects, no soil baked in at all). Ground p_hayday tiles provide the base.
+  // Painted iso 4-stage crop sprites (each frame includes its own soil cube), keyed
+  // by crop id. shanghai_miao keeps its pixel sprite (no cube) — handled separately.
   const ISO_CROPS = {
-    eggplant: 'crop_eggplant', cilantro: 'crop_cilantro', jiucai: 'crop_jiucai',
-    niu_jiao_jiao: 'crop_niu_jiao_jiao', suan_tai: 'crop_suan_tai', tomato: 'crop_tomato', cucumber: 'crop_cucumber',
-    shanghai_miao: 'crop_shanghai_miao',
+    eggplant: 'crop_eggplant', cilantro: 'crop_cilantro', jiucai: 'crop_chives',
+    niu_jiao_jiao: 'crop_chili', suan_tai: 'crop_garlic', tomato: 'crop_tomato', cucumber: 'crop_cucumber',
+    // 上海青: the refreshed crop_qingcai sprites now include their OWN soil cube, so
+    // it must go through the ISO_CROPS path (ground stays grass) — otherwise the
+    // ground also draws a soil tile and the two cubes stack → bok choy floats.
+    shanghai_miao: 'crop_qingcai',
   };
   const BUILDINGS = {
     barn: { img: 'barn', w: 2, h: 2, sc: 2.4, zh: '谷仓·仓库', en: 'Barn', tap: 'warehouse' },
@@ -91,10 +78,8 @@
     { key: 'grass', zh: '草地·擦除', en: 'Grass', color: '#8bbf5a' },
   ];
   const SEASON_PARTICLES = {
-    spring: ['🌸', '🌸', '🌷', '🦋'], 
-    summer: ['🦋', '🦋', '🐝', '🌼'],
-    autumn: ['🍂', '🍁', '🍂', '🌰'], 
-    winter: ['❄️', '❄️', '🌨', '❅'],
+    spring: ['🌸', '🌸', '🌷'], summer: ['🦋', '🦋', '🐝'],
+    autumn: ['🍂', '🍁', '🍂'], winter: ['❄️', '❄️', '🌨'],
   };
   function monthSeason() {
     const m = new Date().getMonth() + 1;
@@ -140,11 +125,9 @@
 
       const cv = document.createElement('canvas');
       cv.id = 'isoCanvas';
-      cv.style.cssText = 'position:fixed;z-index:5;touch-action:none;display:block;background:#9fd0ff;';
+      cv.style.cssText = 'position:fixed;z-index:5;touch-action:none;display:block;background:#86b030;';
       document.body.appendChild(cv);
       this._cv = cv; this._ctx = cv.getContext('2d');
-      // Sky color as default background (we draw full layered sky + land every frame).
-      cv.style.background = '#9fd0ff';
 
       Object.keys(ASSET_SRC).forEach((k) => { const im = new Image(); im.onload = () => { this._img[k] = im; if (this._on) this.render(); }; im.src = ASSET_DIR + ASSET_SRC[k]; });
       this._buildLayout();
@@ -174,19 +157,8 @@
     _farmRect() {
       const f = document.getElementById('farm');
       if (f) { const r = f.getBoundingClientRect(); if (r.width > 10 && r.height > 10) return r; }
-      const t = document.getElementById('topbar');
-      const th = t ? t.getBoundingClientRect().height : 56;
-
-      // In build mode (especially on phones) give as much vertical space as possible
-      // for dragging buildings/decorations around. Hide the game bottombar and use
-      // only a tiny bottom margin so the finger has room to move objects without
-      // fighting UI chrome.
-      if (this._build) {
-        return { left: 0, top: th, width: window.innerWidth, height: Math.max(200, window.innerHeight - th - 28) };
-      }
-
-      const b = document.getElementById('bottombar');
-      const bh = b ? b.getBoundingClientRect().height : 64;
+      const t = document.getElementById('topbar'), b = document.getElementById('bottombar');
+      const th = t ? t.getBoundingClientRect().height : 56, bh = b ? b.getBoundingClientRect().height : 64;
       return { left: 0, top: th, width: window.innerWidth, height: Math.max(120, window.innerHeight - th - bh) };
     },
     _cssW() { return this._w; }, _cssH() { return this._h; },
@@ -201,28 +173,29 @@
       this._ctx.setTransform(this._dpr, 0, 0, this._dpr, 0, 0);
     },
     _syncSize() { const r = this._farmRect(); if (Math.abs(r.width - this._w) > 1 || Math.abs(r.height - this._h) > 1) { this._resize(); this._clampCam(); } },
-    // Frame the PLOTS for the big Hay Day-scale farm (20x15 world, 8-col plots). Autoframe prioritizes showing generous open space around the action area so it feels like a living, expandable farm rather than a tight grid. Extra headroom for the new 3D ground tiles' visual volume.
+    // Frame the PLOTS (where ~all taps go), not the whole 9×11 grid. The old code
+    // sized zoom off (COLS+ROWS) — but the on-screen iso width of content is only
+    // its (Δgx+Δgy) diagonal, far less than COLS+ROWS, so it over-shrank to ZMIN
+    // and plots became too small/cramped to tap on phones. Framing the compact plot
+    // block with its REAL screen extent more than doubles tile size (50→110px on a
+    // phone). Buildings sit just off the initial view; a short pan reveals them.
     _autoFrame() {
-      // Frame the *visual* farm rectangle (using current plotRows from render scope or recompute),
-      // not just populated plots. This ensures the whole prepared tilled area is
-      // prominently visible and substantial, even if only a few plots are unlocked yet.
-      const plotCount = (Farm.state.data.plots || []).length || 12;
-      const pr = Math.max(6, Math.ceil(plotCount / PLOT_COLS));
-      const minx = PLOT_OX, maxx = PLOT_OX + PLOT_COLS - 1;
-      const miny = PLOT_OY, maxy = PLOT_OY + pr - 1;
-
-      const span = (maxx - minx) + (maxy - miny);
-
-      // Highest standard framing: substantial plots area front and center (Hay Day feel).
-      const screenW = span * TW / 2;
-      const screenH = span * TH / 2 + TH * 2.2;
-      const fitW = this._cssW() / (screenW * 0.95);
-      const fitH = this._cssH() / (screenH * 0.90);
-      this._zoom = Math.max(ZMIN, Math.min(fitW, fitH, 0.82));
-
+      const plots = Farm.state.data.plots || [];
+      const n = Math.max(1, plots.length);
+      let minx = Infinity, miny = Infinity, maxx = -Infinity, maxy = -Infinity;
+      for (let i = 0; i < n; i++) {
+        const gx = PLOT_OX + (i % PLOT_COLS), gy = PLOT_OY + Math.floor(i / PLOT_COLS);
+        if (gx < minx) minx = gx; if (gy < miny) miny = gy; if (gx > maxx) maxx = gx; if (gy > maxy) maxy = gy;
+      }
+      const span = (maxx - minx) + (maxy - miny);   // iso screen diagonal (du === dv === Δgx+Δgy)
+      const screenW = span * TW / 2, screenH = span * TH / 2 + TH * 2.5;   // +headroom for tall sprites
+      // Cap initial zoom at 0.85: big enough to tap easily (≈78px tiles vs the old
+      // 50px), small enough that all plots + cute crops fit without crowding. Players
+      // can still pinch up to ZMAX or out to ZMIN.
+      this._zoom = Math.min(0.85, Math.max(ZMIN, Math.min(this._cssW() / (screenW * 1.15), this._cssH() / (screenH * 1.05))));
       const ccx = (minx + maxx) / 2, ccy = (miny + maxy) / 2, u = ccx - ccy, v = ccx + ccy;
       this._camX = u * this._tw() / 2;
-      this._camY = this._oy + v * this._th() / 2 - this._cssH() / 2 - this._th() * 0.55;
+      this._camY = this._oy + v * this._th() / 2 - this._cssH() / 2 - this._th() * 1.2;   // smaller camY → content sits lower → headroom above
       this._clampCam();
     },
 
@@ -266,9 +239,9 @@
         if (this._sel >= 0) { const ch = this._delChip((Farm.state.data.map)[this._sel]); if (Math.hypot(p.x - ch.x, p.y - ch.y) <= ch.r) { Farm.state.data.map.splice(this._sel, 1); this._sel = -1; Farm.state.save(); this.render(); return; } }
         const c = this._screenToCell(p.x, p.y);
         const bidx = this._buildingAt(c.gx, c.gy);
-        if (bidx >= 0) { const o = Farm.state.data.map[bidx]; this._sel = bidx; this._moving = { kind: 'building', idx: bidx, gx: o.gx, gy: o.gy, valid: true, sx: p.x, sy: p.y, moved: false }; this._layoutUI(); this.render(); return; }
+        if (bidx >= 0) { const o = Farm.state.data.map[bidx]; this._sel = bidx; this._moving = { kind: 'building', idx: bidx, gx: o.gx, gy: o.gy, valid: true, sx: p.x, sy: p.y, moved: false }; this.render(); return; }
         const didx = this._decoAt(c.gx, c.gy);
-        if (didx >= 0) { const d = Farm.state.data.decorations[didx]; this._sel = -1; this._moving = { kind: 'deco', idx: didx, gx: d.gx, gy: d.gy, valid: true, sx: p.x, sy: p.y, moved: false }; this._layoutUI(); this.render(); return; }
+        if (didx >= 0) { const d = Farm.state.data.decorations[didx]; this._sel = -1; this._moving = { kind: 'deco', idx: didx, gx: d.gx, gy: d.gy, valid: true, sx: p.x, sy: p.y, moved: false }; this.render(); return; }
       }
       this._drag = { x: p.x, y: p.y, camX: this._camX, camY: this._camY, moved: false };
     },
@@ -284,18 +257,6 @@
       const p = this._pointers[e.pointerId];
       if (this._painting) { const c = this._screenToCell(p.x, p.y); this._paintCell(c.gx, c.gy); return; }
       if (this._moving) {
-        // Auto-pan the camera when finger approaches screen edge.
-        // This gives "infinite" workspace on a tiny phone screen so you can
-        // drag buildings far without running out of room or hitting UI.
-        const EDGE = 48;
-        const pan = 9;
-        let panned = false;
-        if (p.x < EDGE) { this._camX -= pan; panned = true; }
-        if (p.x > this._cssW() - EDGE) { this._camX += pan; panned = true; }
-        if (p.y < EDGE) { this._camY -= pan; panned = true; }
-        if (p.y > this._cssH() - EDGE) { this._camY += pan; panned = true; }
-        if (panned) this._clampCam();
-
         if (Math.abs(p.x - this._moving.sx) + Math.abs(p.y - this._moving.sy) > 4) this._moving.moved = true;
         const c = this._screenToCell(p.x, p.y);
         if (this._moving.kind === 'deco') { this._moving.gx = c.gx; this._moving.gy = c.gy; this._moving.valid = this._decoCellFree(c.gx, c.gy, this._moving.idx); }
@@ -318,7 +279,6 @@
           if (m.kind === 'deco') { const d = Farm.state.data.decorations[m.idx]; if (d) { d.gx = m.gx; d.gy = m.gy; Farm.state.save(); } }
           else { const o = Farm.state.data.map[m.idx]; if (o) { o.gx = m.gx; o.gy = m.gy; Farm.state.save(); } }
         }
-        this._layoutUI();   // restore full palette after drop
         this.render(); this._drag = null; return;
       }
       const wasTap = this._drag && !this._drag.moved && !this._pinch; this._drag = null;
@@ -351,10 +311,9 @@
       for (const o of list) {
         const c = this._cell(o.gx, o.gy), pl = plots[o.i];
         const planted = pl && pl.unlocked && pl.crop;
-        // More generous hit area now that plots/crops are chunkier — much better mobile tap UX.
-        const halfW = tw * (planted ? 0.62 : 0.72);
-        const bot = c.y + th * 0.85;
-        const top = planted ? c.y - th * 3.1 : c.y - th * 0.75;
+        const halfW = tw * (planted ? 0.5 : 0.58);
+        const bot = c.y + th * 0.7;                          // base of the diamond/sprite
+        const top = planted ? c.y - th * 2.8 : c.y - th * 0.6;
         if (px >= c.x - halfW && px <= c.x + halfW && py >= top && py <= bot) return o;
       }
       return null;
@@ -465,17 +424,16 @@
       if (!(Farm.state.data && Farm.state.data.mapBuildSeen) && btn.animate) this._buildPulse = btn.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.09)' }, { transform: 'scale(1)' }], { duration: 1300, iterations: Infinity, easing: 'ease-in-out' });
 
       const tray = document.createElement('div'); tray.id = 'isoPalette';
-      // Compact on mobile so dragging has breathing room. Still usable.
-      tray.style.cssText = 'position:fixed;left:0;right:0;z-index:20;display:none;flex-direction:column;gap:4px;padding:5px 6px;background:rgba(255,255,255,.96);box-shadow:0 -3px 12px rgba(0,0,0,.12);';
+      tray.style.cssText = 'position:fixed;left:0;right:0;z-index:20;display:none;flex-direction:column;gap:8px;padding:9px 10px;background:rgba(255,255,255,.94);box-shadow:0 -3px 12px rgba(0,0,0,.12);';
       const tabs = document.createElement('div'); tabs.style.cssText = 'display:flex;gap:6px;justify-content:center;';
       [['build', en ? '🏠 Build' : '🏠 建筑'], ['terrain', en ? '🖌 Terrain' : '🖌 地形']].forEach(([m, label]) => { const t = document.createElement('button'); t.dataset.mode = m; t.textContent = label; t.style.cssText = 'border:none;border-radius:13px;padding:6px 16px;cursor:pointer;font:600 13px/1 "Fredoka",system-ui,sans-serif;'; t.onclick = () => this.setEditMode(m); tabs.appendChild(t); });
       this._modeTabs = tabs; tray.appendChild(tabs);
       const rowCss = 'display:flex;flex-wrap:wrap;gap:8px;justify-content:center;align-items:flex-end;';
       const pb = document.createElement('div'); pb.style.cssText = rowCss;
-      PALETTE.forEach((type) => { const b = BUILDINGS[type]; const item = document.createElement('button'); item.style.cssText = 'border:1px solid #e0e0e0;border-radius:12px;background:#fff;padding:5px 6px 4px;min-width:58px;cursor:pointer;font:500 11px/1.2 "Fredoka",system-ui,sans-serif;color:#444;'; item.innerHTML = '<div style="font-size:10px;color:#888;margin-top:2px">＋ ' + (en ? b.en : b.zh) + '</div>'; const ic = document.createElement('div'); ic.style.cssText = 'width:36px;height:30px;margin:0 auto;background-size:contain;background-repeat:no-repeat;background-position:center;'; ic.style.backgroundImage = "url('" + ASSET_DIR + ASSET_SRC[b.img] + "')"; item.insertBefore(ic, item.firstChild); item.onclick = () => this._addBuilding(type); pb.appendChild(item); });
+      PALETTE.forEach((type) => { const b = BUILDINGS[type]; const item = document.createElement('button'); item.style.cssText = 'border:1px solid #e0e0e0;border-radius:14px;background:#fff;padding:8px 10px 6px;min-width:72px;cursor:pointer;font:500 12px/1.3 "Fredoka",system-ui,sans-serif;color:#444;'; item.innerHTML = '<div style="font-size:11px;color:#888;margin-top:4px">＋ ' + (en ? b.en : b.zh) + '</div>'; const ic = document.createElement('div'); ic.style.cssText = 'width:44px;height:38px;margin:0 auto;background-size:contain;background-repeat:no-repeat;background-position:center;'; ic.style.backgroundImage = "url('" + ASSET_DIR + ASSET_SRC[b.img] + "')"; item.insertBefore(ic, item.firstChild); item.onclick = () => this._addBuilding(type); pb.appendChild(item); });
       this._palBuild = pb; tray.appendChild(pb);
       const pt = document.createElement('div'); pt.style.cssText = rowCss;
-      BRUSHES.forEach((br) => { const item = document.createElement('button'); item.dataset.brush = br.key; item.style.cssText = 'border:1px solid #e0e0e0;border-radius:12px;background:#fff;padding:5px 6px 4px;min-width:58px;cursor:pointer;font:500 11px/1.2 "Fredoka",system-ui,sans-serif;color:#444;'; item.innerHTML = '<div style="width:32px;height:24px;margin:0 auto;border-radius:6px;background:' + br.color + '"></div><div style="font-size:10px;color:#888;margin-top:2px">' + (en ? br.en : br.zh) + '</div>'; item.onclick = () => this.setBrush(br.key); pt.appendChild(item); });
+      BRUSHES.forEach((br) => { const item = document.createElement('button'); item.dataset.brush = br.key; item.style.cssText = 'border:1px solid #e0e0e0;border-radius:14px;background:#fff;padding:8px 10px 6px;min-width:72px;cursor:pointer;font:500 12px/1.3 "Fredoka",system-ui,sans-serif;color:#444;'; item.innerHTML = '<div style="width:40px;height:30px;margin:0 auto;border-radius:8px;background:' + br.color + '"></div><div style="font-size:11px;color:#888;margin-top:4px">' + (en ? br.en : br.zh) + '</div>'; item.onclick = () => this.setBrush(br.key); pt.appendChild(item); });
       this._palTerrain = pt; tray.appendChild(pt);
       document.body.appendChild(tray); this._palette = tray;
 
@@ -487,35 +445,8 @@
     },
     _layoutUI() {
       const r = this._farmRect(), fromBottom = Math.max(0, window.innerHeight - (r.top + r.height)), en = this._lang() === 'en';
-      const isMoving = !!this._moving;
-
-      if (this._palette) {
-        if (!this._build) {
-          this._palette.style.display = 'none';
-        } else if (isMoving) {
-          // While actively dragging an object, collapse the palette to give
-          // maximum finger room on small phone screens.
-          this._palette.style.display = 'flex';
-          this._palette.style.bottom = fromBottom + 'px';
-          this._palette.style.opacity = '0.15';   // almost invisible but still there if needed
-          this._palette.style.pointerEvents = 'none';
-        } else {
-          this._palette.style.display = 'flex';
-          this._palette.style.left = r.left + 'px';
-          this._palette.style.right = Math.max(0, window.innerWidth - (r.left + r.width)) + 'px';
-          this._palette.style.bottom = fromBottom + 'px';
-          this._palette.style.opacity = '1';
-          this._palette.style.pointerEvents = 'auto';
-        }
-      }
-
-      if (this._buildBtn) {
-        const ph = (this._build && this._palette && !isMoving) ? (this._palette.getBoundingClientRect().height || 74) : 0;
-        this._buildBtn.style.right = (Math.max(0, window.innerWidth - (r.left + r.width)) + 14) + 'px';
-        this._buildBtn.style.bottom = (fromBottom + (this._build ? ph + 10 : 14)) + 'px';
-        this._buildBtn.textContent = this._build ? (en ? '✓ Done' : '✓ 完成') : (en ? '🔨 Build' : '🔨 建造');
-        this._buildBtn.style.background = this._build ? '#FF9800' : '#4CAF50';
-      }
+      if (this._palette) { this._palette.style.display = this._build ? 'flex' : 'none'; this._palette.style.left = r.left + 'px'; this._palette.style.right = Math.max(0, window.innerWidth - (r.left + r.width)) + 'px'; this._palette.style.bottom = fromBottom + 'px'; }
+      if (this._buildBtn) { const ph = (this._build && this._palette) ? (this._palette.getBoundingClientRect().height || 74) : 0; this._buildBtn.style.right = (Math.max(0, window.innerWidth - (r.left + r.width)) + 14) + 'px'; this._buildBtn.style.bottom = (fromBottom + (this._build ? ph + 10 : 14)) + 'px'; this._buildBtn.textContent = this._build ? (en ? '✓ Done' : '✓ 完成') : (en ? '🔨 Build' : '🔨 建造'); this._buildBtn.style.background = this._build ? '#FF9800' : '#4CAF50'; }
       if (this._hint) { this._hint.style.display = this._build ? 'block' : 'none'; this._hint.style.left = r.left + 'px'; this._hint.style.right = Math.max(0, window.innerWidth - (r.left + r.width)) + 'px'; this._hint.style.top = (r.top + 8) + 'px'; }
     },
     _refreshModeUI() {
@@ -533,20 +464,6 @@
       this._build = !this._build;
       if (this._build && Farm.state.data && !Farm.state.data.mapBuildSeen) { Farm.state.data.mapBuildSeen = true; Farm.state.save(); if (this._buildPulse) { this._buildPulse.cancel(); this._buildPulse = null; } }
       if (!this._build) { this._sel = -1; this._moving = null; this._painting = false; this._editMode = 'build'; Farm.state.save(); }
-
-      // Give the user maximum screen real-estate for dragging on phones.
-      // Hide the normal bottom navigation bar while building.
-      const bb = document.getElementById('bottombar');
-      if (bb) bb.style.display = this._build ? 'none' : '';
-
-      // When leaving build, make sure size recalcs to normal bars.
-      if (!this._build) {
-        this._resize();
-      } else {
-        // Enter build → immediately give more space
-        this._resize();
-      }
-
       this._refreshModeUI(); this._layoutUI(); this.render();
     },
 
@@ -575,149 +492,18 @@
     // matches the crops' own baked soil exactly → every plot (empty or planted) is a
     // consistent raised tilled bed. Bottom-anchored like the crops so heights line up.
     _tilledDiamond(cx, cy) {
-      const ctx = this._ctx, tw = this._tw(), th = this._th();
-      // Always draw a rich, attractive Hay Day-style tilled bed – never black or flat ugly.
-      // Base warm soil
-      this._diamond(cx, cy, tw, th);
-      ctx.fillStyle = '#c9a06e'; // warm inviting brown
-      ctx.fill();
-
-      // Furrows for tilled look (horizontal lines, slightly darker)
-      ctx.fillStyle = 'rgba(139, 90, 60, 0.55)';
-      for (let i = -3; i <= 3; i++) {
-        const y = cy + i * th * 0.14;
-        ctx.fillRect(cx - tw * 0.38, y - 1, tw * 0.76, 2);
-      }
-
-      // Lighter top rim / highlight for 3D pop and to avoid "black" flat look
-      ctx.fillStyle = 'rgba(232, 212, 168, 0.45)';
-      ctx.fillRect(cx - tw * 0.38, cy - th * 0.42, tw * 0.76, th * 0.12);
-
-      // Small texture dots for soil realism (not solid)
-      ctx.fillStyle = 'rgba(100, 60, 30, 0.35)';
-      for (let i = 0; i < 18; i++) {
-        const rx = cx - tw * 0.35 + seeded(cx / tw | 0, cy / th | 0, i + 800) * tw * 0.7;
-        const ry = cy - th * 0.35 + seeded(cx / tw | 0, cy / th | 0, i + 900) * th * 0.7;
-        ctx.fillRect(rx, ry, 1.8, 1.8);
-      }
-
-      // If the plot_bed image loads, layer it on top for extra 3D painted detail (non-destructive)
-      const im = this._img.plot_bed;
-      if (im && im.width) {
-        const w = tw * 1.04, s = w / im.width, hh = im.height * s;
-        ctx.drawImage(im, cx - w / 2, cy + th * 0.55 - hh, w, hh);
-      }
+      const im = this._img.plot_bed, ctx = this._ctx, tw = this._tw(), th = this._th();
+      if (im && im.width) { const w = tw * 1.04, s = w / im.width, hh = im.height * s; ctx.drawImage(im, cx - w / 2, cy + th * 0.6 - hh, w, hh); return; }
+      this._diamond(cx, cy, tw, th); ctx.fillStyle = '#a9743f'; ctx.fill();
     },
-    // Draw a painted cube ground tile (p_hayday_* for premium Hay Day 3D volume) + always-bright base + top texture.
-    // Clipped image draw + diamond fill guarantees ZERO black boards/gaps between plots — continuous painted land.
-    // Textures layered on top give the final chunky pop and life. Fallbacks are rich so never ugly/black.
+    // Draw a painted cube ground tile centered on cell c (diamond width = TW,
+    // ~2% overlap to hide seams), or a flat-diamond fallback while it loads.
     _tileImg(key, c, gx, gy) {
       const t = (key === 'grass' && gx != null) ? grassVariant(gx, gy) : ISO_TILES[key];
       const im = t && this._img[t.img], tw = this._tw(), th = this._th();
-      // Always draw bright base diamond first to kill black.
-      // Slightly oversized (1.02x) so adjacent tiles overlap 1px and wipe any
-      // sub-pixel seams or gaps — continuous solid land like Hay Day, never
-      // stepped black boards.
-      this._diamond(c.x, c.y, tw * 1.02, th * 1.02);
-      let baseColor = GRASS_A;
-      if (key === 'soil') baseColor = '#c9a06e';
-      else if (key === 'path') baseColor = '#d4a574';
-      else if (key === 'water') baseColor = '#5aa0c8';
-      this._ctx.fillStyle = baseColor;
-      this._ctx.fill();
-
-      if (im && im.width) {
-        const w = tw * 1.15;
-        const sc = w / im.width;
-        if (key === 'grass' || key === 'soil') {
-          // FLAT TOP FACE ONLY for grass/soil.
-          // Hay Day style: the land is a continuous painted carpet (bright,
-          // unified, no dark skirts or "boards" between rows). We take only the
-          // upper portion of the p_hayday cube image (the flat top diamond)
-          // and stamp it on the solid base slab + texture. 3D volume comes from
-          // crops, buildings, animals and subtle highlights. No more terraced black.
-          const topFrac = 0.52;
-          const srcH = im.height * topFrac;
-          const dstH = im.height * sc * topFrac;
-          const dx = c.x - w / 2;
-          const dy = c.y - dstH * 0.55;  // tuned for chunkier tiles + flat ground
-          this._ctx.save();
-          this._diamond(c.x, c.y, tw, th);
-          this._ctx.clip();
-          this._ctx.drawImage(im, 0, 0, im.width, srcH, dx, dy, w, dstH);
-          this._ctx.restore();
-        } else {
-          // path/water keep more of their volume if desired
-          const dh = im.height * sc;
-          this._ctx.save();
-          this._diamond(c.x, c.y, tw, th);
-          this._ctx.clip();
-          this._ctx.drawImage(im, c.x - w / 2, c.y - dh * t.cy, w, dh);
-          this._ctx.restore();
-        }
-      }
-
-      // Phase 2: Subtle global lighting (top-left highlight / bottom-right shadow)
-      // Applied to ground after base/image for Hay Day painted depth without breaking flat tiling.
-      if (key === 'grass' || key === 'wildGrass' || key === 'soil') {
-        const light = 0.12;
-        const shade = 0.18;
-        // Simple directional based on cell position for variation
-        const dir = ((gx + gy) % 5) / 5 - 0.5;
-        ctx.fillStyle = `rgba(255,255,240,${light + dir * 0.04})`;
-        ctx.fillRect(c.x - tw * 0.48, c.y - th * 0.48, tw * 0.96, th * 0.35); // top-left highlight
-        ctx.fillStyle = `rgba(40,55,30,${shade - dir * 0.03})`;
-        ctx.fillRect(c.x - tw * 0.48, c.y + th * 0.1, tw * 0.96, th * 0.42); // bottom-right shadow
-      }
-
-      // Re-apply rich texture ON TOP of the (clipped) painted image so grass
-      // blades / soil furrows / path dots / water highlights read clearly.
-      // Base bright color + clipped painted 3D image + top texture =
-      // continuous vibrant land (no black boards/gaps), Hay Day chunky 3D pop.
-      if (key === 'grass' || key === 'wildGrass') {
-        this._ctx.fillStyle = (key === 'wildGrass') ? '#7cb05a' : GRASS_B;
-        // Gentle wind using slow time + seeded base (stable positions).
-        // Very subtle so it feels alive without the old harsh flicker.
-        const wind = Math.sin(Date.now() / 1400 + gx * 0.7) * 1.2;
-        const bladeCount = (key === 'wildGrass') ? 26 : 18;  // denser wild grass
-        for (let i = 0; i < bladeCount; i++) {
-          const rx = c.x - tw * 0.45 + seeded(gx, gy, i) * tw * 0.9 + wind * (i % 3 - 1) * 0.3;
-          const ry = c.y - th * 0.45 + seeded(gx, gy, i + 100) * th * 0.9;
-          this._ctx.fillRect(rx, ry, 1.5, 2.8);
-        }
-        this._ctx.fillStyle = (key === 'wildGrass') ? '#5a9c3a' : GRASS_C;
-        const highlightCount = (key === 'wildGrass') ? 11 : 7;
-        for (let i = 0; i < highlightCount; i++) {
-          const rx = c.x - tw * 0.4 + seeded(gx, gy, i + 200) * tw * 0.8 + wind * (i % 2) * 0.4;
-          const ry = c.y - th * 0.4 + seeded(gx, gy, i + 300) * th * 0.8;
-          this._ctx.fillRect(rx, ry, 2, 3.5);
-        }
-      } else if (key === 'soil') {
-        this._ctx.fillStyle = 'rgba(139,90,60,0.55)';
-        for (let i = 0; i < 6; i++) {
-          const y = c.y - th * 0.35 + i * th * 0.15;
-          this._ctx.fillRect(c.x - tw * 0.4, y, tw * 0.8, 2.5);
-        }
-        this._ctx.fillStyle = 'rgba(100,60,30,0.4)';
-        for (let i = 0; i < 12; i++) {
-          const rx = c.x - tw * 0.38 + seeded(gx, gy, i + 400) * tw * 0.76;
-          const ry = c.y - th * 0.38 + seeded(gx, gy, i + 500) * th * 0.76;
-          this._ctx.fillRect(rx, ry, 2, 2);
-        }
-      } else if (key === 'path') {
-        this._ctx.fillStyle = 'rgba(139,90,60,0.5)';
-        for (let i = 0; i < 10; i++) {
-          const rx = c.x - tw * 0.4 + seeded(gx, gy, i + 600) * tw * 0.8;
-          const ry = c.y - th * 0.4 + seeded(gx, gy, i + 700) * th * 0.8;
-          this._ctx.fillRect(rx, ry, 2.5, 2.5);
-        }
-      } else if (key === 'water') {
-        this._ctx.fillStyle = 'rgba(255,255,255,0.3)';
-        for (let i = 0; i < 5; i++) {
-          const y = c.y - th * 0.25 + i * th * 0.2;
-          this._ctx.fillRect(c.x - tw * 0.35, y, tw * 0.7, 2);
-        }
-      }
+      if (im) { const w = tw * 1.12, sc = w / im.width, dh = im.height * sc; this._ctx.drawImage(im, c.x - w / 2, c.y - dh * t.cy, w, dh); return; }
+      this._diamond(c.x, c.y, tw, th);
+      this._ctx.fillStyle = key === 'water' ? '#5aa0c8' : key === 'path' ? '#a8743a' : key === 'soil' ? SOIL_TOP : GRASS_A; this._ctx.fill();
     },
     _startLoop() {
       const loop = () => {
@@ -732,204 +518,10 @@
       if (!this._on) return;
       const ctx = this._ctx, tw = this._tw(), th = this._th(), W = this._cssW(), H = this._cssH();
       const terrain = Farm.state.data.mapTerrain || {};
-
-      // Precompute early for all boundary/perimeter/peripheral code in this render
-      const plotCount = (Farm.state.data.plots || []).length || 80;
-      const plotRows = Math.max(6, Math.ceil(plotCount / PLOT_COLS));
-
       ctx.clearRect(0, 0, W, H);
-
-      // === BEAUTIFUL HAY DAY-STYLE BACKGROUND LAYERS ===
-      // Sky gradient + distant soft hills. This is what makes the view feel alive
-      // and "worth opening" instead of a flat green rectangle.
-      const skyH = Math.min(H * 0.42, 260);
-      const skyGrad = ctx.createLinearGradient(0, 0, 0, skyH);
-      skyGrad.addColorStop(0, '#a1d4ff');
-      skyGrad.addColorStop(0.45, '#c5e0f5');
-      skyGrad.addColorStop(0.75, '#d4e8d0');
-      skyGrad.addColorStop(1, '#a3d977');
-      ctx.fillStyle = skyGrad;
-      ctx.fillRect(0, 0, W, skyH);
-
-      // Distant rolling hills (soft, behind everything)
-      ctx.fillStyle = '#6ea83a';
-      ctx.beginPath();
-      ctx.moveTo(0, skyH - 8);
-      ctx.quadraticCurveTo(W * 0.18, skyH - 52, W * 0.42, skyH - 18);
-      ctx.quadraticCurveTo(W * 0.68, skyH - 58, W, skyH - 12);
-      ctx.lineTo(W, skyH + 25);
-      ctx.lineTo(0, skyH + 25);
-      ctx.closePath();
-      ctx.fill();
-
-      // Farther softer hill layer for depth
-      ctx.fillStyle = 'rgba(85, 125, 55, 0.55)';
-      ctx.beginPath();
-      ctx.moveTo(0, skyH + 2);
-      ctx.quadraticCurveTo(W * 0.28, skyH + 28, W * 0.55, skyH + 8);
-      ctx.quadraticCurveTo(W * 0.82, skyH + 35, W, skyH + 18);
-      ctx.lineTo(W, skyH + 55);
-      ctx.lineTo(0, skyH + 55);
-      ctx.closePath();
-      ctx.fill();
-
-      // Base lush green fill for the close ground (kept for compatibility with existing slabs)
-      ctx.fillStyle = '#a3d977';
-      ctx.fillRect(0, skyH - 5, W, H - skyH + 5);
-
-      // Solid land mass slab for the ENTIRE world grid.
-      // This paints one continuous vibrant green field under everything so there
-      // are ZERO black steps, trenches, voids or "boards" between iso rows — exactly
-      // the continuous painted farm look in Hay Day. Tile images + texture add
-      // the nice painted variation and detail on top of the solid slab.
-      const c0 = this._cell(0, 0);
-      const c1 = this._cell(COLS-1, 0);
-      const c2 = this._cell(COLS-1, ROWS-1);
-      const c3 = this._cell(0, ROWS-1);
-      ctx.fillStyle = '#a3d977';
-      ctx.beginPath();
-      ctx.moveTo(c0.x, c0.y - th * 0.65);
-      ctx.lineTo(c1.x + tw * 0.6, c1.y);
-      ctx.lineTo(c2.x, c2.y + th * 0.6);
-      ctx.lineTo(c3.x - tw * 0.6, c3.y);
-      ctx.closePath();
-      ctx.fill();
-
-      // Very soft shadow under the whole farm land — makes it sit in the world
-      // instead of floating on flat color (big part of "not monotonous").
-      ctx.fillStyle = 'rgba(35, 65, 25, 0.16)';
-      ctx.beginPath();
-      ctx.moveTo(c0.x + 6, c0.y - th * 0.65 + 10);
-      ctx.lineTo(c1.x + tw * 0.6 + 6, c1.y + 6);
-      ctx.lineTo(c2.x + 4, c2.y + th * 0.6 + 8);
-      ctx.lineTo(c3.x - tw * 0.6 + 2, c3.y + 6);
-      ctx.closePath();
-      ctx.fill();
-
-      // Soil slab for the cultivated plot rectangle (makes the active farm field
-      // a single solid tilled carpet like a real planted area in Hay Day, instead
-      // of individual stepped tiles with gaps). Grass slab is under everything.
-
-      // Phase 2: Soften the hard polygon edges for natural fusion.
-      // Draw a slightly larger, feathered outer grass layer with variation.
-      ctx.fillStyle = '#8fbf5a';  // slightly wilder outer green
-      ctx.beginPath();
-      ctx.moveTo(c0.x - 12, c0.y - th * 0.75);
-      ctx.lineTo(c1.x + tw * 0.7, c1.y - 8);
-      ctx.lineTo(c2.x + 12, c2.y + th * 0.7);
-      ctx.lineTo(c3.x - tw * 0.7, c3.y - 8);
-      ctx.closePath();
-      ctx.fill();
-      const p0 = this._cell(PLOT_OX, PLOT_OY);
-      const p1 = this._cell(PLOT_OX + PLOT_COLS - 1, PLOT_OY);
-      const p2 = this._cell(PLOT_OX + PLOT_COLS - 1, PLOT_OY + plotRows - 1);
-      const p3 = this._cell(PLOT_OX, PLOT_OY + plotRows - 1);
-      ctx.fillStyle = '#c9a06e';
-      ctx.beginPath();
-      ctx.moveTo(p0.x, p0.y - th * 0.5);
-      ctx.lineTo(p1.x + tw * 0.5, p1.y);
-      ctx.lineTo(p2.x, p2.y + th * 0.5);
-      ctx.lineTo(p3.x - tw * 0.5, p3.y);
-      ctx.closePath();
-      ctx.fill();
-
-      // Phase 2/3: Soft organic perimeter for the farm "island".
-      // Light fence-like dots + rocks along plot boundary (seeded, subtle).
-      ctx.strokeStyle = 'rgba(85,70,50,0.35)';
-      ctx.lineWidth = 1.5;
-      for (let i = 0; i < 28; i++) {
-        const seed = i + 900;
-        const side = i % 4;
-        let gx, gy;
-        if (side === 0) { gx = PLOT_OX + (seed % PLOT_COLS); gy = PLOT_OY - 1; }
-        else if (side === 1) { gx = PLOT_OX + PLOT_COLS; gy = PLOT_OY + (seed % plotRows); }
-        else if (side === 2) { gx = PLOT_OX + (seed % PLOT_COLS); gy = PLOT_OY + plotRows; }
-        else { gx = PLOT_OX - 1; gy = PLOT_OY + (seed % plotRows); }
-        if (gx < 0 || gy < 0) continue;
-        const cc = this._cell(gx, gy);
-        ctx.beginPath();
-        ctx.arc(cc.x, cc.y + th * 0.15, tw * 0.18, 0, Math.PI * 2);
-        ctx.stroke();
-      }
-
-      // === AMBIENT BACKGROUND DETAILS (wild trees, bushes) ===
-      // These live in the huge open peripheral space. Seeded positions = stable,
-      // drawn at reduced scale + alpha so they feel "far away" and give the farm
-      // a real sense of place instead of floating on a green void.
-      // Uses existing assets, zero extra memory.
-      const ambientProps = [
-        {type: 'tree', count: 7, scale: 0.62, alpha: 0.42, yBias: -1},
-        {type: 'bush', count: 6, scale: 0.78, alpha: 0.32, yBias: 0},
-      ];
-      ambientProps.forEach((prop) => {
-        const key = (prop.type === 'bush') ? 'deco_bush' : prop.type;
-        const im = this._img[key];
-        if (!im) return;
-        for (let i = 0; i < prop.count; i++) {
-          // Seeded around the outer edges of the big world (not on the central farm)
-          const seed = i + (prop.type === 'tree' ? 0 : 100);
-          const gx = ((seed * 11) % (COLS - 2)) + 1;
-          const gy = Math.min(ROWS-2, Math.max(1, Math.floor((seed * 7) % 5) + prop.yBias));
-          // Bias some to top and sides for nice framing
-          const cc = this._cell(gx, gy);
-          const sc = prop.scale * (0.85 + (seed % 3) * 0.1);
-          const w = tw * 1.6 * sc;
-          const h = w * (im.height / im.width);
-          ctx.save();
-          ctx.globalAlpha = prop.alpha;
-          ctx.drawImage(im, cc.x - w/2, cc.y - h * 0.7, w, h);
-          ctx.restore();
-        }
-      });
-
-      // Phase 2: More static peripheral environment decorations (seeded, only outer)
-      // Flower patches, small rocks, logs in the wild grass areas.
-      const outerCount = 22;
-      for (let i = 0; i < outerCount; i++) {
-        const seed = i + 500;
-        const gx = (seed * 13 % (COLS - 1)) + 1;
-        const gy = Math.floor((seed * 9) % (ROWS - 2)) + 1;
-        const inMain = gx >= PLOT_OX && gx < PLOT_OX + PLOT_COLS &&
-                       gy >= PLOT_OY && gy < PLOT_OY + plotRows;
-        if (inMain) continue;
-
-        const cc = this._cell(gx, gy);
-        const type = seed % 5;
-
-        if (type === 0) {
-          // Flower patch (small colored dots)
-          ctx.fillStyle = (seed % 3 === 0) ? '#ff9bb3' : (seed % 2 === 0 ? '#fff08a' : '#a8e6cf');
-          for (let f = 0; f < 5; f++) {
-            const fx = cc.x - tw * 0.25 + seeded(gx, gy, f + 10) * tw * 0.5;
-            const fy = cc.y - th * 0.2 + seeded(gx, gy, f + 20) * th * 0.4;
-            ctx.beginPath();
-            ctx.arc(fx, fy, 2.5, 0, Math.PI * 2);
-            ctx.fill();
-          }
-        } else if (type === 1) {
-          // Small rock
-          ctx.fillStyle = '#6b6b5a';
-          ctx.beginPath();
-          ctx.ellipse(cc.x, cc.y + th * 0.1, tw * 0.22, th * 0.12, 0, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.fillStyle = '#525247';
-          ctx.fillRect(cc.x - tw * 0.08, cc.y + th * 0.02, tw * 0.16, th * 0.06);
-        } else {
-          // Log or extra bush at very low opacity (reuse bush)
-          const im = this._img.deco_bush;
-          if (im) {
-            ctx.save();
-            ctx.globalAlpha = 0.25;
-            const sw = tw * 0.7;
-            ctx.drawImage(im, cc.x - sw / 2, cc.y - sw * 0.6, sw, sw * 0.8);
-            ctx.restore();
-          }
-        }
-      }
 
       // painted iso cube tiles, back-to-front (front rows cover the row behind's
       // earth skirt → the Hay Day "farm island"). Plot cells use the soil tile.
-
       const plotCells = this._plotCellSet();
       for (let s = 0; s <= (COLS - 1) + (ROWS - 1); s++) {
         for (let gx = 0; gx < COLS; gx++) {
@@ -937,29 +529,16 @@
           const c = this._cell(gx, gy);
           if (c.x + tw < 0 || c.x - tw > W || c.y + th * 4 < 0 || c.y - th * 2 > H) continue;
           const k = gx + ',' + gy;
-          let key = 'grass';
-
-          // Phase 2: the entire visual farm rectangle (12x at least 6) shows as
-          // prepared tilled soil, so it doesn't disappear into background grass.
-          // Only actually planted crops get grass under them.
-          const inMainFarm = gx >= PLOT_OX && gx < PLOT_OX + PLOT_COLS &&
-                             gy >= PLOT_OY && gy < PLOT_OY + plotRows;
-          if (!inMainFarm) {
-            key = 'wildGrass';
-          } else {
-            let pl = null;
-            if (plotCells[k]) {
-              const idx = this._cellToPlot[k];
-              pl = (idx != null) ? Farm.state.data.plots[idx] : null;
-            }
-            if (pl && pl.unlocked && pl.crop) {
-              key = 'grass';   // planted → grass base + crop on top
-            } else {
-              key = 'soil';    // empty unlocked, locked, or virtual future slots → tilled soil
-            }
+          let key = 'grass', emptyPlot = false;
+          if (plotCells[k]) {
+            const pl = Farm.state.data.plots[this._cellToPlot[k]];
+            // empty unlocked plot → clean tilled bed drawn ON grass (below); planted
+            // painted-crop plots stay grass (the crop sprite brings its own soil cube).
+            if (pl && pl.unlocked && !(pl.crop && ISO_CROPS[pl.crop])) emptyPlot = true;
           }
           if (terrain[k] === 'water') key = 'water'; else if (terrain[k] === 'path') key = 'path';
           this._tileImg(key, c, gx, gy);
+          if (emptyPlot && key === 'grass') this._tilledDiamond(c.x, c.y);
         }
       }
 
@@ -1000,13 +579,6 @@
       draws.sort((a, c) => a.d - c.d); draws.forEach(x => x.fn());
 
       this._drawParticles(tw); this._drawFestival();
-
-      // Phase 3: Soft vignette to focus attention on the cultivated farm area (Hay Day trick)
-      const vig = ctx.createRadialGradient(W/2, H/2, Math.min(W, H) * 0.35, W/2, H/2, Math.max(W, H) * 0.72);
-      vig.addColorStop(0, 'rgba(0,0,0,0)');
-      vig.addColorStop(1, 'rgba(30,45,20,0.22)');
-      ctx.fillStyle = vig;
-      ctx.fillRect(0, 0, W, H);
     },
     _drawPlot(plot, gx, gy, idx) {
       const ctx = this._ctx, tw = this._tw(), th = this._th(), c = this._cell(gx, gy);
@@ -1031,9 +603,9 @@
       if (mature) { const t = Date.now() / 1000, ph = Math.sin(t * 2 + gx + gy); ctx.beginPath(); ctx.arc(c.x, c.y - th * 0.1, tw * (0.34 + ph * 0.02), 0, Math.PI * 2); ctx.fillStyle = 'rgba(255,214,79,' + (0.3 + ph * 0.08) + ')'; ctx.fill(); }
       ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
       const fr = p >= 1 ? 3 : p >= 0.6 ? 2 : p >= 0.25 ? 1 : 0;
-      if (ISO_CROPS[plot.crop]) {   // pure plant. With chunkier tiles + flat painted ground, sit slightly lower so stems feel planted in the tilled top. Generous hit area above.
+      if (ISO_CROPS[plot.crop]) {   // painted iso 4-stage (sprite includes soil cube)
         const im = this._lazyImg(ISO_CROPS[plot.crop] + '_' + fr);
-        if (!this._blit(im, c.x, c.y + th * 0.18, tw * 0.95, th * 2.05)) { const def = Farm.crops.get(plot.crop); ctx.font = (th * 1.1) + 'px sans-serif'; ctx.fillText((def && def.icon) || '🌿', c.x, by); }
+        if (!this._blit(im, c.x, c.y + th * 0.6, tw * 0.92, th * 2.45)) { const def = Farm.crops.get(plot.crop); ctx.font = (th * 1.1) + 'px sans-serif'; ctx.fillText((def && def.icon) || '🌿', c.x, by); }
       } else if (mature) {
         const im = this._cropSprite(plot.crop);
         if (!this._blit(im, c.x, by, tw * 0.72, th * 1.7)) { const def = Farm.crops.get(plot.crop); ctx.font = (th * 1.1) + 'px sans-serif'; ctx.fillText((def && def.icon) || '🥬', c.x, by); }
@@ -1211,46 +783,11 @@
       const season = (Farm.seasons && Farm.seasons.current) || monthSeason(), set = SEASON_PARTICLES[season];
       if (!set) return;
       const ctx = this._ctx, W = this._cssW(), H = this._cssH(), t = Date.now() / 1000;
-
-      ctx.save();
-      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-
-      // Phase 3 richer particles (Hay Day style depth + variety)
-      // Far layer (high sky insects)
-      ctx.globalAlpha = 0.38;
-      for (let i = 0; i < 8; i++) {
-        const sp = 8 + (i % 3);
-        const x = ((i * 71) % (W * 1.05)) - 15;
-        const sway = Math.sin(t * 0.35 + i) * 6;
-        const y = ((t * sp + i * 31) % (H * 0.55)) + 5;
-        ctx.font = (tw * 0.18) + 'px sans-serif';
-        ctx.fillText(set[i % set.length], x + sway, y);
+      ctx.save(); ctx.globalAlpha = 0.8; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      for (let i = 0; i < 16; i++) {
+        const sp = 16 + (i % 5) * 7, x = (i * 53.7) % W, sway = Math.sin(t * 0.8 + i) * 13, y = ((t * sp + i * 41) % (H + 40)) - 20;
+        ctx.font = (this._th() * 0.5 + (i % 3) * 3) + 'px sans-serif'; ctx.fillText(set[i % set.length], x + sway, y);
       }
-
-      // Mid layer (floating petals / leaves)
-      ctx.globalAlpha = 0.55;
-      for (let i = 0; i < 10; i++) {
-        const sp = 11 + (i % 4);
-        const x = (i * 47 + 30) % W;
-        const sway = Math.sin(t * 0.7 + i * 0.8) * 9;
-        const y = ((t * sp + i * 23) % (H * 0.78)) + H * 0.08;
-        ctx.font = (tw * 0.28 + (i % 2)) + 'px sans-serif';
-        const emoji = (i % 3 === 0) ? '🍃' : set[(i + 1) % set.length];
-        ctx.fillText(emoji, x + sway, y);
-      }
-
-      // Near layer (ground butterflies / dandelion fluff)
-      ctx.globalAlpha = 0.78;
-      for (let i = 0; i < 14; i++) {
-        const sp = 13 + (i % 5) * 2;
-        const x = (i * 39) % W;
-        const sway = Math.sin(t * 1.2 + i) * 12;
-        const y = ((t * sp + i * 17) % (H * 0.92)) + H * 0.15;
-        ctx.font = (tw * 0.42) + 'px sans-serif';
-        const emoji = (i % 4 === 0) ? '✨' : set[(i + 3) % set.length];
-        ctx.fillText(emoji, x + sway, y);
-      }
-
       ctx.restore();
     },
     _drawFestival() {
