@@ -59,7 +59,7 @@ self.addEventListener('notificationclick', (event) => {
   );
 });
 
-const CACHE_VERSION = 'ef-v43';
+const CACHE_VERSION = 'ef-v44';
 const CACHE = 'eastern-farm-' + CACHE_VERSION;
 const PRECACHE = [
   '/src/index.html',
