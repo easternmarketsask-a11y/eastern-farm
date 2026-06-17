@@ -650,6 +650,25 @@
       ctx.closePath();
       ctx.fill();
 
+      // Soil slab for the cultivated plot rectangle (makes the active farm field
+      // a single solid tilled carpet like a real planted area in Hay Day, instead
+      // of individual stepped tiles with gaps). Grass slab is under everything.
+      const p0 = this._cell(PLOT_OX, PLOT_OY);
+      const p1 = this._cell(PLOT_OX + PLOT_COLS - 1, PLOT_OY);
+      // Estimate plot rows from current unlocked plots (fall back to ~8 rows for big field)
+      const plotCount = (Farm.state.data.plots || []).length || 80;
+      const plotRows = Math.max(6, Math.ceil(plotCount / PLOT_COLS));
+      const p2 = this._cell(PLOT_OX + PLOT_COLS - 1, PLOT_OY + plotRows - 1);
+      const p3 = this._cell(PLOT_OX, PLOT_OY + plotRows - 1);
+      ctx.fillStyle = '#c9a06e';
+      ctx.beginPath();
+      ctx.moveTo(p0.x, p0.y - th * 0.5);
+      ctx.lineTo(p1.x + tw * 0.5, p1.y);
+      ctx.lineTo(p2.x, p2.y + th * 0.5);
+      ctx.lineTo(p3.x - tw * 0.5, p3.y);
+      ctx.closePath();
+      ctx.fill();
+
       // painted iso cube tiles, back-to-front (front rows cover the row behind's
       // earth skirt → the Hay Day "farm island"). Plot cells use the soil tile.
       const plotCells = this._plotCellSet();
