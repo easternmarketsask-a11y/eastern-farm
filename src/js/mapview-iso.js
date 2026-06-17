@@ -222,8 +222,8 @@
 
       const ccx = (minx + maxx) / 2, ccy = (miny + maxy) / 2, u = ccx - ccy, v = ccx + ccy;
       this._camX = u * this._tw() / 2;
-      // Center the plot area nicely with a bit of breathing room at top for sky/hills.
-      this._camY = this._oy + v * this._th() / 2 - this._cssH() / 2 - this._th() * 0.35;
+      // Bias cam so that sky + distant hills stay nicely visible above the (now larger) working plot area.
+      this._camY = this._oy + v * this._th() / 2 - this._cssH() / 2 - this._th() * 0.55;
       this._clampCam();
     },
 
