@@ -168,8 +168,19 @@
     _farmRect() {
       const f = document.getElementById('farm');
       if (f) { const r = f.getBoundingClientRect(); if (r.width > 10 && r.height > 10) return r; }
-      const t = document.getElementById('topbar'), b = document.getElementById('bottombar');
-      const th = t ? t.getBoundingClientRect().height : 56, bh = b ? b.getBoundingClientRect().height : 64;
+      const t = document.getElementById('topbar');
+      const th = t ? t.getBoundingClientRect().height : 56;
+
+      // In build mode (especially on phones) give as much vertical space as possible
+      // for dragging buildings/decorations around. Hide the game bottombar and use
+      // only a tiny bottom margin so the finger has room to move objects without
+      // fighting UI chrome.
+      if (this._build) {
+        return { left: 0, top: th, width: window.innerWidth, height: Math.max(200, window.innerHeight - th - 28) };
+      }
+
+      const b = document.getElementById('bottombar');
+      const bh = b ? b.getBoundingClientRect().height : 64;
       return { left: 0, top: th, width: window.innerWidth, height: Math.max(120, window.innerHeight - th - bh) };
     },
     _cssW() { return this._w; }, _cssH() { return this._h; },
@@ -243,9 +254,9 @@
         if (this._sel >= 0) { const ch = this._delChip((Farm.state.data.map)[this._sel]); if (Math.hypot(p.x - ch.x, p.y - ch.y) <= ch.r) { Farm.state.data.map.splice(this._sel, 1); this._sel = -1; Farm.state.save(); this.render(); return; } }
         const c = this._screenToCell(p.x, p.y);
         const bidx = this._buildingAt(c.gx, c.gy);
-        if (bidx >= 0) { const o = Farm.state.data.map[bidx]; this._sel = bidx; this._moving = { kind: 'building', idx: bidx, gx: o.gx, gy: o.gy, valid: true, sx: p.x, sy: p.y, moved: false }; this.render(); return; }
+        if (bidx >= 0) { const o = Farm.state.data.map[bidx]; this._sel = bidx; this._moving = { kind: 'building', idx: bidx, gx: o.gx, gy: o.gy, valid: true, sx: p.x, sy: p.y, moved: false }; this._layoutUI(); this.render(); return; }
         const didx = this._decoAt(c.gx, c.gy);
-        if (didx >= 0) { const d = Farm.state.data.decorations[didx]; this._sel = -1; this._moving = { kind: 'deco', idx: didx, gx: d.gx, gy: d.gy, valid: true, sx: p.x, sy: p.y, moved: false }; this.render(); return; }
+        if (didx >= 0) { const d = Farm.state.data.decorations[didx]; this._sel = -1; this._moving = { kind: 'deco', idx: didx, gx: d.gx, gy: d.gy, valid: true, sx: p.x, sy: p.y, moved: false }; this._layoutUI(); this.render(); return; }
       }
       this._drag = { x: p.x, y: p.y, camX: this._camX, camY: this._camY, moved: false };
     },
@@ -261,6 +272,18 @@
       const p = this._pointers[e.pointerId];
       if (this._painting) { const c = this._screenToCell(p.x, p.y); this._paintCell(c.gx, c.gy); return; }
       if (this._moving) {
+        // Auto-pan the camera when finger approaches screen edge.
+        // This gives "infinite" workspace on a tiny phone screen so you can
+        // drag buildings far without running out of room or hitting UI.
+        const EDGE = 48;
+        const pan = 9;
+        let panned = false;
+        if (p.x < EDGE) { this._camX -= pan; panned = true; }
+        if (p.x > this._cssW() - EDGE) { this._camX += pan; panned = true; }
+        if (p.y < EDGE) { this._camY -= pan; panned = true; }
+        if (p.y > this._cssH() - EDGE) { this._camY += pan; panned = true; }
+        if (panned) this._clampCam();
+
         if (Math.abs(p.x - this._moving.sx) + Math.abs(p.y - this._moving.sy) > 4) this._moving.moved = true;
         const c = this._screenToCell(p.x, p.y);
         if (this._moving.kind === 'deco') { this._moving.gx = c.gx; this._moving.gy = c.gy; this._moving.valid = this._decoCellFree(c.gx, c.gy, this._moving.idx); }
@@ -283,6 +306,7 @@
           if (m.kind === 'deco') { const d = Farm.state.data.decorations[m.idx]; if (d) { d.gx = m.gx; d.gy = m.gy; Farm.state.save(); } }
           else { const o = Farm.state.data.map[m.idx]; if (o) { o.gx = m.gx; o.gy = m.gy; Farm.state.save(); } }
         }
+        this._layoutUI();   // restore full palette after drop
         this.render(); this._drag = null; return;
       }
       const wasTap = this._drag && !this._drag.moved && !this._pinch; this._drag = null;
@@ -428,16 +452,17 @@
       if (!(Farm.state.data && Farm.state.data.mapBuildSeen) && btn.animate) this._buildPulse = btn.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.09)' }, { transform: 'scale(1)' }], { duration: 1300, iterations: Infinity, easing: 'ease-in-out' });
 
       const tray = document.createElement('div'); tray.id = 'isoPalette';
-      tray.style.cssText = 'position:fixed;left:0;right:0;z-index:20;display:none;flex-direction:column;gap:8px;padding:9px 10px;background:rgba(255,255,255,.94);box-shadow:0 -3px 12px rgba(0,0,0,.12);';
+      // Compact on mobile so dragging has breathing room. Still usable.
+      tray.style.cssText = 'position:fixed;left:0;right:0;z-index:20;display:none;flex-direction:column;gap:4px;padding:5px 6px;background:rgba(255,255,255,.96);box-shadow:0 -3px 12px rgba(0,0,0,.12);';
       const tabs = document.createElement('div'); tabs.style.cssText = 'display:flex;gap:6px;justify-content:center;';
       [['build', en ? '🏠 Build' : '🏠 建筑'], ['terrain', en ? '🖌 Terrain' : '🖌 地形']].forEach(([m, label]) => { const t = document.createElement('button'); t.dataset.mode = m; t.textContent = label; t.style.cssText = 'border:none;border-radius:13px;padding:6px 16px;cursor:pointer;font:600 13px/1 "Fredoka",system-ui,sans-serif;'; t.onclick = () => this.setEditMode(m); tabs.appendChild(t); });
       this._modeTabs = tabs; tray.appendChild(tabs);
       const rowCss = 'display:flex;flex-wrap:wrap;gap:8px;justify-content:center;align-items:flex-end;';
       const pb = document.createElement('div'); pb.style.cssText = rowCss;
-      PALETTE.forEach((type) => { const b = BUILDINGS[type]; const item = document.createElement('button'); item.style.cssText = 'border:1px solid #e0e0e0;border-radius:14px;background:#fff;padding:8px 10px 6px;min-width:72px;cursor:pointer;font:500 12px/1.3 "Fredoka",system-ui,sans-serif;color:#444;'; item.innerHTML = '<div style="font-size:11px;color:#888;margin-top:4px">＋ ' + (en ? b.en : b.zh) + '</div>'; const ic = document.createElement('div'); ic.style.cssText = 'width:44px;height:38px;margin:0 auto;background-size:contain;background-repeat:no-repeat;background-position:center;'; ic.style.backgroundImage = "url('" + ASSET_DIR + ASSET_SRC[b.img] + "')"; item.insertBefore(ic, item.firstChild); item.onclick = () => this._addBuilding(type); pb.appendChild(item); });
+      PALETTE.forEach((type) => { const b = BUILDINGS[type]; const item = document.createElement('button'); item.style.cssText = 'border:1px solid #e0e0e0;border-radius:12px;background:#fff;padding:5px 6px 4px;min-width:58px;cursor:pointer;font:500 11px/1.2 "Fredoka",system-ui,sans-serif;color:#444;'; item.innerHTML = '<div style="font-size:10px;color:#888;margin-top:2px">＋ ' + (en ? b.en : b.zh) + '</div>'; const ic = document.createElement('div'); ic.style.cssText = 'width:36px;height:30px;margin:0 auto;background-size:contain;background-repeat:no-repeat;background-position:center;'; ic.style.backgroundImage = "url('" + ASSET_DIR + ASSET_SRC[b.img] + "')"; item.insertBefore(ic, item.firstChild); item.onclick = () => this._addBuilding(type); pb.appendChild(item); });
       this._palBuild = pb; tray.appendChild(pb);
       const pt = document.createElement('div'); pt.style.cssText = rowCss;
-      BRUSHES.forEach((br) => { const item = document.createElement('button'); item.dataset.brush = br.key; item.style.cssText = 'border:1px solid #e0e0e0;border-radius:14px;background:#fff;padding:8px 10px 6px;min-width:72px;cursor:pointer;font:500 12px/1.3 "Fredoka",system-ui,sans-serif;color:#444;'; item.innerHTML = '<div style="width:40px;height:30px;margin:0 auto;border-radius:8px;background:' + br.color + '"></div><div style="font-size:11px;color:#888;margin-top:4px">' + (en ? br.en : br.zh) + '</div>'; item.onclick = () => this.setBrush(br.key); pt.appendChild(item); });
+      BRUSHES.forEach((br) => { const item = document.createElement('button'); item.dataset.brush = br.key; item.style.cssText = 'border:1px solid #e0e0e0;border-radius:12px;background:#fff;padding:5px 6px 4px;min-width:58px;cursor:pointer;font:500 11px/1.2 "Fredoka",system-ui,sans-serif;color:#444;'; item.innerHTML = '<div style="width:32px;height:24px;margin:0 auto;border-radius:6px;background:' + br.color + '"></div><div style="font-size:10px;color:#888;margin-top:2px">' + (en ? br.en : br.zh) + '</div>'; item.onclick = () => this.setBrush(br.key); pt.appendChild(item); });
       this._palTerrain = pt; tray.appendChild(pt);
       document.body.appendChild(tray); this._palette = tray;
 
@@ -449,8 +474,35 @@
     },
     _layoutUI() {
       const r = this._farmRect(), fromBottom = Math.max(0, window.innerHeight - (r.top + r.height)), en = this._lang() === 'en';
-      if (this._palette) { this._palette.style.display = this._build ? 'flex' : 'none'; this._palette.style.left = r.left + 'px'; this._palette.style.right = Math.max(0, window.innerWidth - (r.left + r.width)) + 'px'; this._palette.style.bottom = fromBottom + 'px'; }
-      if (this._buildBtn) { const ph = (this._build && this._palette) ? (this._palette.getBoundingClientRect().height || 74) : 0; this._buildBtn.style.right = (Math.max(0, window.innerWidth - (r.left + r.width)) + 14) + 'px'; this._buildBtn.style.bottom = (fromBottom + (this._build ? ph + 10 : 14)) + 'px'; this._buildBtn.textContent = this._build ? (en ? '✓ Done' : '✓ 完成') : (en ? '🔨 Build' : '🔨 建造'); this._buildBtn.style.background = this._build ? '#FF9800' : '#4CAF50'; }
+      const isMoving = !!this._moving;
+
+      if (this._palette) {
+        if (!this._build) {
+          this._palette.style.display = 'none';
+        } else if (isMoving) {
+          // While actively dragging an object, collapse the palette to give
+          // maximum finger room on small phone screens.
+          this._palette.style.display = 'flex';
+          this._palette.style.bottom = fromBottom + 'px';
+          this._palette.style.opacity = '0.15';   // almost invisible but still there if needed
+          this._palette.style.pointerEvents = 'none';
+        } else {
+          this._palette.style.display = 'flex';
+          this._palette.style.left = r.left + 'px';
+          this._palette.style.right = Math.max(0, window.innerWidth - (r.left + r.width)) + 'px';
+          this._palette.style.bottom = fromBottom + 'px';
+          this._palette.style.opacity = '1';
+          this._palette.style.pointerEvents = 'auto';
+        }
+      }
+
+      if (this._buildBtn) {
+        const ph = (this._build && this._palette && !isMoving) ? (this._palette.getBoundingClientRect().height || 74) : 0;
+        this._buildBtn.style.right = (Math.max(0, window.innerWidth - (r.left + r.width)) + 14) + 'px';
+        this._buildBtn.style.bottom = (fromBottom + (this._build ? ph + 10 : 14)) + 'px';
+        this._buildBtn.textContent = this._build ? (en ? '✓ Done' : '✓ 完成') : (en ? '🔨 Build' : '🔨 建造');
+        this._buildBtn.style.background = this._build ? '#FF9800' : '#4CAF50';
+      }
       if (this._hint) { this._hint.style.display = this._build ? 'block' : 'none'; this._hint.style.left = r.left + 'px'; this._hint.style.right = Math.max(0, window.innerWidth - (r.left + r.width)) + 'px'; this._hint.style.top = (r.top + 8) + 'px'; }
     },
     _refreshModeUI() {
@@ -468,6 +520,20 @@
       this._build = !this._build;
       if (this._build && Farm.state.data && !Farm.state.data.mapBuildSeen) { Farm.state.data.mapBuildSeen = true; Farm.state.save(); if (this._buildPulse) { this._buildPulse.cancel(); this._buildPulse = null; } }
       if (!this._build) { this._sel = -1; this._moving = null; this._painting = false; this._editMode = 'build'; Farm.state.save(); }
+
+      // Give the user maximum screen real-estate for dragging on phones.
+      // Hide the normal bottom navigation bar while building.
+      const bb = document.getElementById('bottombar');
+      if (bb) bb.style.display = this._build ? 'none' : '';
+
+      // When leaving build, make sure size recalcs to normal bars.
+      if (!this._build) {
+        this._resize();
+      } else {
+        // Enter build → immediately give more space
+        this._resize();
+      }
+
       this._refreshModeUI(); this._layoutUI(); this.render();
     },
 
