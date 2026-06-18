@@ -916,30 +916,56 @@
       const reacting = p && p.react && now < p.react;
       const nuzzling = p && p.pause > 0 && p.nuzzle && !reacting;
       const moving = p && p.pause <= 0;
-      let lift;
-      if (reacting) lift = Math.abs(Math.sin(t * 9)) * th * 0.22;            // excited hop
-      else if (nuzzling) lift = -Math.abs(Math.sin(t * 6 + d.seed)) * th * 0.05;  // dip down to peck
-      else if (moving) lift = Math.abs(Math.sin(t * 7 + d.seed)) * th * 0.12;     // walk bounce
-      else lift = Math.abs(Math.sin(t * 1.4 + d.seed)) * th * 0.06;          // gentle idle
+      // Natural motion: a gentle SMOOTH bob + side-to-side waddle + slight body tilt
+      // while walking (no more abs-sin "hopping"); soft breathing when idle.
+      let lift = 0, sway = 0, tilt = 0;
+      if (reacting) lift = Math.abs(Math.sin(t * 8)) * th * 0.16;                       // happy hop on tap (intentional)
+      else if (nuzzling) lift = -Math.abs(Math.sin(t * 5 + d.seed)) * th * 0.04;        // dip to peck
+      else if (moving) {
+        const ph = t * 5.0 + d.seed;
+        lift = (Math.sin(ph) * 0.5 + 0.5) * th * 0.045;   // small smooth body bob
+        sway = Math.sin(ph * 0.5) * tw * 0.028;           // waddle left/right
+        tilt = Math.sin(ph * 0.5) * 0.045;                // ~2.5° gait tilt
+      } else lift = (Math.sin(t * 1.3 + d.seed) * 0.5 + 0.5) * th * 0.025;              // idle breathing
       const w = tw * 0.9, sc = Math.min(w / im.width, (th * 2.4) / im.height), dw = im.width * sc, dh = im.height * sc;
-      const by = c.y + th * 0.5 - lift;
-      this._shadow(c.x, c.y + th * 0.5, dw * 0.66, 0.15);   // static ground shadow (hop reads against it)
-      if (face < 0) { ctx.save(); ctx.translate(c.x, 0); ctx.scale(-1, 1); ctx.drawImage(im, -dw / 2, by - dh, dw, dh); ctx.restore(); }
-      else ctx.drawImage(im, c.x - dw / 2, by - dh, dw, dh);
+      const bx = c.x + sway, by = c.y + th * 0.5 - lift;
+      this._shadow(c.x, c.y + th * 0.5, dw * 0.62, 0.15);   // static ground shadow (motion reads against it)
+      ctx.save(); ctx.translate(bx, by); if (tilt) ctx.rotate(tilt * (face < 0 ? -1 : 1)); ctx.scale(face < 0 ? -1 : 1, 1);
+      ctx.drawImage(im, -dw / 2, -dh, dw, dh); ctx.restore();
       // emote above the head: ❤️ when petted, ✨ while nuzzling a crop
       let emote = reacting ? '❤️' : (nuzzling && Math.sin(t * 3 + d.seed) > 0.6 ? '✨' : '');
-      if (emote) { ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic'; ctx.font = (th * 0.7) + 'px sans-serif'; ctx.fillText(emote, c.x, by - dh - th * 0.1); }
+      if (emote) { ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic'; ctx.font = (th * 0.7) + 'px sans-serif'; ctx.fillText(emote, bx, by - dh - th * 0.1); }
     },
-    _drawParticles(tw) {
-      const season = (Farm.seasons && Farm.seasons.current) || monthSeason(), set = SEASON_PARTICLES[season];
-      if (!set) return;
-      const ctx = this._ctx, W = this._cssW(), H = this._cssH(), t = Date.now() / 1000;
-      ctx.save(); ctx.globalAlpha = 0.8; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      for (let i = 0; i < 16; i++) {
-        const sp = 16 + (i % 5) * 7, x = (i * 53.7) % W, sway = Math.sin(t * 0.8 + i) * 13, y = ((t * sp + i * 41) % (H + 40)) - 20;
-        ctx.font = (this._th() * 0.5 + (i % 3) * 3) + 'px sans-serif'; ctx.fillText(set[i % set.length], x + sway, y);
-      }
+    _cloud(x, y, w, alpha) {
+      const ctx = this._ctx; ctx.save(); ctx.globalAlpha = alpha; ctx.fillStyle = '#ffffff';
+      const r = w * 0.22;
+      [[0, 0, r], [w * 0.22, r * 0.2, r * 0.85], [-w * 0.22, r * 0.15, r * 0.8], [w * 0.08, -r * 0.35, r * 0.7]].forEach((b) => { ctx.beginPath(); ctx.ellipse(x + b[0], y + b[1], b[2], b[2] * 0.72, 0, 0, Math.PI * 2); ctx.fill(); });
       ctx.restore();
+    },
+    // Calm ambiance instead of a constant emoji "rain": slow drifting clouds always,
+    // plus a FEW wandering butterflies (spring/summer) or gentle leaves/snow (autumn/
+    // winter). Subtle and natural — adds life without being annoying.
+    _drawParticles(tw) {
+      const ctx = this._ctx, W = this._cssW(), H = this._cssH(), t = Date.now() / 1000, th = this._th();
+      // drifting clouds (sky)
+      for (let i = 0; i < 3; i++) { const cw = W * (0.26 + 0.07 * i), x = ((t * (5 + i * 3) + i * W * 0.55) % (W + cw * 1.4)) - cw * 0.7, y = H * (0.06 + 0.06 * i); this._cloud(x, y, cw, 0.5 - i * 0.1); }
+      const season = (Farm.seasons && Farm.seasons.current) || monthSeason();
+      if (season === 'autumn' || season === 'winter') {
+        const glyph = season === 'winter' ? '❄️' : '🍂', n = season === 'winter' ? 9 : 6;
+        ctx.save(); ctx.globalAlpha = 0.8; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        for (let i = 0; i < n; i++) { const sp = 9 + (i % 4) * 4, x = (i * 97.3) % W, sway = Math.sin(t * 0.5 + i) * 20, y = ((t * sp + i * 70) % (H + 40)) - 20; ctx.font = (th * 0.46) + 'px sans-serif'; ctx.fillText(glyph, x + sway, y); }
+        ctx.restore();
+      } else {
+        // spring/summer: 3 butterflies fluttering on gentle wandering paths near the farm
+        ctx.save(); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        for (let i = 0; i < 3; i++) {
+          const x = W * (0.22 + 0.27 * i) + Math.sin(t * 0.45 + i * 2) * W * 0.16 + Math.sin(t * 1.6 + i) * 16;
+          const y = H * 0.5 + Math.cos(t * 0.62 + i * 2) * H * 0.14 + Math.sin(t * 3.0 + i) * 7;
+          const flutter = 0.78 + Math.abs(Math.sin(t * 6 + i)) * 0.32;
+          ctx.globalAlpha = 0.92; ctx.font = (th * 0.5 * flutter) + 'px sans-serif'; ctx.fillText('🦋', x, y);
+        }
+        ctx.restore();
+      }
     },
     _drawFestival() {
       const id = Farm.events && Farm.events.getActiveFestivalId && Farm.events.getActiveFestivalId(); if (!id) return;
