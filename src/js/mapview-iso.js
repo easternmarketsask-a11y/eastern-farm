@@ -89,12 +89,13 @@
   const charmOf = (b) => Math.max(1, Math.round((b.cost || 0) / 8));
   const COOP_INTERVAL = 5 * 60 * 1000, COOP_REWARD = 30;   // 鸡舍每 5 分钟产一窝蛋，收一次 +30 农场币
   const BED_W = 0.88;   // soil-bed width as a fraction of the cell → <1 leaves a grass gap so plots are distinct/tappable
-  // World-locked backdrop placement (mapview-iso _drawBackdrop). The landscape image is
-  // sized BG_WORLD_CELLS cells wide (× tile-width → scales with zoom) and its focal point
-  // (BG_FX, BG_FY in image fractions = the central flat meadow) is pinned to world cell
-  // (BG_ANCHOR_GX, BG_ANCHOR_GY) ≈ the farm start-area centre. Tune these to position the
-  // farm on the meadow; they keep the bg locked to the farm at every pan/zoom.
-  const BG_WORLD_CELLS = 22, BG_FX = 0.5, BG_FY = 0.62, BG_ANCHOR_GX = 2, BG_ANCHOR_GY = 3.5;
+  // World-locked backdrop placement (mapview-iso _drawBackdrop). The landscape image's
+  // focal point (BG_FX, BG_FY in image fractions = the central flat meadow) is pinned to
+  // world cell (BG_ANCHOR_GX, BG_ANCHOR_GY) ≈ the farm start-area centre, and it scales
+  // with farm zoom (see BG_ZOOM_REF). Tune these to position the farm on the meadow; they
+  // keep the bg locked to the farm at every pan/zoom.
+  const BG_FX = 0.5, BG_FY = 0.62, BG_ANCHOR_GX = 2, BG_ANCHOR_GY = 3.5;
+  const BG_ZOOM_REF = 0.70;   // zoom at which the bg exactly covers the canvas; >this = covers w/ margin, <this (zoomed out) = shrinks w/ farm, base shows around (no float)
   const PALETTE = ['barn', 'house', 'greenhouse', 'coop', 'stall', 'well', 'tree', 'bush', 'lantern', 'fence', 'wheel', 'bridge'];
   // EP-shop pets → painted iso animal sprites (replaces the emoji pet).
   const ANIMALS = { pet_chick: 'animal_chicken', pet_cat: 'animal_cat', pet_rabbit: 'animal_rabbit', decoration_dog: 'animal_dog', guard_dog: 'animal_dog' };
@@ -867,15 +868,19 @@
       const bg = this._img.hd_bg;
       if (bg && bg.width) {
         // WORLD-LOCKED backdrop (Chris 2026-06-18: "先把背景图定好坐标-对应农场坐标和
-        // 尺寸"). The landscape is anchored to a fixed WORLD cell and sized in WORLD
-        // units (cells × tile-width), drawn through the same camera (_cell includes pan
-        // + zoom). So the image pans AND zooms locked 1:1 with the farm — the farm always
-        // sits on the exact same patch of meadow at every zoom level (no more "floating
-        // to the sky" when zooming out). The image's focal point (central meadow) is
-        // pinned to the farm's start-area centre; hills/sky extend above it.
-        const a = this._cell(BG_ANCHOR_GX, BG_ANCHOR_GY);    // moves with pan + zoom
-        const dw = BG_WORLD_CELLS * tw, sc = dw / bg.width, dh = bg.height * sc;
-        ctx.drawImage(bg, a.x - BG_FX * dw, a.y - BG_FY * dh, dw, dh);
+        // 尺寸"). Anchored to a fixed WORLD cell via _cell() (which carries pan + zoom),
+        // so it pans AND zooms 1:1 with the farm — the farm always sits on the same patch
+        // of meadow, and it never "floats to the sky" on zoom-out (scale tracks _zoom with
+        // NO floor). Base size = cover-the-canvas at the reference zoom, so at normal zoom
+        // the photo fully covers (no flat base band at the edges); clamped to the canvas
+        // while it's ≥ canvas, centred (base shows around) only when zoomed far out.
+        const a = this._cell(BG_ANCHOR_GX, BG_ANCHOR_GY);
+        const scale = Math.max(W / bg.width, H / bg.height) * (this._zoom / BG_ZOOM_REF);
+        const dw = bg.width * scale, dh = bg.height * scale;
+        let dx = a.x - BG_FX * dw, dy = a.y - BG_FY * dh;
+        dx = (dw >= W) ? Math.min(0, Math.max(W - dw, dx)) : (W - dw) / 2;
+        dy = (dh >= H) ? Math.min(0, Math.max(H - dh, dy)) : (H - dh) / 2;
+        ctx.drawImage(bg, dx, dy, dw, dh);
       } else {   // fallback: procedural hills (image not yet loaded)
         const pc = this._cell(3, 3);
         this._drawHills(pc.x, pc.y - th * 3, 20 * tw * 0.62);
