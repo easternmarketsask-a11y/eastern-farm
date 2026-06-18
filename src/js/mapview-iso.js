@@ -84,6 +84,7 @@
   };
   const charmOf = (b) => Math.max(1, Math.round((b.cost || 0) / 8));
   const COOP_INTERVAL = 5 * 60 * 1000, COOP_REWARD = 30;   // 鸡舍每 5 分钟产一窝蛋，收一次 +30 农场币
+  const BED_W = 0.88;   // soil-bed width as a fraction of the cell → <1 leaves a grass gap so plots are distinct/tappable
   const PALETTE = ['barn', 'house', 'greenhouse', 'coop', 'stall', 'well', 'tree', 'bush', 'lantern', 'fence', 'wheel', 'bridge'];
   // EP-shop pets → painted iso animal sprites (replaces the emoji pet).
   const ANIMALS = { pet_chick: 'animal_chicken', pet_cat: 'animal_cat', pet_rabbit: 'animal_rabbit', decoration_dog: 'animal_dog', guard_dog: 'animal_dog' };
@@ -780,8 +781,11 @@
         // Chris's painted tilled-soil bed (raised cube). Drawn per plot → distinct
         // raised beds on the green field, Hay-Day style. cy = top-face center fraction.
         const im = this._img.hd_soil;
-        if (im) { const w = tw * 1.18, sc = w / im.width, dh = im.height * sc; ctx.drawImage(im, c.x - w / 2, c.y - dh * 0.42, w, dh); return; }
-        this._diamond(c.x, c.y, tw, th); ctx.fillStyle = SOIL_TOP; ctx.fill(); return;
+        // BED_W < 1 leaves a small grass gap between adjacent beds so each plot
+        // reads as a DISTINCT, separately-tappable patch (Chris 2026-06-18: beds
+        // looked merged/stacked). Was tw*1.18 (overlapping → one brown mass).
+        if (im) { const w = tw * BED_W, sc = w / im.width, dh = im.height * sc; ctx.drawImage(im, c.x - w / 2, c.y - dh * 0.42, w, dh); return; }
+        this._diamond(c.x, c.y, tw * BED_W, th * BED_W); ctx.fillStyle = SOIL_TOP; ctx.fill(); return;
       }
       // path / water = FLAT diamonds matching the flat ground (no raised cube → no
       // clash with the green field). Subtle detail keeps them readable.
@@ -981,8 +985,8 @@
       const ctx = this._ctx, tw = this._tw(), th = this._th(), c = this._cell(gx, gy);
       if (!plot.unlocked) {   // locked → a DIMMED tilled bed (consistent with the field) + lock badge
         const im = this._img.hd_soil;
-        if (im) { const w = tw * 1.18, sc = w / im.width, dh = im.height * sc; ctx.save(); ctx.globalAlpha = 0.5; ctx.drawImage(im, c.x - w / 2, c.y - dh * 0.42, w, dh); ctx.restore(); }
-        else { this._diamond(c.x, c.y, tw * 0.92, th * 0.92); ctx.fillStyle = 'rgba(120,90,60,0.5)'; ctx.fill(); }
+        if (im) { const w = tw * BED_W, sc = w / im.width, dh = im.height * sc; ctx.save(); ctx.globalAlpha = 0.5; ctx.drawImage(im, c.x - w / 2, c.y - dh * 0.42, w, dh); ctx.restore(); }
+        else { this._diamond(c.x, c.y, tw * 0.88, th * 0.88); ctx.fillStyle = 'rgba(120,90,60,0.5)'; ctx.fill(); }
         this._diamond(c.x, c.y, tw * 0.96, th * 0.96); ctx.fillStyle = 'rgba(55,65,50,0.3)'; ctx.fill();
         ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         ctx.font = (th * 0.5) + 'px sans-serif'; ctx.fillText('🔒', c.x, c.y - th * 0.08);
@@ -1044,7 +1048,10 @@
       if (!this._blit(this._img[b.img], cc.x, by, b.w * tw * 0.92, b.sc * th * 2.2)) { ctx.fillStyle = '#c0392b'; ctx.fillRect(cc.x - tw * 0.4, by - th, tw * 0.8, th); }
       ctx.globalAlpha = 1;
       // coop ready-to-collect egg bubble (read the real map entry for eggAt)
-      if (o.type === 'coop' && !this._build) { const real = Farm.state.data.map[idx]; if (real && this._coopReady(real)) { const t = Date.now() / 1000, bob = Math.sin(t * 2.5) * th * 0.12, r = th * 0.5, byy = by - b.sc * th * 1.7 - r + bob; ctx.beginPath(); ctx.arc(cc.x, byy, r, 0, Math.PI * 2); ctx.fillStyle = 'rgba(255,255,255,0.95)'; ctx.fill(); ctx.strokeStyle = 'rgba(230,160,32,0.9)'; ctx.lineWidth = Math.max(1.5, th * 0.06); ctx.stroke(); ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = (r * 1.2) + 'px sans-serif'; ctx.fillText('🥚', cc.x, byy + r * 0.05); ctx.textBaseline = 'alphabetic'; } }
+      // coop ready-to-collect indicator: a SMALL egg bubble nestled just above the
+      // coop roof (was a big white orb floating high above → looked like a stray ball,
+      // Chris 2026-06-18). Smaller + closer + gentle bob so it clearly belongs to the coop.
+      if (o.type === 'coop' && !this._build) { const real = Farm.state.data.map[idx]; if (real && this._coopReady(real)) { const t = Date.now() / 1000, bob = Math.sin(t * 2.5) * th * 0.05, r = th * 0.3, byy = by - b.sc * th * 1.05 + bob; ctx.beginPath(); ctx.arc(cc.x, byy, r, 0, Math.PI * 2); ctx.fillStyle = 'rgba(255,255,255,0.96)'; ctx.fill(); ctx.strokeStyle = 'rgba(230,160,32,0.95)'; ctx.lineWidth = Math.max(1.2, th * 0.05); ctx.stroke(); ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = (r * 1.3) + 'px sans-serif'; ctx.fillText('🥚', cc.x, byy + r * 0.05); ctx.textBaseline = 'alphabetic'; } }
       if (this._build && this._sel === idx && idx != null && !moving) {   // delete chip
         const ch = this._delChip(o);
         ctx.beginPath(); ctx.arc(ch.x, ch.y, ch.r, 0, Math.PI * 2); ctx.fillStyle = '#e8522a'; ctx.fill();
