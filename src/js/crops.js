@@ -52,12 +52,18 @@
     },
 
     // ============= Plot helpers =============
+    // 建筑加速：每座温室让作物快 20%、每口水井快 8%（封顶 +150%）。让建筑有实际用途。
+    growMultiplier() {
+      const map = (Farm.state && Farm.state.data && Farm.state.data.map) || [];
+      let g = 0, w = 0; for (let i = 0; i < map.length; i++) { const t = map[i] && map[i].type; if (t === 'greenhouse') g++; else if (t === 'well') w++; }
+      return Math.min(2.5, 1 + g * 0.2 + w * 0.08);
+    },
     getStage(plot) {
       if (!plot.crop) return -1;
       const def = this.get(plot.crop);
       if (!def) return -1;
       const elapsedMin = (Date.now() - plot.plantedAt) / 60000;
-      const growMin = def.grow_minutes;
+      const growMin = def.grow_minutes / this.growMultiplier();
       if (elapsedMin >= growMin) return 2;     // mature
       if (elapsedMin >= growMin * 0.4) return 1;  // sprout
       return 0;  // seed
@@ -68,7 +74,7 @@
       const def = this.get(plot.crop);
       if (!def) return 0;
       const elapsedMin = (Date.now() - plot.plantedAt) / 60000;
-      return Math.min(1, elapsedMin / def.grow_minutes);
+      return Math.min(1, elapsedMin / (def.grow_minutes / this.growMultiplier()));
     },
 
     isMature(plot) {

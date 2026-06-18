@@ -83,6 +83,7 @@
     bridge: { img: 'deco_bridge', w: 2, h: 1, sc: 1.6, zh: '小桥', en: 'Bridge', cost: 140 },
   };
   const charmOf = (b) => Math.max(1, Math.round((b.cost || 0) / 8));
+  const COOP_INTERVAL = 5 * 60 * 1000, COOP_REWARD = 30;   // 鸡舍每 5 分钟产一窝蛋，收一次 +30 农场币
   const PALETTE = ['barn', 'house', 'greenhouse', 'coop', 'stall', 'well', 'tree', 'bush', 'lantern', 'fence', 'wheel', 'bridge'];
   // EP-shop pets → painted iso animal sprites (replaces the emoji pet).
   const ANIMALS = { pet_chick: 'animal_chicken', pet_cat: 'animal_cat', pet_rabbit: 'animal_rabbit', decoration_dog: 'animal_dog', guard_dog: 'animal_dog' };
@@ -165,8 +166,18 @@
     _buildLayout() {
       this._cellToPlot = {};
       const plots = Farm.state.data.plots || [];
-      for (let i = 0; i < plots.length; i++) this._cellToPlot[(PLOT_OX + (i % PLOT_COLS)) + ',' + (PLOT_OY + Math.floor(i / PLOT_COLS))] = i;
+      let migrated = false;
+      for (let i = 0; i < plots.length; i++) {
+        const p = plots[i];
+        // plots now carry their own cell coords (so new plots can sit anywhere on owned
+        // land); migrate legacy index-derived plots once.
+        if (!Number.isInteger(p.gx) || !Number.isInteger(p.gy)) { p.gx = PLOT_OX + (i % PLOT_COLS); p.gy = PLOT_OY + Math.floor(i / PLOT_COLS); migrated = true; }
+        this._cellToPlot[p.gx + ',' + p.gy] = i;
+      }
+      if (migrated && Farm.state.save) Farm.state.save();
     },
+    _plotGX(i) { const p = (Farm.state.data.plots || [])[i]; return p ? (Number.isInteger(p.gx) ? p.gx : PLOT_OX + (i % PLOT_COLS)) : 0; },
+    _plotGY(i) { const p = (Farm.state.data.plots || [])[i]; return p ? (Number.isInteger(p.gy) ? p.gy : PLOT_OY + Math.floor(i / PLOT_COLS)) : 0; },
 
     _farmRect() {
       const f = document.getElementById('farm');
@@ -198,7 +209,7 @@
       const n = Math.max(1, plots.length);
       let minx = Infinity, miny = Infinity, maxx = -Infinity, maxy = -Infinity;
       for (let i = 0; i < n; i++) {
-        const gx = PLOT_OX + (i % PLOT_COLS), gy = PLOT_OY + Math.floor(i / PLOT_COLS);
+        const gx = this._plotGX(i), gy = this._plotGY(i);
         if (gx < minx) minx = gx; if (gy < miny) miny = gy; if (gx > maxx) maxx = gx; if (gy > maxy) maxy = gy;
       }
       const span = (maxx - minx) + (maxy - miny);   // iso screen diagonal (du === dv === Δgx+Δgy)
@@ -312,7 +323,7 @@
       const hit = this._plotAtPoint(p.x, p.y);
       if (hit) { this._tapCell(hit.gx, hit.gy); return; }
       const bidx = this._buildingAtPoint(p.x, p.y);
-      if (bidx >= 0) { const o = Farm.state.data.map[bidx], b = BUILDINGS[o.type]; if (b.tap === 'warehouse' && Farm.warehouse && Farm.warehouse.open) Farm.warehouse.open(); else if (b.tap === 'shop' && Farm.shop && Farm.shop.open) Farm.shop.open(); else if (Farm.ui && Farm.ui.toast) Farm.ui.toast(this._lang() === 'en' ? b.en : b.zh); return; }
+      if (bidx >= 0) { const o = Farm.state.data.map[bidx], b = BUILDINGS[o.type]; if (o.type === 'coop') { this._collectCoop(o, p); } else if (b.tap === 'warehouse' && Farm.warehouse && Farm.warehouse.open) Farm.warehouse.open(); else if (b.tap === 'shop' && Farm.shop && Farm.shop.open) Farm.shop.open(); else if (Farm.ui && Farm.ui.toast) Farm.ui.toast(this._lang() === 'en' ? b.en : b.zh); return; }
       this._tapCell(c.gx, c.gy);
     },
     // Frontmost plot whose on-screen sprite box contains (px,py). Planted plots get
@@ -323,7 +334,7 @@
       const plots = Farm.state.data.plots || [];
       const tw = this._tw(), th = this._th();
       const list = [];
-      for (let i = 0; i < plots.length; i++) list.push({ i, gx: PLOT_OX + (i % PLOT_COLS), gy: PLOT_OY + Math.floor(i / PLOT_COLS) });
+      for (let i = 0; i < plots.length; i++) list.push({ i, gx: this._plotGX(i), gy: this._plotGY(i) });
       list.sort((a, b) => (b.gx + b.gy) - (a.gx + a.gy));   // frontmost first
       for (const o of list) {
         const c = this._cell(o.gx, o.gy), pl = plots[o.i];
@@ -368,7 +379,7 @@
       const plots = Farm.state.data.plots || [];
       if (this._pcs && this._pcsN === plots.length) return this._pcs;   // cache; rebuild only when a plot unlocks
       const s = {};
-      for (let i = 0; i < plots.length; i++) s[(PLOT_OX + (i % PLOT_COLS)) + ',' + (PLOT_OY + Math.floor(i / PLOT_COLS))] = 1;
+      for (let i = 0; i < plots.length; i++) s[this._plotGX(i) + ',' + this._plotGY(i)] = 1;
       this._pcs = s; this._pcsN = plots.length;
       return s;
     },
@@ -460,11 +471,59 @@
       }
       if (Farm.ui && Farm.ui.toast) Farm.ui.toast(en ? 'No room' : '没有空位了');
     },
+    _PLOT_COST: 200,
+    _cellFreeForPlot(gx, gy) {
+      if (!this._ownedCell(gx, gy)) return false;
+      if (this._cellToPlot[gx + ',' + gy] != null) return false;            // already a plot
+      if (this._terrain()[gx + ',' + gy] === 'water') return false;
+      if (this._buildingAt(gx, gy) >= 0) return false;                       // under a building
+      return true;
+    },
+    _addPlot() {   // buy a new garden plot (菜地) on owned land → farmable anywhere you've expanded
+      const en = this._lang() === 'en', cost = this._PLOT_COST;
+      if (Farm.state.data.coins < cost) { if (Farm.ui && Farm.ui.toast) Farm.ui.toast(en ? ('Need ' + (cost - Farm.state.data.coins) + ' more coins') : ('还差 ' + (cost - Farm.state.data.coins) + ' 农场币')); return; }
+      const ob = this._ownedBounds(), ctr = this._screenToCell(this._cssW() / 2, this._cssH() / 2);
+      const tries = [[ctr.gx, ctr.gy]];
+      for (let gy = ob.y1; gy <= ob.y2; gy++) for (let gx = ob.x1; gx <= ob.x2; gx++) tries.push([gx, gy]);
+      for (const [gx, gy] of tries) if (this._cellFreeForPlot(gx, gy)) {
+        if (!Farm.state.spendCoins(cost)) return;
+        const plots = (Farm.state.data.plots = Farm.state.data.plots || []);
+        const id = plots.reduce((m, p) => Math.max(m, p.id || 0), -1) + 1;
+        plots.push({ id, crop: null, plantedAt: 0, harvestsLeft: 0, unlocked: true, gx, gy });
+        this._buildLayout(); this._pcs = null;   // refresh cell→plot map + plotCellSet cache
+        Farm.state.save(); this.render();
+        if (Farm.ui && Farm.ui.refreshHUD) Farm.ui.refreshHUD();
+        this._refreshPaletteAfford();
+        const c = this._cell(gx, gy), r = this._cv.getBoundingClientRect();
+        if (Farm.ui && Farm.ui.floatText) Farm.ui.floatText('🌱 -' + cost, r.left + c.x - 16, r.top + c.y - this._th(), '#3a8c50');
+        if (Farm.audio) Farm.audio.play('coin');
+        if (Farm.ui && Farm.ui.toast) Farm.ui.toast(en ? 'New plot ready — tap to plant!' : '新菜地开好啦 — 点它种菜！');
+        return;
+      }
+      if (Farm.ui && Farm.ui.toast) Farm.ui.toast(en ? 'No room on your land — expand first' : '地里没空位了，先扩地吧');
+    },
+    _coopReady(o) { return Date.now() - (o && o.eggAt || 0) >= COOP_INTERVAL; },
+    _collectCoop(o, p) {
+      const en = this._lang() === 'en';
+      if (this._coopReady(o)) {
+        o.eggAt = Date.now(); Farm.state.addCoins(COOP_REWARD); Farm.state.save();
+        if (Farm.ui && Farm.ui.refreshHUD) Farm.ui.refreshHUD();
+        if (Farm.audio) Farm.audio.play('coin');
+        if (p && Farm.ui && Farm.ui.floatText) { const r = this._cv.getBoundingClientRect(); Farm.ui.floatText('🥚 +' + COOP_REWARD, r.left + p.x - 16, r.top + p.y - 20, '#e8a020'); }
+        if (Farm.ui && Farm.ui.toast) Farm.ui.toast(en ? ('Collected eggs! +' + COOP_REWARD + ' coins') : ('收鸡蛋啦！+' + COOP_REWARD + ' 农场币'));
+        this.render();
+      } else {
+        const left = Math.ceil((COOP_INTERVAL - (Date.now() - (o.eggAt || 0))) / 60000);
+        if (Farm.ui && Farm.ui.toast) Farm.ui.toast(en ? ('Eggs ready in ~' + left + ' min') : ('鸡蛋还需约 ' + left + ' 分钟'));
+      }
+    },
     _refreshPaletteAfford() {
       if (!this._palBuild) return;
       const coins = (Farm.state.data && Farm.state.data.coins) || 0;
       this._palBuild.querySelectorAll('button[data-type]').forEach((btn) => {
-        const b = BUILDINGS[btn.dataset.type]; if (!b) return; const afford = coins >= (b.cost || 0);
+        const b = BUILDINGS[btn.dataset.type], cost = b ? (b.cost || 0) : (btn.dataset.type === '__plot' ? this._PLOT_COST : 0);
+        if (!b && btn.dataset.type !== '__plot') return;
+        const afford = coins >= cost;
         btn.style.opacity = afford ? '1' : '0.55';
         const cs = btn.querySelector('.palCost'); if (cs) cs.style.color = afford ? '#3a8c50' : '#e8522a';
       });
@@ -498,6 +557,12 @@
       // single horizontal SCROLLING row (no wrap) → compact, takes minimal height
       const rowCss = 'display:flex;flex-wrap:nowrap;gap:8px;align-items:flex-end;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;padding-bottom:2px;scrollbar-width:none;';
       const pb = document.createElement('div'); pb.style.cssText = rowCss;
+      // 菜地 (new farmable plot) — first item so it's front-and-centre
+      const pit = document.createElement('button'); pit.dataset.type = '__plot';
+      pit.style.cssText = 'border:1px solid #cdebc9;border-radius:14px;background:#f3fbef;padding:8px 10px 6px;min-width:64px;flex:0 0 auto;cursor:pointer;font:500 12px/1.3 "Fredoka",system-ui,sans-serif;color:#444;';
+      pit.innerHTML = '<div style="font-size:11px;color:#3a8c50;margin-top:4px;font-weight:600">🌱 ' + (en ? 'Plot' : '菜地') + '</div><div class="palCost" style="font-size:12px;font-weight:600;color:#3a8c50;margin-top:1px"><span class="coin-icon"></span> ' + this._PLOT_COST + '</div>';
+      const pic = document.createElement('div'); pic.style.cssText = 'width:44px;height:38px;margin:0 auto;background-size:contain;background-repeat:no-repeat;background-position:center;'; pic.style.backgroundImage = "url('" + ASSET_DIR + "hd_soil.png')"; pit.insertBefore(pic, pit.firstChild);
+      pit.onclick = () => this._addPlot(); pb.appendChild(pit);
       PALETTE.forEach((type) => { const b = BUILDINGS[type]; const item = document.createElement('button'); item.dataset.type = type; item.style.cssText = 'border:1px solid #e0e0e0;border-radius:14px;background:#fff;padding:8px 10px 6px;min-width:64px;flex:0 0 auto;cursor:pointer;font:500 12px/1.3 "Fredoka",system-ui,sans-serif;color:#444;'; item.innerHTML = '<div style="font-size:11px;color:#888;margin-top:4px">' + (en ? b.en : b.zh) + '</div><div class="palCost" style="font-size:12px;font-weight:600;color:#3a8c50;margin-top:1px"><span class="coin-icon"></span> ' + (b.cost || 0) + '</div>'; const ic = document.createElement('div'); ic.style.cssText = 'width:44px;height:38px;margin:0 auto;background-size:contain;background-repeat:no-repeat;background-position:center;'; ic.style.backgroundImage = "url('" + ASSET_DIR + ASSET_SRC[b.img] + "')"; item.insertBefore(ic, item.firstChild); item.onclick = () => this._addBuilding(type); pb.appendChild(item); });
       this._palBuild = pb; tray.appendChild(pb);
       const pt = document.createElement('div'); pt.style.cssText = rowCss;
@@ -557,7 +622,7 @@
       this._refreshModeUI(); this._layoutUI(); this.render();
     },
     _setChromeHidden(hide) {
-      ['statusbar', 'bottombar', 'pwaInstallBanner', 'harvestStatusBar'].forEach((id) => { const e = document.getElementById(id); if (e) e.style.display = hide ? 'none' : ''; });
+      ['statusbar', 'bottombar', 'pwaInstallBanner', 'harvestStatusBar', 'storekeeper'].forEach((id) => { const e = document.getElementById(id); if (e) e.style.display = hide ? 'none' : ''; });
       document.body.classList.toggle('iso-build-fullscreen', hide);
     },
     // Frame the whole farm (plots + buildings) with a generous empty margin → room to
@@ -565,7 +630,7 @@
     _buildFrame() {
       const plots = Farm.state.data.plots || []; let minx = Infinity, miny = Infinity, maxx = -Infinity, maxy = -Infinity;
       const add = (gx, gy) => { minx = Math.min(minx, gx); miny = Math.min(miny, gy); maxx = Math.max(maxx, gx); maxy = Math.max(maxy, gy); };
-      for (let i = 0; i < plots.length; i++) add(PLOT_OX + (i % PLOT_COLS), PLOT_OY + Math.floor(i / PLOT_COLS));
+      for (let i = 0; i < plots.length; i++) add(this._plotGX(i), this._plotGY(i));
       (Farm.state.data.map || []).forEach((o) => { const b = BUILDINGS[o.type]; if (b) { add(o.gx, o.gy); add(o.gx + b.w - 1, o.gy + b.h - 1); } });
       if (minx === Infinity) { minx = 0; miny = 0; maxx = COLS - 1; maxy = ROWS - 1; }
       minx -= 2; miny -= 2; maxx += 2; maxy += 2;   // empty-land margin to drop things into
@@ -794,7 +859,7 @@
       const plots = Farm.state.data.plots || [];
       if (this._cellToPlotN !== plots.length) { this._buildLayout(); this._cellToPlotN = plots.length; }
       for (let i = 0; i < plots.length; i++) {
-        const gx = PLOT_OX + (i % PLOT_COLS), gy = PLOT_OY + Math.floor(i / PLOT_COLS);
+        const gx = this._plotGX(i), gy = this._plotGY(i);
         draws.push({ d: gx + gy, fn: () => this._drawPlot(plots[i], gx, gy, i) });
       }
       const map = (Farm.state.data.map) || [];
@@ -946,6 +1011,8 @@
       ctx.globalAlpha = moving ? 0.82 : 1;
       if (!this._blit(this._img[b.img], cc.x, by, b.w * tw * 0.92, b.sc * th * 2.2)) { ctx.fillStyle = '#c0392b'; ctx.fillRect(cc.x - tw * 0.4, by - th, tw * 0.8, th); }
       ctx.globalAlpha = 1;
+      // coop ready-to-collect egg bubble (read the real map entry for eggAt)
+      if (o.type === 'coop' && !this._build) { const real = Farm.state.data.map[idx]; if (real && this._coopReady(real)) { const t = Date.now() / 1000, bob = Math.sin(t * 2.5) * th * 0.12, r = th * 0.5, byy = by - b.sc * th * 1.7 - r + bob; ctx.beginPath(); ctx.arc(cc.x, byy, r, 0, Math.PI * 2); ctx.fillStyle = 'rgba(255,255,255,0.95)'; ctx.fill(); ctx.strokeStyle = 'rgba(230,160,32,0.9)'; ctx.lineWidth = Math.max(1.5, th * 0.06); ctx.stroke(); ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = (r * 1.2) + 'px sans-serif'; ctx.fillText('🥚', cc.x, byy + r * 0.05); ctx.textBaseline = 'alphabetic'; } }
       if (this._build && this._sel === idx && idx != null && !moving) {   // delete chip
         const ch = this._delChip(o);
         ctx.beginPath(); ctx.arc(ch.x, ch.y, ch.r, 0, Math.PI * 2); ctx.fillStyle = '#e8522a'; ctx.fill();
@@ -957,7 +1024,7 @@
     // any without a cell, then render upright; pets wander a little.
     _decoCells() {
       const occ = {}, plots = Farm.state.data.plots || [];
-      for (let i = 0; i < plots.length; i++) occ[(PLOT_OX + (i % PLOT_COLS)) + ',' + (PLOT_OY + Math.floor(i / PLOT_COLS))] = 1;
+      for (let i = 0; i < plots.length; i++) occ[this._plotGX(i) + ',' + this._plotGY(i)] = 1;
       (Farm.state.data.map || []).forEach((o) => { const b = BUILDINGS[o.type]; if (!b) return; for (let y = 0; y < b.h; y++) for (let x = 0; x < b.w; x++) occ[(o.gx + x) + ',' + (o.gy + y)] = 1; });
       const t = Farm.state.data.mapTerrain || {}; Object.keys(t).forEach((k) => { if (t[k] === 'water') occ[k] = 1; });
       return occ;
@@ -1052,7 +1119,7 @@
       const plots = Farm.state.data.plots || [], out = [], seen = {};
       for (let i = 0; i < plots.length; i++) {
         if (!plots[i] || !plots[i].crop) continue;
-        const gx = PLOT_OX + (i % PLOT_COLS), gy = PLOT_OY + Math.floor(i / PLOT_COLS);
+        const gx = this._plotGX(i), gy = this._plotGY(i);
         for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const nx = gx + dx, ny = gy + dy, k = nx + ',' + ny; if (!seen[k] && this._walkablePet(nx, ny)) { seen[k] = 1; out.push([nx, ny]); } }
       }
       return out;
