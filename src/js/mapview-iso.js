@@ -89,6 +89,12 @@
   const charmOf = (b) => Math.max(1, Math.round((b.cost || 0) / 8));
   const COOP_INTERVAL = 5 * 60 * 1000, COOP_REWARD = 30;   // 鸡舍每 5 分钟产一窝蛋，收一次 +30 农场币
   const BED_W = 0.88;   // soil-bed width as a fraction of the cell → <1 leaves a grass gap so plots are distinct/tappable
+  // World-locked backdrop placement (mapview-iso _drawBackdrop). The landscape image is
+  // sized BG_WORLD_CELLS cells wide (× tile-width → scales with zoom) and its focal point
+  // (BG_FX, BG_FY in image fractions = the central flat meadow) is pinned to world cell
+  // (BG_ANCHOR_GX, BG_ANCHOR_GY) ≈ the farm start-area centre. Tune these to position the
+  // farm on the meadow; they keep the bg locked to the farm at every pan/zoom.
+  const BG_WORLD_CELLS = 22, BG_FX = 0.5, BG_FY = 0.62, BG_ANCHOR_GX = 2, BG_ANCHOR_GY = 3.5;
   const PALETTE = ['barn', 'house', 'greenhouse', 'coop', 'stall', 'well', 'tree', 'bush', 'lantern', 'fence', 'wheel', 'bridge'];
   // EP-shop pets → painted iso animal sprites (replaces the emoji pet).
   const ANIMALS = { pet_chick: 'animal_chicken', pet_cat: 'animal_cat', pet_rabbit: 'animal_rabbit', decoration_dog: 'animal_dog', guard_dog: 'animal_dog' };
@@ -860,21 +866,16 @@
 
       const bg = this._img.hd_bg;
       if (bg && bg.width) {
-        // Zoom INTO the painted landscape's central flat meadow (Chris 2026-06-18:
-        // don't show the whole panorama by default — show the middle flat area, sized
-        // to match the farm). We crop to a region around the meadow focal point and
-        // scale it WITH the farm zoom so the meadow patch stays proportional to the
-        // farm. Clamped so the image always covers the canvas (no edges/base showing).
-        const fillCover = Math.max(W / bg.width, H / bg.height);
-        const k = Math.max(1.0, 2.8 * (this._zoom / 0.85));   // >1 crops into centre; tracks farm zoom
-        const cover = fillCover * k;
-        const dw = bg.width * cover, dh = bg.height * cover;
-        const FX = 0.5, FY = 0.63;                            // central flat-meadow focal point in the image
-        let dx = W * 0.5 - FX * dw - this._camX * 0.3;        // place focal point under the farm; pan with camera
-        let dy = H * 0.60 - FY * dh - this._camY * 0.3;
-        dx = Math.min(0, Math.max(W - dw, dx));               // clamp so the photo always covers
-        dy = Math.min(0, Math.max(H - dh, dy));
-        ctx.drawImage(bg, dx, dy, dw, dh);
+        // WORLD-LOCKED backdrop (Chris 2026-06-18: "先把背景图定好坐标-对应农场坐标和
+        // 尺寸"). The landscape is anchored to a fixed WORLD cell and sized in WORLD
+        // units (cells × tile-width), drawn through the same camera (_cell includes pan
+        // + zoom). So the image pans AND zooms locked 1:1 with the farm — the farm always
+        // sits on the exact same patch of meadow at every zoom level (no more "floating
+        // to the sky" when zooming out). The image's focal point (central meadow) is
+        // pinned to the farm's start-area centre; hills/sky extend above it.
+        const a = this._cell(BG_ANCHOR_GX, BG_ANCHOR_GY);    // moves with pan + zoom
+        const dw = BG_WORLD_CELLS * tw, sc = dw / bg.width, dh = bg.height * sc;
+        ctx.drawImage(bg, a.x - BG_FX * dw, a.y - BG_FY * dh, dw, dh);
       } else {   // fallback: procedural hills (image not yet loaded)
         const pc = this._cell(3, 3);
         this._drawHills(pc.x, pc.y - th * 3, 20 * tw * 0.62);
