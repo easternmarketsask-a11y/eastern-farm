@@ -18,7 +18,7 @@
  * delivery completion). When offline / not logged in: no-op silently.
  */
 (function () {
-  const SYNC_MIN_INTERVAL_MS = 60 * 1000;
+  const SYNC_MIN_INTERVAL_MS = 30 * 1000;   // was 60s — halve worst-case loss between pushes
   const SAVE_BLOB_VERSION = 1;   // cloud save-blob schema version
   const PRIVACY_DEFAULT_VISIBLE = true;
   const DAILY_LIKE_CAP = 5;
@@ -29,6 +29,7 @@
   const STICKER_SENDER_COINS = 2;
   let _lastSyncAt = 0;
   let _pendingTimer = null;
+  let _dirty = false;   // true when local state changed since the last successful cloud push
 
   // "Me": the REAL member doc id (store-keyed). All game data for the current
   // player must read/write this doc — NOT doc(authUid), which created the
@@ -149,9 +150,11 @@
           console.warn('[gameSync] farm_players mirror failed', e);
         }
         _lastSyncAt = Date.now();
+        _dirty = false;   // cloud now has everything local had
         return { ok: true };
       } catch (e) {
         console.warn('[gameSync] push failed', e);
+        _dirty = true;    // keep dirty so the next save/flush retries
         return { ok: false, reason: e.message };
       }
     },
@@ -210,6 +213,7 @@
     // Debounced — called frequently from state.save(). Skips if recently
     // synced. Schedules a delayed push if within the cooldown window.
     pushStatsDebounced() {
+      _dirty = true;   // local state changed; cloud is now behind
       const now = Date.now();
       const since = now - _lastSyncAt;
       if (since >= SYNC_MIN_INTERVAL_MS) {
@@ -222,6 +226,19 @@
         _pendingTimer = null;
         this.push();
       }, SYNC_MIN_INTERVAL_MS - since);
+    },
+
+    // Flush any pending changes to the cloud RIGHT NOW (bypass the debounce).
+    // CRITICAL for mobile: the debounced setTimeout is killed when the page is
+    // hidden/frozen (app switch, screen lock, tab close), so without this the
+    // last <30s of play never reaches the server — and on flaky-storage phones
+    // (iOS eviction, WeChat/in-app browsers, private mode) the local copy is lost
+    // too, so the progress vanishes. Fire-and-forget: the Firestore write is sent
+    // immediately and modern browsers let it complete during the hide grace period.
+    flush() {
+      if (_pendingTimer) { clearTimeout(_pendingTimer); _pendingTimer = null; }
+      if (!_dirty) return;
+      this.push();
     },
 
     // Compute the public display name for a member doc.
@@ -984,4 +1001,18 @@
 
   window.Farm = window.Farm || {};
   window.Farm.fbGameSync = gameSync;
+
+  // ===== Flush-on-hide (the real fix for "mobile progress doesn't sync") =====
+  // The Page Lifecycle API guarantees `visibilitychange → hidden` fires before
+  // the page is frozen/discarded on mobile (app switch, screen lock, tab close);
+  // `pagehide` is a secondary backup. `beforeunload` is intentionally NOT used —
+  // it's unreliable on iOS/Android and can block bfcache. We push immediately on
+  // hide so the trailing window of play is written to the cloud instead of dying
+  // with the killed debounce timer.
+  try {
+    document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState === 'hidden') { try { gameSync.flush(); } catch (_) {} }
+    });
+    window.addEventListener('pagehide', function () { try { gameSync.flush(); } catch (_) {} });
+  } catch (_) {}
 })();
