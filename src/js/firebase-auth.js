@@ -181,7 +181,7 @@
         // Release the deferred sign-in auto-open so it decides on the REAL state
         // — fixes the card popping every load on flaky-storage signed-in devices.
         this.authSettled = true;
-        if (Farm.loginCalendar && Farm.loginCalendar.maybeAutoOpen) Farm.loginCalendar.maybeAutoOpen();
+        // (Sign-in calendar no longer auto-opens; reachable from the「今日」panel.)
       });
     },
 

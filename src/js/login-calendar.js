@@ -93,6 +93,11 @@
     },
 
     maybeAutoOpen() {
+      // DISABLED (Chris 2026-06-17): the sign-in card no longer auto-pops. Players
+      // open it from the「今日」panel sign-in card (去签到/查看). Kept as a no-op so
+      // any remaining caller is harmless. Use Farm.loginCalendar.open() to show it.
+      return;
+      // eslint-disable-next-line no-unreachable
       if (this._autoOpened) return;
       // 全新玩家先看新手教程，签到日历让到下次启动——免得两个开屏弹窗
       // 在 600/700ms 互相覆盖。tutorialV1Done 未完成时本次不自动弹。
