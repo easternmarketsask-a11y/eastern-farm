@@ -253,7 +253,7 @@
       this._zoom = Math.min(0.85, Math.max(ZMIN, Math.min(this._cssW() / (screenW * 1.15), this._cssH() / (screenH * 1.05))));
       const ccx = (minx + maxx) / 2, ccy = (miny + maxy) / 2, u = ccx - ccy, v = ccx + ccy;
       this._camX = u * this._tw() / 2;
-      this._camY = this._oy + v * this._th() / 2 - this._cssH() / 2 - this._cssH() * 0.13;   // farm sits lower → sky/hills/treeline visible above
+      this._camY = this._oy + v * this._th() / 2 - this._cssH() / 2 - this._cssH() * 0.20;   // farm sits lower on the meadow (Chris 2026-06-18 整体下移)
       this._clampCam();
     },
 
@@ -866,12 +866,12 @@
         // scale it WITH the farm zoom so the meadow patch stays proportional to the
         // farm. Clamped so the image always covers the canvas (no edges/base showing).
         const fillCover = Math.max(W / bg.width, H / bg.height);
-        const k = Math.max(1.0, 2.0 * (this._zoom / 0.85));   // >1 crops into centre; tracks farm zoom
+        const k = Math.max(1.0, 2.8 * (this._zoom / 0.85));   // >1 crops into centre; tracks farm zoom
         const cover = fillCover * k;
         const dw = bg.width * cover, dh = bg.height * cover;
-        const FX = 0.5, FY = 0.60;                            // central flat-meadow focal point in the image
+        const FX = 0.5, FY = 0.63;                            // central flat-meadow focal point in the image
         let dx = W * 0.5 - FX * dw - this._camX * 0.3;        // place focal point under the farm; pan with camera
-        let dy = H * 0.54 - FY * dh - this._camY * 0.3;
+        let dy = H * 0.60 - FY * dh - this._camY * 0.3;
         dx = Math.min(0, Math.max(W - dw, dx));               // clamp so the photo always covers
         dy = Math.min(0, Math.max(H - dh, dy));
         ctx.drawImage(bg, dx, dy, dw, dh);
