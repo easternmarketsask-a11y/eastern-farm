@@ -42,7 +42,7 @@
     tile_grass: 'p_grass.png', tile_grass_b: 'p_grass_b.png', tile_grass_c: 'p_grass_c.png',
     tile_soil: 'p_soil.png', tile_path: 'p_path.png', tile_water: 'p_water.png',
     plot_bed: 'plot_bed.png',
-    hd_grass: 'hd_grass.png', hd_soil: 'hd_soil.png',   // flat 1:1 diamond tiles (Grok) → clean Hay-Day field
+    hd_soil: 'hd_soil.png',   // painted tilled-soil bed (grass no longer tiled — the bg image is the ground)
     hd_bg: 'hd_bg.png',   // painted landscape backdrop (hills + forest + grass)
   };
   // Painted iso ground cube tiles. `cy` = fraction of the image height where the
