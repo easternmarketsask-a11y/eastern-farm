@@ -596,11 +596,25 @@
         if (im) { const w = tw * 1.18, sc = w / im.width, dh = im.height * sc; ctx.drawImage(im, c.x - w / 2, c.y - dh * 0.42, w, dh); return; }
         this._diamond(c.x, c.y, tw, th); ctx.fillStyle = SOIL_TOP; ctx.fill(); return;
       }
-      // path / water keep the painted cube tiles
-      const t = ISO_TILES[key], im = t && this._img[t.img];
-      if (im) { const w = tw * 1.12, sc = w / im.width, dh = im.height * sc; ctx.drawImage(im, c.x - w / 2, c.y - dh * t.cy, w, dh); return; }
+      // path / water = FLAT diamonds matching the flat ground (no raised cube → no
+      // clash with the green field). Subtle detail keeps them readable.
+      if (key === 'water' || key === 'path') {
+        const w = tw * 1.04, h = th * 1.04;
+        this._diamond(c.x, c.y, w, h);
+        if (key === 'water') {
+          const g = ctx.createLinearGradient(c.x, c.y - h / 2, c.x, c.y + h / 2); g.addColorStop(0, '#86c8e8'); g.addColorStop(1, '#4f9fc9');
+          ctx.fillStyle = g; ctx.fill();
+          ctx.strokeStyle = 'rgba(255,255,255,0.4)'; ctx.lineWidth = Math.max(1, th * 0.05);
+          ctx.beginPath(); ctx.moveTo(c.x - w * 0.16, c.y - th * 0.05); ctx.quadraticCurveTo(c.x, c.y - th * 0.12, c.x + w * 0.16, c.y - th * 0.05); ctx.stroke();
+        } else {
+          ctx.fillStyle = '#c08e54'; ctx.fill();
+          ctx.fillStyle = 'rgba(110,78,42,0.45)';
+          for (let i = 0; i < 5; i++) { const a = i / 5 * 6.283; ctx.beginPath(); ctx.arc(c.x + Math.cos(a) * w * 0.22, c.y + Math.sin(a) * h * 0.22, Math.max(1.2, th * 0.06), 0, 6.283); ctx.fill(); }
+        }
+        return;
+      }
       this._diamond(c.x, c.y, tw, th);
-      ctx.fillStyle = key === 'water' ? '#5aa0c8' : key === 'path' ? '#a8743a' : GRASS_A; ctx.fill();
+      ctx.fillStyle = GRASS_A; ctx.fill();
     },
     _startLoop() {
       const loop = () => {
