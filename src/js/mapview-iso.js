@@ -902,8 +902,8 @@
         decos.forEach((d) => { const it = this._shopItem(d.itemId); if (!it || !it.decoration_emoji) return; if (hp(d) && !occ[d.gx + ',' + d.gy]) return; while (fi < free.length && taken[free[fi]]) fi++; if (fi < free.length) { const k = free[fi++].split(','); d.gx = +k[0]; d.gy = +k[1]; taken[k[0] + ',' + k[1]] = 1; ch = true; } });
         if (ch) Farm.state.save();
       }
-      const out = [];
-      decos.forEach((d, i) => { if (!hp(d)) return; const it = this._shopItem(d.itemId); if (!it || !it.decoration_emoji) return; out.push({ emoji: it.decoration_emoji, itemId: d.itemId, gx: d.gx, gy: d.gy, pet: it.category === 'pet', seed: i }); });
+      const out = [], petsOn = !!(Farm.state.data && Farm.state.data.petsEnabled);   // walking pets default OFF
+      decos.forEach((d, i) => { if (!hp(d)) return; const it = this._shopItem(d.itemId); if (!it || !it.decoration_emoji) return; const isPet = it.category === 'pet'; if (isPet && !petsOn) return; out.push({ emoji: it.decoration_emoji, itemId: d.itemId, gx: d.gx, gy: d.gy, pet: isPet, seed: i }); });
       return out;
     },
     _drawDeco(d, moving) {

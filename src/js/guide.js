@@ -116,8 +116,13 @@
           (on ? '#FF9800' : '#e0e0e0') + ';background:' + (on ? '#FFF3E0' : '#fff') + ';color:' + (on ? '#E8522A' : '#666') + ';">' +
           (on ? '✓ ' : '') + label + '</button>';
       }).join('');
+      const petsOn = !!(Farm.state && Farm.state.data && Farm.state.data.petsEnabled);
+      const petsRow = '<div style="margin-top:12px;"><div style="font:600 13px/1 system-ui,sans-serif;color:#555;margin-bottom:7px;">🐾 ' +
+        (EN ? 'Walking pets' : '走动小动物') + '</div><button id="guidePetsToggle" style="padding:9px 16px;border-radius:12px;cursor:pointer;font:600 12px/1.2 system-ui,sans-serif;border:2px solid ' +
+        (petsOn ? '#FF9800' : '#e0e0e0') + ';background:' + (petsOn ? '#FFF3E0' : '#fff') + ';color:' + (petsOn ? '#E8522A' : '#666') + ';">' +
+        (petsOn ? (EN ? '✓ On' : '✓ 开启') : (EN ? 'Off' : '已关闭')) + '</button></div>';
       return '<div style="margin-top:14px;"><div style="font:600 13px/1 system-ui,sans-serif;color:#555;margin-bottom:7px;">🎨 ' +
-        (EN ? 'Farm style' : '农场画风') + '</div><div style="display:flex;gap:7px;flex-wrap:wrap;">' + btns + '</div></div>';
+        (EN ? 'Farm style' : '农场画风') + '</div><div style="display:flex;gap:7px;flex-wrap:wrap;">' + btns + '</div></div>' + petsRow;
     },
     _wireStyleSwitcher() {
       document.querySelectorAll('.guide-style-btn').forEach((b) => {
@@ -129,6 +134,16 @@
           location.reload();   // re-boot into the chosen renderer
         };
       });
+      const pt = document.getElementById('guidePetsToggle');
+      if (pt) pt.onclick = () => {
+        Farm.state.data.petsEnabled = !Farm.state.data.petsEnabled; Farm.state.save();
+        if (Farm.audio) Farm.audio.play('tap');
+        const on = Farm.state.data.petsEnabled, EN = Farm.state.data.language === 'en';
+        pt.textContent = on ? (EN ? '✓ On' : '✓ 开启') : (EN ? 'Off' : '已关闭');
+        pt.style.border = '2px solid ' + (on ? '#FF9800' : '#e0e0e0'); pt.style.background = on ? '#FFF3E0' : '#fff'; pt.style.color = on ? '#E8522A' : '#666';
+        if (Farm.isoView && Farm.isoView.render) Farm.isoView.render();
+        if (Farm.mapView && Farm.mapView.render) Farm.mapView.render();
+      };
     },
   };
 

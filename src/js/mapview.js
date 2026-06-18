@@ -817,10 +817,12 @@
       if (!decos.length || !Farm.epShop || !Farm.epShop.items || !Farm.epShop.items.length) return [];
       if (decos.some((d) => !this._decoHasPos(d))) this._ensureDecoPositions();
       const out = [];
+      const petsOn = !!(Farm.state.data && Farm.state.data.petsEnabled);   // walking pets default OFF
       decos.forEach((d, i) => {
         if (!this._decoHasPos(d)) return;
         const item = Farm.epShop.items.find((it) => it.id === d.itemId);
         if (!item || !item.decoration_emoji) return;
+        if (item.category === 'pet' && !petsOn) return;
         out.push({ emoji: item.decoration_emoji, gx: d.gx, gy: d.gy, pet: item.category === 'pet', seed: i, decoIdx: i });
       });
       return out;
