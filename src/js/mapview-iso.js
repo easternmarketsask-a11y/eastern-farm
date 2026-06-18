@@ -486,8 +486,34 @@
     toggleBuild() {
       this._build = !this._build;
       if (this._build && Farm.state.data && !Farm.state.data.mapBuildSeen) { Farm.state.data.mapBuildSeen = true; Farm.state.save(); if (this._buildPulse) { this._buildPulse.cancel(); this._buildPulse = null; } }
-      if (!this._build) { this._sel = -1; this._moving = null; this._painting = false; this._editMode = 'build'; Farm.state.save(); }
+      if (this._build) {
+        // Zoom OUT on entering build → show the whole farm + a margin of empty land so
+        // there's room to drag/rearrange objects (the play view is framed tight on plots).
+        this._savedView = { zoom: this._zoom, camX: this._camX, camY: this._camY };
+        this._buildFrame();
+      } else {
+        this._sel = -1; this._moving = null; this._painting = false; this._editMode = 'build'; Farm.state.save();
+        if (this._savedView) { this._zoom = this._savedView.zoom; this._camX = this._savedView.camX; this._camY = this._savedView.camY; this._savedView = null; this._clampCam(); }
+      }
       this._refreshModeUI(); this._layoutUI(); this.render();
+    },
+    // Frame the whole farm (plots + buildings) with a generous empty margin → room to
+    // move things around on a phone. Lower zoom than the tight play view.
+    _buildFrame() {
+      const plots = Farm.state.data.plots || []; let minx = Infinity, miny = Infinity, maxx = -Infinity, maxy = -Infinity;
+      const add = (gx, gy) => { minx = Math.min(minx, gx); miny = Math.min(miny, gy); maxx = Math.max(maxx, gx); maxy = Math.max(maxy, gy); };
+      for (let i = 0; i < plots.length; i++) add(PLOT_OX + (i % PLOT_COLS), PLOT_OY + Math.floor(i / PLOT_COLS));
+      (Farm.state.data.map || []).forEach((o) => { const b = BUILDINGS[o.type]; if (b) { add(o.gx, o.gy); add(o.gx + b.w - 1, o.gy + b.h - 1); } });
+      if (minx === Infinity) { minx = 0; miny = 0; maxx = COLS - 1; maxy = ROWS - 1; }
+      minx -= 2; miny -= 2; maxx += 2; maxy += 2;   // empty-land margin to drop things into
+      const span = (maxx - minx) + (maxy - miny);
+      const screenW = span * TW / 2, screenH = span * TH / 2 + TH * 3;
+      // reserve ~38% of height for the palette tray so content frames into the top area
+      this._zoom = Math.max(ZMIN, Math.min(this._cssW() / (screenW * 1.08), (this._cssH() * 0.62) / (screenH * 1.0)));
+      const ccx = (minx + maxx) / 2, ccy = (miny + maxy) / 2, u = ccx - ccy, v = ccx + ccy;
+      this._camX = u * this._tw() / 2;
+      this._camY = this._oy + v * this._th() / 2 - this._cssH() * 0.34;   // push content up, above the palette
+      this._clampCam();
     },
 
     // ---- render ----
