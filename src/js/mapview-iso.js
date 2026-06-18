@@ -11,18 +11,27 @@
  */
 (function () {
   const COLS = 16, ROWS = 16;      // big world — room to expand the farm across the hills
-  const PLOT_OX = 1, PLOT_OY = 2, PLOT_COLS = 3;
+  // Start zone sits in the BRIGHT FRONT-CENTER of the world (Chris 2026-06-18:
+  // "把整个农场往前搬到前面明亮的大片地区，作为默认初始开发区"). Higher gx+gy = more
+  // toward the viewer (front); gx≈gy = horizontally centered. Old origin was (1,2)
+  // = jammed against the back hills; new origin puts the farm on the open bright land
+  // with the hills pushed far back. _migrateForwardOnce() shifts existing farms here.
+  const PLOT_OX = 6, PLOT_OY = 6, PLOT_COLS = 3;
+  const OLD_PLOT_OX = 1, OLD_PLOT_OY = 2;   // pre-move origin, for the one-time forward migration
   const TW = 92, TH = 46;          // diamond width/height at zoom 1 (2:1 iso)
   const ZMIN = 0.35, ZMAX = 2.4;   // wide range: zoom way out (whole farm+scenery) or right in
   const REQUIRED_LV = { 4: 2, 5: 2, 6: 3, 7: 3, 8: 4, 9: 4, 10: 5, 11: 5 };
   // Pay-to-expand land. Each level's TOTAL owned rectangle (cells x1,y1..x2,y2) grows
   // outward; cost is to unlock UP TO that level. L0 = starting land (free, ⊇ the old
   // 9×11 so existing farms are never taken away). Farthest level also costs a few 超市积分.
+  // Owned land grows OUTWARD from the bright front-center start block toward the
+  // back hills + edges ("扩大到整个山丘"). L0 contains the start plots + room for
+  // buildings; a translated old landLevel-0 farm (old L0 ⊆ {5,4..13,14}) fits inside.
   const LAND_LEVELS = [
-    { x1: 0, y1: 0, x2: 8, y2: 10, coins: 0, points: 0 },        // L0 start (owned)
-    { x1: 0, y1: 0, x2: 12, y2: 10, coins: 800, points: 0 },     // L1 → right strip
-    { x1: 0, y1: 0, x2: 12, y2: 13, coins: 1500, points: 0 },    // L2 → bottom
-    { x1: 0, y1: 0, x2: 15, y2: 15, coins: 3000, points: 30 },   // L3 → far corner (coins + points)
+    { x1: 4, y1: 4, x2: 13, y2: 14, coins: 0, points: 0 },       // L0 start (owned) — front-center
+    { x1: 2, y1: 2, x2: 15, y2: 15, coins: 800, points: 0 },     // L1 → toward back-left + front edge
+    { x1: 1, y1: 1, x2: 15, y2: 15, coins: 1500, points: 0 },    // L2 → almost whole world
+    { x1: 0, y1: 0, x2: 15, y2: 15, coins: 3000, points: 30 },   // L3 → whole world incl. far hills (coins + points)
   ];
   const GRASS_A = '#8bbf5a', GRASS_B = '#83b653', GRASS_EDGE = 'rgba(60,90,40,0.18)';
   const SOIL_TOP = '#9c6b3f', SOIL_FURROW = 'rgba(80,50,26,0.5)';
@@ -146,6 +155,7 @@
       this._cv = cv; this._ctx = cv.getContext('2d');
 
       Object.keys(ASSET_SRC).forEach((k) => { const im = new Image(); im.onload = () => { this._img[k] = im; this._bgKey = null; if (this._on) this.render(); }; im.src = ASSET_DIR + ASSET_SRC[k]; });   // _bgKey=null → re-render cached backdrop once the landscape/tiles finish loading
+      this._migrateForwardOnce();
       this._buildLayout();
       this._resize();
       window.addEventListener('resize', () => { this._resize(); this._clampCam(); this.render(); });
@@ -162,6 +172,38 @@
       this._tick = setInterval(() => { if (document.hidden) return; this._syncSize(); this.render(); }, 1000);
       this._startLoop();
       this.render();
+    },
+
+    // One-time: shift an EXISTING farm forward to the new bright front-center start
+    // zone (Chris 2026-06-18). Translates every world object (plots/buildings/decos/
+    // terrain) by the same delta so the whole layout moves together. Runs BEFORE
+    // _buildLayout so fresh players (plots without gx yet) are skipped here and get
+    // the new origin from _buildLayout instead. Bounds-checked: if the shift would push
+    // anything off the 16×16 world (heavily-expanded farms), it's skipped — the player
+    // keeps their layout, never corrupted. Idempotent via the farmFwdV1 flag.
+    _migrateForwardOnce() {
+      const d = Farm.state.data;
+      if (!d || d.farmFwdV1) return;
+      const dx = PLOT_OX - OLD_PLOT_OX, dy = PLOT_OY - OLD_PLOT_OY;
+      if (dx === 0 && dy === 0) { d.farmFwdV1 = true; return; }
+      const objs = [];
+      (d.plots || []).forEach(p => { if (Number.isInteger(p.gx) && Number.isInteger(p.gy)) objs.push({ o: p, w: 1, h: 1 }); });
+      (d.map || []).forEach(o => { const b = BUILDINGS[o.type]; objs.push({ o, w: b ? b.w : 1, h: b ? b.h : 1 }); });
+      (d.decorations || []).forEach(o => { if (Number.isInteger(o.gx) && Number.isInteger(o.gy)) objs.push({ o, w: 1, h: 1 }); });
+      const terr = d.mapTerrain || {};
+      const terrKeys = Object.keys(terr);
+      // bounds check: every shifted object (incl. building footprint) must stay in-world
+      let ok = true;
+      for (const { o, w, h } of objs) {
+        if (o.gx + dx < 0 || o.gy + dy < 0 || o.gx + dx + (w - 1) > COLS - 1 || o.gy + dy + (h - 1) > ROWS - 1) { ok = false; break; }
+      }
+      if (ok) for (const k of terrKeys) { const a = k.split(','); const gx = +a[0] + dx, gy = +a[1] + dy; if (gx < 0 || gy < 0 || gx > COLS - 1 || gy > ROWS - 1) { ok = false; break; } }
+      if (ok) {
+        objs.forEach(({ o }) => { o.gx += dx; o.gy += dy; });
+        if (terrKeys.length) { const nt = {}; terrKeys.forEach(k => { const a = k.split(','); nt[(+a[0] + dx) + ',' + (+a[1] + dy)] = terr[k]; }); d.mapTerrain = nt; }
+      }
+      d.farmFwdV1 = true;   // mark done either way (skipped farms keep their layout, won't retry)
+      if (Farm.state.save) Farm.state.save();
     },
 
     _buildLayout() {
@@ -823,7 +865,11 @@
       const sky = ctx.createLinearGradient(0, 0, 0, H);
       sky.addColorStop(0, '#a7dcf0'); sky.addColorStop(0.5, '#cfe9d2'); sky.addColorStop(1, '#bfe2a4');
       ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H);
-      const pc = this._cell((PLOT_OX + (PLOT_COLS - 1) / 2), PLOT_OY);   // center of back plot row
+      // Hills anchor to the WORLD BACK-CENTER (gx===gy → horizontally centered;
+      // small sum → far back), NOT the plot block. The farm now sits forward on the
+      // bright meadow, so the hills must stay pinned to the back with open meadow
+      // between them and the farm (else the hills would hug the farm again).
+      const pc = this._cell(3, 3);
       const horizonY = pc.y - th * 1.6, spanX = 20 * tw * 0.62;          // backdrop sized to the start view (not the whole big grid)
       // green meadow covering the WHOLE world grid (locked land is dimmed on top later)
       const gc = this._cell((COLS - 1) / 2, (ROWS - 1) / 2), gspan = (COLS + ROWS);
