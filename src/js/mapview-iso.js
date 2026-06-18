@@ -238,10 +238,11 @@
       if (this._build && this._editMode === 'terrain') { const c = this._screenToCell(p.x, p.y); this._painting = true; this._paintCell(c.gx, c.gy); return; }
       if (this._build) {
         if (this._sel >= 0) { const ch = this._delChip((Farm.state.data.map)[this._sel]); if (Math.hypot(p.x - ch.x, p.y - ch.y) <= ch.r) { Farm.state.data.map.splice(this._sel, 1); this._sel = -1; Farm.state.save(); this.render(); return; } }
-        const c = this._screenToCell(p.x, p.y);
-        const bidx = this._buildingAt(c.gx, c.gy);
+        // Grab by the VISIBLE sprite (generous), not the tiny footprint cell — on a
+        // phone you tap the building/decoration you see, which sits above its cell.
+        const bidx = this._buildingAtPoint(p.x, p.y);
         if (bidx >= 0) { const o = Farm.state.data.map[bidx]; this._sel = bidx; this._moving = { kind: 'building', idx: bidx, gx: o.gx, gy: o.gy, valid: true, sx: p.x, sy: p.y, moved: false }; this.render(); return; }
-        const didx = this._decoAt(c.gx, c.gy);
+        const didx = this._decoAtPoint(p.x, p.y);
         if (didx >= 0) { const d = Farm.state.data.decorations[didx]; this._sel = -1; this._moving = { kind: 'deco', idx: didx, gx: d.gx, gy: d.gy, valid: true, sx: p.x, sy: p.y, moved: false }; this.render(); return; }
       }
       this._drag = { x: p.x, y: p.y, camX: this._camX, camY: this._camY, moved: false };
@@ -312,9 +313,17 @@
       for (const o of list) {
         const c = this._cell(o.gx, o.gy), pl = plots[o.i];
         const planted = pl && pl.unlocked && pl.crop;
+        // Tap box height tracks the crop's GROWTH stage: a seedling gets a short box
+        // (≈ empty plot), so it never covers the adjacent empty plots' tap targets;
+        // only a tall mature plant claims a tall box.
+        let top = c.y - th * 0.6;
+        if (planted) {
+          const p = Farm.crops.getProgress ? Farm.crops.getProgress(pl) : 1;
+          const fr = p >= 1 ? 3 : p >= 0.6 ? 2 : p >= 0.25 ? 1 : 0;
+          top = c.y - th * (0.7 + fr * 0.6);
+        }
         const halfW = tw * (planted ? 0.5 : 0.58);
         const bot = c.y + th * 0.7;                          // base of the diamond/sprite
-        const top = planted ? c.y - th * 2.8 : c.y - th * 0.6;
         if (px >= c.x - halfW && px <= c.x + halfW && py >= top && py <= bot) return o;
       }
       return null;
@@ -388,6 +397,18 @@
       return -1;
     },
     _decoAt(gx, gy) { const d = (Farm.state.data.decorations) || []; for (let i = 0; i < d.length; i++) if (d[i].gx === gx && d[i].gy === gy) return i; return -1; },
+    // Nearest decoration to a tap, by on-screen distance (generous radius) — small
+    // deco/pet sprites are hard to hit dead-center on a phone in build mode.
+    _decoAtPoint(px, py) {
+      const d = (Farm.state.data.decorations) || [], tw = this._tw(), th = this._th();
+      let best = -1, bd = Infinity; const reach = tw * 0.85;
+      for (let i = 0; i < d.length; i++) {
+        if (!Number.isInteger(d[i].gx) || !Number.isInteger(d[i].gy)) continue;
+        const c = this._cell(d[i].gx, d[i].gy), dist = Math.hypot(px - c.x, py - (c.y - th * 0.5));
+        if (dist < bd) { bd = dist; best = i; }
+      }
+      return bd <= reach ? best : -1;
+    },
     _decoCellFree(gx, gy, exceptIdx) {
       if (!this._inBounds(gx, gy)) return false;
       if (this._plotCellSet()[gx + ',' + gy] || this._terrain()[gx + ',' + gy] === 'water' || this._buildingAt(gx, gy) >= 0) return false;
@@ -620,9 +641,13 @@
       if (mature) { const t = Date.now() / 1000, ph = Math.sin(t * 2 + gx + gy); ctx.beginPath(); ctx.arc(c.x, c.y - th * 0.1, tw * (0.34 + ph * 0.02), 0, Math.PI * 2); ctx.fillStyle = 'rgba(255,214,79,' + (0.3 + ph * 0.08) + ')'; ctx.fill(); }
       ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
       const fr = p >= 1 ? 3 : p >= 0.6 ? 2 : p >= 0.25 ? 1 : 0;
-      if (ISO_CROPS[plot.crop]) {   // pure-plant 4-stage sprite — sits IN the soil bed
+      if (ISO_CROPS[plot.crop]) {   // pure-plant 4-stage sprite — sits IN the soil bed.
+        // FIXED scale (stage-3 sprites are all 260px tall): each stage renders at its
+        // true relative size, so a seedling is genuinely small and does NOT cover the
+        // neighbouring empty plots. (Old _blit fit-to-box blew seedlings up to mature size.)
         const im = this._lazyImg(ISO_CROPS[plot.crop] + '_' + fr);
-        if (!this._blit(im, c.x, c.y + th * 0.34, tw * 0.92, th * 2.6)) { const def = Farm.crops.get(plot.crop); ctx.font = (th * 1.1) + 'px sans-serif'; ctx.fillText((def && def.icon) || '🌿', c.x, by); }
+        if (im) { const s = (th * 2.2) / 260, w = im.width * s, h = im.height * s; ctx.drawImage(im, c.x - w / 2, (c.y + th * 0.34) - h, w, h); }
+        else { const def = Farm.crops.get(plot.crop); ctx.font = (th * 1.1) + 'px sans-serif'; ctx.fillText((def && def.icon) || '🌿', c.x, by); }
       } else if (mature) {
         const im = this._cropSprite(plot.crop);
         if (!this._blit(im, c.x, by, tw * 0.72, th * 1.7)) { const def = Farm.crops.get(plot.crop); ctx.font = (th * 1.1) + 'px sans-serif'; ctx.fillText((def && def.icon) || '🥬', c.x, by); }
