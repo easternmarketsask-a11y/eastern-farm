@@ -26,6 +26,7 @@
     tile_soil: 'p_soil.png', tile_path: 'p_path.png', tile_water: 'p_water.png',
     plot_bed: 'plot_bed.png',
     hd_grass: 'hd_grass.png', hd_soil: 'hd_soil.png',   // flat 1:1 diamond tiles (Grok) → clean Hay-Day field
+    hd_bg: 'hd_bg.png',   // painted landscape backdrop (hills + forest + grass)
   };
   // Painted iso ground cube tiles. `cy` = fraction of the image height where the
   // diamond-top CENTER sits (so it lands on the cell center; tuned by screenshot).
@@ -130,7 +131,7 @@
       document.body.appendChild(cv);
       this._cv = cv; this._ctx = cv.getContext('2d');
 
-      Object.keys(ASSET_SRC).forEach((k) => { const im = new Image(); im.onload = () => { this._img[k] = im; if (this._on) this.render(); }; im.src = ASSET_DIR + ASSET_SRC[k]; });
+      Object.keys(ASSET_SRC).forEach((k) => { const im = new Image(); im.onload = () => { this._img[k] = im; this._bgKey = null; if (this._on) this.render(); }; im.src = ASSET_DIR + ASSET_SRC[k]; });   // _bgKey=null → re-render cached backdrop once the landscape/tiles finish loading
       this._buildLayout();
       this._resize();
       window.addEventListener('resize', () => { this._resize(); this._clampCam(); this.render(); });
@@ -633,17 +634,20 @@
       sky.addColorStop(0, '#a7dcf0'); sky.addColorStop(0.5, '#cfe9d2'); sky.addColorStop(1, '#bfe2a4');
       ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H);
       const pc = this._cell((PLOT_OX + (PLOT_COLS - 1) / 2), PLOT_OY);   // center of back plot row
-      const horizonY = pc.y - th * 1.6, spanX = (COLS + ROWS) * tw * 0.6;
-      this._drawHills(pc.x, horizonY - th * 1.6, spanX);
-      // soft atmospheric haze at the horizon → distance/depth (hills recede)
-      const hz = ctx.createLinearGradient(0, horizonY - th * 4, 0, horizonY + th * 1.5);
-      hz.addColorStop(0, 'rgba(233,244,236,0)'); hz.addColorStop(0.6, 'rgba(233,244,236,0.42)'); hz.addColorStop(1, 'rgba(233,244,236,0)');
-      ctx.fillStyle = hz; ctx.fillRect(0, horizonY - th * 4, W, th * 5.5);
-      this._drawTreeRow(pc.x, horizonY, spanX * 0.95);
-      const mcy = horizonY + th * 14, mrx = spanX * 0.62, mry = th * 16;
+      const horizonY = pc.y - th * 1.6, spanX = (COLS + ROWS) * tw * 0.62;
+      // green meadow base (matches the painted grass) so no sky gaps when panned
+      const mcy = horizonY + th * 14, mrx = spanX * 1.05, mry = th * 16;
       const mg = ctx.createRadialGradient(pc.x, pc.y, mrx * 0.2, pc.x, mcy, mry);
-      mg.addColorStop(0, '#9ecd5c'); mg.addColorStop(1, '#7cb444');
+      mg.addColorStop(0, '#aec162'); mg.addColorStop(1, '#90a84e');
       ctx.save(); ctx.beginPath(); ctx.ellipse(pc.x, mcy, mrx, mry, 0, 0, Math.PI * 2); ctx.fillStyle = mg; ctx.fill(); ctx.restore();
+      const bg = this._img.hd_bg;
+      if (bg && bg.width) {   // painted landscape (hills+forest+grass), world-anchored → pans with farm
+        const imgW = (COLS + ROWS) * tw * 1.3, sc = imgW / bg.width, imgH = bg.height * sc;
+        ctx.drawImage(bg, pc.x - imgW / 2, horizonY - imgH * 0.46, imgW, imgH);
+      } else {   // fallback: procedural hills + treeline
+        this._drawHills(pc.x, horizonY - th * 1.6, spanX);
+        this._drawTreeRow(pc.x, horizonY, spanX * 0.95);
+      }
       this._drawMeadowDetail(pc.x, pc.y);
     },
     _blitBackdrop(ctx, W, H) {
