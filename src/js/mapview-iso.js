@@ -971,11 +971,16 @@
       const next = this._nextLand(); this._landBadge = null;
       if (!next) return;
       const ctx = this._ctx, ob = this._ownedBounds(), th = this._th();
-      // dim everything in the grid OUTSIDE the owned rect (evenodd ring)
-      ctx.save(); ctx.beginPath();
-      this._rectPath(-1, -1, COLS - 1, ROWS - 1);   // whole grid (slightly padded)
-      this._rectPath(ob.x1, ob.y1, ob.x2, ob.y2);   // owned hole
-      ctx.fillStyle = 'rgba(45,62,32,0.42)'; ctx.fill('evenodd'); ctx.restore();
+      // NOTE: no dark overlay on the wild land anymore — it sat as an ugly dark diamond
+      // on top of the painted landscape and broke the blend (Chris 2026-06-18). The whole
+      // scene is the painted meadow; the farm sits naturally on it. We only mark the
+      // owned EDGE with a soft dashed outline (a gentle "property line") + the unlock
+      // badge, so players still understand where they can build / expand.
+      ctx.save();
+      ctx.beginPath(); this._rectPath(ob.x1, ob.y1, ob.x2, ob.y2);
+      ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.lineWidth = Math.max(1.5, th * 0.06);
+      ctx.setLineDash([th * 0.5, th * 0.4]); ctx.stroke(); ctx.setLineDash([]);
+      ctx.restore();
       // badge at the centre of the NEXT region's new band (beyond the owned edge)
       const cx2 = (ob.x2 + next.x2) / 2 + 0.5, cy2 = (next.y1 + next.y2) / 2;
       const c = this._cell(cx2, cy2), t = Date.now() / 1000, pulse = 0.5 + 0.5 * Math.sin(t * 2.2);
