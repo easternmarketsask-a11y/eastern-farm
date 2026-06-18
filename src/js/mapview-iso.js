@@ -621,6 +621,10 @@
       const pc = this._cell((PLOT_OX + (PLOT_COLS - 1) / 2), PLOT_OY);   // center of back plot row
       const horizonY = pc.y - th * 1.6, spanX = (COLS + ROWS) * tw * 0.6;
       this._drawHills(pc.x, horizonY - th * 1.6, spanX);
+      // soft atmospheric haze at the horizon → distance/depth (hills recede)
+      const hz = ctx.createLinearGradient(0, horizonY - th * 4, 0, horizonY + th * 1.5);
+      hz.addColorStop(0, 'rgba(233,244,236,0)'); hz.addColorStop(0.6, 'rgba(233,244,236,0.42)'); hz.addColorStop(1, 'rgba(233,244,236,0)');
+      ctx.fillStyle = hz; ctx.fillRect(0, horizonY - th * 4, W, th * 5.5);
       this._drawTreeRow(pc.x, horizonY, spanX * 0.95);
       const mcy = horizonY + th * 14, mrx = spanX * 0.62, mry = th * 16;
       const mg = ctx.createRadialGradient(pc.x, pc.y, mrx * 0.2, pc.x, mcy, mry);
