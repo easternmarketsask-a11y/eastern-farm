@@ -13,7 +13,7 @@
   const COLS = 9, ROWS = 11;
   const PLOT_OX = 1, PLOT_OY = 2, PLOT_COLS = 3;
   const TW = 92, TH = 46;          // diamond width/height at zoom 1 (2:1 iso)
-  const ZMIN = 0.55, ZMAX = 1.7;
+  const ZMIN = 0.4, ZMAX = 2.4;   // wide range: zoom way out (whole farm+scenery) or right in
   const REQUIRED_LV = { 4: 2, 5: 2, 6: 3, 7: 3, 8: 4, 9: 4, 10: 5, 11: 5 };
   const GRASS_A = '#8bbf5a', GRASS_B = '#83b653', GRASS_EDGE = 'rgba(60,90,40,0.18)';
   const SOIL_TOP = '#9c6b3f', SOIL_FURROW = 'rgba(80,50,26,0.5)';
@@ -57,20 +57,23 @@
     // ground also draws a soil tile and the two cubes stack → bok choy floats.
     shanghai_miao: 'crop_qingcai',
   };
+  // cost = 农场币 to place (coins; East Points stay scarce for real rewards). charm =
+  // 农场魅力 gained (derived ≈ cost/8) — a vanity progression to drive the build impulse.
   const BUILDINGS = {
-    barn: { img: 'barn', w: 2, h: 2, sc: 2.4, zh: '谷仓·仓库', en: 'Barn', tap: 'warehouse' },
-    house: { img: 'house', w: 2, h: 2, sc: 2.6, zh: '小屋·种子店', en: 'Cottage', tap: 'shop' },
-    greenhouse: { img: 'greenhouse', w: 2, h: 2, sc: 2.4, zh: '温室', en: 'Greenhouse' },
-    coop: { img: 'coop', w: 2, h: 2, sc: 2.3, zh: '鸡舍', en: 'Coop' },
-    stall: { img: 'stall', w: 2, h: 2, sc: 2.8, zh: '超市摊位', en: 'Stall' },
-    well: { img: 'well', w: 1, h: 1, sc: 2.4, zh: '水井', en: 'Well' },
-    tree: { img: 'tree', w: 1, h: 1, sc: 2.2, zh: '树', en: 'Tree' },
-    bush: { img: 'deco_bush', w: 1, h: 1, sc: 1.7, zh: '花丛', en: 'Flowers' },
-    lantern: { img: 'deco_lantern', w: 1, h: 1, sc: 2.6, zh: '灯笼', en: 'Lantern' },
-    fence: { img: 'deco_fence', w: 1, h: 1, sc: 1.9, zh: '篱笆', en: 'Fence' },
-    wheel: { img: 'deco_wheel', w: 2, h: 2, sc: 2.2, zh: '水车', en: 'Water Wheel' },
-    bridge: { img: 'deco_bridge', w: 2, h: 1, sc: 1.6, zh: '小桥', en: 'Bridge' },
+    barn: { img: 'barn', w: 2, h: 2, sc: 2.4, zh: '谷仓·仓库', en: 'Barn', tap: 'warehouse', cost: 350 },
+    house: { img: 'house', w: 2, h: 2, sc: 2.6, zh: '小屋·种子店', en: 'Cottage', tap: 'shop', cost: 400 },
+    greenhouse: { img: 'greenhouse', w: 2, h: 2, sc: 2.4, zh: '温室', en: 'Greenhouse', cost: 600 },
+    coop: { img: 'coop', w: 2, h: 2, sc: 2.3, zh: '鸡舍', en: 'Coop', cost: 450 },
+    stall: { img: 'stall', w: 2, h: 2, sc: 2.8, zh: '超市摊位', en: 'Stall', cost: 320 },
+    well: { img: 'well', w: 1, h: 1, sc: 2.4, zh: '水井', en: 'Well', cost: 180 },
+    tree: { img: 'tree', w: 1, h: 1, sc: 2.2, zh: '树', en: 'Tree', cost: 90 },
+    bush: { img: 'deco_bush', w: 1, h: 1, sc: 1.7, zh: '花丛', en: 'Flowers', cost: 40 },
+    lantern: { img: 'deco_lantern', w: 1, h: 1, sc: 2.6, zh: '灯笼', en: 'Lantern', cost: 70 },
+    fence: { img: 'deco_fence', w: 1, h: 1, sc: 1.9, zh: '篱笆', en: 'Fence', cost: 40 },
+    wheel: { img: 'deco_wheel', w: 2, h: 2, sc: 2.2, zh: '水车', en: 'Water Wheel', cost: 480 },
+    bridge: { img: 'deco_bridge', w: 2, h: 1, sc: 1.6, zh: '小桥', en: 'Bridge', cost: 140 },
   };
+  const charmOf = (b) => Math.max(1, Math.round((b.cost || 0) / 8));
   const PALETTE = ['barn', 'house', 'greenhouse', 'coop', 'stall', 'well', 'tree', 'bush', 'lantern', 'fence', 'wheel', 'bridge'];
   // EP-shop pets → painted iso animal sprites (replaces the emoji pet).
   const ANIMALS = { pet_chick: 'animal_chicken', pet_cat: 'animal_cat', pet_rabbit: 'animal_rabbit', decoration_dog: 'animal_dog', guard_dog: 'animal_dog' };
@@ -238,7 +241,7 @@
       if (ids.length === 2) { const [a, b] = ids.map(k => this._pointers[k]); this._pinch = { dist: Math.hypot(a.x - b.x, a.y - b.y) || 1, zoom: this._zoom }; this._drag = null; this._moving = null; this._painting = false; return; }
       if (this._build && this._editMode === 'terrain') { const c = this._screenToCell(p.x, p.y); this._painting = true; this._paintCell(c.gx, c.gy); return; }
       if (this._build) {
-        if (this._sel >= 0) { const ch = this._delChip((Farm.state.data.map)[this._sel]); if (Math.hypot(p.x - ch.x, p.y - ch.y) <= ch.r) { Farm.state.data.map.splice(this._sel, 1); this._sel = -1; Farm.state.save(); this.render(); return; } }
+        if (this._sel >= 0) { const ch = this._delChip((Farm.state.data.map)[this._sel]); if (Math.hypot(p.x - ch.x, p.y - ch.y) <= ch.r) { const o = Farm.state.data.map[this._sel], b = BUILDINGS[o.type], refund = b ? Math.round((b.cost || 0) / 2) : 0; Farm.state.data.map.splice(this._sel, 1); this._sel = -1; if (refund > 0) { Farm.state.addCoins(refund); if (Farm.ui && Farm.ui.refreshHUD) Farm.ui.refreshHUD(); if (Farm.ui && Farm.ui.toast) Farm.ui.toast(this._lang() === 'en' ? ('Removed — refunded ' + refund + ' coins') : ('已移除 — 退回 ' + refund + ' 农场币')); } this._refreshPaletteAfford(); Farm.state.save(); this.render(); return; } }
         // Grab by the VISIBLE sprite (generous), not the tiny footprint cell — on a
         // phone you tap the building/decoration you see, which sits above its cell.
         const bidx = this._buildingAtPoint(p.x, p.y);
@@ -391,7 +394,7 @@
         const front = this._cell(o.gx + (b.w - 1), o.gy + (b.h - 1));
         const by = front.y + th / 2 + th * 0.18;
         const im = this._img[b.img]; let w, h;
-        if (im && im.width) { const s = Math.min(b.w * tw * 1.06 / im.width, b.sc * th * 2.6 / im.height); w = im.width * s; h = im.height * s; }
+        if (im && im.width) { const s = Math.min(b.w * tw * 0.92 / im.width, b.sc * th * 2.2 / im.height); w = im.width * s; h = im.height * s; }
         else { w = b.w * tw * 1.06; h = b.sc * th * 2.0; }
         if (px >= cc.x - w / 2 && px <= cc.x + w / 2 && py >= by - h && py <= by) return i;
       }
@@ -418,16 +421,42 @@
     },
     _delChip(o) { const b = BUILDINGS[o.type], c = this._cell(o.gx + b.w - 1, o.gy), th = this._th(); return { x: c.x + this._tw() / 2 * 0.5, y: c.y - th * 0.2, r: Math.max(12, th * 0.5) }; },
     _addBuilding(type) {
-      const b = BUILDINGS[type], ctr = this._screenToCell(this._cssW() / 2, this._cssH() / 2);
+      const b = BUILDINGS[type], en = this._lang() === 'en', cost = b.cost || 0;
+      // must be able to afford it (农场币) — show the shortfall, nudge to earn more.
+      if (cost > 0 && Farm.state.data.coins < cost) {
+        const need = cost - Farm.state.data.coins;
+        if (Farm.ui && Farm.ui.toast) Farm.ui.toast(en ? ('Need ' + need + ' more coins — sell crops to earn!') : ('还差 ' + need + ' 农场币，去卖菜赚钱吧！'));
+        return;
+      }
+      const ctr = this._screenToCell(this._cssW() / 2, this._cssH() / 2);
       const tries = [[ctr.gx - (b.w >> 1), ctr.gy - (b.h >> 1)]];
       for (let gy = 0; gy + b.h <= ROWS; gy++) for (let gx = 0; gx + b.w <= COLS; gx++) tries.push([gx, gy]);
       for (const [gx, gy] of tries) if (this._footprintFree(gx, gy, type, -1)) {
+        if (cost > 0 && !Farm.state.spendCoins(cost)) { if (Farm.ui && Farm.ui.toast) Farm.ui.toast(en ? 'Not enough coins' : '农场币不足'); return; }
         (Farm.state.data.map = Farm.state.data.map || []).push({ type, gx, gy }); this._sel = Farm.state.data.map.length - 1;
         Farm.state.save(); this.render();
-        if (Farm.ui && Farm.ui.toast) Farm.ui.toast(this._lang() === 'en' ? ('Placed ' + b.en + ' — drag to move') : ('已放置' + b.zh + '，拖动可移动'));
+        if (Farm.ui && Farm.ui.refreshHUD) Farm.ui.refreshHUD();
+        this._refreshPaletteAfford();
+        const charm = charmOf(b), c = this._cell(gx + (b.w - 1) / 2, gy + (b.h - 1) / 2), r = this._cv.getBoundingClientRect();
+        if (Farm.ui && Farm.ui.floatText) Farm.ui.floatText('✨+' + charm + ' 魅力', r.left + c.x - 20, r.top + c.y - this._th() * 2, '#e8a020');
+        if (Farm.audio) Farm.audio.play('coin');
+        if (Farm.ui && Farm.ui.toast) Farm.ui.toast(en ? ('Placed ' + b.en + ' (-' + cost + ' coins) — drag to move') : ('已建' + b.zh + '（-' + cost + ' 农场币）拖动可移动'));
         return;
       }
-      if (Farm.ui && Farm.ui.toast) Farm.ui.toast(this._lang() === 'en' ? 'No room' : '没有空位了');
+      if (Farm.ui && Farm.ui.toast) Farm.ui.toast(en ? 'No room' : '没有空位了');
+    },
+    _refreshPaletteAfford() {
+      if (!this._palBuild) return;
+      const coins = (Farm.state.data && Farm.state.data.coins) || 0;
+      this._palBuild.querySelectorAll('button[data-type]').forEach((btn) => {
+        const b = BUILDINGS[btn.dataset.type]; if (!b) return; const afford = coins >= (b.cost || 0);
+        btn.style.opacity = afford ? '1' : '0.55';
+        const cs = btn.querySelector('.palCost'); if (cs) cs.style.color = afford ? '#3a8c50' : '#e8522a';
+      });
+      if (this._refreshModeUI) this._refreshModeUI();   // refresh the charm count in the hint
+    },
+    _farmCharm() {
+      let s = 0; (Farm.state.data.map || []).forEach((o) => { const b = BUILDINGS[o.type]; if (b) s += charmOf(b); }); return s;
     },
     _paintCell(gx, gy) {
       if (!this._inBounds(gx, gy)) return;
@@ -453,7 +482,7 @@
       this._modeTabs = tabs; tray.appendChild(tabs);
       const rowCss = 'display:flex;flex-wrap:wrap;gap:8px;justify-content:center;align-items:flex-end;';
       const pb = document.createElement('div'); pb.style.cssText = rowCss;
-      PALETTE.forEach((type) => { const b = BUILDINGS[type]; const item = document.createElement('button'); item.style.cssText = 'border:1px solid #e0e0e0;border-radius:14px;background:#fff;padding:8px 10px 6px;min-width:72px;cursor:pointer;font:500 12px/1.3 "Fredoka",system-ui,sans-serif;color:#444;'; item.innerHTML = '<div style="font-size:11px;color:#888;margin-top:4px">＋ ' + (en ? b.en : b.zh) + '</div>'; const ic = document.createElement('div'); ic.style.cssText = 'width:44px;height:38px;margin:0 auto;background-size:contain;background-repeat:no-repeat;background-position:center;'; ic.style.backgroundImage = "url('" + ASSET_DIR + ASSET_SRC[b.img] + "')"; item.insertBefore(ic, item.firstChild); item.onclick = () => this._addBuilding(type); pb.appendChild(item); });
+      PALETTE.forEach((type) => { const b = BUILDINGS[type]; const item = document.createElement('button'); item.dataset.type = type; item.style.cssText = 'border:1px solid #e0e0e0;border-radius:14px;background:#fff;padding:8px 10px 6px;min-width:72px;cursor:pointer;font:500 12px/1.3 "Fredoka",system-ui,sans-serif;color:#444;'; item.innerHTML = '<div style="font-size:11px;color:#888;margin-top:4px">' + (en ? b.en : b.zh) + '</div><div class="palCost" style="font-size:12px;font-weight:600;color:#3a8c50;margin-top:1px"><span class="coin-icon"></span> ' + (b.cost || 0) + '</div>'; const ic = document.createElement('div'); ic.style.cssText = 'width:44px;height:38px;margin:0 auto;background-size:contain;background-repeat:no-repeat;background-position:center;'; ic.style.backgroundImage = "url('" + ASSET_DIR + ASSET_SRC[b.img] + "')"; item.insertBefore(ic, item.firstChild); item.onclick = () => this._addBuilding(type); pb.appendChild(item); });
       this._palBuild = pb; tray.appendChild(pb);
       const pt = document.createElement('div'); pt.style.cssText = rowCss;
       BRUSHES.forEach((br) => { const item = document.createElement('button'); item.dataset.brush = br.key; item.style.cssText = 'border:1px solid #e0e0e0;border-radius:14px;background:#fff;padding:8px 10px 6px;min-width:72px;cursor:pointer;font:500 12px/1.3 "Fredoka",system-ui,sans-serif;color:#444;'; item.innerHTML = '<div style="width:40px;height:30px;margin:0 auto;border-radius:8px;background:' + br.color + '"></div><div style="font-size:11px;color:#888;margin-top:4px">' + (en ? br.en : br.zh) + '</div>'; item.onclick = () => this.setBrush(br.key); pt.appendChild(item); });
@@ -464,10 +493,21 @@
       hint.style.cssText = 'position:fixed;left:0;right:0;z-index:19;text-align:center;display:none;pointer-events:none;font:500 13px/1.4 "Fredoka",system-ui,sans-serif;color:#fff;';
       hint.innerHTML = '<span style="background:rgba(0,0,0,.45);padding:6px 14px;border-radius:16px"></span>';
       document.body.appendChild(hint); this._hint = hint;
+
+      // Always-visible on-screen zoom buttons (＋ / −) — one-tap zoom, easy on phones
+      // (in addition to pinch / wheel). Big tap targets.
+      const zwrap = document.createElement('div'); zwrap.id = 'isoZoom';
+      zwrap.style.cssText = 'position:fixed;z-index:20;display:flex;flex-direction:column;gap:10px;';
+      const mkZ = (label, f) => { const z = document.createElement('button'); z.textContent = label; z.style.cssText = 'width:46px;height:46px;border:none;border-radius:50%;background:rgba(255,255,255,.92);color:#3a8c50;font:600 24px/1 system-ui,sans-serif;box-shadow:0 2px 8px rgba(0,0,0,.2);cursor:pointer;touch-action:manipulation;'; z.onclick = (e) => { e.preventDefault(); this._zoomBy(f); }; return z; };
+      zwrap.appendChild(mkZ('＋', 1.3)); zwrap.appendChild(mkZ('－', 0.77));
+      document.body.appendChild(zwrap); this._zoomUI = zwrap;
+
       this._refreshModeUI(); this._layoutUI();
     },
+    _zoomBy(f) { this._zoomAt(this._cssW() / 2, this._cssH() / 2, this._zoom * f); },
     _layoutUI() {
       const r = this._farmRect(), fromBottom = Math.max(0, window.innerHeight - (r.top + r.height)), en = this._lang() === 'en';
+      if (this._zoomUI) { this._zoomUI.style.left = (r.left + 12) + 'px'; this._zoomUI.style.top = (r.top + r.height * 0.46) + 'px'; }
       if (this._palette) { this._palette.style.display = this._build ? 'flex' : 'none'; this._palette.style.left = r.left + 'px'; this._palette.style.right = Math.max(0, window.innerWidth - (r.left + r.width)) + 'px'; this._palette.style.bottom = fromBottom + 'px'; }
       if (this._buildBtn) { const ph = (this._build && this._palette) ? (this._palette.getBoundingClientRect().height || 74) : 0; this._buildBtn.style.right = (Math.max(0, window.innerWidth - (r.left + r.width)) + 14) + 'px'; this._buildBtn.style.bottom = (fromBottom + (this._build ? ph + 10 : 14)) + 'px'; this._buildBtn.textContent = this._build ? (en ? '✓ Done' : '✓ 完成') : (en ? '🔨 Build' : '🔨 建造'); this._buildBtn.style.background = this._build ? '#FF9800' : '#4CAF50'; }
       if (this._hint) { this._hint.style.display = this._build ? 'block' : 'none'; this._hint.style.left = r.left + 'px'; this._hint.style.right = Math.max(0, window.innerWidth - (r.left + r.width)) + 'px'; this._hint.style.top = (r.top + 8) + 'px'; }
@@ -478,7 +518,7 @@
       if (this._palTerrain) this._palTerrain.style.display = terr ? 'flex' : 'none';
       if (this._modeTabs) Array.from(this._modeTabs.children).forEach((t) => { const on = t.dataset.mode === this._editMode; t.style.background = on ? '#FF9800' : '#eee'; t.style.color = on ? '#fff' : '#777'; });
       if (this._palTerrain) Array.from(this._palTerrain.children).forEach((it) => { it.style.outline = (it.dataset.brush === this._brush) ? '3px solid #FF9800' : 'none'; });
-      if (this._hint) { const s = this._hint.querySelector('span'); if (s) s.textContent = terr ? (en ? 'Tap / drag to paint terrain' : '点按或拖动涂刷地形（草地=擦除）') : (en ? 'Drag buildings & decorations · tap ✕ to remove' : '拖动摆放建筑/装饰 · 点 ✕ 移除建筑'); }
+      if (this._hint) { const s = this._hint.querySelector('span'); if (s) s.textContent = terr ? (en ? 'Tap / drag to paint terrain' : '点按或拖动涂刷地形（草地=擦除）') : (en ? ('✨ Charm ' + this._farmCharm() + ' · drag to place · ✕ remove (50% back)') : ('✨ 农场魅力 ' + this._farmCharm() + ' · 拖动摆放 · ✕ 移除(退一半)')); }
       this._layoutUI();
     },
     setEditMode(m) { this._editMode = m; this._sel = -1; this._moving = null; this._refreshModeUI(); this.render(); },
@@ -487,15 +527,22 @@
       this._build = !this._build;
       if (this._build && Farm.state.data && !Farm.state.data.mapBuildSeen) { Farm.state.data.mapBuildSeen = true; Farm.state.save(); if (this._buildPulse) { this._buildPulse.cancel(); this._buildPulse = null; } }
       if (this._build) {
-        // Zoom OUT on entering build → show the whole farm + a margin of empty land so
-        // there's room to drag/rearrange objects (the play view is framed tight on plots).
+        // Build mode goes FULLSCREEN: hide the bottom bars (Lv/XP, nav, install banner)
+        // for max room; keep the top bar so the coin balance stays visible. Then zoom
+        // out to show the whole farm + empty-land margin to drag into.
         this._savedView = { zoom: this._zoom, camX: this._camX, camY: this._camY };
-        this._buildFrame();
+        this._setChromeHidden(true); this._resize();
+        this._buildFrame(); this._refreshPaletteAfford();
       } else {
         this._sel = -1; this._moving = null; this._painting = false; this._editMode = 'build'; Farm.state.save();
+        this._setChromeHidden(false); this._resize();
         if (this._savedView) { this._zoom = this._savedView.zoom; this._camX = this._savedView.camX; this._camY = this._savedView.camY; this._savedView = null; this._clampCam(); }
       }
       this._refreshModeUI(); this._layoutUI(); this.render();
+    },
+    _setChromeHidden(hide) {
+      ['statusbar', 'bottombar', 'pwaInstallBanner', 'harvestStatusBar'].forEach((id) => { const e = document.getElementById(id); if (e) e.style.display = hide ? 'none' : ''; });
+      document.body.classList.toggle('iso-build-fullscreen', hide);
     },
     // Frame the whole farm (plots + buildings) with a generous empty margin → room to
     // move things around on a phone. Lower zoom than the tight play view.
@@ -821,7 +868,7 @@
       const by = front.y + th / 2 + th * 0.18;
       if (!moving) this._shadow(cc.x, by - th * 0.35, b.w * tw * 0.7, 0.18);   // contact shadow grounds the building
       ctx.globalAlpha = moving ? 0.82 : 1;
-      if (!this._blit(this._img[b.img], cc.x, by, b.w * tw * 1.06, b.sc * th * 2.6)) { ctx.fillStyle = '#c0392b'; ctx.fillRect(cc.x - tw * 0.4, by - th, tw * 0.8, th); }
+      if (!this._blit(this._img[b.img], cc.x, by, b.w * tw * 0.92, b.sc * th * 2.2)) { ctx.fillStyle = '#c0392b'; ctx.fillRect(cc.x - tw * 0.4, by - th, tw * 0.8, th); }
       ctx.globalAlpha = 1;
       if (this._build && this._sel === idx && idx != null && !moving) {   // delete chip
         const ch = this._delChip(o);
