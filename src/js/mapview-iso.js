@@ -225,14 +225,39 @@
     },
 
     // ---- iso transforms ----
+    // Rolling-terrain height (Chris 2026-06-18 #3 "农田顺着山坡起伏"). Returns a
+    // UNITLESS vertical offset in tile-height units; _cell multiplies by th so it
+    // scales with zoom. Long wavelength + modest amplitude → adjacent beds differ
+    // only ~6px (stay near-coplanar, no staircase) while the whole field visibly
+    // rolls (~30px peak-to-trough), so the farmland drapes over the hills instead
+    // of sitting as a flat slab. Mean ≈ 0 so camera framing/clamping is unaffected.
+    _hUnit(gx, gy) {
+      const a = Math.sin((gx + gy) * 0.30 + 0.5) * 0.42;
+      const b = Math.cos((gx - gy) * 0.26 - 0.4) * 0.22;
+      return a + b;
+    },
     _cell(gx, gy) {
       const tw = this._tw(), th = this._th();
-      return { x: this._ox + (gx - gy) * tw / 2 - this._camX, y: this._oy + (gx + gy) * th / 2 - this._camY };
+      return { x: this._ox + (gx - gy) * tw / 2 - this._camX, y: this._oy + (gx + gy) * th / 2 - this._camY + this._hUnit(gx, gy) * th };
     },
+    // Inverse of _cell. The flat algebraic inverse is only a first guess because
+    // _cell now adds a per-cell height; refine by scanning a small window around
+    // that guess and returning the FRONTMOST cell whose displaced diamond contains
+    // the point (matches draw order, so taps land on what you see).
     _screenToCell(sx, sy) {
       const tw = this._tw(), th = this._th();
       const dx = sx + this._camX - this._ox, dy = sy + this._camY - this._oy;
       const fu = dx / (tw / 2), fv = dy / (th / 2);
+      const g0 = Math.round((fv + fu) / 2), h0 = Math.round((fv - fu) / 2);
+      let best = null, bestSum = -Infinity;
+      for (let gy = h0 - 3; gy <= h0 + 3; gy++) {
+        for (let gx = g0 - 3; gx <= g0 + 3; gx++) {
+          const c = this._cell(gx, gy);
+          const d = Math.abs(sx - c.x) / (tw / 2) + Math.abs(sy - c.y) / (th / 2);
+          if (d <= 1.0 && (gx + gy) > bestSum) { bestSum = gx + gy; best = { gx, gy }; }
+        }
+      }
+      if (best) return best;
       return { gx: Math.floor((fv + fu) / 2), gy: Math.floor((fv - fu) / 2) };
     },
     _clampCam() {
