@@ -98,7 +98,7 @@
   // world cell (BG_ANCHOR_GX, BG_ANCHOR_GY) ≈ the farm start-area centre, and it scales
   // with farm zoom (see BG_ZOOM_REF). Tune these to position the farm on the meadow; they
   // keep the bg locked to the farm at every pan/zoom.
-  const BG_FX = 0.5, BG_FY = 0.62, BG_ANCHOR_GX = 2, BG_ANCHOR_GY = 3.5;
+  const BG_FX = 0.5, BG_FY = 0.66, BG_ANCHOR_GX = 2, BG_ANCHOR_GY = 3.5;
   const BG_ZOOM_REF = 0.70;   // zoom at which the bg exactly covers the canvas; >this = covers w/ margin, <this (zoomed out) = shrinks w/ farm, base shows around (no float)
   const PALETTE = ['barn', 'house', 'greenhouse', 'coop', 'stall', 'well', 'tree', 'bush', 'lantern', 'fence', 'wheel', 'bridge'];
   // EP-shop pets → painted iso animal sprites (replaces the emoji pet).
