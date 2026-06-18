@@ -16,7 +16,11 @@
   // shifts any save that got forwarded back to here.)
   const PLOT_OX = 1, PLOT_OY = 2, PLOT_COLS = 3;
   const TW = 92, TH = 46;          // diamond width/height at zoom 1 (2:1 iso)
-  const ZMIN = 0.35, ZMAX = 2.4;   // wide range: zoom way out (whole farm+scenery) or right in
+  // ZMIN is pinned to BG_ZOOM_REF (below): at the most-zoomed-out point the painted
+  // backdrop still EXACTLY covers the canvas, so you can never zoom out into the flat
+  // base band, and the bg stays world-locked to the farm at every reachable zoom (no
+  // float). ZMAX lets you zoom right in.
+  const ZMIN = 0.70, ZMAX = 2.4;
   const REQUIRED_LV = { 4: 2, 5: 2, 6: 3, 7: 3, 8: 4, 9: 4, 10: 5, 11: 5 };
   // Pay-to-expand land. Each level's TOTAL owned rectangle (cells x1,y1..x2,y2) grows
   // outward; cost is to unlock UP TO that level. L0 = starting land (free, ⊇ the old
