@@ -109,6 +109,19 @@
           </div>
         </div>` : '';
 
+      // 小东订单板入口：显示当前可交付的订单数，引导去交付（核心循环）。
+      const fillable = (Farm.orders && Farm.orders.fillableCount) ? Farm.orders.fillableCount() : 0;
+      const ordersHTML = `
+        <div class="daily-card daily-orders">
+          <div class="daily-card-title">📋 ${lang === 'en' ? "小东's Orders" : '小东的订单'}</div>
+          <div class="daily-card-body">
+            ${fillable > 0
+              ? (lang === 'en' ? `<strong>${fillable}</strong> order(s) ready to deliver — pays more than bulk selling!` : `有 <strong>${fillable}</strong> 单现在就能交付——比直接卖更划算！`)
+              : (lang === 'en' ? 'Grow crops to fill 小东’s orders for bonus coins.' : '种菜交付小东的订单，赚更多农场币。')}
+          </div>
+          <button class="daily-claim" id="dailyOpenOrders">${fillable > 0 ? '🚚 ' + (lang === 'en' ? 'Deliver' : '去交付') : '📋 ' + (lang === 'en' ? 'View orders' : '看订单')}</button>
+        </div>`;
+
       const lotteryHTML = `
         <div class="daily-card daily-lottery">
           <div class="daily-card-title">🎰 ${lang === 'en' ? 'Daily Lottery' : '每日大转盘'}</div>
@@ -156,6 +169,7 @@
             <button class="daily-claim" id="dailyOpenGuide">📖 ${lang === 'en' ? 'View guide' : '看玩法'}</button>
           </div>
           ${signinHTML}
+          ${ordersHTML}
           ${newsHTML}
           ${specialHTML}
           ${lotteryHTML}
@@ -209,6 +223,10 @@
       const signinBtn = $('dailyOpenSignin');
       if (signinBtn) signinBtn.onclick = () => {
         if (Farm.loginCalendar) Farm.loginCalendar.open();
+      };
+      const ordersBtn = $('dailyOpenOrders');
+      if (ordersBtn) ordersBtn.onclick = () => {
+        if (Farm.orders) Farm.orders.open();
       };
       const wheelBtn = $('dailyOpenWheel');
       if (wheelBtn) wheelBtn.onclick = () => this.openWheel();

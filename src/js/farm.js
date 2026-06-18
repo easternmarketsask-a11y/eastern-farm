@@ -291,6 +291,8 @@
 
       // Update warehouse badge with new count
       if (Farm.warehouse && Farm.warehouse.refreshBadge) Farm.warehouse.refreshBadge();
+      // New crops in the silo may make a 小东 order fillable → refresh his badge
+      if (Farm.orders && Farm.orders.refreshBadge) Farm.orders.refreshBadge();
       // 首次收获入仓：教"菜进了仓库，攒着卖"（晚于首收撒花的 toast）
       if (Farm.coach) Farm.coach.fire('first_warehouse', 1600);
 

@@ -129,6 +129,9 @@
     // 6c. Buildable map view init is now deferred until after splash dismiss (see wireSplash),
     // so the entry buttons are guaranteed responsive and no early canvas overlay conflicts.
 
+    // 6d. Seed 小东's order board + show his fillable-order badge
+    if (Farm.orders) { Farm.orders.ensure(); Farm.orders.refreshBadge(); }
+
     // 7. Storekeeper
     Farm.storekeeper.refresh();
 

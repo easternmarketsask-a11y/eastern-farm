@@ -85,12 +85,18 @@
   window.Farm = window.Farm || {};
   window.Farm.storekeeper = storekeeper;
 
-  // Click to refresh
+  // Tap 小东 → open his order board (he IS the Eastern Market buyer, so this
+  // is the most thematic entry point). The greeting line still rotates on its
+  // own via refresh() calls elsewhere.
   document.addEventListener('DOMContentLoaded', () => {
     const npc = document.getElementById('storekeeper');
     if (npc) {
       npc.style.cursor = 'pointer';
-      npc.onclick = () => storekeeper.refresh();
+      npc.onclick = () => {
+        if (Farm.audio) Farm.audio.play('tap');
+        if (Farm.orders) Farm.orders.open();
+        else storekeeper.refresh();
+      };
     }
   });
 })();

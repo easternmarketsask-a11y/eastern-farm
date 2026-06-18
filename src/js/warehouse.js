@@ -207,6 +207,8 @@
 
       // Update the warehouse badge on the topbar / nav
       if (this.refreshBadge) this.refreshBadge();
+      // Silo emptied → 小东 orders are no longer fillable; refresh his badge
+      if (Farm.orders && Farm.orders.refreshBadge) Farm.orders.refreshBadge();
       // Silo now has room → clear any "仓库满了" state on the harvest bar.
       if (Farm.harvestStatus) Farm.harvestStatus.render();
 

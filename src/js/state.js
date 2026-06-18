@@ -110,6 +110,15 @@
     warehouseCapacity: 20,      // Soft cap; harvest blocked when full
     totalDeliveries: 0,         // Lifetime count of warehouse→Eastern Market deliveries
 
+    // ============ 小东订单板 (orders.js — 2026-06-18) ============
+    // Hay Day-style order board: 小东 (Eastern Market) requests specific
+    // crops; player delivers them FROM the warehouse for a coin premium
+    // (~1.5× bulk-sell) + XP, and occasionally a little 超市积分. This gives
+    // crop VARIETY a purpose beyond bulk selling and pulls the player back.
+    orders: [],                 // Array of { id, items:[{cropId,qty}], coins, xp, points, createdAt }
+    totalOrdersFilled: 0,       // Lifetime count of fulfilled orders
+    orderEp: { date: '', earned: 0 },  // self-resetting daily cap on 超市积分 from orders
+
     // ============ Neighbor system (Phase 1 — 2026-05-24) ============
     nickname: null,             // user-set in settings (else derived "{firstChar}邻居")
     visibleToNeighbors: true,   // privacy toggle (settings)
@@ -665,6 +674,28 @@
     isWarehouseFull() {
       const wh = this.data.warehouse || [];
       return wh.length >= (this.data.warehouseCapacity || 20);
+    },
+
+    // How many of a specific crop are currently in the warehouse.
+    // Used by the order board to show have/need and gate fulfillment.
+    warehouseCount(cropId) {
+      const wh = this.data.warehouse || [];
+      let n = 0;
+      for (let i = 0; i < wh.length; i++) if (wh[i].cropId === cropId) n++;
+      return n;
+    },
+
+    // Remove up to `n` of `cropId` from the warehouse (oldest first).
+    // Returns how many were actually removed. Used when delivering an order.
+    removeFromWarehouse(cropId, n) {
+      const wh = this.data.warehouse || [];
+      let removed = 0;
+      for (let i = 0; i < wh.length && removed < n; ) {
+        if (wh[i].cropId === cropId) { wh.splice(i, 1); removed++; }
+        else i++;
+      }
+      this.save();
+      return removed;
     },
 
     // Aggregate the warehouse into { cropId: count } so the UI can
