@@ -196,7 +196,7 @@
       this._zoom = Math.min(0.85, Math.max(ZMIN, Math.min(this._cssW() / (screenW * 1.15), this._cssH() / (screenH * 1.05))));
       const ccx = (minx + maxx) / 2, ccy = (miny + maxy) / 2, u = ccx - ccy, v = ccx + ccy;
       this._camX = u * this._tw() / 2;
-      this._camY = this._oy + v * this._th() / 2 - this._cssH() / 2 - this._th() * 1.2;   // smaller camY → content sits lower → headroom above
+      this._camY = this._oy + v * this._th() / 2 - this._cssH() / 2 - this._cssH() * 0.13;   // farm sits lower → sky/hills/treeline visible above
       this._clampCam();
     },
 
@@ -507,6 +507,47 @@
       return null;
     },
     _diamond(x, y, tw, th) { const c = this._ctx; c.beginPath(); c.moveTo(x, y - th / 2); c.lineTo(x + tw / 2, y); c.lineTo(x, y + th / 2); c.lineTo(x - tw / 2, y); c.closePath(); },
+    // ---- world-anchored landscape backdrop (cx,cy are camera-adjusted, so it pans) ----
+    _drawHills(cx, cy, span) {
+      const ctx = this._ctx;
+      // 3 layered soft humps, far→near (lighter/bluer = farther for haze depth)
+      const layers = [
+        { dy: -span * 0.06, h: span * 0.30, col: '#bcd9a8' },
+        { dy: span * 0.02, h: span * 0.34, col: '#a6cf86' },
+        { dy: span * 0.10, h: span * 0.40, col: '#8ec46a' },
+      ];
+      layers.forEach((L) => {
+        ctx.fillStyle = L.col; ctx.beginPath();
+        const left = cx - span * 1.1, right = cx + span * 1.1, base = cy + L.dy + L.h;
+        ctx.moveTo(left, base);
+        // a few rolling bumps via quadratic curves
+        const bumps = 5, step = (right - left) / bumps;
+        for (let i = 0; i < bumps; i++) {
+          const x0 = left + i * step, peakY = cy + L.dy - (i % 2 ? L.h * 0.12 : 0);
+          ctx.quadraticCurveTo(x0 + step * 0.5, peakY, x0 + step, base - (i % 2 ? 0 : L.h * 0.08));
+        }
+        ctx.lineTo(right, base + span); ctx.lineTo(left, base + span); ctx.closePath(); ctx.fill();
+      });
+    },
+    _tree(x, y, s) {
+      const ctx = this._ctx;
+      ctx.fillStyle = '#6b4a2b'; ctx.fillRect(x - s * 0.09, y - s * 0.5, s * 0.18, s * 0.5);   // trunk
+      const blob = (dx, dy, r, col) => { ctx.fillStyle = col; ctx.beginPath(); ctx.arc(x + dx, y - s * 0.7 + dy, r, 0, Math.PI * 2); ctx.fill(); };
+      blob(-s * 0.28, s * 0.1, s * 0.34, '#4f8f44');
+      blob(s * 0.28, s * 0.1, s * 0.34, '#4f8f44');
+      blob(0, -s * 0.15, s * 0.42, '#5fa050');
+      blob(-s * 0.1, -s * 0.05, s * 0.3, '#6cb45a');   // highlight
+    },
+    _drawTreeRow(cx, y, span) {
+      // a row of trees along the horizon behind the farm (world-anchored → pans),
+      // with a gentle up/down sway so it reads as a treeline, not a fence.
+      const n = 11, tw = this._tw();
+      for (let i = 0; i <= n; i++) {
+        const t = i / n, x = cx - span / 2 + span * t;
+        const dy = Math.sin(t * 7.1) * this._th() * 0.5;        // stable wobble
+        this._tree(x, y + dy, tw * (1.25 + (i % 3) * 0.3));
+      }
+    },
     // Clean procedural tilled-soil bed (replaces the muddy p_soil cube tile, which
     // tiled with dark seams). A flat inset diamond + furrows + a soft raised rim →
     // neat, distinct Hay-Day plots that tessellate seamlessly.
@@ -553,11 +594,23 @@
       const ctx = this._ctx, tw = this._tw(), th = this._th(), W = this._cssW(), H = this._cssH();
       const terrain = Farm.state.data.mapTerrain || {};
       ctx.clearRect(0, 0, W, H);
-      // Smooth solid grass base (gentle top→bottom gradient) — no tiled grass, so no
-      // quilt/checkerboard. Soil beds, terrain, crops, buildings draw on top.
-      const bg = ctx.createLinearGradient(0, 0, 0, H);
-      bg.addColorStop(0, '#9ccb5b'); bg.addColorStop(1, '#84ba48');
-      ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+      // ---- Landscape backdrop so the farm sits in a world (not floating). Sky is
+      // screen-fixed; hills/trees/meadow are WORLD-anchored (drawn relative to the
+      // farm center → they pan with the farm when you move the camera). ----
+      const sky = ctx.createLinearGradient(0, 0, 0, H);
+      sky.addColorStop(0, '#a7dcf0'); sky.addColorStop(0.5, '#cfe9d2'); sky.addColorStop(1, '#bfe2a4');
+      ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H);
+      // Anchor the backdrop to the PLOT block (what the camera frames), not the whole
+      // grid, so the horizon/hills/trees sit just behind the plots and are visible.
+      const pc = this._cell((PLOT_OX + (PLOT_COLS - 1) / 2), PLOT_OY);   // center of back plot row
+      const horizonY = pc.y - th * 1.6, spanX = (COLS + ROWS) * tw * 0.6;
+      this._drawHills(pc.x, horizonY - th * 1.6, spanX);
+      this._drawTreeRow(pc.x, horizonY, spanX * 0.95);
+      // green meadow: top edge ≈ horizon, extends well below past the farm (world-anchored)
+      const mTop = horizonY, mcy = mTop + th * 14, mrx = spanX * 0.62, mry = th * 16;
+      const mg = ctx.createRadialGradient(pc.x, pc.y, mrx * 0.2, pc.x, mcy, mry);
+      mg.addColorStop(0, '#9ecd5c'); mg.addColorStop(1, '#7cb444');
+      ctx.save(); ctx.beginPath(); ctx.ellipse(pc.x, mcy, mrx, mry, 0, 0, Math.PI * 2); ctx.fillStyle = mg; ctx.fill(); ctx.restore();
 
       // Soil beds (plots) + terrain tiles, back-to-front. Grass cells draw nothing
       // (the base shows through). Plot cells use the raised soil bed.
