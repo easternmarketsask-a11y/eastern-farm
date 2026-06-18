@@ -611,29 +611,44 @@
       };
       this._raf = requestAnimationFrame(loop);
     },
+    // Render the static landscape backdrop into `this._ctx` (which _blitBackdrop
+    // temporarily points at the offscreen cache canvas).
+    _drawBackdrop(W, H) {
+      const ctx = this._ctx, tw = this._tw(), th = this._th();
+      const sky = ctx.createLinearGradient(0, 0, 0, H);
+      sky.addColorStop(0, '#a7dcf0'); sky.addColorStop(0.5, '#cfe9d2'); sky.addColorStop(1, '#bfe2a4');
+      ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H);
+      const pc = this._cell((PLOT_OX + (PLOT_COLS - 1) / 2), PLOT_OY);   // center of back plot row
+      const horizonY = pc.y - th * 1.6, spanX = (COLS + ROWS) * tw * 0.6;
+      this._drawHills(pc.x, horizonY - th * 1.6, spanX);
+      this._drawTreeRow(pc.x, horizonY, spanX * 0.95);
+      const mcy = horizonY + th * 14, mrx = spanX * 0.62, mry = th * 16;
+      const mg = ctx.createRadialGradient(pc.x, pc.y, mrx * 0.2, pc.x, mcy, mry);
+      mg.addColorStop(0, '#9ecd5c'); mg.addColorStop(1, '#7cb444');
+      ctx.save(); ctx.beginPath(); ctx.ellipse(pc.x, mcy, mrx, mry, 0, 0, Math.PI * 2); ctx.fillStyle = mg; ctx.fill(); ctx.restore();
+      this._drawMeadowDetail(pc.x, pc.y);
+    },
+    _blitBackdrop(ctx, W, H) {
+      const key = Math.round(this._camX) + ',' + Math.round(this._camY) + ',' + this._zoom.toFixed(3) + ',' + W + ',' + H;
+      if (this._bgKey !== key || !this._bgCache) {
+        if (!this._bgCache) this._bgCache = document.createElement('canvas');
+        const cv = this._bgCache, dpr = this._dpr, pw = Math.round(W * dpr), ph = Math.round(H * dpr);
+        if (cv.width !== pw || cv.height !== ph) { cv.width = pw; cv.height = ph; }
+        const g = cv.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, W, H);
+        const real = this._ctx; this._ctx = g; this._drawBackdrop(W, H); this._ctx = real;
+        this._bgKey = key;
+      }
+      ctx.drawImage(this._bgCache, 0, 0, W, H);
+    },
     render() {
       if (!this._on) return;
       const ctx = this._ctx, tw = this._tw(), th = this._th(), W = this._cssW(), H = this._cssH();
       const terrain = Farm.state.data.mapTerrain || {};
       ctx.clearRect(0, 0, W, H);
-      // ---- Landscape backdrop so the farm sits in a world (not floating). Sky is
-      // screen-fixed; hills/trees/meadow are WORLD-anchored (drawn relative to the
-      // farm center → they pan with the farm when you move the camera). ----
-      const sky = ctx.createLinearGradient(0, 0, 0, H);
-      sky.addColorStop(0, '#a7dcf0'); sky.addColorStop(0.5, '#cfe9d2'); sky.addColorStop(1, '#bfe2a4');
-      ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H);
-      // Anchor the backdrop to the PLOT block (what the camera frames), not the whole
-      // grid, so the horizon/hills/trees sit just behind the plots and are visible.
-      const pc = this._cell((PLOT_OX + (PLOT_COLS - 1) / 2), PLOT_OY);   // center of back plot row
-      const horizonY = pc.y - th * 1.6, spanX = (COLS + ROWS) * tw * 0.6;
-      this._drawHills(pc.x, horizonY - th * 1.6, spanX);
-      this._drawTreeRow(pc.x, horizonY, spanX * 0.95);
-      // green meadow: top edge ≈ horizon, extends well below past the farm (world-anchored)
-      const mTop = horizonY, mcy = mTop + th * 14, mrx = spanX * 0.62, mry = th * 16;
-      const mg = ctx.createRadialGradient(pc.x, pc.y, mrx * 0.2, pc.x, mcy, mry);
-      mg.addColorStop(0, '#9ecd5c'); mg.addColorStop(1, '#7cb444');
-      ctx.save(); ctx.beginPath(); ctx.ellipse(pc.x, mcy, mrx, mry, 0, 0, Math.PI * 2); ctx.fillStyle = mg; ctx.fill(); ctx.restore();
-      this._drawMeadowDetail(pc.x, pc.y);   // scattered tufts/flowers around the farm (world-anchored)
+      // Landscape backdrop (sky/hills/trees/meadow/tufts) — only changes when the
+      // camera pans/zooms, so it's rendered once into an offscreen canvas and reused
+      // on the ~30fps animation frames (pets/bubbles). Saves CPU/battery on phones.
+      this._blitBackdrop(ctx, W, H);
 
       // Soil beds (plots) + terrain tiles, back-to-front. Grass cells draw nothing
       // (the base shows through). Plot cells use the raised soil bed.
