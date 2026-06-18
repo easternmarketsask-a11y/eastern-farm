@@ -507,6 +507,12 @@
       return null;
     },
     _diamond(x, y, tw, th) { const c = this._ctx; c.beginPath(); c.moveTo(x, y - th / 2); c.lineTo(x + tw / 2, y); c.lineTo(x, y + th / 2); c.lineTo(x - tw / 2, y); c.closePath(); },
+    // soft contact shadow under an object → grounds it (Hay-Day depth)
+    _shadow(cx, cy, w, alpha) {
+      const ctx = this._ctx; ctx.save(); ctx.beginPath();
+      ctx.ellipse(cx, cy, w * 0.5, w * 0.2, 0, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(38,46,26,' + (alpha || 0.16) + ')'; ctx.fill(); ctx.restore();
+    },
     // ---- world-anchored landscape backdrop (cx,cy are camera-adjusted, so it pans) ----
     _drawHills(cx, cy, span) {
       const ctx = this._ctx;
@@ -537,6 +543,22 @@
       blob(s * 0.28, s * 0.1, s * 0.34, '#4f8f44');
       blob(0, -s * 0.15, s * 0.42, '#5fa050');
       blob(-s * 0.1, -s * 0.05, s * 0.3, '#6cb45a');   // highlight
+    },
+    _tuft(x, y, s) {
+      const ctx = this._ctx; ctx.fillStyle = '#74b252';
+      for (let i = 0; i < 4; i++) { const dx = (i - 1.5) * s * 0.4; ctx.beginPath(); ctx.moveTo(x + dx, y); ctx.lineTo(x + dx + s * 0.13, y - s); ctx.lineTo(x + dx - s * 0.13, y); ctx.closePath(); ctx.fill(); }
+    },
+    _flower(x, y, s) {
+      this._tuft(x, y, s * 0.8); const ctx = this._ctx;
+      const cols = ['#f6c945', '#ef7a7a', '#e88ad0', '#ffffff'], col = cols[Math.abs(Math.round(x * 0.7 + y)) % 4];
+      ctx.fillStyle = col; for (let a = 0; a < 5; a++) { const an = a / 5 * 6.283; ctx.beginPath(); ctx.arc(x + Math.cos(an) * s * 0.2, y - s * 0.95 + Math.sin(an) * s * 0.2, s * 0.15, 0, 6.283); ctx.fill(); }
+      ctx.fillStyle = '#ffd34d'; ctx.beginPath(); ctx.arc(x, y - s * 0.95, s * 0.13, 0, 6.283); ctx.fill();
+    },
+    // scattered grass tufts + flowers around the farm (NOT on the plot block), world-anchored
+    _drawMeadowDetail(cx, cy) {
+      const tw = this._tw(), th = this._th();
+      const P = [[-3.6, 2.5], [-3.1, 4.6], [-4.1, 0.8], [-2.2, 6.3], [-1.4, 7.4], [3.5, 1.8], [4.2, 3.6], [4.6, 0.4], [3.0, 6.0], [1.2, 7.3], [2.6, 7.6], [-3.0, 7.0]];
+      P.forEach((o, i) => { const x = cx + o[0] * tw, y = cy + o[1] * th; if (i % 3 === 0) this._flower(x, y, tw * 0.22); else this._tuft(x, y, tw * 0.24); });
     },
     _drawTreeRow(cx, y, span) {
       // a row of trees along the horizon behind the farm (world-anchored → pans),
@@ -611,6 +633,7 @@
       const mg = ctx.createRadialGradient(pc.x, pc.y, mrx * 0.2, pc.x, mcy, mry);
       mg.addColorStop(0, '#9ecd5c'); mg.addColorStop(1, '#7cb444');
       ctx.save(); ctx.beginPath(); ctx.ellipse(pc.x, mcy, mrx, mry, 0, 0, Math.PI * 2); ctx.fillStyle = mg; ctx.fill(); ctx.restore();
+      this._drawMeadowDetail(pc.x, pc.y);   // scattered tufts/flowers around the farm (world-anchored)
 
       // Soil beds (plots) + terrain tiles, back-to-front. Grass cells draw nothing
       // (the base shows through). Plot cells use the raised soil bed.
@@ -673,11 +696,14 @@
     },
     _drawPlot(plot, gx, gy, idx) {
       const ctx = this._ctx, tw = this._tw(), th = this._th(), c = this._cell(gx, gy);
-      if (!plot.unlocked) {   // ground drew grass; overlay a grey lock plate
-        this._diamond(c.x, c.y, tw * 0.92, th * 0.92); ctx.fillStyle = 'rgba(70,78,66,0.62)'; ctx.fill();
+      if (!plot.unlocked) {   // locked → a DIMMED tilled bed (consistent with the field) + lock badge
+        const im = this._img.hd_soil;
+        if (im) { const w = tw * 1.18, sc = w / im.width, dh = im.height * sc; ctx.save(); ctx.globalAlpha = 0.5; ctx.drawImage(im, c.x - w / 2, c.y - dh * 0.42, w, dh); ctx.restore(); }
+        else { this._diamond(c.x, c.y, tw * 0.92, th * 0.92); ctx.fillStyle = 'rgba(120,90,60,0.5)'; ctx.fill(); }
+        this._diamond(c.x, c.y, tw * 0.96, th * 0.96); ctx.fillStyle = 'rgba(55,65,50,0.3)'; ctx.fill();
         ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.font = (th * 0.55) + 'px sans-serif'; ctx.fillText('🔒', c.x, c.y - th * 0.1);
-        ctx.font = 'bold ' + (th * 0.42) + 'px "Fredoka",sans-serif'; ctx.fillText('Lv' + (REQUIRED_LV[idx] || 2), c.x, c.y + th * 0.38);
+        ctx.font = (th * 0.5) + 'px sans-serif'; ctx.fillText('🔒', c.x, c.y - th * 0.08);
+        ctx.font = 'bold ' + (th * 0.4) + 'px "Fredoka",sans-serif'; ctx.fillText('Lv' + (REQUIRED_LV[idx] || 2), c.x, c.y + th * 0.4);
         return;
       }
       // ground already drew the clean tilled bed for this cell; add a small, soft
@@ -691,21 +717,30 @@
       }
       const p = Farm.crops.getProgress ? Farm.crops.getProgress(plot) : 1, mature = Farm.crops.isMature(plot);
       const by = c.y + th * 0.2;   // sprite stands on the diamond
-      if (mature) { const t = Date.now() / 1000, ph = Math.sin(t * 2 + gx + gy); ctx.beginPath(); ctx.arc(c.x, c.y - th * 0.1, tw * (0.34 + ph * 0.02), 0, Math.PI * 2); ctx.fillStyle = 'rgba(255,214,79,' + (0.3 + ph * 0.08) + ')'; ctx.fill(); }
       ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
       const fr = p >= 1 ? 3 : p >= 0.6 ? 2 : p >= 0.25 ? 1 : 0;
-      if (ISO_CROPS[plot.crop]) {   // pure-plant 4-stage sprite — sits IN the soil bed.
-        // FIXED scale (stage-3 sprites are all 260px tall): each stage renders at its
-        // true relative size, so a seedling is genuinely small and does NOT cover the
-        // neighbouring empty plots. (Old _blit fit-to-box blew seedlings up to mature size.)
+      // soft contact shadow so the plant sits IN the bed (not floating)
+      this._shadow(c.x, c.y + th * 0.42, tw * (0.4 + fr * 0.12));
+      let plantTopY = c.y - th * 1.3;   // fallback bubble anchor
+      if (ISO_CROPS[plot.crop]) {   // pure-plant 4-stage sprite — FIXED scale (260px base) → seedling small
         const im = this._lazyImg(ISO_CROPS[plot.crop] + '_' + fr);
-        if (im) { const s = (th * 2.2) / 260, w = im.width * s, h = im.height * s; ctx.drawImage(im, c.x - w / 2, (c.y + th * 0.34) - h, w, h); }
+        if (im) { const s = (th * 2.2) / 260, w = im.width * s, h = im.height * s; const topY = (c.y + th * 0.34) - h; ctx.drawImage(im, c.x - w / 2, topY, w, h); plantTopY = topY; }
         else { const def = Farm.crops.get(plot.crop); ctx.font = (th * 1.1) + 'px sans-serif'; ctx.fillText((def && def.icon) || '🌿', c.x, by); }
       } else if (mature) {
         const im = this._cropSprite(plot.crop);
         if (!this._blit(im, c.x, by, tw * 0.72, th * 1.7)) { const def = Farm.crops.get(plot.crop); ctx.font = (th * 1.1) + 'px sans-serif'; ctx.fillText((def && def.icon) || '🥬', c.x, by); }
       } else { ctx.font = (th * (p >= 0.4 ? 0.9 : 0.7)) + 'px sans-serif'; ctx.fillText(p >= 0.4 ? '🌿' : '🌱', c.x, by); }
-      if (!mature) {   // progress bar
+      if (mature) {
+        // clear "ready to harvest" bubble: a white pill with the crop icon, gently
+        // bobbing above the plant — much clearer than the old faint yellow glow.
+        const def = Farm.crops.get(plot.crop), t = Date.now() / 1000, bob = Math.sin(t * 2.5 + gx + gy) * th * 0.12;
+        const r = th * 0.5, bx = c.x, byy = plantTopY - th * 0.5 + bob;
+        ctx.beginPath(); ctx.arc(bx, byy, r, 0, Math.PI * 2); ctx.fillStyle = 'rgba(255,255,255,0.95)'; ctx.fill();
+        ctx.strokeStyle = 'rgba(120,160,70,0.9)'; ctx.lineWidth = Math.max(1.5, th * 0.06); ctx.stroke();
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = (r * 1.25) + 'px sans-serif';
+        ctx.fillText((def && def.icon) || '✅', bx, byy + r * 0.05);
+        ctx.textBaseline = 'alphabetic';
+      } else {   // progress bar
         const bw = tw * 0.5, bx = c.x - bw / 2, ybar = c.y + th * 0.34, bh = Math.max(3, th * 0.1);
         ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.fillRect(bx, ybar, bw, bh);
         ctx.fillStyle = '#7bc043'; ctx.fillRect(bx, ybar, bw * Math.max(0.04, p), bh);
@@ -721,6 +756,7 @@
       const cc = this._cell(o.gx + (b.w - 1) / 2, o.gy + (b.h - 1) / 2);
       const front = this._cell(o.gx + (b.w - 1), o.gy + (b.h - 1));
       const by = front.y + th / 2 + th * 0.18;
+      if (!moving) this._shadow(cc.x, by - th * 0.35, b.w * tw * 0.7, 0.18);   // contact shadow grounds the building
       ctx.globalAlpha = moving ? 0.82 : 1;
       if (!this._blit(this._img[b.img], cc.x, by, b.w * tw * 1.06, b.sc * th * 2.6)) { ctx.fillStyle = '#c0392b'; ctx.fillRect(cc.x - tw * 0.4, by - th, tw * 0.8, th); }
       ctx.globalAlpha = 1;
@@ -868,6 +904,7 @@
       else lift = Math.abs(Math.sin(t * 1.4 + d.seed)) * th * 0.06;          // gentle idle
       const w = tw * 0.9, sc = Math.min(w / im.width, (th * 2.4) / im.height), dw = im.width * sc, dh = im.height * sc;
       const by = c.y + th * 0.5 - lift;
+      this._shadow(c.x, c.y + th * 0.5, dw * 0.66, 0.15);   // static ground shadow (hop reads against it)
       if (face < 0) { ctx.save(); ctx.translate(c.x, 0); ctx.scale(-1, 1); ctx.drawImage(im, -dw / 2, by - dh, dw, dh); ctx.restore(); }
       else ctx.drawImage(im, c.x - dw / 2, by - dh, dw, dh);
       // emote above the head: ❤️ when petted, ✨ while nuzzling a crop
