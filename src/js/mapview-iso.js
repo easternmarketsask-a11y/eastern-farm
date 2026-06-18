@@ -10,11 +10,20 @@
  * upright sprites placed on cells, depth-sorted back-to-front (gx+gy).
  */
 (function () {
-  const COLS = 9, ROWS = 11;
+  const COLS = 16, ROWS = 16;      // big world — room to expand the farm across the hills
   const PLOT_OX = 1, PLOT_OY = 2, PLOT_COLS = 3;
   const TW = 92, TH = 46;          // diamond width/height at zoom 1 (2:1 iso)
-  const ZMIN = 0.4, ZMAX = 2.4;   // wide range: zoom way out (whole farm+scenery) or right in
+  const ZMIN = 0.35, ZMAX = 2.4;   // wide range: zoom way out (whole farm+scenery) or right in
   const REQUIRED_LV = { 4: 2, 5: 2, 6: 3, 7: 3, 8: 4, 9: 4, 10: 5, 11: 5 };
+  // Pay-to-expand land. Each level's TOTAL owned rectangle (cells x1,y1..x2,y2) grows
+  // outward; cost is to unlock UP TO that level. L0 = starting land (free, ⊇ the old
+  // 9×11 so existing farms are never taken away). Farthest level also costs a few 超市积分.
+  const LAND_LEVELS = [
+    { x1: 0, y1: 0, x2: 8, y2: 10, coins: 0, points: 0 },        // L0 start (owned)
+    { x1: 0, y1: 0, x2: 12, y2: 10, coins: 800, points: 0 },     // L1 → right strip
+    { x1: 0, y1: 0, x2: 12, y2: 13, coins: 1500, points: 0 },    // L2 → bottom
+    { x1: 0, y1: 0, x2: 15, y2: 15, coins: 3000, points: 30 },   // L3 → far corner (coins + points)
+  ];
   const GRASS_A = '#8bbf5a', GRASS_B = '#83b653', GRASS_EDGE = 'rgba(60,90,40,0.18)';
   const SOIL_TOP = '#9c6b3f', SOIL_FURROW = 'rgba(80,50,26,0.5)';
   const ASSET_DIR = 'assets/images/map/';
@@ -289,6 +298,8 @@
       }
       const wasTap = this._drag && !this._drag.moved && !this._pinch; this._drag = null;
       if (!wasTap || !p) return;
+      // tap the land-unlock badge → expand the farm
+      if (this._landBadge && Math.hypot(p.x - this._landBadge.x, p.y - this._landBadge.y) <= this._landBadge.r) { this._tryUnlockLand(); return; }
       const c = this._screenToCell(p.x, p.y);
       if (this._build) { this._sel = this._buildingAt(c.gx, c.gy); this.render(); return; }
       const ps = this._petAt(p.x, p.y);   // tap a roaming pet → ❤️ + sound + hop
@@ -368,12 +379,16 @@
       return this._itemIndex ? this._itemIndex[itemId] : null;
     },
     _inBounds(gx, gy) { return gx >= 0 && gy >= 0 && gx < COLS && gy < ROWS; },
+    _landLevel() { return Math.max(0, Math.min(LAND_LEVELS.length - 1, (Farm.state.data && Farm.state.data.landLevel) | 0)); },
+    _ownedBounds() { return LAND_LEVELS[this._landLevel()]; },
+    _ownedCell(gx, gy) { const o = this._ownedBounds(); return gx >= o.x1 && gx <= o.x2 && gy >= o.y1 && gy <= o.y2; },
+    _nextLand() { const lv = this._landLevel(); return lv + 1 < LAND_LEVELS.length ? LAND_LEVELS[lv + 1] : null; },
     _footprintFree(gx, gy, type, exceptIdx) {
       const b = BUILDINGS[type];
       if (gx < 0 || gy < 0 || gx + b.w > COLS || gy + b.h > ROWS) return false;
       const plotCells = this._plotCellSet(), occ = {}, map = (Farm.state.data.map) || [], t = this._terrain();
       for (let i = 0; i < map.length; i++) { if (i === exceptIdx) continue; const o = map[i], ob = BUILDINGS[o.type]; if (!ob) continue; for (let y = 0; y < ob.h; y++) for (let x = 0; x < ob.w; x++) occ[(o.gx + x) + ',' + (o.gy + y)] = 1; }
-      for (let y = 0; y < b.h; y++) for (let x = 0; x < b.w; x++) { const k = (gx + x) + ',' + (gy + y); if (plotCells[k] || occ[k] || t[k] === 'water') return false; }
+      for (let y = 0; y < b.h; y++) for (let x = 0; x < b.w; x++) { const k = (gx + x) + ',' + (gy + y); if (!this._ownedCell(gx + x, gy + y) || plotCells[k] || occ[k] || t[k] === 'water') return false; }
       return true;
     },
     _buildingAt(gx, gy) {
@@ -480,12 +495,13 @@
       const tabs = document.createElement('div'); tabs.style.cssText = 'display:flex;gap:6px;justify-content:center;';
       [['build', en ? '🏠 Build' : '🏠 建筑'], ['terrain', en ? '🖌 Terrain' : '🖌 地形']].forEach(([m, label]) => { const t = document.createElement('button'); t.dataset.mode = m; t.textContent = label; t.style.cssText = 'border:none;border-radius:13px;padding:6px 16px;cursor:pointer;font:600 13px/1 "Fredoka",system-ui,sans-serif;'; t.onclick = () => this.setEditMode(m); tabs.appendChild(t); });
       this._modeTabs = tabs; tray.appendChild(tabs);
-      const rowCss = 'display:flex;flex-wrap:wrap;gap:8px;justify-content:center;align-items:flex-end;';
+      // single horizontal SCROLLING row (no wrap) → compact, takes minimal height
+      const rowCss = 'display:flex;flex-wrap:nowrap;gap:8px;align-items:flex-end;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;padding-bottom:2px;scrollbar-width:none;';
       const pb = document.createElement('div'); pb.style.cssText = rowCss;
-      PALETTE.forEach((type) => { const b = BUILDINGS[type]; const item = document.createElement('button'); item.dataset.type = type; item.style.cssText = 'border:1px solid #e0e0e0;border-radius:14px;background:#fff;padding:8px 10px 6px;min-width:72px;cursor:pointer;font:500 12px/1.3 "Fredoka",system-ui,sans-serif;color:#444;'; item.innerHTML = '<div style="font-size:11px;color:#888;margin-top:4px">' + (en ? b.en : b.zh) + '</div><div class="palCost" style="font-size:12px;font-weight:600;color:#3a8c50;margin-top:1px"><span class="coin-icon"></span> ' + (b.cost || 0) + '</div>'; const ic = document.createElement('div'); ic.style.cssText = 'width:44px;height:38px;margin:0 auto;background-size:contain;background-repeat:no-repeat;background-position:center;'; ic.style.backgroundImage = "url('" + ASSET_DIR + ASSET_SRC[b.img] + "')"; item.insertBefore(ic, item.firstChild); item.onclick = () => this._addBuilding(type); pb.appendChild(item); });
+      PALETTE.forEach((type) => { const b = BUILDINGS[type]; const item = document.createElement('button'); item.dataset.type = type; item.style.cssText = 'border:1px solid #e0e0e0;border-radius:14px;background:#fff;padding:8px 10px 6px;min-width:64px;flex:0 0 auto;cursor:pointer;font:500 12px/1.3 "Fredoka",system-ui,sans-serif;color:#444;'; item.innerHTML = '<div style="font-size:11px;color:#888;margin-top:4px">' + (en ? b.en : b.zh) + '</div><div class="palCost" style="font-size:12px;font-weight:600;color:#3a8c50;margin-top:1px"><span class="coin-icon"></span> ' + (b.cost || 0) + '</div>'; const ic = document.createElement('div'); ic.style.cssText = 'width:44px;height:38px;margin:0 auto;background-size:contain;background-repeat:no-repeat;background-position:center;'; ic.style.backgroundImage = "url('" + ASSET_DIR + ASSET_SRC[b.img] + "')"; item.insertBefore(ic, item.firstChild); item.onclick = () => this._addBuilding(type); pb.appendChild(item); });
       this._palBuild = pb; tray.appendChild(pb);
       const pt = document.createElement('div'); pt.style.cssText = rowCss;
-      BRUSHES.forEach((br) => { const item = document.createElement('button'); item.dataset.brush = br.key; item.style.cssText = 'border:1px solid #e0e0e0;border-radius:14px;background:#fff;padding:8px 10px 6px;min-width:72px;cursor:pointer;font:500 12px/1.3 "Fredoka",system-ui,sans-serif;color:#444;'; item.innerHTML = '<div style="width:40px;height:30px;margin:0 auto;border-radius:8px;background:' + br.color + '"></div><div style="font-size:11px;color:#888;margin-top:4px">' + (en ? br.en : br.zh) + '</div>'; item.onclick = () => this.setBrush(br.key); pt.appendChild(item); });
+      BRUSHES.forEach((br) => { const item = document.createElement('button'); item.dataset.brush = br.key; item.style.cssText = 'border:1px solid #e0e0e0;border-radius:14px;background:#fff;padding:8px 10px 6px;min-width:64px;flex:0 0 auto;cursor:pointer;font:500 12px/1.3 "Fredoka",system-ui,sans-serif;color:#444;'; item.innerHTML = '<div style="width:40px;height:30px;margin:0 auto;border-radius:8px;background:' + br.color + '"></div><div style="font-size:11px;color:#888;margin-top:4px">' + (en ? br.en : br.zh) + '</div>'; item.onclick = () => this.setBrush(br.key); pt.appendChild(item); });
       this._palTerrain = pt; tray.appendChild(pt);
       document.body.appendChild(tray); this._palette = tray;
 
@@ -707,15 +723,16 @@
       sky.addColorStop(0, '#a7dcf0'); sky.addColorStop(0.5, '#cfe9d2'); sky.addColorStop(1, '#bfe2a4');
       ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H);
       const pc = this._cell((PLOT_OX + (PLOT_COLS - 1) / 2), PLOT_OY);   // center of back plot row
-      const horizonY = pc.y - th * 1.6, spanX = (COLS + ROWS) * tw * 0.62;
-      // green meadow base (matches the painted grass) so no sky gaps when panned
-      const mcy = horizonY + th * 14, mrx = spanX * 1.05, mry = th * 16;
-      const mg = ctx.createRadialGradient(pc.x, pc.y, mrx * 0.2, pc.x, mcy, mry);
+      const horizonY = pc.y - th * 1.6, spanX = 20 * tw * 0.62;          // backdrop sized to the start view (not the whole big grid)
+      // green meadow covering the WHOLE world grid (locked land is dimmed on top later)
+      const gc = this._cell((COLS - 1) / 2, (ROWS - 1) / 2), gspan = (COLS + ROWS);
+      const mrx = gspan * tw * 0.34, mry = gspan * th * 0.34 + th * 4;
+      const mg = ctx.createRadialGradient(gc.x, gc.y, mrx * 0.2, gc.x, gc.y, Math.max(mrx, mry));
       mg.addColorStop(0, '#aec162'); mg.addColorStop(1, '#90a84e');
-      ctx.save(); ctx.beginPath(); ctx.ellipse(pc.x, mcy, mrx, mry, 0, 0, Math.PI * 2); ctx.fillStyle = mg; ctx.fill(); ctx.restore();
+      ctx.save(); ctx.beginPath(); ctx.ellipse(gc.x, gc.y, mrx, mry, 0, 0, Math.PI * 2); ctx.fillStyle = mg; ctx.fill(); ctx.restore();
       const bg = this._img.hd_bg;
-      if (bg && bg.width) {   // painted landscape (hills+forest+grass), world-anchored → pans with farm
-        const imgW = (COLS + ROWS) * tw * 1.3, sc = imgW / bg.width, imgH = bg.height * sc;
+      if (bg && bg.width) {   // painted landscape (hills+forest+grass) behind the start area
+        const imgW = 22 * tw * 1.3, sc = imgW / bg.width, imgH = bg.height * sc;
         ctx.drawImage(bg, pc.x - imgW / 2, horizonY - imgH * 0.46, imgW, imgH);
       } else {   // fallback: procedural hills + treeline
         this._drawHills(pc.x, horizonY - th * 1.6, spanX);
@@ -802,7 +819,66 @@
       });
       draws.sort((a, c) => a.d - c.d); draws.forEach(x => x.fn());
 
+      this._drawLockedLand();
       this._drawParticles(tw); this._drawFestival();
+    },
+    _rectPath(x1, y1, x2, y2) {   // cell-rect → screen parallelogram path
+      const ctx = this._ctx, a = this._cell(x1, y1), b = this._cell(x2 + 1, y1), c = this._cell(x2 + 1, y2 + 1), d = this._cell(x1, y2 + 1);
+      ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.lineTo(c.x, c.y); ctx.lineTo(d.x, d.y); ctx.closePath();
+    },
+    // Dim the WILD (locked) land beyond the owned area + show a pulsing unlock badge on
+    // the next region, so players see "tap to claim more farmland".
+    _drawLockedLand() {
+      const next = this._nextLand(); this._landBadge = null;
+      if (!next) return;
+      const ctx = this._ctx, ob = this._ownedBounds(), th = this._th();
+      // dim everything in the grid OUTSIDE the owned rect (evenodd ring)
+      ctx.save(); ctx.beginPath();
+      this._rectPath(-1, -1, COLS - 1, ROWS - 1);   // whole grid (slightly padded)
+      this._rectPath(ob.x1, ob.y1, ob.x2, ob.y2);   // owned hole
+      ctx.fillStyle = 'rgba(45,62,32,0.42)'; ctx.fill('evenodd'); ctx.restore();
+      // badge at the centre of the NEXT region's new band (beyond the owned edge)
+      const cx2 = (ob.x2 + next.x2) / 2 + 0.5, cy2 = (next.y1 + next.y2) / 2;
+      const c = this._cell(cx2, cy2), t = Date.now() / 1000, pulse = 0.5 + 0.5 * Math.sin(t * 2.2);
+      const r = Math.max(26, th * 1.5);
+      ctx.save();
+      ctx.beginPath(); ctx.arc(c.x, c.y, r * (1 + pulse * 0.05), 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255,255,255,0.92)'; ctx.fill();
+      ctx.strokeStyle = '#e8a020'; ctx.lineWidth = 3; ctx.stroke();
+      ctx.fillStyle = '#5a4326'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.font = (r * 0.62) + 'px sans-serif'; ctx.fillText('🔒', c.x, c.y - r * 0.34);
+      ctx.fillStyle = '#3a8c50'; ctx.font = 'bold ' + (r * 0.34) + 'px "Fredoka",system-ui,sans-serif';
+      ctx.fillText('+' + next.coins, c.x, c.y + r * 0.18);
+      if (next.points) { ctx.fillStyle = '#E8522A'; ctx.font = 'bold ' + (r * 0.3) + 'px "Fredoka",system-ui,sans-serif'; ctx.fillText('+' + next.points + '★', c.x, c.y + r * 0.55); }
+      ctx.restore();
+      this._landBadge = { x: c.x, y: c.y, r: r };
+    },
+    _tryUnlockLand() {
+      const next = this._nextLand(); if (!next) return;
+      const en = this._lang() === 'en', haveC = Farm.state.data.coins, haveP = (Farm.state.data.totalPoints || 0);
+      if (haveC < next.coins || (next.points && haveP < next.points)) {
+        if (Farm.ui && Farm.ui.toast) Farm.ui.toast(en ? 'Not enough to expand yet — keep farming!' : '钱/积分还不够，再攒攒！');
+        return;
+      }
+      const go = () => {
+        if (!Farm.state.spendCoins(next.coins)) return;
+        if (next.points) { if (!Farm.state.spendEastPoints(next.points, { source: 'land_expand', description: 'Farm land expansion' })) { Farm.state.addCoins(next.coins); return; } }
+        Farm.state.data.landLevel = this._landLevel() + 1; Farm.state.save();
+        this._bgKey = null; if (Farm.ui && Farm.ui.refreshHUD) Farm.ui.refreshHUD();
+        if (Farm.audio) Farm.audio.play('levelUp'); if (Farm.ui && Farm.ui.showConfetti) Farm.ui.showConfetti(30, 1800);
+        if (Farm.ui && Farm.ui.toast) Farm.ui.toast(en ? 'New land unlocked! 🎉' : '新土地解锁啦！🎉');
+        this.render();
+      };
+      const cost = next.coins + ' <span class="coin-icon"></span>' + (next.points ? (' + ' + next.points + ' <span class="points-icon"></span>') : '');
+      const html = '<div style="text-align:center;padding:4px;">' +
+        '<div style="font-size:40px;margin-bottom:4px;">🌄</div><h2 class="modal-title">' + (en ? 'Expand your farm?' : '扩大农场？') + '</h2>' +
+        '<div style="color:#666;margin:8px 0 14px;font-size:14px;line-height:1.5;">' + (en ? 'Claim this wild land — build and decorate on it.' : '把这片野地变成你的农场，可建造和装饰。') + '</div>' +
+        '<div style="font-weight:600;font-size:16px;margin-bottom:16px;">' + (en ? 'Cost: ' : '花费：') + cost + '</div>' +
+        '<div class="btn-row"><button class="btn secondary" id="landNo">' + (en ? 'Later' : '稍后') + '</button><button class="btn primary" id="landYes">🌱 ' + (en ? 'Unlock' : '解锁') + '</button></div></div>';
+      Farm.ui.showModal(html);
+      const y = document.getElementById('landYes'), n = document.getElementById('landNo');
+      if (y) y.onclick = () => { Farm.ui.hideModal(); go(); };
+      if (n) n.onclick = () => Farm.ui.hideModal();
     },
     _drawPlot(plot, gx, gy, idx) {
       const ctx = this._ctx, tw = this._tw(), th = this._th(), c = this._cell(gx, gy);
