@@ -194,13 +194,13 @@
 
       const epLeft = this._epRemainingToday();
       const subtitle = list.length === 0
-        ? `<p class="modal-subtitle">${lang === 'en' ? 'Grow some crops first, then 小东 will start ordering.' : '先种点菜，小东就会开始下单啦。'}</p>`
+        ? `<p class="modal-subtitle">${lang === 'en' ? 'Grow some crops first, then Eastern Market will start ordering.' : '先种点菜，东方超市就会开始下单啦。'}</p>`
         : `<p class="modal-subtitle">${lang === 'en'
             ? 'Deliver crops from your warehouse — orders pay more than bulk selling.'
-            : '从仓库交付小东要的菜——比直接卖更划算。'}</p>`;
+            : '从仓库交付东超要的菜——比直接卖更划算。'}</p>`;
 
       const html = `
-        <h2 class="modal-title">📋 ${lang === 'en' ? "小东's Orders" : '小东的订单'}</h2>
+        <h2 class="modal-title">📋 ${lang === 'en' ? 'Eastern Market Orders' : '东超订单'}</h2>
         ${subtitle}
         <div class="order-list">${cards}</div>
         <div class="btn-row" style="margin-top:14px;">

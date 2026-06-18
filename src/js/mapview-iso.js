@@ -579,7 +579,7 @@
       // (in addition to pinch / wheel). Big tap targets.
       const zwrap = document.createElement('div'); zwrap.id = 'isoZoom';
       zwrap.style.cssText = 'position:fixed;z-index:20;display:flex;flex-direction:column;gap:10px;';
-      const mkZ = (label, f) => { const z = document.createElement('button'); z.textContent = label; z.style.cssText = 'width:46px;height:46px;border:none;border-radius:50%;background:rgba(255,255,255,.92);color:#3a8c50;font:600 24px/1 system-ui,sans-serif;box-shadow:0 2px 8px rgba(0,0,0,.2);cursor:pointer;touch-action:manipulation;'; z.onclick = (e) => { e.preventDefault(); this._zoomBy(f); }; return z; };
+      const mkZ = (label, f) => { const z = document.createElement('button'); z.textContent = label; z.style.cssText = 'width:32px;height:32px;border:none;border-radius:50%;background:rgba(255,255,255,.88);color:#3a8c50;font:600 17px/1 system-ui,sans-serif;box-shadow:0 1px 5px rgba(0,0,0,.18);cursor:pointer;touch-action:manipulation;'; z.onclick = (e) => { e.preventDefault(); this._zoomBy(f); }; return z; };
       zwrap.appendChild(mkZ('＋', 1.3)); zwrap.appendChild(mkZ('－', 0.77));
       document.body.appendChild(zwrap); this._zoomUI = zwrap;
 
@@ -588,7 +588,14 @@
     _zoomBy(f) { this._zoomAt(this._cssW() / 2, this._cssH() / 2, this._zoom * f); },
     _layoutUI() {
       const r = this._farmRect(), fromBottom = Math.max(0, window.innerHeight - (r.top + r.height)), en = this._lang() === 'en';
-      if (this._zoomUI) { this._zoomUI.style.left = (r.left + 12) + 'px'; this._zoomUI.style.top = (r.top + r.height * 0.46) + 'px'; }
+      if (this._zoomUI) {
+        // top-right corner of the farm; clamp below the topbar (it stays
+        // visible even in fullscreen build mode) so it never overlaps the coins.
+        const tb = document.getElementById('topbar');
+        const tbBottom = tb ? tb.getBoundingClientRect().bottom : 0;
+        this._zoomUI.style.left = (r.left + r.width - 42) + 'px';
+        this._zoomUI.style.top = Math.max(r.top + 10, tbBottom + 8) + 'px';
+      }
       if (this._palette) { this._palette.style.display = this._build ? 'flex' : 'none'; this._palette.style.left = r.left + 'px'; this._palette.style.right = Math.max(0, window.innerWidth - (r.left + r.width)) + 'px'; this._palette.style.bottom = fromBottom + 'px'; }
       if (this._buildBtn) { const ph = (this._build && this._palette) ? (this._palette.getBoundingClientRect().height || 74) : 0; this._buildBtn.style.right = (Math.max(0, window.innerWidth - (r.left + r.width)) + 14) + 'px'; this._buildBtn.style.bottom = (fromBottom + (this._build ? ph + 10 : 14)) + 'px'; this._buildBtn.textContent = this._build ? (en ? '✓ Done' : '✓ 完成') : (en ? '🔨 Build' : '🔨 建造'); this._buildBtn.style.background = this._build ? '#FF9800' : '#4CAF50'; }
       if (this._hint) { this._hint.style.display = this._build ? 'block' : 'none'; this._hint.style.left = r.left + 'px'; this._hint.style.right = Math.max(0, window.innerWidth - (r.left + r.width)) + 'px'; this._hint.style.top = (r.top + 8) + 'px'; }
