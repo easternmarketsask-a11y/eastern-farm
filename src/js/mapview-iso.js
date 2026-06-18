@@ -860,17 +860,19 @@
 
       const bg = this._img.hd_bg;
       if (bg && bg.width) {
-        // Full painted landscape (sky + rolling hills + bright foreground meadow),
-        // drawn to COVER the whole canvas with a little headroom so a gentle parallax
-        // pan never exposes the edges. It shifts slightly with the camera → the scene
-        // feels attached to the farm (Chris: "背景要随农场移动，别像悬浮"), while the
-        // farm itself sits on the bright foreground meadow (lower-centre of the image).
-        const head = 1.16;
-        const cover = Math.max(W / bg.width, H / bg.height) * head;
+        // Zoom INTO the painted landscape's central flat meadow (Chris 2026-06-18:
+        // don't show the whole panorama by default — show the middle flat area, sized
+        // to match the farm). We crop to a region around the meadow focal point and
+        // scale it WITH the farm zoom so the meadow patch stays proportional to the
+        // farm. Clamped so the image always covers the canvas (no edges/base showing).
+        const fillCover = Math.max(W / bg.width, H / bg.height);
+        const k = Math.max(1.0, 2.0 * (this._zoom / 0.85));   // >1 crops into centre; tracks farm zoom
+        const cover = fillCover * k;
         const dw = bg.width * cover, dh = bg.height * cover;
-        let dx = (W - dw) / 2 - this._camX * 0.12;
-        let dy = (H - dh) / 2 - this._camY * 0.10 - H * 0.03;   // bias down: foreground meadow under the farm
-        dx = Math.min(0, Math.max(W - dw, dx));                 // clamp so the photo always covers
+        const FX = 0.5, FY = 0.60;                            // central flat-meadow focal point in the image
+        let dx = W * 0.5 - FX * dw - this._camX * 0.3;        // place focal point under the farm; pan with camera
+        let dy = H * 0.54 - FY * dh - this._camY * 0.3;
+        dx = Math.min(0, Math.max(W - dw, dx));               // clamp so the photo always covers
         dy = Math.min(0, Math.max(H - dh, dy));
         ctx.drawImage(bg, dx, dy, dw, dh);
       } else {   // fallback: procedural hills (image not yet loaded)
@@ -971,16 +973,9 @@
       const next = this._nextLand(); this._landBadge = null;
       if (!next) return;
       const ctx = this._ctx, ob = this._ownedBounds(), th = this._th();
-      // NOTE: no dark overlay on the wild land anymore — it sat as an ugly dark diamond
-      // on top of the painted landscape and broke the blend (Chris 2026-06-18). The whole
-      // scene is the painted meadow; the farm sits naturally on it. We only mark the
-      // owned EDGE with a soft dashed outline (a gentle "property line") + the unlock
-      // badge, so players still understand where they can build / expand.
-      ctx.save();
-      ctx.beginPath(); this._rectPath(ob.x1, ob.y1, ob.x2, ob.y2);
-      ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.lineWidth = Math.max(1.5, th * 0.06);
-      ctx.setLineDash([th * 0.5, th * 0.4]); ctx.stroke(); ctx.setLineDash([]);
-      ctx.restore();
+      // No overlay / outline on the land at all — the farm sits naturally on the painted
+      // meadow (Chris 2026-06-18: dark overlay AND dashed border both removed). Players
+      // still see where to expand via the unlock badge below.
       // badge at the centre of the NEXT region's new band (beyond the owned edge)
       const cx2 = (ob.x2 + next.x2) / 2 + 0.5, cy2 = (next.y1 + next.y2) / 2;
       const c = this._cell(cx2, cy2), t = Date.now() / 1000, pulse = 0.5 + 0.5 * Math.sin(t * 2.2);
