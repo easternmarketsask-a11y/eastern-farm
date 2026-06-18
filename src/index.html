@@ -206,32 +206,42 @@
        a bok choy) — same soft rounded style as the crop art. -->
   <div id="storekeeper" class="storekeeper">
     <div class="storekeeper-avatar" aria-hidden="true">
+      <!-- Friendly Eastern Market grocer — clean circular avatar badge (green cap +
+           apron, warm smile). Redesigned 2026-06-18 for a professional, approachable look. -->
       <svg viewBox="0 0 100 100">
-        <!-- shoulders + shirt -->
-        <path d="M20 98 Q 20 70 38 65 L 62 65 Q 80 70 80 98 Z" fill="#f6ead2"/>
-        <!-- apron in brand green -->
-        <path d="M33 98 L 33 73 Q 50 66 67 73 L 67 98 Z" fill="#3a8c50"/>
-        <path d="M37 77 Q 50 71 63 77" stroke="#2a5c34" stroke-width="2" fill="none" stroke-linecap="round"/>
-        <rect x="42" y="82" width="16" height="12" rx="2.5" fill="#2a5c34"/>
-        <!-- bok choy peeking out of the apron pocket -->
-        <g transform="translate(50,82)">
-          <path d="M-4 2 Q -7 -6 -3 -10 Q -1 -5 -1 2 Z" fill="#7cba5e"/>
-          <path d="M4 2 Q 7 -6 3 -10 Q 1 -5 1 2 Z" fill="#8fc774"/>
-          <path d="M-2 2 Q 0 -7 2 2 Z" fill="#eef7e2"/>
+        <defs><clipPath id="skClip"><circle cx="50" cy="50" r="50"/></clipPath></defs>
+        <g clip-path="url(#skClip)">
+          <circle cx="50" cy="50" r="50" fill="#eaf6df"/>
+          <!-- shoulders + shirt -->
+          <path d="M14 101 Q 16 80 36 73 L 64 73 Q 84 80 86 101 Z" fill="#fbf6ec"/>
+          <!-- apron (brand green) + straps -->
+          <path d="M36 101 L 36 79 Q 50 73 64 79 L 64 101 Z" fill="#3a8c50"/>
+          <path d="M44 79 L 49 73 M56 79 L 51 73" stroke="#2f7343" stroke-width="2" stroke-linecap="round"/>
+          <rect x="43" y="86" width="14" height="10" rx="2.5" fill="#2f7343"/>
+          <!-- neck -->
+          <path d="M44 62 L 56 62 L 56 72 Q 50 76 44 72 Z" fill="#f0c098"/>
+          <!-- ears -->
+          <circle cx="29" cy="45" r="5" fill="#f6c79e"/>
+          <circle cx="71" cy="45" r="5" fill="#f6c79e"/>
+          <!-- face -->
+          <circle cx="50" cy="44" r="22" fill="#f9d0a7"/>
+          <!-- side hair -->
+          <path d="M28 46 Q 27 30 34 26 L 36 40 Q 31 40 28 46 Z" fill="#5b4329"/>
+          <path d="M72 46 Q 73 30 66 26 L 64 40 Q 69 40 72 46 Z" fill="#5b4329"/>
+          <!-- cap dome + brim -->
+          <path d="M29 33 Q 31 15 50 15 Q 69 15 71 33 Q 50 27 29 33 Z" fill="#3a8c50"/>
+          <path d="M27 33 Q 50 40 73 33 L 73 30 Q 50 36 27 30 Z" fill="#2f7343"/>
+          <circle cx="50" cy="16.5" r="2.3" fill="#2f7343"/>
+          <!-- eyes (with highlight) + smile + blush -->
+          <circle cx="42.5" cy="45" r="3.3" fill="#4a3526"/>
+          <circle cx="57.5" cy="45" r="3.3" fill="#4a3526"/>
+          <circle cx="43.7" cy="43.8" r="1.1" fill="#fff"/>
+          <circle cx="58.7" cy="43.8" r="1.1" fill="#fff"/>
+          <path d="M42 52 Q 50 59 58 52" stroke="#bd6e3e" stroke-width="2.6" fill="none" stroke-linecap="round"/>
+          <ellipse cx="36" cy="51" rx="3.6" ry="2.4" fill="#ff9e84" opacity="0.5"/>
+          <ellipse cx="64" cy="51" rx="3.6" ry="2.4" fill="#ff9e84" opacity="0.5"/>
         </g>
-        <!-- ears -->
-        <circle cx="26" cy="42" r="4.5" fill="#ffdcb8"/>
-        <circle cx="74" cy="42" r="4.5" fill="#ffdcb8"/>
-        <!-- face -->
-        <circle cx="50" cy="40" r="23" fill="#ffdcb8"/>
-        <!-- hair -->
-        <path d="M26 38 Q 25 15 50 15 Q 75 15 74 38 Q 66 26 50 27 Q 34 26 26 38 Z" fill="#3f2e20"/>
-        <!-- eyes + smile + blush -->
-        <circle cx="42" cy="42" r="2.7" fill="#3a2c1e"/>
-        <circle cx="58" cy="42" r="2.7" fill="#3a2c1e"/>
-        <path d="M43 50 Q 50 56 57 50" stroke="#b06a3a" stroke-width="2.4" fill="none" stroke-linecap="round"/>
-        <ellipse cx="34" cy="48" rx="3.6" ry="2.3" fill="#ffb38a" opacity="0.6"/>
-        <ellipse cx="66" cy="48" rx="3.6" ry="2.3" fill="#ffb38a" opacity="0.6"/>
+        <circle cx="50" cy="50" r="48.5" fill="none" stroke="#ffffff" stroke-width="3"/>
       </svg>
     </div>
     <div class="storekeeper-bubble" id="storekeeperBubble">
