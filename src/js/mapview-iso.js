@@ -163,6 +163,12 @@
         Farm.state.data.map = [{ type: 'house', gx: 5, gy: 2 }, { type: 'barn', gx: 5, gy: 4 }];
         Farm.state.save();
       }
+      // Default decorative pond for brand-new players (mapTerrain untouched = null). An
+      // irregular cell cluster (front-left of the plots) → a natural irregular pond.
+      if (Farm.state.data.mapTerrain == null) {
+        Farm.state.data.mapTerrain = { '1,6': 'water', '2,6': 'water', '2,7': 'water', '3,7': 'water', '1,7': 'water' };
+        Farm.state.save();
+      }
 
       const cv = document.createElement('canvas');
       cv.id = 'isoCanvas';
@@ -903,30 +909,45 @@
     _drawPond(cells) {
       if (!cells || !cells.length) return;
       const ctx = this._ctx, tw = this._tw(), th = this._th();
-      const rx = tw * 0.64, ry = th * 0.70, oy = th * 0.12;   // per-cell ellipse; oy sinks it into the ground
+      const rx = tw * 0.72, ry = th * 0.80, oy = th * 0.12;   // per-cell blob; oy sinks it into the ground
       const t = Date.now() / 1000;
-      const ellipses = (irx, iry) => { ctx.beginPath(); for (const c of cells) { ctx.moveTo(c.x + irx, c.y + oy); ctx.ellipse(c.x, c.y + oy, irx, iry, 0, 0, 6.283); } };
+      // Build an IRREGULAR closed blob per cell (wobbly radius keyed on the cell's stable
+      // seed → natural pond outline, not a uniform oval). Overlapping cell-blobs merge.
+      const blobs = (sx, sy) => {
+        ctx.beginPath();
+        for (const c of cells) {
+          const N = 16;
+          for (let i = 0; i <= N; i++) {
+            const a = (i / N) * 6.283;
+            const wob = 0.74 + 0.26 * (0.5 + 0.5 * Math.sin(a * 3 + c.s)) * (0.6 + 0.4 * Math.cos(a * 2 - c.s * 0.7));
+            const x = c.x + Math.cos(a) * rx * sx * wob;
+            const y = c.y + oy + Math.sin(a) * ry * sy * wob;
+            if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+          }
+          ctx.closePath();
+        }
+      };
       let minY = Infinity, maxY = -Infinity; for (const c of cells) { if (c.y < minY) minY = c.y; if (c.y > maxY) maxY = c.y; }
       ctx.save();
-      // 1) deep-water base + soft ground shadow around the whole pond outline
+      // 1) deep-water base + soft ground shadow around the whole (irregular) outline
       ctx.save();
       ctx.shadowColor = 'rgba(25,60,80,0.32)'; ctx.shadowBlur = th * 0.5; ctx.shadowOffsetY = th * 0.16;
-      ctx.fillStyle = '#3f86a8'; ellipses(rx, ry); ctx.fill();
+      ctx.fillStyle = '#3f86a8'; blobs(1, 1); ctx.fill();
       ctx.restore();
-      // 2) surface water (inset → the deep base shows as a rim), top-lit gradient
+      // 2) surface water (inset → deep base shows as a rim), top-lit gradient
       const g = ctx.createLinearGradient(0, minY - ry + oy, 0, maxY + ry + oy);
       g.addColorStop(0, '#b6e6f6'); g.addColorStop(0.5, '#7fc8ea'); g.addColorStop(1, '#54a6cf');
-      ctx.fillStyle = g; ellipses(rx * 0.86, ry * 0.84); ctx.fill();
-      // 3) gentle animated ripples (a couple of soft white arcs per cell)
+      ctx.fillStyle = g; blobs(0.84, 0.82); ctx.fill();
+      // 3) gentle animated ripples
       ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.lineWidth = Math.max(1, th * 0.05); ctx.lineCap = 'round';
       cells.forEach((c, i) => {
         const wob = Math.sin(t * 1.4 + i * 1.3) * th * 0.05;
-        ctx.beginPath(); ctx.moveTo(c.x - rx * 0.34, c.y + oy + wob); ctx.quadraticCurveTo(c.x, c.y + oy - th * 0.07 + wob, c.x + rx * 0.34, c.y + oy + wob); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(c.x - rx * 0.32, c.y + oy + wob); ctx.quadraticCurveTo(c.x, c.y + oy - th * 0.07 + wob, c.x + rx * 0.32, c.y + oy + wob); ctx.stroke();
       });
-      // 4) a small lily pad + flower on the first cell for charm
+      // 4) a small lily pad + flower for charm
       const lp = cells[0];
-      ctx.fillStyle = '#5fae5a'; ctx.beginPath(); ctx.ellipse(lp.x - rx * 0.28, lp.y + oy + th * 0.2, rx * 0.26, ry * 0.24, 0, 0, 6.283); ctx.fill();
-      ctx.fillStyle = '#f6c0d8'; ctx.beginPath(); ctx.arc(lp.x - rx * 0.28, lp.y + oy + th * 0.2, rx * 0.09, 0, 6.283); ctx.fill();
+      ctx.fillStyle = '#5fae5a'; ctx.beginPath(); ctx.ellipse(lp.x - rx * 0.26, lp.y + oy + th * 0.18, rx * 0.24, ry * 0.22, 0, 0, 6.283); ctx.fill();
+      ctx.fillStyle = '#f6c0d8'; ctx.beginPath(); ctx.arc(lp.x - rx * 0.26, lp.y + oy + th * 0.18, rx * 0.085, 0, 6.283); ctx.fill();
       ctx.restore();
     },
     _startLoop() {
@@ -1007,7 +1028,7 @@
           // Water cells are collected and drawn as ONE merged organic pond (below) rather
           // than per-tile diamonds (Chris 2026-06-19: looked like a grid). Water overrides
           // soil/path on a cell.
-          if (terrain[k] === 'water') { waterCells.push(c); continue; }
+          if (terrain[k] === 'water') { waterCells.push({ x: c.x, y: c.y, s: gx * 7.3 + gy * 13.7 }); continue; }   // s = stable per-cell seed for the irregular outline (NOT screen coords → no flicker on pan)
           let key = 'grass';
           if (plotCells[k]) {
             const pl = Farm.state.data.plots[this._cellToPlot[k]];
