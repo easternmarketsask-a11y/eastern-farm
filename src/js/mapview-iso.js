@@ -16,11 +16,12 @@
   // shifts any save that got forwarded back to here.)
   const PLOT_OX = 1, PLOT_OY = 2, PLOT_COLS = 3;
   const TW = 46, TH = 23;          // diamond width/height at zoom 1 (2:1 iso) — halved 2026-06-18 (Chris: shrink whole farm 50% so it's a small cluster in the meadow centre; bg is canvas-based so the farm gets relatively smaller)
-  // Default play sits ABOVE BG_ZOOM_REF (0.70) where the backdrop fully covers (clean
-  // central meadow). Zooming out BELOW ref deliberately reveals the whole painted
-  // landscape — the "panorama" (Chris 2026-06-18: "缩小才能看到全景"). The bg stays
-  // world-locked to the farm the whole way (shrinks with it, no float). ZMAX zooms in.
-  const ZMIN = 0.40, ZMAX = 2.4;
+  // ZMIN === BG_ZOOM_REF (0.70): at the most-zoomed-out point the painted backdrop's
+  // FULL HEIGHT exactly fills the viewport (Chris 2026-06-18: "高度一旦达到背景图全高则不可
+  // 再缩小"). You can't zoom out past that, so no base band ever shows top/bottom. Because
+  // the image is WIDER than the screen, at min zoom you can pan left/right within it
+  // (_clampCam keeps the bg covering). ZMAX zooms in.
+  const ZMIN = 0.70, ZMAX = 2.4;
   const REQUIRED_LV = { 4: 2, 5: 2, 6: 3, 7: 3, 8: 4, 9: 4, 10: 5, 11: 5 };
   // Pay-to-expand land. Each level's TOTAL owned rectangle (cells x1,y1..x2,y2) grows
   // outward; cost is to unlock UP TO that level. L0 = starting land (free, ⊇ the old
@@ -312,14 +313,29 @@
       return { gx: Math.floor((fv + fu) / 2), gy: Math.floor((fv - fu) / 2) };
     },
     _clampCam() {
-      // keep the map roughly on screen: bound camX/camY by the cell extent. Bounds are
-      // GENEROUS so the auto-frame (farm sitting low on the meadow, camY very negative)
-      // is never clamped up — that was pushing the whole farm onto the horizon.
-      const tw = this._tw(), th = this._th();
-      const minU = (0 - (ROWS - 1)), maxU = ((COLS - 1) - 0);
-      this._camX = Math.max(minU * tw / 2 - this._cssW() * 0.6, Math.min(maxU * tw / 2 + this._cssW() * 0.6, this._camX));
-      const maxV = (COLS - 1) + (ROWS - 1);
-      this._camY = Math.max(this._oy - this._cssH() * 1.05, Math.min(this._oy + maxV * th / 2 - this._cssH() * 0.2, this._camY));
+      // Bound the camera so the painted backdrop ALWAYS covers the viewport — never a base
+      // band (Chris 2026-06-18 spec). The bg is world-anchored to cell BG_ANCHOR; we solve
+      // the cover constraints (bg edges past the viewport edges) for camX/camY. Vertically
+      // it's pinned tight (at min zoom the bg height == viewport height → no vertical pan);
+      // horizontally the wider image leaves room to pan left/right.
+      const tw = this._tw(), th = this._th(), W = this._cssW(), H = this._cssH();
+      const bg = this._img.hd_bg;
+      if (bg && bg.width) {
+        const scale = Math.max(W / bg.width, H / bg.height) * (this._zoom / BG_ZOOM_REF);
+        const dw = bg.width * scale, dh = bg.height * scale;
+        // a.x = AX - camX, a.y = AY - camY (camera-independent parts of _cell(BG_ANCHOR))
+        const AX = this._ox + (BG_ANCHOR_GX - BG_ANCHOR_GY) * tw / 2;
+        const AY = this._oy + (BG_ANCHOR_GX + BG_ANCHOR_GY) * th / 2 + this._hUnit(BG_ANCHOR_GX, BG_ANCHOR_GY) * th;
+        const cxLo = AX - BG_FX * dw, cxHi = AX - W + (1 - BG_FX) * dw;   // dw>=W → cxLo<=cxHi
+        const cyLo = AY - BG_FY * dh, cyHi = AY - H + (1 - BG_FY) * dh;   // dh>=H → cyLo<=cyHi
+        this._camX = Math.max(cxLo, Math.min(cxHi, this._camX));
+        this._camY = Math.max(cyLo, Math.min(cyHi, this._camY));
+        return;
+      }
+      // Fallback before the bg image loads: keep the grid roughly on-screen.
+      const minU = (0 - (ROWS - 1)), maxU = ((COLS - 1) - 0), maxV = (COLS - 1) + (ROWS - 1);
+      this._camX = Math.max(minU * tw / 2 - W * 0.6, Math.min(maxU * tw / 2 + W * 0.6, this._camX));
+      this._camY = Math.max(this._oy - H * 1.05, Math.min(this._oy + maxV * th / 2 - H * 0.2, this._camY));
     },
     _zoomAt(px, py, nz) {
       const z = Math.max(ZMIN, Math.min(ZMAX, nz));
