@@ -16,11 +16,11 @@
   // shifts any save that got forwarded back to here.)
   const PLOT_OX = 1, PLOT_OY = 2, PLOT_COLS = 3;
   const TW = 92, TH = 46;          // diamond width/height at zoom 1 (2:1 iso)
-  // ZMIN is pinned to BG_ZOOM_REF (below): at the most-zoomed-out point the painted
-  // backdrop still EXACTLY covers the canvas, so you can never zoom out into the flat
-  // base band, and the bg stays world-locked to the farm at every reachable zoom (no
-  // float). ZMAX lets you zoom right in.
-  const ZMIN = 0.70, ZMAX = 2.4;
+  // Default play sits ABOVE BG_ZOOM_REF (0.70) where the backdrop fully covers (clean
+  // central meadow). Zooming out BELOW ref deliberately reveals the whole painted
+  // landscape — the "panorama" (Chris 2026-06-18: "缩小才能看到全景"). The bg stays
+  // world-locked to the farm the whole way (shrinks with it, no float). ZMAX zooms in.
+  const ZMIN = 0.40, ZMAX = 2.4;
   const REQUIRED_LV = { 4: 2, 5: 2, 6: 3, 7: 3, 8: 4, 9: 4, 10: 5, 11: 5 };
   // Pay-to-expand land. Each level's TOTAL owned rectangle (cells x1,y1..x2,y2) grows
   // outward; cost is to unlock UP TO that level. L0 = starting land (free, ⊇ the old
@@ -90,6 +90,7 @@
     wheel: { img: 'deco_wheel', w: 2, h: 2, sc: 2.2, zh: '水车', en: 'Water Wheel', cost: 480 },
     bridge: { img: 'deco_bridge', w: 2, h: 1, sc: 1.6, zh: '小桥', en: 'Bridge', cost: 140 },
   };
+  const BLD = 0.7;   // global building-sprite scale (Chris 2026-06-18: buildings were too big) — shrinks all building sprites uniformly so the starter farm fits the central meadow
   const charmOf = (b) => Math.max(1, Math.round((b.cost || 0) / 8));
   const COOP_INTERVAL = 5 * 60 * 1000, COOP_REWARD = 30;   // 鸡舍每 5 分钟产一窝蛋，收一次 +30 农场币
   const BED_W = 0.88;   // soil-bed width as a fraction of the cell → <1 leaves a grass gap so plots are distinct/tappable
@@ -495,8 +496,8 @@
         const front = this._cell(o.gx + (b.w - 1), o.gy + (b.h - 1));
         const by = front.y + th / 2 + th * 0.18;
         const im = this._img[b.img]; let w, h;
-        if (im && im.width) { const s = Math.min(b.w * tw * 0.92 / im.width, b.sc * th * 2.2 / im.height); w = im.width * s; h = im.height * s; }
-        else { w = b.w * tw * 1.06; h = b.sc * th * 2.0; }
+        if (im && im.width) { const s = Math.min(b.w * tw * 0.92 * BLD / im.width, b.sc * th * 2.2 * BLD / im.height); w = im.width * s; h = im.height * s; }
+        else { w = b.w * tw * 1.06 * BLD; h = b.sc * th * 2.0 * BLD; }
         if (px >= cc.x - w / 2 && px <= cc.x + w / 2 && py >= by - h && py <= by) return i;
       }
       return -1;
@@ -1099,13 +1100,13 @@
       const by = front.y + th / 2 + th * 0.18;
       if (!moving) this._shadow(cc.x, by - th * 0.35, b.w * tw * 0.7, 0.18);   // contact shadow grounds the building
       ctx.globalAlpha = moving ? 0.82 : 1;
-      if (!this._blit(this._img[b.img], cc.x, by, b.w * tw * 0.92, b.sc * th * 2.2)) { ctx.fillStyle = '#c0392b'; ctx.fillRect(cc.x - tw * 0.4, by - th, tw * 0.8, th); }
+      if (!this._blit(this._img[b.img], cc.x, by, b.w * tw * 0.92 * BLD, b.sc * th * 2.2 * BLD)) { ctx.fillStyle = '#c0392b'; ctx.fillRect(cc.x - tw * 0.4, by - th, tw * 0.8, th); }
       ctx.globalAlpha = 1;
       // coop ready-to-collect egg bubble (read the real map entry for eggAt)
       // coop ready-to-collect indicator: a SMALL egg bubble nestled just above the
       // coop roof (was a big white orb floating high above → looked like a stray ball,
       // Chris 2026-06-18). Smaller + closer + gentle bob so it clearly belongs to the coop.
-      if (o.type === 'coop' && !this._build) { const real = Farm.state.data.map[idx]; if (real && this._coopReady(real)) { const t = Date.now() / 1000, bob = Math.sin(t * 2.5) * th * 0.05, r = th * 0.3, byy = by - b.sc * th * 1.05 + bob; ctx.beginPath(); ctx.arc(cc.x, byy, r, 0, Math.PI * 2); ctx.fillStyle = 'rgba(255,255,255,0.96)'; ctx.fill(); ctx.strokeStyle = 'rgba(230,160,32,0.95)'; ctx.lineWidth = Math.max(1.2, th * 0.05); ctx.stroke(); ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = (r * 1.3) + 'px sans-serif'; ctx.fillText('🥚', cc.x, byy + r * 0.05); ctx.textBaseline = 'alphabetic'; } }
+      if (o.type === 'coop' && !this._build) { const real = Farm.state.data.map[idx]; if (real && this._coopReady(real)) { const t = Date.now() / 1000, bob = Math.sin(t * 2.5) * th * 0.05, r = th * 0.3, byy = by - b.sc * th * 1.05 * BLD + bob; ctx.beginPath(); ctx.arc(cc.x, byy, r, 0, Math.PI * 2); ctx.fillStyle = 'rgba(255,255,255,0.96)'; ctx.fill(); ctx.strokeStyle = 'rgba(230,160,32,0.95)'; ctx.lineWidth = Math.max(1.2, th * 0.05); ctx.stroke(); ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = (r * 1.3) + 'px sans-serif'; ctx.fillText('🥚', cc.x, byy + r * 0.05); ctx.textBaseline = 'alphabetic'; } }
       if (this._build && this._sel === idx && idx != null && !moving) {   // delete chip
         const ch = this._delChip(o);
         ctx.beginPath(); ctx.arc(ch.x, ch.y, ch.r, 0, Math.PI * 2); ctx.fillStyle = '#e8522a'; ctx.fill();
