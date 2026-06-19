@@ -102,6 +102,14 @@
   // keep the bg locked to the farm at every pan/zoom.
   const BG_FX = 0.5, BG_FY = 0.66, BG_ANCHOR_GX = 2, BG_ANCHOR_GY = 3.5;
   const BG_ZOOM_REF = 0.70;   // zoom at which the bg exactly covers the canvas; >this = covers w/ margin, <this (zoomed out) = shrinks w/ farm, base shows around (no float)
+  // ===== TUNABLE: farm position + size (independent of the background) — Chris 2026-06-18 =====
+  // FARM_SCALE multiplies ONLY the farm (grid/plots/crops/buildings); the background is
+  // unaffected, so this resizes the farm relative to the meadow. FARM_DX/FARM_DY shift the
+  // whole farm on screen (pixels at default zoom): +DX → right, +DY → down. Tune these to
+  // place the farm exactly on the meadow. (1.0 / 0 / 0 = current look.)
+  const FARM_SCALE = 1.0;     // 0.6 (small) … 1.0 (current) … 1.5 (big)
+  const FARM_DX = 0;          // −150 (left) … 0 … +150 (right), pixels
+  const FARM_DY = 0;          // −150 (up)   … 0 … +150 (down), pixels
   const PALETTE = ['barn', 'house', 'greenhouse', 'coop', 'stall', 'well', 'tree', 'bush', 'lantern', 'fence', 'wheel', 'bridge'];
   // EP-shop pets → painted iso animal sprites (replaces the emoji pet).
   const ANIMALS = { pet_chick: 'animal_chicken', pet_cat: 'animal_cat', pet_rabbit: 'animal_rabbit', decoration_dog: 'animal_dog', guard_dog: 'animal_dog' };
@@ -138,8 +146,8 @@
     // DEFAULT farm view (Hay Day isometric). Chosen via Farm.state.farmStyle()
     // (saved preference + URL override); players switch in the guide (ⓘ).
     active() { return (Farm.state && Farm.state.farmStyle) ? Farm.state.farmStyle() === 'iso' : true; },
-    _tw() { return TW * this._zoom; },
-    _th() { return TH * this._zoom; },
+    _tw() { return TW * this._zoom * FARM_SCALE; },   // farm tile size (FARM_SCALE = farm-only zoom; bg uses base TW*zoom)
+    _th() { return TH * this._zoom * FARM_SCALE; },
     _lang() { return (Farm.state && Farm.state.data && Farm.state.data.language === 'en') ? 'en' : 'zh'; },
 
     init() {
@@ -265,8 +273,8 @@
       if (minx === Infinity) { minx = miny = 0; maxx = maxy = 1; }
 
       const span = (maxx - minx) + (maxy - miny);   // iso screen diagonal (du === dv === Δgx+Δgy)
-      const screenW = span * TW / 2 + TW;            // +1 tile side padding
-      const screenH = span * TH / 2 + TH * 4.5;      // generous headroom for tall building roofs
+      const screenW = (span * TW / 2 + TW) * FARM_SCALE;            // +1 tile side padding (× farm scale)
+      const screenH = (span * TH / 2 + TH * 4.5) * FARM_SCALE;      // generous headroom for tall building roofs
       // Cap initial zoom at 0.85 (tap-friendly tiles); floor at ZMIN. Fit so the whole
       // farm is visible with a little margin.
       this._zoom = Math.min(0.85, Math.max(ZMIN, Math.min(this._cssW() / (screenW * 1.1), this._cssH() / (screenH * 1.05))));
@@ -290,7 +298,13 @@
     },
     _cell(gx, gy) {
       const tw = this._tw(), th = this._th();
-      return { x: this._ox + (gx - gy) * tw / 2 - this._camX, y: this._oy + (gx + gy) * th / 2 - this._camY + this._hUnit(gx, gy) * th };
+      return { x: this._ox + (gx - gy) * tw / 2 - this._camX + FARM_DX, y: this._oy + (gx + gy) * th / 2 - this._camY + this._hUnit(gx, gy) * th + FARM_DY };
+    },
+    // Background anchor transform — BASE tiles, NO farm scale/offset/height, so the
+    // backdrop stays put when the farm is scaled or panned via FARM_SCALE/FARM_DX/FARM_DY.
+    _cellBg(gx, gy) {
+      const btw = TW * this._zoom, bth = TH * this._zoom;
+      return { x: this._ox + (gx - gy) * btw / 2 - this._camX, y: this._oy + (gx + gy) * bth / 2 - this._camY };
     },
     // Inverse of _cell. The flat algebraic inverse is only a first guess because
     // _cell now adds a per-cell height; refine by scanning a small window around
@@ -323,9 +337,11 @@
       if (bg && bg.width) {
         const scale = Math.max(W / bg.width, H / bg.height) * (this._zoom / BG_ZOOM_REF);
         const dw = bg.width * scale, dh = bg.height * scale;
-        // a.x = AX - camX, a.y = AY - camY (camera-independent parts of _cell(BG_ANCHOR))
-        const AX = this._ox + (BG_ANCHOR_GX - BG_ANCHOR_GY) * tw / 2;
-        const AY = this._oy + (BG_ANCHOR_GX + BG_ANCHOR_GY) * th / 2 + this._hUnit(BG_ANCHOR_GX, BG_ANCHOR_GY) * th;
+        // a.x = AX - camX, a.y = AY - camY (camera-independent parts of _cellBg(BG_ANCHOR) —
+        // BASE tiles, no farm scale/offset, so the clamp matches the drawn backdrop)
+        const btw = TW * this._zoom, bth = TH * this._zoom;
+        const AX = this._ox + (BG_ANCHOR_GX - BG_ANCHOR_GY) * btw / 2;
+        const AY = this._oy + (BG_ANCHOR_GX + BG_ANCHOR_GY) * bth / 2;
         const cxLo = AX - BG_FX * dw, cxHi = AX - W + (1 - BG_FX) * dw;   // dw>=W → cxLo<=cxHi
         const cyLo = AY - BG_FY * dh, cyHi = AY - H + (1 - BG_FY) * dh;   // dh>=H → cyLo<=cyHi
         this._camX = Math.max(cxLo, Math.min(cxHi, this._camX));
@@ -912,7 +928,7 @@
         // the meadow (a clamp here was decoupling them → farm floated off the meadow). At
         // the default framed zoom dh≈1.2×H with the meadow at the farm (~64% screen), so it
         // fully covers; zooming out lets it shrink with the farm → reveals the panorama.
-        const a = this._cell(BG_ANCHOR_GX, BG_ANCHOR_GY);
+        const a = this._cellBg(BG_ANCHOR_GX, BG_ANCHOR_GY);
         const scale = Math.max(W / bg.width, H / bg.height) * (this._zoom / BG_ZOOM_REF);
         const dw = bg.width * scale, dh = bg.height * scale;
         ctx.drawImage(bg, a.x - BG_FX * dw, a.y - BG_FY * dh, dw, dh);
