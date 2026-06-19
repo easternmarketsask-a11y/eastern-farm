@@ -312,12 +312,14 @@
       return { gx: Math.floor((fv + fu) / 2), gy: Math.floor((fv - fu) / 2) };
     },
     _clampCam() {
-      // keep the map roughly on screen: bound camX/camY by the cell extent
+      // keep the map roughly on screen: bound camX/camY by the cell extent. Bounds are
+      // GENEROUS so the auto-frame (farm sitting low on the meadow, camY very negative)
+      // is never clamped up — that was pushing the whole farm onto the horizon.
       const tw = this._tw(), th = this._th();
       const minU = (0 - (ROWS - 1)), maxU = ((COLS - 1) - 0);
-      this._camX = Math.max(minU * tw / 2 - this._cssW() * 0.4, Math.min(maxU * tw / 2 + this._cssW() * 0.4, this._camX));
+      this._camX = Math.max(minU * tw / 2 - this._cssW() * 0.6, Math.min(maxU * tw / 2 + this._cssW() * 0.6, this._camX));
       const maxV = (COLS - 1) + (ROWS - 1);
-      this._camY = Math.max(-this._cssH() * 0.3, Math.min(this._oy + maxV * th / 2 - this._cssH() * 0.5, this._camY));
+      this._camY = Math.max(this._oy - this._cssH() * 1.05, Math.min(this._oy + maxV * th / 2 - this._cssH() * 0.2, this._camY));
     },
     _zoomAt(px, py, nz) {
       const z = Math.max(ZMIN, Math.min(ZMAX, nz));
@@ -885,13 +887,15 @@
         // NO floor). Base size = cover-the-canvas at the reference zoom, so at normal zoom
         // the photo fully covers (no flat base band at the edges); clamped to the canvas
         // while it's ≥ canvas, centred (base shows around) only when zoomed far out.
+        // PURE world-anchor — NO clamp. The image's meadow focal (BG_FX,BG_FY) is pinned
+        // to world cell (BG_ANCHOR) which moves with pan+zoom, so the farm ALWAYS sits on
+        // the meadow (a clamp here was decoupling them → farm floated off the meadow). At
+        // the default framed zoom dh≈1.2×H with the meadow at the farm (~64% screen), so it
+        // fully covers; zooming out lets it shrink with the farm → reveals the panorama.
         const a = this._cell(BG_ANCHOR_GX, BG_ANCHOR_GY);
         const scale = Math.max(W / bg.width, H / bg.height) * (this._zoom / BG_ZOOM_REF);
         const dw = bg.width * scale, dh = bg.height * scale;
-        let dx = a.x - BG_FX * dw, dy = a.y - BG_FY * dh;
-        dx = (dw >= W) ? Math.min(0, Math.max(W - dw, dx)) : (W - dw) / 2;
-        dy = (dh >= H) ? Math.min(0, Math.max(H - dh, dy)) : (H - dh) / 2;
-        ctx.drawImage(bg, dx, dy, dw, dh);
+        ctx.drawImage(bg, a.x - BG_FX * dw, a.y - BG_FY * dh, dw, dh);
       } else {   // fallback: procedural hills (image not yet loaded)
         const pc = this._cell(3, 3);
         this._drawHills(pc.x, pc.y - th * 3, 20 * tw * 0.62);
