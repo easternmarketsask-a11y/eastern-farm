@@ -51,7 +51,10 @@
   function _nextMidnight() { const d = new Date(); d.setHours(24, 0, 0, 0); return d.getTime(); }
   function _notePointsOutcome(code, ok) {
     if (ok) { _syncPausedUntil = 0; _failStreak = 0; return; }
-    if (code === 429) { _syncPausedUntil = _nextMidnight(); }                 // daily cap → done for today
+    // 429 daily cap → pause until midnight, BUT clamped to [1min, 6h] from NOW so a wrong
+    // device clock (common on cheap phones) can't pause sync for ~24h+. Relative to now,
+    // so it's safe regardless of the absolute clock value.
+    if (code === 429) { _syncPausedUntil = Date.now() + Math.min(6 * 3600 * 1000, Math.max(60 * 1000, _nextMidnight() - Date.now())); }
     else if (code === 401 || code === 403 || code === 404) { _syncPausedUntil = Date.now() + 30 * 60 * 1000; }  // auth/endpoint → back off 30min
     else if (code !== 422) { if (++_failStreak >= 3) _syncPausedUntil = Date.now() + 5 * 60 * 1000; }           // repeated net/5xx → 5min
   }

@@ -44,7 +44,12 @@
           const r = item.kind === 'spend'
             ? await Farm.fbPoints.syncEpSpend(item.amount, item.source, item.description, item.eventId)
             : await Farm.fbPoints.syncEpEarn (item.amount, item.source, item.description, item.eventId);
-          if (!r.synced) remaining.push(item);
+          // Keep on transient failure (network/5xx) and while sync is paused; but DROP
+          // terminal rejections (422 bad data / 404 endpoint gone) — they can never
+          // succeed, so retaining them retries every 60s forever (console spam, since 422
+          // doesn't trip the circuit breaker).
+          const terminal = r && r.rejected && (r.code === 422 || r.code === 404);
+          if (!r.synced && !terminal) remaining.push(item);
         } catch (e) {
           remaining.push(item);
         }
