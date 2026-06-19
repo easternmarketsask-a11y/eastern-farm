@@ -149,8 +149,8 @@
       ['farmGrid', 'farmDecorations'].forEach((idd) => { const e = document.getElementById(idd); if (e) e.style.display = 'none'; });
       const sc = document.querySelector('.farm-scene'); if (sc) sc.style.display = 'none';
 
-      if (!Array.isArray(Farm.state.data.map)) {   // share the default layout with the top-down view
-        Farm.state.data.map = [{ type: 'barn', gx: 5, gy: 1 }, { type: 'house', gx: 6, gy: 4 }];
+      if (!Array.isArray(Farm.state.data.map)) {   // tidy starter layout: house + barn flank the plot block on the right
+        Farm.state.data.map = [{ type: 'house', gx: 5, gy: 2 }, { type: 'barn', gx: 5, gy: 4 }];
         Farm.state.save();
       }
 
@@ -249,22 +249,28 @@
     // block with its REAL screen extent more than doubles tile size (50→110px on a
     // phone). Buildings sit just off the initial view; a short pan reveals them.
     _autoFrame() {
-      const plots = Farm.state.data.plots || [];
-      const n = Math.max(1, plots.length);
+      // Frame the WHOLE farm — plots + buildings (with footprint) + decorations — so
+      // nothing is cut off at the screen edges (Chris 2026-06-18: buildings were being
+      // clipped because only the plot block was framed).
       let minx = Infinity, miny = Infinity, maxx = -Infinity, maxy = -Infinity;
-      for (let i = 0; i < n; i++) {
-        const gx = this._plotGX(i), gy = this._plotGY(i);
-        if (gx < minx) minx = gx; if (gy < miny) miny = gy; if (gx > maxx) maxx = gx; if (gy > maxy) maxy = gy;
-      }
+      const acc = (gx, gy) => { if (gx < minx) minx = gx; if (gy < miny) miny = gy; if (gx > maxx) maxx = gx; if (gy > maxy) maxy = gy; };
+      const plots = Farm.state.data.plots || [];
+      for (let i = 0; i < plots.length; i++) acc(this._plotGX(i), this._plotGY(i));
+      const map = Farm.state.data.map || [];
+      for (const o of map) { const b = BUILDINGS[o.type]; const w = b ? b.w : 1, h = b ? b.h : 1; acc(o.gx, o.gy); acc(o.gx + w - 1, o.gy + h - 1); }
+      const decos = Farm.state.data.decorations || [];
+      for (const d of decos) { if (Number.isInteger(d.gx) && Number.isInteger(d.gy)) acc(d.gx, d.gy); }
+      if (minx === Infinity) { minx = miny = 0; maxx = maxy = 1; }
+
       const span = (maxx - minx) + (maxy - miny);   // iso screen diagonal (du === dv === Δgx+Δgy)
-      const screenW = span * TW / 2, screenH = span * TH / 2 + TH * 2.5;   // +headroom for tall sprites
-      // Cap initial zoom at 0.85: big enough to tap easily (≈78px tiles vs the old
-      // 50px), small enough that all plots + cute crops fit without crowding. Players
-      // can still pinch up to ZMAX or out to ZMIN.
-      this._zoom = Math.min(0.85, Math.max(ZMIN, Math.min(this._cssW() / (screenW * 1.15), this._cssH() / (screenH * 1.05))));
+      const screenW = span * TW / 2 + TW;            // +1 tile side padding
+      const screenH = span * TH / 2 + TH * 4.5;      // generous headroom for tall building roofs
+      // Cap initial zoom at 0.85 (tap-friendly tiles); floor at ZMIN. Fit so the whole
+      // farm is visible with a little margin.
+      this._zoom = Math.min(0.85, Math.max(ZMIN, Math.min(this._cssW() / (screenW * 1.1), this._cssH() / (screenH * 1.05))));
       const ccx = (minx + maxx) / 2, ccy = (miny + maxy) / 2, u = ccx - ccy, v = ccx + ccy;
       this._camX = u * this._tw() / 2;
-      this._camY = this._oy + v * this._th() / 2 - this._cssH() / 2 - this._cssH() * 0.20;   // farm sits lower on the meadow (Chris 2026-06-18 整体下移)
+      this._camY = this._oy + v * this._th() / 2 - this._cssH() / 2 - this._cssH() * 0.14;   // farm centred, slightly low on the meadow
       this._clampCam();
     },
 
