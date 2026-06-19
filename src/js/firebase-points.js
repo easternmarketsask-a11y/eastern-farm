@@ -42,6 +42,20 @@
   const GAME_SIGNUP_BONUS_COINS = 3000;
   const GAME_SIGNUP_BONUS_END = '2026-08-31';
 
+  // Circuit breaker: once an earn/spend call hits a state where retrying soon is
+  // pointless — daily cap (429), or auth/endpoint trouble (401/403/404) — pause the
+  // network sync so every subsequent harvest doesn't fire another failing request
+  // (which the browser logs as a red console error). Events stay queued locally and
+  // flush once the pause expires; the server's eventId dedupe prevents double-credit.
+  let _syncPausedUntil = 0, _failStreak = 0;
+  function _nextMidnight() { const d = new Date(); d.setHours(24, 0, 0, 0); return d.getTime(); }
+  function _notePointsOutcome(code, ok) {
+    if (ok) { _syncPausedUntil = 0; _failStreak = 0; return; }
+    if (code === 429) { _syncPausedUntil = _nextMidnight(); }                 // daily cap → done for today
+    else if (code === 401 || code === 403 || code === 404) { _syncPausedUntil = Date.now() + 30 * 60 * 1000; }  // auth/endpoint → back off 30min
+    else if (code !== 422) { if (++_failStreak >= 3) _syncPausedUntil = Date.now() + 5 * 60 * 1000; }           // repeated net/5xx → 5min
+  }
+
   function uuid() {
     if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
@@ -103,6 +117,11 @@
         if (Farm.fbQueue) Farm.fbQueue.enqueue({ kind: 'earn', amount, source, description, eventId });
         return { synced: false, eventId, queued: true, reason: 'not_logged_in' };
       }
+      // Breaker: skip the network call (keep it queued) while paused after a cap/auth failure.
+      if (Date.now() < _syncPausedUntil) {
+        if (Farm.fbQueue) Farm.fbQueue.enqueue({ kind: 'earn', amount, source, description, eventId });
+        return { synced: false, eventId, queued: true, reason: 'sync_paused' };
+      }
       try {
         const resp = await _callStockWise('/api/rewardup/me/earn', {
           points: amount,
@@ -111,10 +130,12 @@
           description: description || '',
         });
         _applyServerResponseToLocal(resp);
+        _notePointsOutcome(0, true);
         return { synced: true, eventId, new_balance: resp.new_balance };
       } catch (e) {
-        // 429 = daily cap, 422 = validation → don't queue (would just fail again)
-        if (e.code === 429 || e.code === 422 || e.code === 404) {
+        _notePointsOutcome(e.code, false);
+        // 429 = daily cap, 422 = validation, 401/403/404 = auth/endpoint → don't queue (would just fail again)
+        if (e.code === 429 || e.code === 422 || e.code === 404 || e.code === 401 || e.code === 403) {
           console.warn('[fb-points] earn rejected:', e.code, e.detail);
           return { synced: false, eventId, rejected: true, code: e.code, reason: e.detail || String(e) };
         }
@@ -136,6 +157,10 @@
         if (Farm.fbQueue) Farm.fbQueue.enqueue({ kind: 'spend', amount, source, description, eventId });
         return { synced: false, eventId, queued: true, reason: 'not_logged_in' };
       }
+      if (Date.now() < _syncPausedUntil) {
+        if (Farm.fbQueue) Farm.fbQueue.enqueue({ kind: 'spend', amount, source, description, eventId });
+        return { synced: false, eventId, queued: true, reason: 'sync_paused' };
+      }
       try {
         const resp = await _callStockWise('/api/rewardup/me/spend', {
           points: amount,
@@ -144,9 +169,11 @@
           description: description || '',
         });
         _applyServerResponseToLocal(resp);
+        _notePointsOutcome(0, true);
         return { synced: true, eventId, new_balance: resp.new_balance };
       } catch (e) {
-        if (e.code === 422 || e.code === 404) {
+        _notePointsOutcome(e.code, false);
+        if (e.code === 422 || e.code === 404 || e.code === 401 || e.code === 403) {
           console.warn('[fb-points] spend rejected:', e.code, e.detail);
           return { synced: false, eventId, rejected: true, code: e.code, reason: e.detail || String(e) };
         }
