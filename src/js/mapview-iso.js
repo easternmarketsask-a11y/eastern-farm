@@ -897,6 +897,38 @@
       this._diamond(c.x, c.y, tw, th);
       ctx.fillStyle = GRASS_A; ctx.fill();
     },
+    // Draw all water cells as ONE realistic pond — overlapping soft ellipses merge into an
+    // organic blob (single cell = a clean oval), with a deep-water rim, surface gradient,
+    // gentle animated ripples and a little lily pad. Replaces the per-tile diamond grid.
+    _drawPond(cells) {
+      if (!cells || !cells.length) return;
+      const ctx = this._ctx, tw = this._tw(), th = this._th();
+      const rx = tw * 0.64, ry = th * 0.70, oy = th * 0.12;   // per-cell ellipse; oy sinks it into the ground
+      const t = Date.now() / 1000;
+      const ellipses = (irx, iry) => { ctx.beginPath(); for (const c of cells) { ctx.moveTo(c.x + irx, c.y + oy); ctx.ellipse(c.x, c.y + oy, irx, iry, 0, 0, 6.283); } };
+      let minY = Infinity, maxY = -Infinity; for (const c of cells) { if (c.y < minY) minY = c.y; if (c.y > maxY) maxY = c.y; }
+      ctx.save();
+      // 1) deep-water base + soft ground shadow around the whole pond outline
+      ctx.save();
+      ctx.shadowColor = 'rgba(25,60,80,0.32)'; ctx.shadowBlur = th * 0.5; ctx.shadowOffsetY = th * 0.16;
+      ctx.fillStyle = '#3f86a8'; ellipses(rx, ry); ctx.fill();
+      ctx.restore();
+      // 2) surface water (inset → the deep base shows as a rim), top-lit gradient
+      const g = ctx.createLinearGradient(0, minY - ry + oy, 0, maxY + ry + oy);
+      g.addColorStop(0, '#b6e6f6'); g.addColorStop(0.5, '#7fc8ea'); g.addColorStop(1, '#54a6cf');
+      ctx.fillStyle = g; ellipses(rx * 0.86, ry * 0.84); ctx.fill();
+      // 3) gentle animated ripples (a couple of soft white arcs per cell)
+      ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.lineWidth = Math.max(1, th * 0.05); ctx.lineCap = 'round';
+      cells.forEach((c, i) => {
+        const wob = Math.sin(t * 1.4 + i * 1.3) * th * 0.05;
+        ctx.beginPath(); ctx.moveTo(c.x - rx * 0.34, c.y + oy + wob); ctx.quadraticCurveTo(c.x, c.y + oy - th * 0.07 + wob, c.x + rx * 0.34, c.y + oy + wob); ctx.stroke();
+      });
+      // 4) a small lily pad + flower on the first cell for charm
+      const lp = cells[0];
+      ctx.fillStyle = '#5fae5a'; ctx.beginPath(); ctx.ellipse(lp.x - rx * 0.28, lp.y + oy + th * 0.2, rx * 0.26, ry * 0.24, 0, 0, 6.283); ctx.fill();
+      ctx.fillStyle = '#f6c0d8'; ctx.beginPath(); ctx.arc(lp.x - rx * 0.28, lp.y + oy + th * 0.2, rx * 0.09, 0, 6.283); ctx.fill();
+      ctx.restore();
+    },
     _startLoop() {
       const loop = () => {
         this._raf = requestAnimationFrame(loop);
@@ -965,12 +997,17 @@
       // Soil beds (plots) + terrain tiles, back-to-front. Grass cells draw nothing
       // (the base shows through). Plot cells use the raised soil bed.
       const plotCells = this._plotCellSet();
+      const waterCells = [];
       for (let s = 0; s <= (COLS - 1) + (ROWS - 1); s++) {
         for (let gx = 0; gx < COLS; gx++) {
           const gy = s - gx; if (gy < 0 || gy >= ROWS) continue;
           const c = this._cell(gx, gy);
           if (c.x + tw < 0 || c.x - tw > W || c.y + th * 4 < 0 || c.y - th * 2 > H) continue;
           const k = gx + ',' + gy;
+          // Water cells are collected and drawn as ONE merged organic pond (below) rather
+          // than per-tile diamonds (Chris 2026-06-19: looked like a grid). Water overrides
+          // soil/path on a cell.
+          if (terrain[k] === 'water') { waterCells.push(c); continue; }
           let key = 'grass';
           if (plotCells[k]) {
             const pl = Farm.state.data.plots[this._cellToPlot[k]];
@@ -978,10 +1015,11 @@
             // tilled field; pure-plant crops sit on top. Locked plots stay grass.
             if (pl && pl.unlocked) key = 'soil';
           }
-          if (terrain[k] === 'water') key = 'water'; else if (terrain[k] === 'path') key = 'path';
+          if (terrain[k] === 'path') key = 'path';
           if (key !== 'grass') this._tileImg(key, c);
         }
       }
+      this._drawPond(waterCells);
 
       // build-mode grid overlay
       if (this._build) {
