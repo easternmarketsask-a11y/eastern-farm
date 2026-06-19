@@ -59,8 +59,13 @@ self.addEventListener('notificationclick', (event) => {
   );
 });
 
-const CACHE_VERSION = 'ef-v91';
+const CACHE_VERSION = 'ef-v92';
 const CACHE = 'eastern-farm-' + CACHE_VERSION;
+// Precache the FULL app shell — HTML + CSS + every JS module + data JSON — so a SW
+// update (which clears the old cache) followed by a flaky mobile network can never leave
+// the game unable to load (the old SW only precached HTML/CSS, so the JS could vanish →
+// stuck-can't-enter). Images stay network-first/on-demand (the game degrades gracefully
+// without them). Cached individually below so one missing file can't block the rest.
 const PRECACHE = [
   '/src/index.html',
   '/src/css/style.css',
@@ -69,13 +74,28 @@ const PRECACHE = [
   '/src/icons/icon-192.png',
   '/src/icons/icon-512.png',
   '/src/icons/icon-maskable-512.png',
+  '/src/js/analytics.js', '/src/js/i18n.js', '/src/js/weather.js', '/src/js/state.js',
+  '/src/js/audio.js', '/src/js/crops.js', '/src/js/crop-art.js', '/src/js/ui.js',
+  '/src/js/coach.js', '/src/js/firebase-init.js', '/src/js/firebase-queue.js',
+  '/src/js/firebase-points.js', '/src/js/firebase-auth.js', '/src/js/firebase-game-sync.js',
+  '/src/js/firebase-push.js', '/src/js/ep-shop.js', '/src/js/ai-neighbors.js',
+  '/src/js/social-steal.js', '/src/js/neighbors.js', '/src/js/home-report.js',
+  '/src/js/daily.js', '/src/js/login-calendar.js', '/src/js/farm.js', '/src/js/tending.js',
+  '/src/js/seasons.js', '/src/js/harvest-status.js', '/src/js/warehouse.js', '/src/js/orders.js',
+  '/src/js/shop.js', '/src/js/tasks.js', '/src/js/events.js', '/src/js/storekeeper.js',
+  '/src/js/rewards.js', '/src/js/achievements.js', '/src/js/tutorial.js', '/src/js/guide.js',
+  '/src/js/spotlight.js', '/src/js/login-nudge.js', '/src/js/promo.js', '/src/js/share.js',
+  '/src/js/mapview.js', '/src/js/mapview-iso.js', '/src/js/main.js', '/src/js/pwa-install.js',
+  '/data/achievements.json', '/data/ai-neighbors.json', '/data/coupons.json', '/data/crops.json',
+  '/data/ep-shop.json', '/data/events.json', '/data/i18n.json', '/data/news.json', '/data/tasks.json',
 ];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE)
-      .then((cache) => cache.addAll(PRECACHE))
-      .catch(() => {})            // a missing asset must not abort install
+      // cache each individually so one missing/failed file doesn't abort the whole precache
+      .then((cache) => Promise.all(PRECACHE.map((u) => cache.add(u).catch(() => {}))))
+      .catch(() => {})
       .then(() => self.skipWaiting())
   );
 });
