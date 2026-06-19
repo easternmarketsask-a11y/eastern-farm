@@ -101,7 +101,14 @@
 
     showModal(html) {
       const modal = document.getElementById('modal');
-      const content = document.getElementById('modalContent');
+      if (!modal) return;
+      // Defensive: rebuild #modalContent (and the backdrop) if it ever went missing,
+      // so a popup can never crash with "Cannot set innerHTML of null".
+      let content = document.getElementById('modalContent');
+      if (!content) {
+        if (!modal.querySelector('.modal-backdrop')) { const bd = document.createElement('div'); bd.className = 'modal-backdrop'; modal.appendChild(bd); }
+        content = document.createElement('div'); content.id = 'modalContent'; content.className = 'modal-content'; modal.appendChild(content);
+      }
       // Auto-inject a floating ✕ button at the top-right of every modal.
       // Was previously only a bottom "Close" button which required scrolling
       // on long modals (warehouse, shop, leaderboard). The ✕ is always

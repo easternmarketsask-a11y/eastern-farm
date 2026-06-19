@@ -1026,33 +1026,13 @@
       const ctx = this._ctx, a = this._cell(x1, y1), b = this._cell(x2 + 1, y1), c = this._cell(x2 + 1, y2 + 1), d = this._cell(x1, y2 + 1);
       ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.lineTo(c.x, c.y); ctx.lineTo(d.x, d.y); ctx.closePath();
     },
-    // Dim the WILD (locked) land beyond the owned area + show a pulsing unlock badge on
-    // the next region, so players see "tap to claim more farmland".
-    _drawLockedLand() {
-      const next = this._nextLand(); this._landBadge = null;
-      if (!next) return;
-      const ctx = this._ctx, ob = this._ownedBounds(), th = this._th();
-      // No overlay / outline on the land at all — the farm sits naturally on the painted
-      // meadow (Chris 2026-06-18: dark overlay AND dashed border both removed). Players
-      // still see where to expand via the unlock badge below.
-      // badge at the centre of the NEXT region's new band (beyond the owned edge)
-      const cx2 = (ob.x2 + next.x2) / 2 + 0.5, cy2 = (next.y1 + next.y2) / 2;
-      const c = this._cell(cx2, cy2), t = Date.now() / 1000, pulse = 0.5 + 0.5 * Math.sin(t * 2.2);
-      const r = Math.max(26, th * 1.5);
-      ctx.save();
-      ctx.beginPath(); ctx.arc(c.x, c.y, r * (1 + pulse * 0.05), 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(255,255,255,0.92)'; ctx.fill();
-      ctx.strokeStyle = '#e8a020'; ctx.lineWidth = 3; ctx.stroke();
-      ctx.fillStyle = '#5a4326'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.font = (r * 0.62) + 'px sans-serif'; ctx.fillText('🔒', c.x, c.y - r * 0.34);
-      ctx.fillStyle = '#3a8c50'; ctx.font = 'bold ' + (r * 0.34) + 'px "Fredoka",system-ui,sans-serif';
-      ctx.fillText('+' + next.coins, c.x, c.y + r * 0.18);
-      if (next.points) { ctx.fillStyle = '#E8522A'; ctx.font = 'bold ' + (r * 0.3) + 'px "Fredoka",system-ui,sans-serif'; ctx.fillText('+' + next.points + '★', c.x, c.y + r * 0.55); }
-      ctx.restore();
-      this._landBadge = { x: c.x, y: c.y, r: r };
-    },
+    // The on-map pulsing unlock circle was removed (Chris 2026-06-19) — land expansion
+    // now lives in the ☰ menu ("扩建农场"). _landBadge stays null so the on-map tap-to-
+    // expand is disabled.
+    _drawLockedLand() { this._landBadge = null; },
     _tryUnlockLand() {
-      const next = this._nextLand(); if (!next) return;
+      const next = this._nextLand();
+      if (!next) { if (Farm.ui && Farm.ui.toast) Farm.ui.toast(this._lang() === 'en' ? '🏆 Your farm is already at max size' : '🏆 农场已是最大啦'); return; }
       const en = this._lang() === 'en', haveC = Farm.state.data.coins, haveP = (Farm.state.data.totalPoints || 0);
       if (haveC < next.coins || (next.points && haveP < next.points)) {
         if (Farm.ui && Farm.ui.toast) Farm.ui.toast(en ? 'Not enough to expand yet — keep farming!' : '钱/积分还不够，再攒攒！');

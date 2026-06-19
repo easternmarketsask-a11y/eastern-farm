@@ -320,6 +320,7 @@
       { a: 'orders', icon: '📦', zh: '东超订单', en: 'Orders' },
       { a: 'community', icon: '🏘', zh: '社区', en: 'Community' },
       { a: 'store', icon: '🛍️', zh: '农场商城', en: 'Mall' },
+      { a: 'expand', icon: '🗺️', zh: '扩建农场', en: 'Expand' },
       { a: 'collection', icon: '📖', zh: '图鉴', en: 'Collection' },
       { a: 'guide', icon: '❓', zh: '怎么玩', en: 'How to' },
       { a: 'settings', icon: '⚙️', zh: '设置', en: 'Settings' },
@@ -338,6 +339,7 @@
           case 'orders': if (Farm.orders) Farm.orders.open(); break;
           case 'community': if (Farm.neighbors) Farm.neighbors.open(); break;
           case 'store': if (Farm.epShop) Farm.epShop.open(); break;
+          case 'expand': if (Farm.isoView && Farm.isoView._tryUnlockLand) Farm.isoView._tryUnlockLand(); else if (Farm.ui) Farm.ui.toast('扩建仅在农场视图可用'); break;
           case 'collection': openCollection(); break;
           case 'guide': if (Farm.guide) Farm.guide.open(); break;
           case 'settings': openSettings(); break;
