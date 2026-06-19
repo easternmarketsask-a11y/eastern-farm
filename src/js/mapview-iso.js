@@ -15,7 +15,7 @@
   // preferred adapting via the new full-scene background instead. _undoForwardOnce()
   // shifts any save that got forwarded back to here.)
   const PLOT_OX = 1, PLOT_OY = 2, PLOT_COLS = 3;
-  const TW = 92, TH = 46;          // diamond width/height at zoom 1 (2:1 iso)
+  const TW = 46, TH = 23;          // diamond width/height at zoom 1 (2:1 iso) — halved 2026-06-18 (Chris: shrink whole farm 50% so it's a small cluster in the meadow centre; bg is canvas-based so the farm gets relatively smaller)
   // Default play sits ABOVE BG_ZOOM_REF (0.70) where the backdrop fully covers (clean
   // central meadow). Zooming out BELOW ref deliberately reveals the whole painted
   // landscape — the "panorama" (Chris 2026-06-18: "缩小才能看到全景"). The bg stays
