@@ -433,18 +433,22 @@
       for (const o of list) {
         const c = this._cell(o.gx, o.gy), pl = plots[o.i];
         const planted = pl && pl.unlocked && pl.crop;
-        // Tap box height tracks the crop's GROWTH stage: a seedling gets a short box
-        // (≈ empty plot), so it never covers the adjacent empty plots' tap targets;
-        // only a tall mature plant claims a tall box.
-        let top = c.y - th * 0.6;
         if (planted) {
+          // Planted: the plant rises ~3 tiles ABOVE the cell, so use a tall box to catch
+          // a tap on the visible plant (height tracks growth stage so a seedling's box is
+          // short and doesn't swallow neighbours).
           const p = Farm.crops.getProgress ? Farm.crops.getProgress(pl) : 1;
           const fr = p >= 1 ? 3 : p >= 0.6 ? 2 : p >= 0.25 ? 1 : 0;
-          top = c.y - th * (0.7 + fr * 0.6);
+          const top = c.y - th * (0.7 + fr * 0.6), halfW = tw * 0.5, bot = c.y + th * 0.65;
+          if (px >= c.x - halfW && px <= c.x + halfW && py >= top && py <= bot) return o;
+        } else {
+          // Empty / locked: PRECISE diamond hit-test on the bed (cells tessellate with no
+          // overlap) → tapping a plot to plant selects exactly that plot, not a neighbour
+          // (Chris 2026-06-18: planting taps were landing on the wrong plot). cy shifted
+          // down slightly to match the painted bed's visual centre.
+          const d = Math.abs(px - c.x) / (tw / 2) + Math.abs(py - (c.y + th * 0.12)) / (th / 2);
+          if (d <= 1.0) return o;
         }
-        const halfW = tw * (planted ? 0.5 : 0.58);
-        const bot = c.y + th * 0.7;                          // base of the diamond/sprite
-        if (px >= c.x - halfW && px <= c.x + halfW && py >= top && py <= bot) return o;
       }
       return null;
     },
