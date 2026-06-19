@@ -47,16 +47,19 @@
   // network sync so every subsequent harvest doesn't fire another failing request
   // (which the browser logs as a red console error). Events stay queued locally and
   // flush once the pause expires; the server's eventId dedupe prevents double-credit.
-  let _syncPausedUntil = 0, _failStreak = 0;
+  let _syncPausedUntil = 0, _backoffMs = 0;
   function _nextMidnight() { const d = new Date(); d.setHours(24, 0, 0, 0); return d.getTime(); }
   function _notePointsOutcome(code, ok) {
-    if (ok) { _syncPausedUntil = 0; _failStreak = 0; return; }
-    // 429 daily cap → pause until midnight, BUT clamped to [1min, 6h] from NOW so a wrong
-    // device clock (common on cheap phones) can't pause sync for ~24h+. Relative to now,
-    // so it's safe regardless of the absolute clock value.
-    if (code === 429) { _syncPausedUntil = Date.now() + Math.min(6 * 3600 * 1000, Math.max(60 * 1000, _nextMidnight() - Date.now())); }
-    else if (code === 401 || code === 403 || code === 404) { _syncPausedUntil = Date.now() + 30 * 60 * 1000; }  // auth/endpoint → back off 30min
-    else if (code !== 422) { if (++_failStreak >= 3) _syncPausedUntil = Date.now() + 5 * 60 * 1000; }           // repeated net/5xx → 5min
+    if (ok) { _syncPausedUntil = 0; _backoffMs = 0; return; }     // healthy → reset backoff
+    if (code === 422) return;                                     // per-event bad data: don't pause the whole channel
+    // EVERY other failure — 429 rate-limit ("earn_too_fast", the game fires several EP
+    // earns per harvest + rapid play), 429 daily cap, 401/403/404, 5xx, network — uses
+    // ONE exponential backoff: 1min → 2 → 4 → … capped at 2h. A transient rate-limit burst
+    // recovers in ~1min; a persistently-broken endpoint produces only ~7 failed requests
+    // total per session instead of 100+ red console errors. Events stay queued (eventId
+    // dedupe), so nothing is double-credited or lost — just delayed.
+    _backoffMs = _backoffMs ? Math.min(2 * 3600 * 1000, _backoffMs * 2) : 60 * 1000;
+    _syncPausedUntil = Date.now() + _backoffMs;
   }
 
   function uuid() {
