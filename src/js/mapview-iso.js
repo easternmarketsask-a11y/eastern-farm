@@ -312,7 +312,9 @@
     // the point (matches draw order, so taps land on what you see).
     _screenToCell(sx, sy) {
       const tw = this._tw(), th = this._th();
-      const dx = sx + this._camX - this._ox, dy = sy + this._camY - this._oy;
+      // subtract FARM_DX/FARM_DY — _cell adds them, so the inverse must remove them or
+      // every tap is off by the farm offset (was making build-mode selection miss badly).
+      const dx = sx + this._camX - this._ox - FARM_DX, dy = sy + this._camY - this._oy - FARM_DY;
       const fu = dx / (tw / 2), fv = dy / (th / 2);
       const g0 = Math.round((fv + fu) / 2), h0 = Math.round((fv - fu) / 2);
       let best = null, bestSum = -Infinity;
@@ -1106,7 +1108,7 @@
       let plantTopY = c.y - th * 1.3;   // fallback bubble anchor
       if (ISO_CROPS[plot.crop]) {   // pure-plant 4-stage sprite — FIXED scale (260px base) → seedling small
         const im = this._lazyImg(ISO_CROPS[plot.crop] + '_' + fr);
-        if (im) { const s = (th * 2.2) / 260, w = im.width * s, h = im.height * s; const topY = (c.y + th * 0.34) - h; ctx.drawImage(im, c.x - w / 2, topY, w, h); plantTopY = topY; }
+        if (im) { const s = (th * 1.5) / 260, w = im.width * s, h = im.height * s; const topY = (c.y + th * 0.34) - h; ctx.drawImage(im, c.x - w / 2, topY, w, h); plantTopY = topY; }   // crop ref shrunk th*2.2→1.5 (Chris: 菜比房子大)
         else { const def = Farm.crops.get(plot.crop); ctx.font = (th * 1.1) + 'px sans-serif'; ctx.fillText((def && def.icon) || '🌿', c.x, by); }
       } else if (mature) {
         const im = this._cropSprite(plot.crop);
