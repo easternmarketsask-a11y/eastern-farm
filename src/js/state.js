@@ -279,7 +279,11 @@
           // would silently produce a state object missing nested defaults.
           if (!parsed || typeof parsed !== 'object') throw new Error('save not an object');
           // Object.assign auto-fills any new STARTER fields missing from old saves.
-          this.data = Object.assign({}, STARTER_STATE, parsed);
+          // DEEP-CLONE the defaults first: otherwise a field present in STARTER but
+          // absent from an old save (e.g. orders/warehouse/festivalHarvests/orderEp)
+          // is copied BY REFERENCE — mutating this.data.orders would then mutate the
+          // module's STARTER_STATE.orders and leak across resets/reloads.
+          this.data = Object.assign(JSON.parse(JSON.stringify(STARTER_STATE)), parsed);
           // Deep-fill nested objects added in later versions
           this.data.dailyClaims = Object.assign({}, STARTER_STATE.dailyClaims, this.data.dailyClaims || {});
           this.data.activeEffects = Object.assign({}, STARTER_STATE.activeEffects, this.data.activeEffects || {});

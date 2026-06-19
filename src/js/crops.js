@@ -209,9 +209,13 @@
       const weekendMultiplier = weekMul;  // kept for backwards compat with farm.js toast logic
 
       if (plot.harvestsLeft > 0) {
-        // Multi-harvest crop: restart from regrow time
-        const regrowMs = (def.regrow_minutes || def.grow_minutes) * 60000;
-        plot.plantedAt = Date.now() - (def.grow_minutes * 60000 - regrowMs);
+        // Multi-harvest crop: restart so the next maturity is `regrow_minutes` away.
+        // getStage matures at grow_minutes / growMultiplier(), so the pre-set elapsed
+        // offset must ALSO be divided by the multiplier — otherwise a greenhouse/well
+        // (mult > 1) makes the offset exceed the (shrunken) threshold → instant regrow.
+        const mult = this.growMultiplier() || 1;
+        const regrowMin = (def.regrow_minutes || def.grow_minutes);
+        plot.plantedAt = Date.now() - Math.max(0, (def.grow_minutes - regrowMin)) * 60000 / mult;
         plot.watered = false;   // new regrow cycle: waterable again (打理系统)
       } else {
         // Done: clear plot

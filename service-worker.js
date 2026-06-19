@@ -59,7 +59,7 @@ self.addEventListener('notificationclick', (event) => {
   );
 });
 
-const CACHE_VERSION = 'ef-v92';
+const CACHE_VERSION = 'ef-v93';
 const CACHE = 'eastern-farm-' + CACHE_VERSION;
 // Precache the FULL app shell — HTML + CSS + every JS module + data JSON — so a SW
 // update (which clears the old cache) followed by a flaky mobile network can never leave
@@ -116,24 +116,21 @@ self.addEventListener('fetch', (event) => {
   try { url = new URL(req.url); } catch (e) { return; }
   if (url.origin !== self.location.origin) return;  // leave Firebase/CDN alone
 
-  // Network-first for ALL same-origin GETs: returning players always get the
-  // latest code/data/styles when online; the cache is purely an offline
-  // fallback. This avoids serving stale JS against a newer save schema after a
-  // deploy (the main risk of stale-while-revalidate for an actively-iterated
-  // game). Each 200 response refreshes the offline copy.
-  event.respondWith(
-    fetch(req).then((res) => {
-      if (res && res.status === 200) {
-        const copy = res.clone();
-        caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {});
-      }
-      return res;
-    }).catch(() =>
-      caches.match(req).then((cached) => {
-        if (cached) return cached;
-        if (req.mode === 'navigate') return caches.match('/src/index.html');
-        return Response.error();
-      })
-    )
-  );
+  // Network-first for ALL same-origin GETs (latest code/data when online; cache is the
+  // offline fallback). CRITICAL for flaky mobile / in-app browsers: a fetch that HANGS
+  // (no response, no error — common on captive-portal/in-app WebViews) would otherwise
+  // stall the page forever. So we RACE the network against a timeout that falls back to
+  // the cached copy — the game loads from cache instead of hanging on a dead socket.
+  const fromCache = () => caches.match(req).then((cached) => {
+    if (cached) return cached;
+    if (req.mode === 'navigate') return caches.match('/src/index.html');
+    return Response.error();
+  });
+  const TIMEOUT = req.mode === 'navigate' ? 4000 : 6000;
+  const network = fetch(req).then((res) => {
+    if (res && res.status === 200) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {}); }
+    return res;
+  });
+  const timeout = new Promise((resolve) => setTimeout(() => resolve(fromCache()), TIMEOUT));
+  event.respondWith(Promise.race([network, timeout]).catch(fromCache));
 });

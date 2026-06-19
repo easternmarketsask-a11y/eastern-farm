@@ -337,7 +337,7 @@
       const tw = this._tw(), th = this._th(), W = this._cssW(), H = this._cssH();
       const bg = this._img.hd_bg;
       if (bg && bg.width) {
-        const scale = Math.max(W / bg.width, H / bg.height) * (this._zoom / BG_ZOOM_REF);
+        const scale = Math.max(W / bg.width, H / bg.height) * Math.max(1, this._zoom / BG_ZOOM_REF);
         const dw = bg.width * scale, dh = bg.height * scale;
         // a.x = AX - camX, a.y = AY - camY (camera-independent parts of _cellBg(BG_ANCHOR) —
         // BASE tiles, no farm scale/offset, so the clamp matches the drawn backdrop)
@@ -931,7 +931,7 @@
         // the default framed zoom dh≈1.2×H with the meadow at the farm (~64% screen), so it
         // fully covers; zooming out lets it shrink with the farm → reveals the panorama.
         const a = this._cellBg(BG_ANCHOR_GX, BG_ANCHOR_GY);
-        const scale = Math.max(W / bg.width, H / bg.height) * (this._zoom / BG_ZOOM_REF);
+        const scale = Math.max(W / bg.width, H / bg.height) * Math.max(1, this._zoom / BG_ZOOM_REF);
         const dw = bg.width * scale, dh = bg.height * scale;
         ctx.drawImage(bg, a.x - BG_FX * dw, a.y - BG_FY * dh, dw, dh);
       } else {   // fallback: procedural hills (image not yet loaded)

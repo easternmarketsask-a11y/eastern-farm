@@ -65,7 +65,10 @@
       if (bootDone && !hadSave) _storageBroken = true;
     } catch (_) {}
 
-    // 1. Load data files in parallel
+    // 1. Load data files in parallel. Each loader is wrapped in .catch so a single
+    // failed/hung fetch on a flaky mobile network can NEVER reject the whole boot —
+    // that was leaving the splash up with a dead "进入农场" button (Chris's recurring
+    // "stuck, can't enter"). Each loader already degrades internally on failure.
     await Promise.all([
       Farm.i18n.load(),
       Farm.crops.load(),
@@ -74,7 +77,7 @@
       Farm.epShop.load(),
       Farm.daily.load(),
       Farm.aiNeighbors.load(),
-    ]);
+    ].map(function (p) { return (p && p.catch) ? p.catch(function (e) { console.warn('[boot] a data loader failed (continuing):', e); }) : p; }));
 
     // 1b. 邀请链接：进场就把 ?ref=<会员id> 存下（登录后 applyReferral 发奖）。
     try {
@@ -105,35 +108,42 @@
     // 3b. Live Saskatoon weather chip in the brandbar (cached 30 min)
     if (Farm.weather && Farm.weather.init) Farm.weather.init();
 
-    // 4. Daily tasks
-    Farm.tasks.initDaily();
-    Farm.tasks.updateBadge();
+    // Steps 4-7 are wrapped so a failure in any single subsystem (tasks/events/render/
+    // warehouse/orders/storekeeper) can't stop wireNav/wireSplash below from running —
+    // the splash must ALWAYS become dismissable so the player can enter the game.
+    try {
+      // 4. Daily tasks
+      Farm.tasks.initDaily();
+      Farm.tasks.updateBadge();
 
-    // 5. Festival check
-    Farm.events.check();
+      // 5. Festival check
+      Farm.events.check();
 
-    // 5b. 被偷结算（回家小报）——必须在 renderGrid 前，让农场直接显示被顺后的状态。
-    if (Farm.homeReport) Farm.homeReport.settleOnBoot();
+      // 5b. 被偷结算（回家小报）——必须在 renderGrid 前，让农场直接显示被顺后的状态。
+      if (Farm.homeReport) Farm.homeReport.settleOnBoot();
 
-    // 6. Initial render
-    Farm.ui.refreshHUD();
-    Farm.farm.renderGrid();
-    if (Farm.seasons) Farm.seasons.apply();
-    if (Farm.harvestStatus) Farm.harvestStatus.render();
+      // 6. Initial render
+      Farm.ui.refreshHUD();
+      Farm.farm.renderGrid();
+      if (Farm.seasons) Farm.seasons.apply();
+      if (Farm.harvestStatus) Farm.harvestStatus.render();
 
-    // 6b. Install the floating warehouse button on the farm view
-    if (Farm.warehouse && Farm.warehouse.installButton) {
-      Farm.warehouse.installButton();
+      // 6b. Install the floating warehouse button on the farm view
+      if (Farm.warehouse && Farm.warehouse.installButton) {
+        Farm.warehouse.installButton();
+      }
+
+      // 6c. Buildable map view init is now deferred until after splash dismiss (see wireSplash),
+      // so the entry buttons are guaranteed responsive and no early canvas overlay conflicts.
+
+      // 6d. Seed 小东's order board + show his fillable-order badge
+      if (Farm.orders) { Farm.orders.ensure(); Farm.orders.refreshBadge(); }
+
+      // 7. Storekeeper
+      Farm.storekeeper.refresh();
+    } catch (e) {
+      console.error('[boot] render/init step failed (continuing to wire splash):', e);
     }
-
-    // 6c. Buildable map view init is now deferred until after splash dismiss (see wireSplash),
-    // so the entry buttons are guaranteed responsive and no early canvas overlay conflicts.
-
-    // 6d. Seed 小东's order board + show his fillable-order badge
-    if (Farm.orders) { Farm.orders.ensure(); Farm.orders.refreshBadge(); }
-
-    // 7. Storekeeper
-    Farm.storekeeper.refresh();
 
     // 8. Wire nav buttons + splash. Toast-emitting steps (daily login bonus,
     // retroactive achievement unlocks) are deferred to after splash dismiss
@@ -153,13 +163,25 @@
     wireSplash(() => {
       // Defer the main farm view (iso or map) until after splash, to guarantee
       // splash entry buttons always work and avoid any early overlay conflicts.
-      if (Farm.isoView && Farm.isoView.active && Farm.isoView.active()) {
-        Farm.isoView.init();
-      } else if (Farm.mapView && Farm.mapView.active && Farm.mapView.active()) {
-        Farm.mapView.init();
+      // Guarded: iso init hides the classic DOM grid first, so if it throws the
+      // player would be left on a blank screen (splash already removed). On failure
+      // we re-show the classic grid so there's always a playable view.
+      try {
+        if (Farm.isoView && Farm.isoView.active && Farm.isoView.active()) {
+          Farm.isoView.init();
+        } else if (Farm.mapView && Farm.mapView.active && Farm.mapView.active()) {
+          Farm.mapView.init();
+        }
+      } catch (e) {
+        console.error('[boot] farm view init failed — falling back to classic grid', e);
+        try {
+          ['farmGrid', 'farmDecorations'].forEach(function (id) { var el = document.getElementById(id); if (el) el.style.display = ''; });
+          var sc = document.querySelector('.farm-scene'); if (sc) sc.style.display = '';
+          if (Farm.farm && Farm.farm.renderGrid) Farm.farm.renderGrid();
+        } catch (_) {}
       }
 
-      checkDailyLogin();
+      try { checkDailyLogin(); } catch (e) { console.warn('[boot] checkDailyLogin failed', e); }
       Farm.achievements.checkAll();
       refreshTodayBadge();
       // First-time welcome overlay (3-step). Defer past the daily-login toast
