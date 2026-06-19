@@ -107,9 +107,9 @@
   // unaffected, so this resizes the farm relative to the meadow. FARM_DX/FARM_DY shift the
   // whole farm on screen (pixels at default zoom): +DX → right, +DY → down. Tune these to
   // place the farm exactly on the meadow. (1.0 / 0 / 0 = current look.)
-  const FARM_SCALE = 1.0;     // 0.6 (small) … 1.0 (current) … 1.5 (big)
+  const FARM_SCALE = 0.85;     // 0.6 (small) … 1.0 (current) … 1.5 (big)
   const FARM_DX = 0;          // −150 (left) … 0 … +150 (right), pixels
-  const FARM_DY = 0;          // −150 (up)   … 0 … +150 (down), pixels
+  const FARM_DY = -70;          // −150 (up)   … 0 … +150 (down), pixels
   const PALETTE = ['barn', 'house', 'greenhouse', 'coop', 'stall', 'well', 'tree', 'bush', 'lantern', 'fence', 'wheel', 'bridge'];
   // EP-shop pets → painted iso animal sprites (replaces the emoji pet).
   const ANIMALS = { pet_chick: 'animal_chicken', pet_cat: 'animal_cat', pet_rabbit: 'animal_rabbit', decoration_dog: 'animal_dog', guard_dog: 'animal_dog' };
