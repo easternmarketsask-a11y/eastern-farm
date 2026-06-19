@@ -63,6 +63,7 @@
         Farm.coach.fire('first_coins_exchange', 1200);
       }
       document.getElementById('levelValue').textContent = s.level;
+      const topLvl = document.getElementById('topbarLevel'); if (topLvl) topLvl.textContent = 'Lv ' + s.level;
 
       // Title (e.g. 新手 / 学徒 / 农神 / 萨城传说)
       const titleEl = document.getElementById('titleLabel');
@@ -256,7 +257,10 @@
 
     setTaskBadge(count) {
       const badge = document.getElementById('taskBadge');
-      badge.textContent = count > 0 ? count : '';
+      if (badge) badge.textContent = count > 0 ? count : '';
+      // mirror onto the top-bar hamburger so unclaimed tasks are visible without the bottom nav
+      const nav = document.getElementById('navBadge');
+      if (nav) { nav.textContent = count > 0 ? count : ''; nav.classList.toggle('show', count > 0); }
     },
 
     // Big celebratory modal shown when the player levels up. Shows the level

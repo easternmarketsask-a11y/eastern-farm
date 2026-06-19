@@ -311,7 +311,44 @@
     badge.textContent = pending > 0 ? pending : '';
   }
 
+  // Bottom-sheet nav menu opened by the top-right hamburger (replaces the old bottom bar).
+  function openNavMenu() {
+    const lang = (Farm.state && Farm.state.data && Farm.state.data.language) || 'zh';
+    const items = [
+      { a: 'shop', icon: '🛒', zh: '种子店', en: 'Seeds' },
+      { a: 'tasks', icon: '📋', zh: '任务', en: 'Tasks' },
+      { a: 'orders', icon: '📦', zh: '东超订单', en: 'Orders' },
+      { a: 'community', icon: '🏘', zh: '社区', en: 'Community' },
+      { a: 'store', icon: '🛍️', zh: '农场商城', en: 'Mall' },
+      { a: 'collection', icon: '📖', zh: '图鉴', en: 'Collection' },
+      { a: 'guide', icon: '❓', zh: '怎么玩', en: 'How to' },
+      { a: 'settings', icon: '⚙️', zh: '设置', en: 'Settings' },
+    ];
+    const grid = items.map(it =>
+      '<button class="nav-menu-item" data-nav="' + it.a + '"><span class="nav-menu-icon">' + it.icon +
+      '</span><span class="nav-menu-label">' + (lang === 'en' ? it.en : it.zh) + '</span></button>'
+    ).join('');
+    Farm.ui.showModal('<h2 class="modal-title">📂 ' + (lang === 'en' ? 'Menu' : '菜单') + '</h2><div class="nav-menu-grid">' + grid + '</div>');
+    document.querySelectorAll('#modalContent .nav-menu-item').forEach(btn => {
+      btn.onclick = () => {
+        if (Farm.audio) Farm.audio.play('tap');
+        switch (btn.getAttribute('data-nav')) {
+          case 'shop': Farm.shop.open(); break;
+          case 'tasks': Farm.tasks.open(); break;
+          case 'orders': if (Farm.orders) Farm.orders.open(); break;
+          case 'community': if (Farm.neighbors) Farm.neighbors.open(); break;
+          case 'store': if (Farm.epShop) Farm.epShop.open(); break;
+          case 'collection': openCollection(); break;
+          case 'guide': if (Farm.guide) Farm.guide.open(); break;
+          case 'settings': openSettings(); break;
+        }
+      };
+    });
+  }
+
   function wireNav() {
+    const hb = document.getElementById('hamburgerButton');
+    if (hb) hb.onclick = () => { if (Farm.audio) Farm.audio.play('tap'); openNavMenu(); };
     document.querySelectorAll('.action-btn[data-action]').forEach(btn => {
       const action = btn.dataset.action;
       btn.onclick = () => {

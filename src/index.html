@@ -106,18 +106,24 @@
       <a class="brandbar-logo-link" href="https://easternmarket.ca/" title="访问东方超市官网 · Visit Eastern Market">
         <img class="brandbar-logo" src="assets/images/logo-horizontal.png" alt="东方超市 Eastern Market">
       </a>
-      <span class="brand-sprout">🌱</span>
+      <span class="topbar-level" id="topbarLevel">Lv 1</span>
       <!-- weatherChip injected here by weather.js -->
     </div>
     <div class="topbar-right">
+      <button class="topbar-cur coins currency-tappable" id="coinsCard" title="农场币 — 点开看获取规则与兑换">
+        <span class="icon coin-icon"></span><span class="value" id="coinsValue">100</span>
+      </button>
+      <button class="topbar-cur points currency-tappable" id="pointsCard" title="超市积分 — 点开兑换与积分明细">
+        <span class="icon points-icon"></span><span class="value" id="pointsValue">0</span>
+      </button>
       <div id="memberButton" class="topbar-member-slot"></div>
       <button id="todayButton" class="today-button" title="今日签到 · 活动">
         <span class="today-icon">🌅</span>
-        <span class="today-label">今日</span>
         <span id="todayBadge" class="today-badge"></span>
       </button>
-      <button id="guideButton" class="guide-button guide-button--icon" title="怎么玩 · How to play" aria-label="怎么玩 · How to play" onclick="Farm.guide && Farm.guide.open()">
-        <span class="guide-icon">ⓘ</span>
+      <button id="hamburgerButton" class="hamburger-button" title="菜单 Menu" aria-label="菜单 Menu">
+        <span class="hamburger-icon">☰</span>
+        <span id="navBadge" class="nav-badge"></span>
       </button>
     </div>
   </header>
@@ -129,29 +135,13 @@
   </div>
 
 
-  <!-- Currency + harvest status band: 农场币 on the left, "when are my crops
-       ready" status in the middle, 超市积分 on the right. -->
+  <!-- Floating "when are my crops ready" status pill — overlays the top of the farm
+       (currencies moved into the top bar; this no longer takes a layout row). -->
   <div id="harvestStatusBar" class="harvest-status-bar">
-    <button class="currency coins currency-tappable" id="coinsCard" title="农场币 — 点开看获取规则与兑换">
-      <div class="currency-row">
-        <span class="icon coin-icon"></span>
-        <span class="value" id="coinsValue">100</span>
-        <span class="currency-chevron">›</span>
-      </div>
-      <div class="label">农场币 · Coin</div>
-    </button>
     <div class="harvest-status-center" id="harvestStatusCenter">
       <span class="harvest-status-text" id="harvestStatusText"></span>
       <button class="btn harvest-status-btn hidden" id="harvestStatusBtn"></button>
     </div>
-    <button class="currency points currency-tappable" id="pointsCard" title="超市积分 — 点开兑换与积分明细">
-      <div class="currency-row">
-        <span class="icon points-icon"></span>
-        <span class="value" id="pointsValue">0</span>
-        <span class="currency-chevron">›</span>
-      </div>
-      <div class="label">超市积分 · Points</div>
-    </button>
   </div>
 
   <!-- Main farm view -->
