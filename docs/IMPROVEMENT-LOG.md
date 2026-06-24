@@ -537,6 +537,25 @@ harvest() 和 social-steal settle 都调它。彻底消除发散。
 > 进度：经济/交付/打理/社交奖励四大「发币」子系统全部审计 sound；加上此前修掉的
 > tasks/成就/存档/签到/顺菜 5 个逻辑 bug。剩余仅小型 UI/引导辅助
 > （tutorial/coach/spotlight/home-report 等），低风险。下一步审引导（与留存相关）。
+
+---
+
+### 迭代 #19 — 引导（tutorial/coach）+ 全量 i18n key 校验：**未发现可改项**
+
+- **coach.js**（just-in-time 提示）：`fire()` 查 seen + spotlight 进行时不抢话；
+  `tip()` 延迟后**再次查 seen 并标记**，故快速重复 fire 也只显示一次（幂等）。
+  一生一次、存档记 coachSeen。正确。
+- **tutorial.js**（首跑欢迎）：`tutorialV1Done` + `cropsEverGrown` 空双重门
+  （老存档静默标记 done），开始后交棒 spotlight。正确。
+- **全量 i18n key 校验**：扫全部 `i18n.t('key')` 调用——**62 个被引用的 key
+  全部存在**于 i18n.json（共定义 105 个）。**无任何缺 key**——首跑玩家不会看到
+  `tutorial_step1_title` 这种生 key。
+
+**无 bug。** 引导逻辑健全，i18n 完整。
+
+> 至此高/中价值面已**全面审计**：经济/社交/引导 sound；数据/逻辑层修了 6 个真 bug。
+> 剩余仅极小型展示辅助（weather/seasons/spotlight/share/home-report 等）。
+> **已非常接近「无改善空间」**。继续逐一扫尾，clean 就如实记。
 - [ ] **维度 8（取景）**：农场默认取景偏空旷——先出对比截图再议（业主刻意调过）。
 - [ ] **维度 9（音频）**：音效齐全度 / 音量协调（需实机听）。
 - [ ] **健壮性**：通读一遍 console 错误（注入错误监听器后跑核心流程截图）。
