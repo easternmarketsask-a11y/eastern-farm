@@ -17,6 +17,8 @@
         // 02-11→03-02 window was ~2 weeks too late and missed the festival
         // entirely. Window follows the others: 14 days before → 6 days after.
         { start: '2028-01-12', end: '2028-02-01' },
+        { start: '2029-01-30', end: '2029-02-19' },   // CNY 2029-02-13 (Rooster)
+        { start: '2030-01-20', end: '2030-02-09' },   // CNY 2030-02-03 (Dog)
       ],
       decorations: '🏮',
     },
@@ -27,6 +29,8 @@
         { start: '2026-09-19', end: '2026-09-29' },
         { start: '2027-09-08', end: '2027-09-18' },
         { start: '2028-09-27', end: '2028-10-07' },
+        { start: '2029-09-16', end: '2029-09-26' },   // Mid-Autumn 2029-09-22
+        { start: '2030-09-06', end: '2030-09-16' },   // Mid-Autumn 2030-09-12
       ],
       decorations: '🌕',
     },
