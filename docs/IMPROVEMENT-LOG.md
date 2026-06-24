@@ -519,6 +519,24 @@ harvest() 和 social-steal settle 都调它。彻底消除发散。
 > 改 id 反而有破坏存档里已拥有道具引用的风险。留给 Chris 决定是否重命名。
 
 经济(×2)+打理 三轮审计均 sound。下一步审最大的未审子系统 neighbors.js(918 行)。
+
+---
+
+### 迭代 #18 — 邻居社交奖励（走访/点赞/帮浇水/贴纸）审计：**未发现可改项**
+
+审 neighbors.js（918 行，最大未审）+ aiNeighbors.interact 的奖励/封顶逻辑：
+- **走访 +40**：`claimNeighborVisit` 去重（已访返回 false），奖励门 `length===3`
+  恰好一次——需 3 个**不同**邻居，重访同一户不计。无白嫖、无重复发。
+- **点赞 +5 / 帮浇水 +10 / 贴纸 +2**：按钮 onclick **先 disabled** 防连点，失败
+  才回enable；**权威封顶 + 去重在 `interact()` 里**（赞 5/帮 5/贴 10 per day +
+  per-target 去重），不只靠 UI 禁用。即便 UI 失效，interact 仍挡超领。
+- 计数写入 `dailyClaims.likesSentToday/helpSentToday/stickersSentToday`，每日重置。
+
+**无功能 bug。** 社交奖励经济封顶/去重正确。
+
+> 进度：经济/交付/打理/社交奖励四大「发币」子系统全部审计 sound；加上此前修掉的
+> tasks/成就/存档/签到/顺菜 5 个逻辑 bug。剩余仅小型 UI/引导辅助
+> （tutorial/coach/spotlight/home-report 等），低风险。下一步审引导（与留存相关）。
 - [ ] **维度 8（取景）**：农场默认取景偏空旷——先出对比截图再议（业主刻意调过）。
 - [ ] **维度 9（音频）**：音效齐全度 / 音量协调（需实机听）。
 - [ ] **健壮性**：通读一遍 console 错误（注入错误监听器后跑核心流程截图）。
