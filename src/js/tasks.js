@@ -57,11 +57,12 @@
           if (t.type === 'plant') t.progress++;
           if (t.type === 'plant_specific' && t.cropId === cid) t.progress++;
           if (t.type === 'plant_new') {
-            // "first time growing this crop"
-            const grown = Farm.state.data.cropsEverGrown;
-            // We added it just before this in recordPlant; check if it was newly added
-            // Heuristic: if cropsEverGrown has it and progress<target, count once
-            if (grown.includes(cid) && grown.indexOf(cid) === grown.length - 1) {
+            // Count ONLY a genuinely-new crop. The caller passes `isNew` from
+            // crops.plant's pre-recordPlant check. (The old heuristic compared
+            // against the last element of cropsEverGrown, which also matched a
+            // replant of the most-recently-discovered crop — letting "try a new
+            // crop" complete without trying anything new.)
+            if (payload && payload.isNew === true) {
               t.progress = Math.min(t.target, t.progress + 1);
             }
           }

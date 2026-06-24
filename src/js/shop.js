@@ -178,7 +178,10 @@
           if (Farm.harvestStatus) Farm.harvestStatus.render();
           const def = Farm.crops.get(cropId);
           if (Farm.audio) Farm.audio.play('plant');
-          if (Farm.tasks) Farm.tasks.onEvent('plant', { cropId });
+          // Pass the authoritative "first time in collection" flag (computed in
+          // crops.plant BEFORE recordPlant) so the "try a new crop" task counts
+          // only genuinely-new crops — not a replant of the most-recent one.
+          if (Farm.tasks) Farm.tasks.onEvent('plant', { cropId, isNew: result.isNewToCollection });
 
           if (isFirstPlantEver) {
             Farm.state.data.firstPlantCelebrated = true;
