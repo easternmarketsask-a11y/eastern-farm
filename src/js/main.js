@@ -654,26 +654,21 @@
     `;
     Farm.ui.showModal(html);
 
-    document.getElementById('langZh').onclick = () => {
-      Farm.state.data.language = 'zh';
+    const applyLanguage = (lang) => {
+      Farm.state.data.language = lang;
       Farm.state.save();
-      Farm.i18n.setLanguage('zh');
+      Farm.i18n.setLanguage(lang);
       Farm.ui.refreshHUD();
       Farm.farm.renderGrid();
+      // The iso map is a canvas overlay the DOM grid render never touches —
+      // refresh its Build button / palette / mode-tab labels too.
+      if (Farm.isoView && Farm.isoView.relang) Farm.isoView.relang();
       Farm.events.check();
       Farm.storekeeper.refresh();
       openSettings();
     };
-    document.getElementById('langEn').onclick = () => {
-      Farm.state.data.language = 'en';
-      Farm.state.save();
-      Farm.i18n.setLanguage('en');
-      Farm.ui.refreshHUD();
-      Farm.farm.renderGrid();
-      Farm.events.check();
-      Farm.storekeeper.refresh();
-      openSettings();
-    };
+    document.getElementById('langZh').onclick = () => applyLanguage('zh');
+    document.getElementById('langEn').onclick = () => applyLanguage('en');
     document.getElementById('soundOn').onclick = () => {
       if (Farm.audio) {
         Farm.audio.setMuted(false);

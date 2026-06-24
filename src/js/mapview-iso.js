@@ -708,6 +708,21 @@
       this._refreshModeUI(); this._layoutUI();
     },
     _zoomBy(f) { this._zoomAt(this._cssW() / 2, this._cssH() / 2, this._zoom * f); },
+    // Re-render all language-dependent map UI in the CURRENT language. The map
+    // is a canvas overlay, so the DOM-grid renderGrid() that the settings
+    // language toggle calls never reaches it — without this, the Build button,
+    // palette labels and mode tabs stay in the old language until a reload.
+    // _buildUI() appends (not idempotent), so tear down its elements first;
+    // mode/zoom/camera state lives on `this` and survives the rebuild.
+    relang() {
+      if (!this._on) return;   // map inactive → next init() builds it fresh in the right language
+      [this._buildBtn, this._palette, this._hint, this._zoomUI].forEach((el) => { if (el && el.remove) el.remove(); });
+      if (this._buildPulse && this._buildPulse.cancel) { try { this._buildPulse.cancel(); } catch (e) {} }
+      this._buildBtn = this._palette = this._hint = this._zoomUI = null;
+      this._modeTabs = this._palBuild = this._palTerrain = null;
+      this._buildUI();   // rebuilds in current language; _refreshModeUI()+_layoutUI() restore the mode
+      this.render();
+    },
     _layoutUI() {
       const r = this._farmRect(), fromBottom = Math.max(0, window.innerHeight - (r.top + r.height)), en = this._lang() === 'en';
       if (this._zoomUI) {
