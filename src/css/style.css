@@ -3760,6 +3760,9 @@ body.mapmode #warehouseBtn { display: none !important; }
 }
 
 /* ============ PWA install banner (pwa-install.js) ============ */
+/* Hide the install banner while a modal is open — it sits at z-index 9000 and
+   would otherwise overlap the modal's bottom content. It returns on close. */
+body.modal-open .pwa-install-banner { display: none; }
 .pwa-install-banner {
   position: fixed;
   left: 50%;

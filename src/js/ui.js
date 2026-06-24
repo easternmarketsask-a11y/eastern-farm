@@ -115,6 +115,10 @@
       // reachable without scroll, matches universal close-affordance.
       content.innerHTML = '<button class="modal-close-x" aria-label="关闭 Close">✕</button>' + html;
       modal.classList.remove('hidden');
+      // Mark the body so persistent fixed overlays (e.g. the PWA install banner,
+      // z-index 9000) can hide themselves while a modal is open — otherwise they
+      // float on top of the modal's bottom content.
+      document.body.classList.add('modal-open');
       // Click backdrop to close
       modal.querySelector('.modal-backdrop').onclick = () => this.hideModal();
       // ✕ button click
@@ -129,6 +133,7 @@
 
     hideModal() {
       document.getElementById('modal').classList.add('hidden');
+      document.body.classList.remove('modal-open');
       if (this._escHandler) {
         document.removeEventListener('keydown', this._escHandler);
         this._escHandler = null;
