@@ -41,6 +41,30 @@
     return ((window.Farm && Farm.state && Farm.state.data && Farm.state.data.language) || 'zh') === 'en';
   }
 
+  // Don't nag a brand-new player to "install" before they've felt any value —
+  // that's a textbook first-run anti-pattern. Wait for a win moment: the player
+  // has harvested at least once, OR is a returning visitor (login streak ≥ 2).
+  // This delays the prompt by seconds for first-timers (it fires right after
+  // their first harvest) while still surfacing it for everyone engaged. The
+  // module stays self-contained — it only READS Farm.state, never wires into it.
+  function engaged() {
+    try {
+      const d = window.Farm && Farm.state && Farm.state.data;
+      if (!d) return false;
+      return (d.totalHarvests || 0) > 0 || d.firstHarvestCelebrated === true || (d.loginStreak || 0) >= 2;
+    } catch (e) { return false; }
+  }
+  // Run `cb` as soon as the player is engaged; poll cheaply until then, and
+  // give up after ~10 min so we never leave a dangling interval.
+  function whenEngaged(cb) {
+    if (engaged()) { cb(); return; }
+    let tries = 0;
+    const iv = setInterval(() => {
+      if (engaged()) { clearInterval(iv); cb(); }
+      else if (++tries > 120) { clearInterval(iv); }
+    }, 5000);
+  }
+
   function showBanner(innerHTML, onAction) {
     if (document.getElementById('pwaInstallBanner')) return;
     const el = document.createElement('div');
@@ -60,6 +84,8 @@
     e.preventDefault();
     deferredPrompt = e;
     if (isStandalone() || dismissed()) return;
+    whenEngaged(() => {
+    if (isStandalone() || dismissed() || !deferredPrompt) return;
     showBanner(
       '<span class="pwa-install-text">' +
         (en() ? '🌱 Add Eastern Farm to your home screen' : '🌱 把东方农场加到主屏幕，每天玩更方便') +
@@ -76,6 +102,7 @@
         if (banner) banner.remove();
       }
     );
+    });
   });
 
   // Environment-aware "add to home screen" guide (iOS has no install event).
@@ -115,5 +142,5 @@
     );
   }
 
-  window.addEventListener('load', () => { setTimeout(maybeShowGuide, 2500); });
+  window.addEventListener('load', () => { setTimeout(() => whenEngaged(maybeShowGuide), 2500); });
 })();

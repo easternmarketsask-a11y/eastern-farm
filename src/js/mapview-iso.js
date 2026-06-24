@@ -586,7 +586,7 @@
         if (Farm.ui && Farm.ui.refreshHUD) Farm.ui.refreshHUD();
         this._refreshPaletteAfford();
         const charm = charmOf(b), c = this._cell(gx + (b.w - 1) / 2, gy + (b.h - 1) / 2), r = this._cv.getBoundingClientRect();
-        if (Farm.ui && Farm.ui.floatText) Farm.ui.floatText('✨+' + charm + ' 魅力', r.left + c.x - 20, r.top + c.y - this._th() * 2, '#e8a020');
+        if (Farm.ui && Farm.ui.floatText) Farm.ui.floatText('✨+' + charm + (en ? ' charm' : ' 魅力'), r.left + c.x - 20, r.top + c.y - this._th() * 2, '#e8a020');
         if (Farm.audio) Farm.audio.play('coin');
         if (Farm.ui && Farm.ui.toast) Farm.ui.toast(en ? ('Placed ' + b.en + ' (-' + cost + ' coins) — drag to move') : ('已建' + b.zh + '（-' + cost + ' 农场币）拖动可移动'));
         return;
