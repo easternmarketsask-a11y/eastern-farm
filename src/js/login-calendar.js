@@ -127,7 +127,20 @@
       const cal = Farm.state.data.loginCalendar;
       const today = Farm.state.getDateString();
       const alreadySignedToday = cal.lastSignDate === today;
-      const dayIndex = cal.dayIndex || 0;  // days claimed so far in this cycle
+      const rawDayIndex = cal.dayIndex || 0;
+      // Mirror state.signTodayCalendar()'s streak logic so the calendar PREVIEW
+      // matches what today's claim will actually grant. A claim only CONTINUES
+      // the streak when yesterday was signed and we're mid-cycle (days 1-6); a
+      // gap or a just-completed 7-day cycle restarts at day 1. Rendering off the
+      // raw stored dayIndex showed phantom states — "Day 8 ready" with all cells
+      // ticked after a finished week, or "Day 4 ready" right before a gap reset
+      // that actually grants Day 1.
+      const yesterday = Farm.state.getDateString(new Date(Date.now() - 86400000));
+      let dayIndex = rawDayIndex;  // days already completed in the cycle being shown
+      if (!alreadySignedToday) {
+        const continues = cal.lastSignDate === yesterday && rawDayIndex >= 1 && rawDayIndex < 7;
+        if (!continues) dayIndex = 0;   // gap or completed cycle → fresh week, day 1 claimable
+      }
 
       const cells = REWARDS.map((r, idx) => {
         const dayNum = idx + 1;
