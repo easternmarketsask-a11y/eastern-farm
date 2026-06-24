@@ -182,9 +182,11 @@
         const def = Farm.crops.get(p.crop);
         if (p.harvestsLeft > 1 && def) {
           p.harvestsLeft -= 1;
-          const regrowMs = (def.regrow_minutes || def.grow_minutes) * 60000;
-          p.plantedAt = Date.now() - (def.grow_minutes * 60000 - regrowMs);
-          p.watered = false; p.fertilized = false;
+          // Use the canonical regrow math (divides by THIS player's growMultiplier).
+          // The old inline formula omitted that division, so a victim with a
+          // greenhouse/well had stolen multi-harvest crops regrow INSTANTLY mature.
+          Farm.crops.startRegrowCycle(p, def);
+          p.fertilized = false;
         } else {
           p.crop = null; p.plantedAt = 0; p.harvestsLeft = 0; p.watered = false; p.fertilized = false;
         }

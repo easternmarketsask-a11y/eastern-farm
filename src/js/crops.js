@@ -209,14 +209,9 @@
       const weekendMultiplier = weekMul;  // kept for backwards compat with farm.js toast logic
 
       if (plot.harvestsLeft > 0) {
-        // Multi-harvest crop: restart so the next maturity is `regrow_minutes` away.
-        // getStage matures at grow_minutes / growMultiplier(), so the pre-set elapsed
-        // offset must ALSO be divided by the multiplier — otherwise a greenhouse/well
-        // (mult > 1) makes the offset exceed the (shrunken) threshold → instant regrow.
-        const mult = this.growMultiplier() || 1;
-        const regrowMin = (def.regrow_minutes || def.grow_minutes);
-        plot.plantedAt = Date.now() - Math.max(0, (def.grow_minutes - regrowMin)) * 60000 / mult;
-        plot.watered = false;   // new regrow cycle: waterable again (打理系统)
+        // Multi-harvest crop: restart the regrow timer (shared so the steal-settle
+        // path can't drift from this math — see startRegrowCycle).
+        this.startRegrowCycle(plot, def);
       } else {
         // Done: clear plot
         plot.crop = null;
@@ -261,6 +256,20 @@
       const shaved = remainMs * frac;
       plot.plantedAt -= shaved;   // more elapsed → less remaining (× (1-frac))
       return shaved;
+    },
+
+    // Restart a multi-harvest plot's growth so the next maturity is `regrow_minutes`
+    // away. SINGLE source of this math — both the normal harvest() and the
+    // real-member steal-settle path (social-steal.js) call it, so a greenhouse/well
+    // owner's regrow timing stays correct in both. getStage matures at
+    // grow_minutes / growMultiplier(), so the pre-set elapsed offset MUST also be
+    // divided by the multiplier, else mult>1 makes the offset exceed the (shrunken)
+    // threshold → instant regrow. Caller decrements harvestsLeft first.
+    startRegrowCycle(plot, def) {
+      const mult = this.growMultiplier() || 1;
+      const regrowMin = (def.regrow_minutes || def.grow_minutes);
+      plot.plantedAt = Date.now() - Math.max(0, (def.grow_minutes - regrowMin)) * 60000 / mult;
+      plot.watered = false;   // new regrow cycle: waterable again (打理系统)
     },
 
     formatTimeRemaining(ms) {

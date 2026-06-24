@@ -469,6 +469,36 @@ signTodayCalendar 的连签判定——只有「昨天签过且在周中(1-6)」
 
 > 经济子系统（兑换/商城/抽奖/交付/订单）连续两轮审计均 sound。这是全代码库最严谨
 > 的部分。转向 bug 概率更高的复杂子系统（顺菜 social-steal / 邻居）。
+
+---
+
+### 迭代 #16 — 顺菜系统：多茬作物再生公式重复且发散（真 bug）
+
+**核实**（审最复杂未审子系统 social-steal.js，313 行）：caps（6/日、2/户、新手
+保护、看家狗概率/赔礼、LOST_DAILY_MAX 受害封顶）、防重放（plantedAt 方向比较）、
+仅熟可偷——这套反作弊/反 grief 逻辑**很扎实**。但发现**真 bug**：
+
+多茬作物的「再生」公式在**两处重复且发散**（违反 CLAUDE.md 铁律#2 单一模板）：
+- crops.js harvest（权威）：`plantedAt = now - max(0, grow-regrow)*60000 / mult`
+  ——**除以 growMultiplier**，注释明说不除会让温室/水井作物「瞬间再生」。
+- social-steal.js settle（line 186）：`now - (grow*60000 - regrowMs)`——
+  **没除 mult、没 Math.max**。
+
+后果：真会员被顺走多茬作物（如韭菜）后回家结算时，**若受害者有温室/水井
+（mult>1）**，被顺的那茬会**瞬间又变成熟**而非按时再生——正是 crops.js 修过、
+social-steal 没继承的同一个 bug。
+
+**修复（DRY）**：把再生数学抽成 `crops.startRegrowCycle(plot, def)` 单一来源，
+harvest() 和 social-steal settle 都调它。彻底消除发散。
+
+**验证**：
+- `node --check` 三文件通过；**errsweep 收获路径 0 错 0 warning**（重构未破坏收获）。
+- 定向 CDP（3 温室 mult=1.6，韭菜 grow120/regrow45）：修复后 newStage=**1**（仍在
+  再生，正确）；旧公式 oldStage=**2**（瞬间成熟，bug）。
+- 复杂子系统命中真 bug，印证「转向高复杂度子系统」的判断。
+
+**影响范围**：再生数学统一到一处（harvest + 顺菜结算）；修正温室受害者的多茬瞬熟。
+不碰经济数值/存档结构。
 - [ ] **维度 8（取景）**：农场默认取景偏空旷——先出对比截图再议（业主刻意调过）。
 - [ ] **维度 9（音频）**：音效齐全度 / 音量协调（需实机听）。
 - [ ] **健壮性**：通读一遍 console 错误（注入错误监听器后跑核心流程截图）。
