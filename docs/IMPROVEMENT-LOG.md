@@ -378,6 +378,35 @@ check 类型（stat/level/crops_set/festival_harvests），代码干净。把 12
 **影响范围**：一行成就数据 id 修正；不碰引擎/存档。10 EP 成就恢复可解锁。
 
 > 又一个深审才现形的真 bug。继续 daily / login-calendar / tutorial / coach。
+
+---
+
+### 迭代 #12 — 存档迁移漏了 cropsEverGrown（图鉴/成就历史不迁移）
+
+**核实**（全库扫描 qingcai/chili/garlic 失效 id 后顺藤摸到迁移逻辑）：
+- crop-art.js 同时有新 id（shanghai_miao/niu_jiao_jiao/suan_tai）和旧 id
+  （qingcai/chili/garlic）渲染函数——改名作物有正确美术，旧函数是死代码（无害，
+  不动）。
+- **真 bug**：`state.migrateCrops()` 迁移了 plots 和 seeds 的别名改名
+  （qingcai→shanghai_miao），但**完全没碰 `cropsEverGrown`**（终身图鉴/发现历史）。
+  老存档里的 `qingcai` 永远是孤儿 → 既不计入蔬菜图鉴，也不计入 crops_set 成就
+  （刚修的八仙过海）。老玩家得**重新种**改名后的作物才有 credit。
+
+**修复**：`src/js/state.js` migrateCrops 增加 cropsEverGrown 迁移——按同一 aliasMap
+改名 + 去重（防 qingcai 与 shanghai_miao 同时存在产生重复）。新增 renamedHistory
+计数，并入日志与返回值。**只用已文档化的 qingcai→shanghai_miao 别名，不加 chili/
+garlic 的推测别名**（那两个映射是推断的，错误别名比留孤儿更糟）。
+
+**验证**（CDP）：输入 `[qingcai,tomato,shanghai_miao,cilantro]` →
+`[shanghai_miao,tomato,cilantro]`（改名 + 与已有 shanghai_miao 去重），
+renamedHistory:1。符合预期。
+
+**影响范围**：仅老存档迁移路径多迁一个字段；新存档无影响；不碰经济/UI。
+「存档神圣」原则下的正确性修复。
+
+> 死数据备注：`data/tasks.json` 同样**未被运行时读取**（tasks.js 硬编码模板），
+> 里面也有 qingcai/chili 失效 id，但不影响 live，故不动（避免动无用文件加噪声）。
+> 与 data/events.json 同属「日后接线前需校正」的死数据。
 - [ ] **维度 8（取景）**：农场默认取景偏空旷——先出对比截图再议（业主刻意调过）。
 - [ ] **维度 9（音频）**：音效齐全度 / 音量协调（需实机听）。
 - [ ] **健壮性**：通读一遍 console 错误（注入错误监听器后跑核心流程截图）。

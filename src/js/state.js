@@ -491,16 +491,31 @@
         }
       }
       this.data.seeds = newSeeds;
+      // Also migrate the lifetime discovery list, so a renamed crop
+      // (qingcai → shanghai_miao) still counts toward the 蔬菜图鉴 collection
+      // and crops_set achievements (e.g. 八仙过海). Without this, an old save's
+      // 'qingcai' lingers as an orphan and the player would have to re-grow the
+      // renamed crop to get credit. Rename via the same aliasMap + dedupe.
+      let renamedHistory = 0;
+      if (Array.isArray(this.data.cropsEverGrown)) {
+        const seen = new Set();
+        this.data.cropsEverGrown = this.data.cropsEverGrown.reduce((acc, id) => {
+          const mapped = aliasMap[id] || id;
+          if (mapped !== id) renamedHistory++;
+          if (!seen.has(mapped)) { seen.add(mapped); acc.push(mapped); }
+          return acc;
+        }, []);
+      }
       // If the player ends up with no seeds at all (e.g. only had tomato),
       // gift the standard 3 starter crops so the game stays playable
       if (Object.keys(this.data.seeds).length === 0) {
         this.data.seeds = { shanghai_miao: 3, xiao_cong: 2, cilantro: 2 };
       }
-      if (cleanedPlots || renamedPlots || cleanedSeeds) {
-        console.log('[migration] plots cleared:', cleanedPlots, 'renamed:', renamedPlots, 'seed types removed:', cleanedSeeds);
+      if (cleanedPlots || renamedPlots || cleanedSeeds || renamedHistory) {
+        console.log('[migration] plots cleared:', cleanedPlots, 'renamed:', renamedPlots, 'seed types removed:', cleanedSeeds, 'history renamed:', renamedHistory);
         this.save();
       }
-      return { cleanedPlots, renamedPlots, cleanedSeeds };
+      return { cleanedPlots, renamedPlots, cleanedSeeds, renamedHistory };
     },
 
     // ============ Mutators (all auto-save) ============
