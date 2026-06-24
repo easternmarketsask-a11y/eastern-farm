@@ -13,7 +13,10 @@
       windows: [
         { start: '2026-02-03', end: '2026-02-23' },
         { start: '2027-01-23', end: '2027-02-12' },
-        { start: '2028-02-11', end: '2028-03-02' },
+        // Chinese New Year 2028 is Jan 26 (Year of the Monkey) — the old
+        // 02-11→03-02 window was ~2 weeks too late and missed the festival
+        // entirely. Window follows the others: 14 days before → 6 days after.
+        { start: '2028-01-12', end: '2028-02-01' },
       ],
       decorations: '🏮',
     },
