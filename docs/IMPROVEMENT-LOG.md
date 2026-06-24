@@ -499,6 +499,26 @@ harvest() 和 social-steal settle 都调它。彻底消除发散。
 
 **影响范围**：再生数学统一到一处（harvest + 顺菜结算）；修正温室受害者的多茬瞬熟。
 不碰经济数值/存档结构。
+
+---
+
+### 迭代 #17 — 打理（浇水/施肥）+ 道具计数审计：**未发现可改项**
+
+审 tending.js 与 activeEffects 计数：
+- **浇水**：canWater（有菜/未浇/未熟）守卫正确；speedUp(-20%) 走刚统一的
+  crops.speedUp；`watered` 标志在 startRegrowCycle 里复位（与迭代#16 一致）。无重复浇水。
+- **施肥**：canFertilize（有菜/未施/有库存）+ 扣 1 charge + 标记本块，`fertilized`
+  在收获/再生时复位。无重复施肥、无负库存。
+- **跨模块计数一致性**：化肥(化肥 id=fertilizer_pro)→`fertilizerCharges`、
+  催熟剂(id=fertilizer)→`accelerationCharges`，**stock_key 与各自效果对得上**
+  （催熟=加速、化肥=×2 产量，语义正确）；登录日历/EP 商城都写同一套 key。
+  `bumperCharges` 是废弃字段，有幂等迁移到 fertilizerCharges。读写一致，**无功能 bug**。
+
+> 低优先备注（不自动改）：EP 商城里「催熟剂」的内部 **id 叫 `fertilizer`** 但实为
+> 加速道具——纯命名误导，无任何 id-based 行为查找依赖它（行为只看 stock_key），
+> 改 id 反而有破坏存档里已拥有道具引用的风险。留给 Chris 决定是否重命名。
+
+经济(×2)+打理 三轮审计均 sound。下一步审最大的未审子系统 neighbors.js(918 行)。
 - [ ] **维度 8（取景）**：农场默认取景偏空旷——先出对比截图再议（业主刻意调过）。
 - [ ] **维度 9（音频）**：音效齐全度 / 音量协调（需实机听）。
 - [ ] **健壮性**：通读一遍 console 错误（注入错误监听器后跑核心流程截图）。
