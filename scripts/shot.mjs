@@ -59,6 +59,16 @@ const sleep = (ms) => new Promise(r => setTimeout(r, ms));
     width: +width, height: +height, deviceScaleFactor: 2, mobile: true,
   });
   await call('Page.navigate', { url });
+  // The app pre-caches the entire JS shell in a service worker, so a plain
+  // reload serves STALE code — Network.setBypassServiceWorker isn't reliable for
+  // <script> subresources. Nuke caches + unregister the SW, then hard-reload so
+  // we always screenshot the CURRENT source on disk.
+  await sleep(1800);
+  await call('Runtime.evaluate', {
+    expression: `(async()=>{try{const ks=await caches.keys();await Promise.all(ks.map(k=>caches.delete(k)));const rs=await navigator.serviceWorker.getRegistrations();await Promise.all(rs.map(r=>r.unregister()));}catch(e){}})()`,
+    awaitPromise: true,
+  }).catch(() => {});
+  await call('Page.reload', { ignoreCache: true }).catch(() => {});
   await sleep(+waitMs);
 
   if (evalJsFile && fs.existsSync(evalJsFile)) {

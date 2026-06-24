@@ -122,10 +122,43 @@ Lv9 作物（春笋 65、枇杷 68 仍更强，保留梯度多样性）。单数
 
 ---
 
+### 迭代 #3 — 2026-06-24 · a11y（语言属性 + 图标按钮）+ 内容完整度
+
+**观察 / 核实**：
+- **维度 10（内容）**：35 种作物**全部**有完整双语 `name/icon/story/recipe`，
+  内容深度健康。维度 10 上调为 🟢。
+- **维度 7（a11y）**：审计 index.html 所有按钮 + 图片 alt + 页面级属性。发现：
+  - **真问题**：`<html lang="zh-CN">` **写死**，切英文时不更新 → 读屏软件会用
+    中文发音规则念英文 UI。i18n.setLanguage 从不同步 documentElement.lang。
+  - **真问题**：`#todayButton` 仅 🌅 emoji，无可访问名（读屏只会念「sunrise」）。
+  - 其余健康：汉堡按钮已有 aria-label、底部导航有可见文字标签、弹窗 ✕ 有 aria-label、
+    logo 有 alt、装饰背景图正确用 `alt=""`。金币/积分卡有 `title`+可见数值（给它们
+    加 aria-label 反而会**盖掉数值**，故不动）。
+
+**修复**：
+1. `src/js/i18n.js` — `setLanguage()` 同步 `document.documentElement.lang`
+   （en → `en`，zh → `zh-CN`），try/catch 包裹。
+2. `src/index.html` — `#todayButton` 加 `aria-label`（双语），🌅 加 `aria-hidden`。
+3. `scripts/shot.mjs` — 截图前**清 SW 缓存 + 注销 SW + 硬刷新**。教训：
+   `Network.setBypassServiceWorker` **不可靠**地绕过 `<script>` 子资源，本游戏整壳
+   预缓存会让截图测到**旧代码**（本轮先踩坑：lang 改了但测到旧 setLanguage）。
+   现在每次截图都测当前源码。
+
+**验证**：`node --check` i18n.js / shot.mjs 通过。CDP 运行时核对：清 SW 后
+`setLanguage('en')` → `documentElement.lang==='en'`，`setLanguage('zh')` → `zh-CN`，
+新代码确认加载。英文模式整屏截图正常渲染。
+
+**影响范围**：附加式 a11y（lang 属性 + 1 个 aria-label）+ 测试工具增强；不碰
+游戏逻辑 / API / 存档。
+
+> 顺手发现（留待下轮）：iso 地图右下「建造」按钮在英文模式仍是中文——未译。
+
+---
+
 ### 下一轮候选（按优先级）
 
-- [ ] **维度 7（a11y）**：给纯图标按钮补 `aria-label`（顶栏金币/积分/汉堡、
-      弹窗 ✕ 已有）。可验证、附加式、低风险。
+- [ ] **i18n 续**：iso 地图「建造」编辑模式按钮英文模式未译（mapview-iso.js）。
+      已发现，核实后修。
 - [ ] **维度 8（取景）**：评估农场默认取景是否过空（_autoFrame 对小农场是否取景
       过松）——谨慎，业主刻意调过，先出截图对比再议。
 - [ ] **维度 9（音频）**：核对音效是否齐全、音量是否协调（需实机听，难无头验证）。

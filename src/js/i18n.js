@@ -33,6 +33,13 @@
 
     setLanguage(lang) {
       this.language = lang === 'en' ? 'en' : 'zh';
+      // Keep the document language in sync so screen readers pick the right
+      // pronunciation (the page ships as zh-CN; an English UI must say so).
+      try {
+        if (document.documentElement) {
+          document.documentElement.lang = this.language === 'en' ? 'en' : 'zh-CN';
+        }
+      } catch (e) {}
       this.applyAll();
     },
 
