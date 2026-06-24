@@ -352,6 +352,32 @@ live↔data 一致性脚本：两节日各 5 窗口（2026-2030）**全部 IN SY
 
 > 教训：「收官」别下太早——深入未审子系统又抓到一个真 bug。继续审 achievements /
 > daily / tutorial。
+
+---
+
+### 迭代 #11 — 成就系统：「八仙过海」永久无法解锁
+
+**核实**（审 achievements.js + achievements.json 对照引擎）：引擎支持 4 种
+check 类型（stat/level/crops_set/festival_harvests），代码干净。把 12 个成就逐条
+对照数据核查：
+- 所有 check.type 都受支持 ✓
+- 4 个 stat key（totalHarvests/maxStreak/totalCouponsRedeemed/totalTasksClaimed）
+  都是真 state 字段 ✓
+- **真 bug**：唯一的 `crops_set` 成就 `try_all_main`（八仙过海/Variety Pack，
+  10 EP）的 8 个作物 id 里有 **3 个不存在**：`qingcai`（已改名 shanghai_miao）、
+  `chili`、`garlic`。crops_set 要求**全部** id 都在 cropsEverGrown，而这 3 个永远
+  种不出来 → **该成就永久无法解锁**。
+
+**修复**：`data/achievements.json` — 把 3 个失效 id 换成当前等价作物（唯一无歧义
+的选择）：`qingcai→shanghai_miao`、`chili→niu_jiao_jiao`(牛角椒，唯一辣椒类)、
+`garlic→suan_tai`(蒜苔，唯一大蒜类)。保持「8 种常规作物」原意。
+
+**验证**：JSON 合法；重审 crops_set id 全部存在；CDP 端到端——种齐 8 种 →
+`try_all_main` 解锁 `true`；只种 7/8 → 保持 `false`（正确要求集齐）。
+
+**影响范围**：一行成就数据 id 修正；不碰引擎/存档。10 EP 成就恢复可解锁。
+
+> 又一个深审才现形的真 bug。继续 daily / login-calendar / tutorial / coach。
 - [ ] **维度 8（取景）**：农场默认取景偏空旷——先出对比截图再议（业主刻意调过）。
 - [ ] **维度 9（音频）**：音效齐全度 / 音量协调（需实机听）。
 - [ ] **健壮性**：通读一遍 console 错误（注入错误监听器后跑核心流程截图）。

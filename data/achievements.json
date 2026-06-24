@@ -62,7 +62,7 @@
       "reward_points": 10,
       "check": {
         "type": "crops_set",
-        "ids": ["qingcai", "tomato", "cucumber", "chili", "eggplant", "jiucai", "garlic", "cilantro"]
+        "ids": ["shanghai_miao", "tomato", "cucumber", "niu_jiao_jiao", "eggplant", "jiucai", "suan_tai", "cilantro"]
       }
     },
     {
