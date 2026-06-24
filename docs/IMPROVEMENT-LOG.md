@@ -184,6 +184,36 @@ Lv9 作物（春笋 65、枇杷 68 仍更强，保留梯度多样性）。单数
 
 ---
 
+### 迭代 #5 — 2026-06-24 · 运行时 console 错误扫描 + 清掉访客噪声
+
+**观察**：新增 `scripts/errsweep.mjs`——CDP 注入 console/exception 监听器，
+依次跑核心流程（关开屏 → 播种 → 强制成熟收获 → 入库 → 卖 → 开六大弹窗 →
+图鉴 → 建造模式 → 放建筑 → 切语言 relang → tick → refreshHUD → save），
+统计 console.error / 未捕获异常 / warning。
+
+**结果**：**0 错误** 跨全部 18 个流程——运行时健壮（维度 6 🟢 实证）。
+唯一一条 warning：`[gameSync] fetchVisiblePool failed FirebaseError:
+Missing or insufficient permissions`。
+
+**核实**：`fetchVisiblePool` 只挡了 `Farm.fb.available`，没挡登录态。Firestore
+规则**拒绝访客读 `farm_players`**（实证：未登录会话被拒）。`_fetchToday()` 调用它
+时也无登录门 → **每个访客**到邻居面板都会刷一条吓人的 FirebaseError warning。
+catch 兜底了（返回 []），功能无碍，但属「预期内的拒绝」当成 warning 刷出来 = 噪声，
+会掩盖真 warning，也不专业。
+
+**修复**：`src/js/firebase-game-sync.js` — `fetchVisiblePool` 开头加登录门：
+未登录直接返回 `[]`（`isLoggedIn()` 已是全代码库的会员闸，line 248
+`!!currentUser`）。跳过注定失败的查询——省一次往返 + 消除噪声；面板本就在空池时
+退化为「邀请态」。登录用户行为不变（查询照常）。
+
+**验证**：`node --check` 通过；**重跑 errsweep → 0 错误 0 warning**，访客启动
+完全静默。登录路径不受影响（`currentUser` 存在则跳过该 return）。
+
+**影响范围**：访客少一次 Firestore 读 + 少一条 console 噪声；登录态零变化。
+新增 `scripts/errsweep.mjs` 可复用健壮性检查（同 shot.mjs，dev-only）。
+
+---
+
 ### 下一轮候选（按优先级）
 
 - [ ] **i18n 一致性（低优先）**：英文建筑标签丢了功能提示——`小屋·种子店`→仅

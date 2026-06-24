@@ -258,6 +258,12 @@
     // per day for the neighbor panel.
     async fetchVisiblePool(limit = 30) {
       if (!Farm.fb || !Farm.fb.available) return [];
+      // Reading the player pool requires auth — Firestore rules deny guests, so
+      // for a signed-out player this query ALWAYS fails with "insufficient
+      // permissions". Skip it: that avoids a wasted round-trip and a scary
+      // FirebaseError warning on every guest who reaches the neighbor panel
+      // (the panel already degrades to an invite state with an empty pool).
+      if (Farm.fbAuth && Farm.fbAuth.isLoggedIn && !Farm.fbAuth.isLoggedIn()) return [];
       try {
         const meUid = Farm.fbAuth && meId();
         // Note: Firestore can't query for "field exists" + "field is true"
