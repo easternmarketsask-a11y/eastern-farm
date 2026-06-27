@@ -85,28 +85,36 @@
       if (refMatch) localStorage.setItem('eastern_farm_ref', refMatch[1]);
     } catch (_) {}
 
-    // 2. Init state, then migrate plots/seeds against the current catalog
-    // (drops crops no longer in data/crops.json, renames qingcai → shanghai_miao)
-    Farm.state.init();
-    if (Farm.crops && Farm.crops.all) {
-      const mainIds = Farm.crops.all().map(function (c) { return c.id; });
-      const festIds = Object.keys(Farm.crops.festivalCrops || {});
-      Farm.state.migrateCrops(mainIds.concat(festIds));
+    // 2-3b. Boot prelude (state/migrate/auth/i18n/weather). Wrapped so a throw in
+    // ANY of these can't abort boot before wireSplash() below runs — the splash must
+    // ALWAYS become dismissable so the player can enter the game (state.init() is
+    // additionally hardened against corrupted saves). Same intent as the steps 4-7 try.
+    try {
+      // 2. Init state, then migrate plots/seeds against the current catalog
+      // (drops crops no longer in data/crops.json, renames qingcai → shanghai_miao)
+      Farm.state.init();
+      if (Farm.crops && Farm.crops.all) {
+        const mainIds = Farm.crops.all().map(function (c) { return c.id; });
+        const festIds = Object.keys(Farm.crops.festivalCrops || {});
+        Farm.state.migrateCrops(mainIds.concat(festIds));
+      }
+
+      // 2b. Arm the one-time gesture gate so audio can resume on first interaction
+      Farm.audio.armGestureGate();
+
+      // 2c. Initialize member auth (Firebase). Safe no-op when Firebase is
+      // unavailable (offline, CDN blocked, etc.) — game continues as guest.
+      if (Farm.fbAuth) Farm.fbAuth.init();
+      if (Farm.fbQueue) Farm.fbQueue.install();
+
+      // 3. Language
+      Farm.i18n.setLanguage(Farm.state.data.language || 'zh');
+
+      // 3b. Live Saskatoon weather chip in the brandbar (cached 30 min)
+      if (Farm.weather && Farm.weather.init) Farm.weather.init();
+    } catch (e) {
+      console.error('[boot] prelude (state/auth/i18n) failed — continuing so splash stays dismissable:', e);
     }
-
-    // 2b. Arm the one-time gesture gate so audio can resume on first interaction
-    Farm.audio.armGestureGate();
-
-    // 2c. Initialize member auth (Firebase). Safe no-op when Firebase is
-    // unavailable (offline, CDN blocked, etc.) — game continues as guest.
-    if (Farm.fbAuth) Farm.fbAuth.init();
-    if (Farm.fbQueue) Farm.fbQueue.install();
-
-    // 3. Language
-    Farm.i18n.setLanguage(Farm.state.data.language || 'zh');
-
-    // 3b. Live Saskatoon weather chip in the brandbar (cached 30 min)
-    if (Farm.weather && Farm.weather.init) Farm.weather.init();
 
     // Steps 4-7 are wrapped so a failure in any single subsystem (tasks/events/render/
     // warehouse/orders/storekeeper) can't stop wireNav/wireSplash below from running —

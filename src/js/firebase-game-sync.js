@@ -147,8 +147,16 @@
         // security rules. merge() preserves likesReceived/likedBy/pendingGifts that
         // other players (or the weekly function) write here.
         try {
+          // STRIP real-value / sensitive fields from the PUBLIC mirror: coins and
+          // eastPoints (the latter mirrors the real store loyalty balance). The
+          // social reads only use level/totalHarvests/totalDeliveries/weeklyHarvests,
+          // so these must never live in the publicly-listable farm_players collection.
+          // members/ keeps the full mirror for the StockWise admin view.
+          const publicPayload = Object.assign({}, payload);
+          delete publicPayload.coins;
+          delete publicPayload.eastPoints;
           await Farm.fb.db.collection('farm_players').doc(uid).set(
-            { gameStats: payload },
+            { gameStats: publicPayload },
             { merge: true }
           );
         } catch (e) {

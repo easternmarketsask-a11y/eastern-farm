@@ -284,6 +284,11 @@
           // is copied BY REFERENCE — mutating this.data.orders would then mutate the
           // module's STARTER_STATE.orders and leak across resets/reloads.
           this.data = Object.assign(JSON.parse(JSON.stringify(STARTER_STATE)), parsed);
+          // Harden core collections against a corrupted-but-parseable save: a null /
+          // non-array `plots` or null / non-object `seeds` would otherwise crash
+          // migrateCrops() during boot and wedge the player on the splash screen.
+          if (!Array.isArray(this.data.plots)) this.data.plots = JSON.parse(JSON.stringify(STARTER_STATE.plots));
+          if (!this.data.seeds || typeof this.data.seeds !== 'object') this.data.seeds = JSON.parse(JSON.stringify(STARTER_STATE.seeds));
           // Deep-fill nested objects added in later versions
           this.data.dailyClaims = Object.assign({}, STARTER_STATE.dailyClaims, this.data.dailyClaims || {});
           this.data.activeEffects = Object.assign({}, STARTER_STATE.activeEffects, this.data.activeEffects || {});
@@ -411,7 +416,10 @@
       const localStyle = (this.data && this.data.farmStyle) || null;        // chosen view (device pref)
       const localBuildSeen = !!(this.data && this.data.mapBuildSeen);
       const localCal = (this.data && this.data.loginCalendar) || {};
-      const merged = Object.assign({}, STARTER_STATE, cloudState);
+      // Deep-clone the STARTER base (not a shallow {}-spread) so any nested field
+      // missing from an older cloud blob doesn't end up ALIASING STARTER_STATE —
+      // the same guard init() applies. Otherwise a later reset() leaks stale data.
+      const merged = Object.assign(JSON.parse(JSON.stringify(STARTER_STATE)), cloudState);
       merged.dailyClaims = Object.assign({}, STARTER_STATE.dailyClaims, cloudState.dailyClaims || {});
       merged.activeEffects = Object.assign({}, STARTER_STATE.activeEffects, cloudState.activeEffects || {});
       // 签到日历:别让旧云端存档把"今天已签/已弹"回退(否则签到卡反复弹 + 签到进度丢失)。

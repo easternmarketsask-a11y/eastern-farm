@@ -241,7 +241,10 @@
       const def = this.get(plot.crop);
       if (!def) return 0;
       const elapsedMs = Date.now() - plot.plantedAt;
-      const remainMs = def.grow_minutes * 60000 - elapsedMs;
+      // Match getStage/getProgress: building speed-ups (greenhouse/well) shorten
+      // grow time, so the remaining countdown must divide by growMultiplier too —
+      // otherwise the timer never reaches 0 and speedUp() over-shaves.
+      const remainMs = (def.grow_minutes / this.growMultiplier()) * 60000 - elapsedMs;
       return Math.max(0, remainMs);
     },
 
