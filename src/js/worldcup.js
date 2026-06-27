@@ -11,6 +11,11 @@
   var SK_OFFSET = -6;                       // hours, no DST
   var PREFS_KEY = 'wc2026_prefs_v1';
   var DATA_URL = '../data/wc2026.json';
+  // Live scores: free, CORS-open, no key. Overlays onto the static JSON; official
+  // (manual) data and graceful fallback keep the page working if the source is down.
+  var LIVE_TEAMS_URL = 'https://worldcup26.ir/get/teams';
+  var LIVE_GAMES_URL = 'https://worldcup26.ir/get/games';
+  var live = null;   // { at, byPair:{ "HOME|AWAY": {...} }, standings:{ group: rows[] }, ok:true }
 
   // Approximate strength order (1 = strongest) for upset detection only.
   // Flavor, not official — used to flag "冷门" when a much lower side wins.
@@ -94,6 +99,12 @@
 
   function matchState(m) {
     // 'done' | 'live' | 'upcoming' | 'awaiting' (kicked off but no result in data yet)
+    var lf = liveFor(m);
+    if (lf) {
+      if (lf.finished && lf.score) return 'done';
+      if (lf.inPlay || lf.score) return 'live';
+      // live source says not-started → fall through to time-based logic
+    }
     if (m.officialFinal && m.officialScore) return 'done';
     if (m.officialScore) return 'done';            // score present even if final flag missing
     var k = new Date(m.kickoffUtc).getTime();
@@ -103,7 +114,7 @@
     if (now < k) return 'upcoming';
     return 'awaiting';   // past kickoff, no confirmed result in the data yet (stale / not entered)
   }
-  function score(m) { return m.officialScore || m.apiScore || null; }
+  function score(m) { var lf = liveFor(m); if (lf && lf.score) return lf.score; return m.officialScore || m.apiScore || null; }
 
   function fmtCountdown(ms) {
     if (ms <= 0) return null;
@@ -124,6 +135,92 @@
         (data.teams || []).forEach(function (t) { T[t.code] = t; });
         return data;
       });
+  }
+
+  /* ============================================================
+     LIVE SCORES (client-side overlay onto the static truth source)
+     Source: worldcup26.ir (free, no auth, CORS *). fifa_code === our codes.
+     Never blocks render: failure leaves `live=null` → static behaviour.
+     ============================================================ */
+  function parseScorers(raw, teamCode) {
+    // Postgres array literal as a string: {"Player 27'","Other 75'"}  (or "null")
+    if (!raw || raw === 'null' || raw === '{}' || raw === 'NULL') return [];
+    var parts = String(raw).match(/"([^"]*)"/g) || [];
+    return parts.map(function (p) {
+      var s = p.replace(/^"|"$/g, '').trim();
+      var m = s.match(/^(.*?)\s*(\d{1,3})\s*'?(?:\s*\+\s*\d+)?\s*'?$/);
+      return m ? { team: teamCode, player: m[1].trim(), minute: parseInt(m[2], 10) }
+               : { team: teamCode, player: s, minute: null };
+    });
+  }
+
+  function fetchLive() {
+    if (!data) return Promise.resolve(false);
+    return Promise.all([
+      fetch(LIVE_TEAMS_URL, { cache: 'no-cache' }).then(function (r) { return r.json(); }),
+      fetch(LIVE_GAMES_URL, { cache: 'no-cache' }).then(function (r) { return r.json(); })
+    ]).then(function (res) {
+      var teams = (res[0] && res[0].teams) || [];
+      var games = (res[1] && res[1].games) || [];
+      if (!teams.length || !games.length) return false;
+      var idToCode = {};
+      teams.forEach(function (t) { idToCode[String(t.id)] = t.fifa_code; });
+      var byPair = {}, groupGames = {};
+      games.forEach(function (g) {
+        if (g.type !== 'group') return;
+        var hc = idToCode[String(g.home_team_id)], ac = idToCode[String(g.away_team_id)];
+        if (!hc || !ac || !T[hc] || !T[ac]) return;
+        var finished = String(g.finished).toUpperCase() === 'TRUE';
+        var hasScore = g.home_score != null && g.home_score !== '' && String(g.home_score).toLowerCase() !== 'null';
+        var rec = {
+          home: hc, away: ac, group: g.group,
+          score: hasScore ? [parseInt(g.home_score, 10), parseInt(g.away_score, 10)] : null,
+          finished: finished,
+          inPlay: !finished && (g.time_elapsed && g.time_elapsed !== 'finished' && g.time_elapsed !== 'notstarted' && g.time_elapsed !== ''),
+          scorers: parseScorers(g.home_scorers, hc).concat(parseScorers(g.away_scorers, ac))
+        };
+        byPair[hc + '|' + ac] = rec;
+        (groupGames[g.group] = groupGames[g.group] || []).push(rec);
+      });
+      if (!Object.keys(byPair).length) return false;
+      // Recompute standings per group from the COMPLETE set of live group games.
+      var standings = {};
+      Object.keys(data.groups).forEach(function (g) {
+        var codes = data.groups[g];
+        var played = (groupGames[g] || []).filter(function (r) { return r.finished && r.score; })
+          .map(function (r) { return { home: r.home, away: r.away, officialScore: r.score, officialFinal: true }; });
+        var ranked = rankGroupPure(codes, played);
+        var allDone = (groupGames[g] || []).filter(function (r) { return r.finished; }).length >= 6;
+        ranked.forEach(function (row, i) {
+          row.status = allDone ? (i < 2 ? 'q' : i === 2 ? 'alive' : 'out') : 'alive';
+          row.h2h = false;
+        });
+        standings[g] = ranked;
+      });
+      live = { at: Date.now(), byPair: byPair, standings: standings, ok: true };
+      return true;
+    }).catch(function (e) { console.warn('[wc] live fetch failed — using static data', e); return false; });
+  }
+
+  // Live record for one of OUR matches (group stage only; KO stays static/placeholder).
+  function liveFor(m) {
+    if (!live || !live.ok || !m || m.stage !== 'group') return null;
+    return live.byPair[m.home + '|' + m.away] || null;
+  }
+  function refreshLive() {
+    return fetchLive().then(function (ok) {
+      if (!ok || !hub) return;
+      rendered.standings = false;          // standings depend on live too
+      if (activeTab === 'schedule') renderSchedule();
+      else if (activeTab === 'standings') { renderStandings(); rendered.standings = true; }
+      else if (activeTab === 'bracket') renderBracket();
+    });
+  }
+  function liveStamp() {
+    if (!live || !live.ok) return '';
+    var sk = new Date(live.at + SK_OFFSET * 3600 * 1000);
+    return '<div class="wc-live-note">⚡ 实时数据 · 更新于 ' + pad(sk.getUTCHours()) + ':' + pad(sk.getUTCMinutes()) +
+      ' 萨省 <span class="wc-live-src">非官方来源，以官方为准</span></div>';
   }
 
   /* ============================================================
@@ -189,6 +286,7 @@
       switchTab('schedule');
       startTimers();
       checkStreak();
+      refreshLive();          // pull live scores in the background, re-render when ready
     }).catch(function (e) {
       console.error('[wc] data load failed', e);
       if (Farm.ui) Farm.ui.toast('观赛台数据加载失败，请检查网络');
@@ -210,7 +308,10 @@
     stopTimers();
     tickClock();
     clockTimer = setInterval(tickClock, 1000);
-    refreshTimer = setInterval(function () { if (activeTab === 'schedule') renderSchedule(); }, 60000);
+    refreshTimer = setInterval(function () {
+      refreshLive();                                                   // re-pull live + re-render on success
+      if ((!live || !live.ok) && activeTab === 'schedule') renderSchedule();  // keep static states fresh too
+    }, 60000);
   }
   function stopTimers() {
     if (clockTimer) clearInterval(clockTimer); clockTimer = null;
@@ -249,7 +350,7 @@
     var stages = uniqueStages();
 
     var focus = pickFocusMatch();
-    var html = focus ? focusCardHtml(focus) : '';
+    var html = liveStamp() + (focus ? focusCardHtml(focus) : '');
 
     html +=
       '<div class="wc-filters">' +
@@ -545,8 +646,10 @@
     var state = matchState(m), s = score(m), p = skParts(m.kickoffUtc);
     var html = '<div class="wc-detail-venue">📍 ' + esc(m.venue) + ' · ' + esc(m.city) + ' &nbsp;·&nbsp; 🕐 ' + p.dayLabel + ' ' + p.time + ' 萨省</div>';
 
-    if (state === 'done' && s && canReveal(m) && m.scorers && m.scorers.length) {
-      var sc = m.scorers.slice().sort(function (a, b) { return (a.minute || 0) - (b.minute || 0); });
+    var lfD = liveFor(m);
+    var scList = (lfD && lfD.scorers && lfD.scorers.length) ? lfD.scorers : (m.scorers || []);
+    if (state === 'done' && s && canReveal(m) && scList.length) {
+      var sc = scList.slice().sort(function (a, b) { return (a.minute || 0) - (b.minute || 0); });
       html += '<div class="wc-timeline">';
       sc.forEach(function (g) {
         html += '<div class="wc-goal"><span class="min">' + (g.minute != null ? g.minute + "'" : '') + '</span>' +
@@ -605,13 +708,13 @@
      ============================================================ */
   function renderStandings() {
     var root = hub.querySelector('#wc-standings');
-    var html =
+    var html = liveStamp() +
       '<div class="wc-legend">' +
         '<i><span class="dot" style="background:var(--wc-pitch)"></span>小组第1 → 16强</i>' +
         '<i><span class="dot" style="background:var(--wc-pitch-soft)"></span>小组第2 → 16强</i>' +
         '<i><span class="dot" style="background:var(--wc-amber)"></span>第3名(争8席)</i>' +
       '</div>' +
-      '<div class="wc-section-note">P 赛 / W 胜 / D 平 / L 负 / GF 进 / GA 失 / GD 净胜 / Pts 积分。Pts、GD 自动计算，按 积分→净胜球→进球→正面交锋 排序。截至 ' + dataDate() + '。</div>';
+      '<div class="wc-section-note">P 赛 / W 胜 / D 平 / L 负 / GF 进 / GA 失 / GD 净胜 / Pts 积分。Pts、GD 自动计算，按 积分→净胜球→进球→正面交锋 排序。' + (live && live.ok ? '实时计算。' : '截至 ' + dataDate() + '。') + '</div>';
 
     var thirds = [];
     Object.keys(data.groups).forEach(function (g) {
@@ -653,6 +756,7 @@
 
   // Display ranking: totals from groupStats; ties broken by head-to-head from matches[].
   function rankGroupForDisplay(g) {
+    if (live && live.ok && live.standings[g]) return live.standings[g];   // live (from all 72 games)
     var rows = (data.groupStats[g] || []).map(function (r) {
       return { code: r.code, P: r.P, W: r.W, D: r.D, L: r.L, GF: r.GF, GA: r.GA, GD: r.GF - r.GA, Pts: r.W * 3 + r.D, status: r.status, h2h: false };
     });

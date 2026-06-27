@@ -22,6 +22,15 @@
 - 积分榜的 P/W/D/L/GF/GA 读 `groupStats`;**Pts/GD 自动算**;tiebreaker 链照 `docs/TIEBREAKER_REFERENCE.md`,正面交锋用 `matches[]` 里存在的对阵(主要是第3轮)能算则算,算不了标"待 h2h"。
 - 赛程页列 `matches[]` 现有真实比赛 + 淘汰赛空壳。**不编造缺失赛果**(守 "officialScore 是人工真相" 铁律)。Chris 往 JSON 补比赛 / scorers,页面自动呈现。
 
+## 实时数据(2026-06-26 加入,Chris 选「自动刷新」)
+
+前端打开观赛台 + 每 60s 从 **worldcup26.ir**(免费、无 auth、CORS `*`、`fifa_code` 与我们的 code 一一对应)拉 `/get/teams` + `/get/games`,客户端叠加:
+- **赛程**:小组赛比赛按 `home|away` code 配对,用实时比分/状态/射手覆盖显示(实时优先于静态 seed)。淘汰赛仍用静态占位(我方 KO 是占位 code,且 local_date 时区不可靠,不从实时源建 KO)。
+- **积分榜**:从实时源**全部 72 场小组赛**用 `rankGroupPure` 重算(终于是"从比赛自动算"),覆盖静态 groupStats。
+- **失败兜底**:任一 fetch 失败 → `live=null` → 完全回退静态行为,绝不白屏。
+- **标注**:顶部「⚡ 实时数据 · 更新于 HH:MM · 非官方来源,以官方为准」。
+- 实时源不可作权威(个人项目);要权威需后端 API-Football + 人工确认(大规格方案,未做)。
+
 ## 文件清单(本期新增)
 
 | 文件 | 作用 | 性质 |
