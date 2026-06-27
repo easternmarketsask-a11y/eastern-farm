@@ -5,10 +5,13 @@
  * (a /src/-scoped worker could not see /data/, a sibling of /src/).
  *
  * Strategy:
- *   - /data/*.json                         → network-first (try fresh, cache fallback offline)
- *   - navigations + app shell (html/css/js/icons) → stale-while-revalidate
- *       (serve cache INSTANTLY, refresh in background — no network wait on open/refresh)
- *   - cross-origin (Firebase/gstatic CDN)  → not intercepted
+ *   - navigations (HTML docs) → network-first with a SHORT timeout, ALWAYS falling back to
+ *       the cached shell. A SW must never be able to hang a navigation (iOS Safari will sit
+ *       on a blank screen forever if respondWith never resolves).
+ *   - /data/*.json            → network-first (try fresh, timeout→cache fallback offline)
+ *   - static sub-resources (css/js/icons) → stale-while-revalidate (cache INSTANTLY,
+ *       refresh in background — the 944KB of JS never blocks on the network)
+ *   - cross-origin (Firebase/gstatic CDN) → not intercepted
  *
  * Bump CACHE_VERSION whenever shell assets change so old caches are purged.
  * (Task 5a will extend this file with Firebase Cloud Messaging background
@@ -59,7 +62,7 @@ self.addEventListener('notificationclick', (event) => {
   );
 });
 
-const CACHE_VERSION = 'ef-v101';
+const CACHE_VERSION = 'ef-v102';
 const CACHE = 'eastern-farm-' + CACHE_VERSION;
 // Precache the FULL app shell — HTML + CSS + every JS module + data JSON — so a SW
 // update (which clears the old cache) followed by a flaky mobile network can never leave
@@ -67,6 +70,7 @@ const CACHE = 'eastern-farm-' + CACHE_VERSION;
 // stuck-can't-enter). Images stay network-first/on-demand (the game degrades gracefully
 // without them). Cached individually below so one missing file can't block the rest.
 const PRECACHE = [
+  '/',                       // root redirect page — cached so a navigation fallback to "/" keeps correct relative paths
   '/src/index.html',
   '/src/css/style.css',
   '/src/css/animations.css',
@@ -116,37 +120,49 @@ self.addEventListener('fetch', (event) => {
   try { url = new URL(req.url); } catch (e) { return; }
   if (url.origin !== self.location.origin) return;  // leave Firebase/CDN alone
 
-  // Best-effort background fetch: refresh the cache, return the response (or null on fail).
-  const revalidate = () => fetch(req).then((res) => {
+  // Best-effort background fetch: cache a fresh 200, return the response (or null on fail).
+  const fetchAndCache = () => fetch(req).then((res) => {
     if (res && res.status === 200) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {}); }
     return res;
   }).catch(() => null);
 
-  // /data/*.json → network-first (fresh game data), with a timeout fallback to cache so a
-  // HUNG fetch on flaky mobile / in-app WebViews can't stall boot's data load forever.
-  if (url.pathname.startsWith('/data/') && url.pathname.endsWith('.json')) {
-    const fromCache = () => caches.match(req).then((c) => c || Response.error());
-    const timeout = new Promise((resolve) => setTimeout(() => resolve(fromCache()), 6000));
+  // NAVIGATIONS (HTML documents) → network-first with a SHORT timeout, then ALWAYS fall back
+  // to the cached shell. CRITICAL: a SW must never be able to hang a navigation. A prior
+  // version served navigations via an un-timed fetch, so on iOS Safari a hung document fetch
+  // left the page stuck on a blank screen forever (WeChat's webview runs no SW, so it was
+  // unaffected — that asymmetry was the tell). Racing a timeout guarantees the page always
+  // resolves: fresh HTML when the network is healthy, cached shell within a few seconds when
+  // it isn't.
+  if (req.mode === 'navigate') {
+    const shell = () => caches.match(req)
+      .then((c) => c || caches.match('/src/index.html'))
+      .then((c) => c || Response.error());
+    const net = fetchAndCache();
+    const timeout = new Promise((resolve) => setTimeout(() => resolve(null), 3500));
     event.respondWith(
-      Promise.race([revalidate().then((res) => res || fromCache()), timeout]).catch(fromCache)
+      Promise.race([net, timeout]).then((res) => res || shell()).catch(shell)
     );
     return;
   }
 
-  // App shell + navigations (html/css/js/icons) → stale-while-revalidate: serve the cached
-  // copy INSTANTLY (no network wait → no "open slow / refresh stall"), refresh in background.
-  // The OLD code raced the network FIRST for these too, so a fully-cached PWA still waited on
-  // ~50 same-origin round-trips (944KB of JS) every open — and up to a 4–6s timeout per HUNG
-  // request on bad networks. CACHE_VERSION bump purges the shell on deploy, so a new release
-  // still propagates within one extra load.
+  // /data/*.json → network-first (fresh game data), timeout→cache so a HUNG fetch on flaky
+  // mobile / in-app WebViews can't stall boot's data load forever.
+  if (url.pathname.startsWith('/data/') && url.pathname.endsWith('.json')) {
+    const fromCache = () => caches.match(req).then((c) => c || Response.error());
+    const net = fetchAndCache();
+    const timeout = new Promise((resolve) => setTimeout(() => resolve(null), 6000));
+    event.respondWith(Promise.race([net, timeout]).then((res) => res || fromCache()).catch(fromCache));
+    return;
+  }
+
+  // Static sub-resources (css/js/icons) → stale-while-revalidate: serve the cached copy
+  // INSTANTLY (the 944KB of JS never blocks on the network), refresh in background. These are
+  // precached on install and immutable per release (CACHE_VERSION bump purges them on deploy),
+  // so serving cache-first is safe and is the main open/refresh speed win.
   event.respondWith(
     caches.match(req).then((cached) => {
-      if (cached) { revalidate(); return cached; }
-      return revalidate().then((res) => {
-        if (res) return res;
-        if (req.mode === 'navigate') return caches.match('/src/index.html');
-        return Response.error();
-      });
+      const net = fetchAndCache();
+      return cached || net.then((res) => res || Response.error());
     })
   );
 });
