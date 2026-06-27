@@ -790,7 +790,8 @@
       '<div class="wc-lotto-wait">赛后自动开奖 · 中奖会显示在这里</div>',
       lottoPrizeLine());
   }
-  function lottoWinHtml(win) {
+  // ---- 中奖结果卡(转盘转完 / 再次打开时显示) ----
+  function lottoResultCard(win) {
     var phys = win.prize && win.prize !== 'coins';
     if (phys) {
       return '<div class="wc-lotto-card win">' +
@@ -798,13 +799,108 @@
         '<div class="wc-lotto-prize">🎁 ' + esc(PRIZE_CN[win.prize] || win.prize) + '</div>' +
         (win.couponCode ? '<div class="wc-lotto-code">券码 <b>' + esc(win.couponCode) + '</b></div>' : '') +
         '<div class="wc-lotto-redeem">' + (win.redeemed ? '✓ 已核销' : '到东方超市收银处出示此码领取') + '</div>' +
-        (win.coins ? '<div class="wc-lotto-coins">外加 🪙 ' + win.coins + ' 农场币已到账</div>' : '') +
+        (win.coins ? '<div class="wc-lotto-coins">外加 <span class="coin-icon"></span> ' + win.coins + ' 农场币已到账</div>' : '') +
         '</div>';
     }
     return '<div class="wc-lotto-card win coins">' +
-      '<div class="wc-lotto-win-h">🪙 +' + (win.coins || 1000) + ' 农场币!</div>' +
+      '<div class="wc-lotto-win-h"><span class="coin-icon"></span> +' + (win.coins || 1000) + ' 农场币!</div>' +
       '<div class="wc-lotto-redeem">已自动到账 · 回农场种菜用得上</div></div>';
   }
+
+  // ---- 幸运转盘(揭晓动画;结果由后台公平开奖预先定好,转盘必停在真奖)----
+  // 6 格,顺序须与 worldcup.css 里 conic-gradient 一致(从 0° 顺时针):
+  // 0 绿=龙角散 / 1 金=1000币 / 2 琥珀=沙琪玛 / 3 红=气泡饮原味 / 4 金=2000币 / 5 浅绿=气泡饮青提
+  var WHEEL_SEGS = [
+    { key: 'ryukakusan',    label: '龙角散',       img: 'ryukakusan.png',    emoji: '🫙', dark: true },
+    { key: 'coins1000',     label: '1000币',       coin: true,               dark: false },
+    { key: 'shaqima',       label: '沙琪玛',       img: 'shaqima.png',       emoji: '🍪', dark: true },
+    { key: 'yogurt_orig',   label: '气泡饮·原味',  img: 'yogurt_orig.png',   emoji: '🥤', dark: true },
+    { key: 'coins2000',     label: '2000币',       coin: true,               dark: false },
+    { key: 'yogurt_muscat', label: '气泡饮·青提',  img: 'yogurt_muscat.png', emoji: '🍇', dark: true }
+  ];
+  function wheelTargetIndex(win) {
+    var p = win.prize;
+    if (p === 'ryukakusan') return 0;
+    if (p === 'shaqima') return 2;
+    if (p === 'yogurt_orig') return 3;
+    if (p === 'yogurt_muscat') return 5;
+    return (win.coins && win.coins >= 2000) ? 4 : 1;   // coins
+  }
+  function wheelStageHtml(win) {
+    var labs = '';
+    for (var i = 0; i < 6; i++) {
+      var s = WHEEL_SEGS[i], home = i * 60 + 30;
+      var icon = s.coin
+        ? '<span class="wc-wheel-coin"><span class="coin-icon"></span></span>'
+        : '<img class="wc-wheel-photo" src="assets/worldcup/prizes/' + s.img + '" alt="">' +
+          '<span class="wc-wheel-emoji">' + s.emoji + '</span>';
+      labs += '<div class="wc-wheel-lab" style="transform:rotate(' + home + 'deg) translateY(calc(-1 * var(--wc-wheel-r)))">' +
+                '<div class="li" data-home="' + home + '" style="transform:translate(-50%,-50%) rotate(' + (-home) + 'deg)">' +
+                  '<span class="ic">' + icon + '</span>' +
+                  '<span class="tx ' + (s.dark ? 'on-dark' : 'on-light') + '">' + s.label + '</span>' +
+                '</div></div>';
+    }
+    var dots = '';
+    for (var d = 0; d < 12; d++)
+      dots += '<i class="wc-wheel-dot" style="transform:translate(-50%,-50%) rotate(' + (d * 30) + 'deg) translateY(calc(-1 * var(--wc-wheel-dotr)))"></i>';
+    var head = win.correct ? '🎯 你猜中了晋级队,手气正旺!' : '🎁 开奖啦,转一转试试手气';
+    return '<div class="wc-lotto-card wc-wheel-card">' +
+      '<div class="wc-wheel-title">🎡 幸运转盘 · 揭晓你的奖</div>' +
+      '<div class="wc-wheel-sub">' + head + '</div>' +
+      '<div class="wc-wheel-stage">' +
+        '<i class="wc-wheel-ptr"></i>' +
+        '<div class="wc-wheel-ring">' + dots +
+          '<div class="wc-wheel-disc"></div>' +
+          '<div class="wc-wheel-labels">' + labs + '</div>' +
+          '<button class="wc-wheel-hub" type="button"><span class="go">GO</span><span class="gs">点击转动</span></button>' +
+        '</div>' +
+      '</div>' +
+      '<div class="wc-wheel-result" style="display:none"></div>' +
+    '</div>';
+  }
+  function wireWheel(el, m, win, u) {
+    // 默认先显 emoji,照片加载成功才换上(永不出现破图)
+    Array.prototype.forEach.call(el.querySelectorAll('.wc-wheel-photo'), function (img) {
+      if (img.complete && img.naturalWidth > 0) img.classList.add('ok');
+      else img.onload = function () { this.classList.add('ok'); };
+    });
+    var disc = el.querySelector('.wc-wheel-disc');
+    var layer = el.querySelector('.wc-wheel-labels');
+    var hub = el.querySelector('.wc-wheel-hub');
+    var lis = el.querySelectorAll('.wc-wheel-lab .li');
+    if (!disc || !layer || !hub) return;
+    var idx = wheelTargetIndex(win);
+    hub.addEventListener('click', function () {
+      if (hub._spun) return; hub._spun = true;
+      hub.classList.add('spinning'); hub.disabled = true;
+      var R = 360 * 6 - (idx * 60 + 30);   // 中奖格正中停在顶部指针下
+      var T = 'transform 4.4s cubic-bezier(.15,.72,.18,1)';
+      disc.style.transition = T; disc.style.transform = 'rotate(' + R + 'deg)';
+      layer.style.transition = T; layer.style.transform = 'rotate(' + R + 'deg)';
+      Array.prototype.forEach.call(lis, function (li) {
+        var home = parseFloat(li.getAttribute('data-home')) || 0;
+        li.style.transition = T;
+        li.style.transform = 'translate(-50%,-50%) rotate(' + (-home - R) + 'deg)';  // 反向自转保持正立
+      });
+      var done = function () { disc.removeEventListener('transitionend', done); revealResult(el, m, win, u); };
+      disc.addEventListener('transitionend', done);
+      setTimeout(done, 4900);   // 兜底
+    });
+  }
+  function revealResult(el, m, win, u) {
+    if (el._revealed) return; el._revealed = true;
+    lottoMarkReveal(u.uid, m.id);
+    var box = el.querySelector('.wc-wheel-result');
+    if (box) { box.innerHTML = lottoResultCard(win); box.style.display = ''; }
+    var hub = el.querySelector('.wc-wheel-hub');
+    if (hub) { var g = hub.querySelector('.go'), s = hub.querySelector('.gs'); if (g) g.textContent = '🎉'; if (s) s.textContent = '已揭晓'; }
+    try { if (Farm.audio && Farm.audio.play) Farm.audio.play('coin'); } catch (e) {}
+    if (typeof miniConfetti === 'function') miniConfetti();
+    if (box && box.scrollIntoView) try { box.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch (e) {}
+  }
+  function lottoRevealKey(uid, id) { return 'wc_lotto_rv_' + uid + '_' + id; }
+  function lottoSeenReveal(uid, id) { try { return localStorage.getItem(lottoRevealKey(uid, id)) === '1'; } catch (e) { return false; } }
+  function lottoMarkReveal(uid, id) { try { localStorage.setItem(lottoRevealKey(uid, id), '1'); } catch (e) {} }
 
   function lottoRender(el, m) {
     if (!el || !isKO(m)) { if (el) el.style.display = 'none'; return; }
@@ -829,7 +925,11 @@
     ]).then(function (res) {
       var entry = res[0] && res[0].exists ? res[0].data() : null;
       var win = res[1] && res[1].exists ? res[1].data() : null;
-      if (win) { el.innerHTML = lottoWinHtml(win); return; }
+      if (win) {
+        if (lottoSeenReveal(u.uid, m.id)) { el.innerHTML = lottoResultCard(win); }
+        else { el.innerHTML = wheelStageHtml(win); wireWheel(el, m, win, u); }
+        return;
+      }
       if (entry) { el.innerHTML = lottoEnteredHtml(m, entry); return; }
       if (!lottoOpen(m)) { el.innerHTML = lottoCard('竞猜抽奖', '<div class="wc-lotto-closed">本场报名已截止 ⏱</div>', lottoPrizeLine()); return; }
       el.innerHTML = lottoFormHtml(m);

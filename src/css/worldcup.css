@@ -365,6 +365,77 @@
 .wc-lotto-redeem { font-size: 11px; color: var(--wc-soft); }
 .wc-lotto-coins { font-size: 11.5px; color: var(--wc-pitch); margin-top: 4px; }
 
+/* ===================== LUCKY WHEEL (转盘揭晓) ===================== */
+.wc-wheel-card { text-align: center;
+  --wc-wheel-size: min(290px, 78vw);
+  --wc-wheel-r:    calc(var(--wc-wheel-size) * 0.30);   /* 图标轨道半径 */
+  --wc-wheel-dotr: calc(var(--wc-wheel-size) * 0.452);  /* 灯珠半径 */
+}
+.wc-wheel-title { font-family: var(--font-display); font-size: 15px; color: var(--wc-amber-deep); }
+.wc-wheel-sub { font-size: 12px; color: var(--wc-soft); margin: 2px 0 12px; }
+
+.wc-wheel-stage { position: relative; width: var(--wc-wheel-size); height: var(--wc-wheel-size); margin: 0 auto; }
+
+/* pointer */
+.wc-wheel-ptr { position: absolute; top: -4px; left: 50%; transform: translateX(-50%); z-index: 6;
+  width: 0; height: 0; border-left: 13px solid transparent; border-right: 13px solid transparent;
+  border-top: 23px solid var(--wc-live); filter: drop-shadow(0 2px 3px rgba(0,0,0,0.28)); }
+.wc-wheel-ptr::after { content: ''; position: absolute; top: -30px; left: -8px; width: 16px; height: 16px;
+  border-radius: 50%; background: var(--wc-live); box-shadow: 0 2px 4px rgba(0,0,0,0.25); }
+
+/* gold ring */
+.wc-wheel-ring { position: absolute; inset: 0; border-radius: 50%; padding: 11px;
+  background: conic-gradient(from 0deg, #f6c66b, #e8a838, #f6c66b, #e8a838, #f6c66b, #e8a838, #f6c66b);
+  box-shadow: 0 9px 24px rgba(120,80,20,0.32), inset 0 2px 6px rgba(255,255,255,0.5); }
+.wc-wheel-ring::before { content: ''; position: absolute; inset: 5px; border-radius: 50%;
+  border: 2px dashed rgba(255,255,255,0.55); pointer-events: none; z-index: 5; }
+.wc-wheel-dot { position: absolute; top: 50%; left: 50%; width: 6px; height: 6px; border-radius: 50%;
+  background: #fff; box-shadow: 0 0 4px rgba(0,0,0,0.2); z-index: 5; }
+
+/* colored disc (spins) */
+.wc-wheel-disc { position: absolute; inset: 11px; border-radius: 50%; will-change: transform;
+  background: conic-gradient(from 0deg,
+    var(--wc-pitch-soft) 0 60deg, #f6e3b4 60deg 120deg, var(--wc-amber) 120deg 180deg,
+    var(--wc-live) 180deg 240deg, #f6e3b4 240deg 300deg, #9ccc65 300deg 360deg);
+  box-shadow: inset 0 0 0 4px rgba(255,255,255,0.85), inset 0 0 28px rgba(0,0,0,0.12); }
+.wc-wheel-disc::after { content: ''; position: absolute; inset: 0; border-radius: 50%;
+  background: repeating-conic-gradient(from 0deg, rgba(255,255,255,0) 0 59.3deg, rgba(255,255,255,0.85) 59.3deg 60deg); }
+
+/* labels layer (spins together; each icon counter-rotates to stay upright) */
+.wc-wheel-labels { position: absolute; inset: 11px; will-change: transform; }
+.wc-wheel-lab { position: absolute; left: 50%; top: 50%; width: 0; height: 0; transform-origin: 0 0; }
+.wc-wheel-lab .li { position: absolute; left: 0; top: 0; width: calc(var(--wc-wheel-size) * 0.27);
+  display: flex; flex-direction: column; align-items: center; gap: 3px; pointer-events: none; }
+.wc-wheel-lab .ic { display: flex; align-items: center; justify-content: center;
+  height: calc(var(--wc-wheel-size) * 0.17); }
+.wc-wheel-photo { width: calc(var(--wc-wheel-size) * 0.16); height: calc(var(--wc-wheel-size) * 0.16);
+  border-radius: 50%; object-fit: cover; background: #fff; display: none;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.28), inset 0 0 0 2px #fff; }
+.wc-wheel-photo.ok { display: block; }
+.wc-wheel-photo.ok + .wc-wheel-emoji { display: none; }
+.wc-wheel-emoji { font-size: calc(var(--wc-wheel-size) * 0.115); line-height: 1;
+  filter: drop-shadow(0 1px 1px rgba(0,0,0,0.18)); }
+.wc-wheel-coin { font-size: calc(var(--wc-wheel-size) * 0.13); display: inline-flex; }
+.wc-wheel-lab .tx { font-size: calc(var(--wc-wheel-size) * 0.044); font-weight: 800;
+  white-space: nowrap; line-height: 1.05; }
+.wc-wheel-lab .tx.on-dark { color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.3); }
+.wc-wheel-lab .tx.on-light { color: var(--wc-ink); }
+
+/* center hub button */
+.wc-wheel-hub { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); z-index: 4;
+  width: calc(var(--wc-wheel-size) * 0.27); height: calc(var(--wc-wheel-size) * 0.27);
+  border-radius: 50%; border: 4px solid #fff; cursor: pointer;
+  background: radial-gradient(circle at 50% 35%, var(--wc-pitch-soft), var(--wc-pitch));
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  box-shadow: 0 4px 12px rgba(58,125,44,0.45); transition: transform 0.12s; }
+.wc-wheel-hub:active { transform: translate(-50%,-50%) scale(0.94); }
+.wc-wheel-hub .go { color: #fff; font-family: var(--font-display); font-size: 16px; line-height: 1; }
+.wc-wheel-hub .gs { color: #eaffd9; font-size: 9px; margin-top: 1px; }
+.wc-wheel-hub.spinning { animation: wc-hub-pulse 0.6s ease-in-out infinite; }
+@keyframes wc-hub-pulse { 0%,100% { box-shadow: 0 4px 12px rgba(58,125,44,0.45); } 50% { box-shadow: 0 4px 20px rgba(106,176,76,0.8); } }
+
+.wc-wheel-result { margin-top: 12px; }
+
 /* ===================== STREAK TOAST (easter egg) ===================== */
 .wc-streak {
   position: fixed; left: 50%; top: 18%; transform: translateX(-50%) translateY(-10px); z-index: 7200;
