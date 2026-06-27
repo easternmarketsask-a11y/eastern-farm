@@ -5,10 +5,10 @@
  * (a /src/-scoped worker could not see /data/, a sibling of /src/).
  *
  * Strategy:
- *   - /data/*.json        → network-first (always try fresh; fall back to cache offline)
- *   - navigations         → network, fall back to cached /src/index.html offline
- *   - other same-origin GET (css/js/icons) → stale-while-revalidate
- *   - cross-origin (Firebase/gstatic CDN) → not intercepted
+ *   - /data/*.json                         → network-first (try fresh, cache fallback offline)
+ *   - navigations + app shell (html/css/js/icons) → stale-while-revalidate
+ *       (serve cache INSTANTLY, refresh in background — no network wait on open/refresh)
+ *   - cross-origin (Firebase/gstatic CDN)  → not intercepted
  *
  * Bump CACHE_VERSION whenever shell assets change so old caches are purged.
  * (Task 5a will extend this file with Firebase Cloud Messaging background
@@ -59,7 +59,7 @@ self.addEventListener('notificationclick', (event) => {
   );
 });
 
-const CACHE_VERSION = 'ef-v100';
+const CACHE_VERSION = 'ef-v101';
 const CACHE = 'eastern-farm-' + CACHE_VERSION;
 // Precache the FULL app shell — HTML + CSS + every JS module + data JSON — so a SW
 // update (which clears the old cache) followed by a flaky mobile network can never leave
@@ -116,21 +116,37 @@ self.addEventListener('fetch', (event) => {
   try { url = new URL(req.url); } catch (e) { return; }
   if (url.origin !== self.location.origin) return;  // leave Firebase/CDN alone
 
-  // Network-first for ALL same-origin GETs (latest code/data when online; cache is the
-  // offline fallback). CRITICAL for flaky mobile / in-app browsers: a fetch that HANGS
-  // (no response, no error — common on captive-portal/in-app WebViews) would otherwise
-  // stall the page forever. So we RACE the network against a timeout that falls back to
-  // the cached copy — the game loads from cache instead of hanging on a dead socket.
-  const fromCache = () => caches.match(req).then((cached) => {
-    if (cached) return cached;
-    if (req.mode === 'navigate') return caches.match('/src/index.html');
-    return Response.error();
-  });
-  const TIMEOUT = req.mode === 'navigate' ? 4000 : 6000;
-  const network = fetch(req).then((res) => {
+  // Best-effort background fetch: refresh the cache, return the response (or null on fail).
+  const revalidate = () => fetch(req).then((res) => {
     if (res && res.status === 200) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {}); }
     return res;
-  });
-  const timeout = new Promise((resolve) => setTimeout(() => resolve(fromCache()), TIMEOUT));
-  event.respondWith(Promise.race([network, timeout]).catch(fromCache));
+  }).catch(() => null);
+
+  // /data/*.json → network-first (fresh game data), with a timeout fallback to cache so a
+  // HUNG fetch on flaky mobile / in-app WebViews can't stall boot's data load forever.
+  if (url.pathname.startsWith('/data/') && url.pathname.endsWith('.json')) {
+    const fromCache = () => caches.match(req).then((c) => c || Response.error());
+    const timeout = new Promise((resolve) => setTimeout(() => resolve(fromCache()), 6000));
+    event.respondWith(
+      Promise.race([revalidate().then((res) => res || fromCache()), timeout]).catch(fromCache)
+    );
+    return;
+  }
+
+  // App shell + navigations (html/css/js/icons) → stale-while-revalidate: serve the cached
+  // copy INSTANTLY (no network wait → no "open slow / refresh stall"), refresh in background.
+  // The OLD code raced the network FIRST for these too, so a fully-cached PWA still waited on
+  // ~50 same-origin round-trips (944KB of JS) every open — and up to a 4–6s timeout per HUNG
+  // request on bad networks. CACHE_VERSION bump purges the shell on deploy, so a new release
+  // still propagates within one extra load.
+  event.respondWith(
+    caches.match(req).then((cached) => {
+      if (cached) { revalidate(); return cached; }
+      return revalidate().then((res) => {
+        if (res) return res;
+        if (req.mode === 'navigate') return caches.match('/src/index.html');
+        return Response.error();
+      });
+    })
+  );
 });
