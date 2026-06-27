@@ -57,7 +57,7 @@
   backdrop-filter: blur(6px);
 }
 .wc-brand { display: flex; align-items: center; gap: 9px; min-width: 0; flex: 1; }
-.wc-brand .wc-emblem { width: 38px; height: 46px; flex: none; filter: drop-shadow(0 2px 3px rgba(150,100,30,0.28)); }
+.wc-brand .wc-emblem { height: 40px; width: auto; flex: none; object-fit: contain; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.18)); }
 .wc-brand-text { min-width: 0; line-height: 1.05; }
 .wc-brand-zh { font-family: var(--font-display); font-size: 16.5px; color: var(--wc-pitch); white-space: nowrap; }
 .wc-brand-en { font-family: var(--font-en); font-size: 9px; letter-spacing: 1.6px; color: var(--wc-amber-deep); font-weight: 700; text-transform: uppercase; margin-top: 1px; }
@@ -318,7 +318,7 @@
 }
 .splash-wc:active { transform: scale(0.98); }
 .splash-wc::after { content: ""; position: absolute; right: -20px; top: -28px; width: 110px; height: 110px; background: radial-gradient(circle, rgba(244,167,44,0.5), transparent 70%); pointer-events: none; }
-.splash-wc .splash-wc-emblem { width: 40px; height: 48px; flex: none; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.25)); position: relative; }
+.splash-wc .splash-wc-emblem { height: 52px; width: auto; flex: none; object-fit: contain; position: relative; background: #fffdf6; border-radius: 12px; padding: 5px 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.18); }
 .splash-wc-txt { position: relative; line-height: 1.2; flex: 1; min-width: 0; }
 .splash-wc-zh { font-family: var(--font-display); font-size: 15.5px; }
 .splash-wc-en { font-family: var(--font-en); font-size: 9px; letter-spacing: 1.4px; font-weight: 700; color: #ffe9bf; text-transform: uppercase; margin-top: 2px; }

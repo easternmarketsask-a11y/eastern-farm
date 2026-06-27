@@ -129,7 +129,7 @@
     hub.id = 'wc-hub';
     hub.innerHTML =
       '<div class="wc-topbar">' +
-        '<div class="wc-brand">' + emblemSvg('wc-emblem') +
+        '<div class="wc-brand"><img class="wc-emblem" src="assets/images/wc2026-logo.png" alt="FIFA World Cup 2026">' +
           '<div class="wc-brand-text"><div class="wc-brand-zh">萨省观赛台</div>' +
           '<div class="wc-brand-en">World Cup 26</div></div>' +
         '</div>' +
