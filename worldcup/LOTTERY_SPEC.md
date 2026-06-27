@@ -14,11 +14,13 @@
     实物库存发完后,该场只发农场币。中实物者得**券码**,到店核销领取。
 
 ## 奖品库存(Chris 提供,一次性)
-| 奖品 | 数量 | 备注 |
-|---|---|---|
-| 沙琪玛(鸡蛋/芝麻) | 20–25 包 | |
-| 龙角散(薄荷,10粒装) | 30–40 支 | 后续可再加款 |
-| 农场币 | 不限 | 游戏内币,近乎零真实成本 |
+| 奖品 | key | 数量 | 备注 |
+|---|---|---|---|
+| 沙琪玛(鸡蛋/芝麻) | `shaqima` | 20–25 包 | |
+| 龙角散(薄荷,10粒装) | `ryukakusan` | 30–40 支 | |
+| 요구르트气泡饮 · 原味(355mL) | `yogurt_orig` | 5 瓶 | 韩国乳酸菌气泡饮 |
+| 요구르트气泡饮 · 香印青提(355mL) | `yogurt_muscat` | 5 瓶 | 韩国乳酸菌气泡饮 |
+| 农场币 | `coins` | 不限 | 游戏内币,近乎零真实成本 |
 
 - **每场实物名额(quota)**:默认 **2 名/场**(共享库存,抽完为止)。约 50–65 份 ÷ 32 场,够发整轮;尾段可能只剩农场币。
 - 库存数字写在配置里,Chris 实际备货后填准确值。
@@ -31,7 +33,8 @@
 ## 数据模型(eastern-market-members Firestore)
 ```
 wc_lottery_config            { coinsFlat:1000, perMatchQuota:2,
-                               stock:{shaqima:22, ryukakusan:35} }
+                               stock:{shaqima:22, ryukakusan:35,
+                                      yogurt_orig:5, yogurt_muscat:5} }
 wc_lottery/{matchId}
   ├─ (doc) { kickoffUtc, deadline, status:'open|drawn',
   │          actualWinnerTeam, drawnAt }
@@ -70,7 +73,7 @@ wc_lottery_winners/{matchId}/{uid}
 ## 默认值(可调)
 - 农场币:一律 1000/场(Chris 选 A,营销期慷慨,接受贬值)。
 - 每场实物名额:2。
-- 库存:沙琪玛 22 / 龙角散 35(备货后填准)。
+- 库存:沙琪玛 22 / 龙角散 35 / 气泡饮原味 5 / 气泡饮青提 5(备货后填准)。
 
 ## 分阶段
 1. 前端竞猜报名 + 登录门 + 中奖展示(本仓库,可先上,不发奖也能跑)。

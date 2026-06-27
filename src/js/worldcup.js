@@ -744,7 +744,11 @@
      ============================================================ */
   var LOTTO_COL = 'wc_lottery';
   var LOTTO_WIN_COL = 'wc_lottery_winners';
-  var PRIZE_CN = { shaqima: '沙琪玛', ryukakusan: '龙角散', coins: '农场币' };
+  var PRIZE_CN = {
+    shaqima: '沙琪玛', ryukakusan: '龙角散',
+    yogurt_orig: '요구르트气泡饮 · 原味', yogurt_muscat: '요구르트气泡饮 · 香印青提',
+    coins: '农场币'
+  };
 
   function isKO(m) { return !!(m && m.stage && m.stage !== 'group'); }
   function lottoOpen(m) { return matchState(m) === 'upcoming'; }   // entry until kickoff
@@ -760,7 +764,7 @@
   }
 
   function lottoPrizeLine() {
-    return '<div class="wc-lotto-prizes">猜对晋级队 → 抽 🐉龙角散 / 🥮沙琪玛(限量)· 人人保底 🪙1000 农场币</div>';
+    return '<div class="wc-lotto-prizes">猜对晋级队 → 抽 龙角散 / 沙琪玛 / 气泡饮 等好礼(限量)· 人人保底 🪙1000 农场币</div>';
   }
   function lottoCard(title, bodyHtml, sub) {
     return '<div class="wc-lotto-card">' +
