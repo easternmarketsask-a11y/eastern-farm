@@ -764,7 +764,7 @@
   }
 
   function lottoPrizeLine() {
-    return '<div class="wc-lotto-prizes">猜对晋级队 → 抽 龙角散 / 沙琪玛 / 气泡饮 等好礼(限量)· 人人保底 🪙1000 农场币</div>';
+    return '<div class="wc-lotto-prizes">进入即抽 龙角散 / 沙琪玛 / 气泡饮 等好礼(限量)· 人人保底 🪙1000 · 猜对晋级队 🪙翻倍 2000</div>';
   }
   function lottoCard(title, bodyHtml, sub) {
     return '<div class="wc-lotto-card">' +
