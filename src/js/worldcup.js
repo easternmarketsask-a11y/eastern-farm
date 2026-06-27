@@ -756,8 +756,10 @@
   function lottoUser() {
     if (!window.Farm || !Farm.fbAuth || !Farm.fbAuth.isLoggedIn || !Farm.fbAuth.isLoggedIn()) return null;
     var u = Farm.fbAuth.currentUser || {}, md = Farm.fbAuth.memberDoc || {};
+    var authUid = (Farm.fbAuth.uid && Farm.fbAuth.uid()) || u.uid;
     return {
-      uid: (Farm.fbAuth.uid && Farm.fbAuth.uid()) || u.uid,
+      uid: authUid,
+      memberId: (Farm.fbAuth.memberDocId && Farm.fbAuth.memberDocId()) || authUid,  // 推送 token 挂在会员文档
       name: md.name || md.username || u.displayName || '会员',
       phone: u.phoneNumber || md.phone || ''
     };
@@ -952,11 +954,13 @@
       if (!lottoOpen(m)) { if (Farm.ui) Farm.ui.toast('报名已截止'); lottoRender(el, m); return; }
       sub.disabled = true; sub.textContent = '提交中…';
       Farm.fb.db.collection(LOTTO_COL).doc(m.id).collection('entries').doc(u.uid).set({
-        uid: u.uid, name: u.name, phone: u.phone, pickedTeam: picked,
+        uid: u.uid, memberId: u.memberId, name: u.name, phone: u.phone, pickedTeam: picked,
         matchId: m.id, createdAt: Farm.fb.serverTimestamp()
       }).then(function () {
         if (Farm.audio) Farm.audio.play('coin');
         miniConfetti();
+        // 顺势邀请开启提醒,开奖时推送通知(已开过/拒过的不打扰)
+        try { if (Farm.push && Farm.push.maybePromptAfterHarvest) Farm.push.maybePromptAfterHarvest(); } catch (e) {}
         lottoRender(el, m);
       }).catch(function (e) {
         sub.disabled = false; sub.textContent = '提交竞猜';

@@ -40,7 +40,7 @@ match /wc_lottery/{matchId} {
       && request.resource.data.pickedTeam.size() > 0
       && request.resource.data.pickedTeam.size() < 8
       && request.resource.data.createdAt == request.time
-      && request.resource.data.keys().hasOnly(['uid','name','phone','pickedTeam','matchId','createdAt'])
+      && request.resource.data.keys().hasOnly(['uid','memberId','name','phone','pickedTeam','matchId','createdAt'])
       && wcEntryBeforeDeadline(matchId);
 
     // 提交后不可改 / 不可删(锁定竞猜)

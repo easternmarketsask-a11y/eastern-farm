@@ -43,9 +43,10 @@ wc_lottery_config            { coinsBase:1000, coinsCorrectTotal:2000,
                                stock:{shaqima:22, ryukakusan:35,
                                       yogurt_orig:10, yogurt_muscat:10} }
 wc_lottery/{matchId}
-  ├─ (doc) { kickoffUtc, deadline, status:'open|drawn',
-  │          actualWinnerTeam, drawnAt }
-  └─ entries/{uid}           { uid, name, phone, pickedTeam, createdAt }
+  ├─ (doc) { kickoffUtc, deadline, status:'open|resolved|drawn',
+  │          actualWinnerTeam, resolved, drawnAt, notified }
+  └─ entries/{uid}           { uid, memberId, name, phone, pickedTeam, createdAt }
+                             // memberId = 会员文档 id(推送 token 挂在那),可!= auth uid
 wc_lottery_winners/{matchId}/w/{uid}
                              { uid, name, phone,
                                prize:'shaqima|ryukakusan|yogurt_orig|yogurt_muscat|coins',
@@ -94,7 +95,14 @@ wc_lottery_admin/secret      { cashierPass }    // 收银口令(规则全锁,仅
 - 每场实物名额:2(纯随机抽全部参与者)+ 名额滚存 + 决赛清仓。
 - 库存:沙琪玛 22 / 龙角散 35 / 气泡饮原味 10 / 气泡饮青提 10(备货后填准)。
 
+## 推送通知(开奖提醒)— 已做
+- 复用农场现有 Web Push(`Farm.push` + `members/{memberDocId}.push.fcmTokens`,VAPID 已配)。
+- 报名时存 `memberId`(会员文档 id),开奖云函数据此找该人的 fcmTokens 推送。
+- 报名成功后顺势弹「开启提醒」(复用现有 banner,已开/拒过不打扰)。
+- 开奖后云函数 `notifyMatch` 给本场所有报名者推「🎁 开奖啦,回来转转盘」(**不剧透奖品**,保留转盘悬念),幂等(match.notified 守门)。
+- iOS 需先「添加到主屏幕」并从主屏图标打开才能收 Web Push(系统限制)。
+
 ## 分阶段
 1. ✅ 前端竞猜报名 + 登录门 + 中奖展示 + 幸运转盘揭晓(本仓库,可先上,不发奖也能跑)。
 2. ✅ Firestore 规则 + Cloud Function 自动开奖(交付在 worldcup/phase2/,Chris 部署)。
-3. ✅ 收银核销页(redeem/,随 deploy.sh 上线)。⬜ App Check ⬜ 推送通知(待做)。
+3. ✅ 收银核销页(redeem/,随 deploy.sh 上线)+ ✅ 开奖推送通知。⬜ App Check(建议)。

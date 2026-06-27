@@ -148,7 +148,35 @@ async function seedMatches(fixtures: any) {
 // ============================================================
 // 单场开奖
 // ============================================================
-type Entry = { uid: string; name?: string; phone?: string; pickedTeam: string; createdAt?: any };
+type Entry = { uid: string; memberId?: string; name?: string; phone?: string; pickedTeam: string; createdAt?: any };
+
+/** 给本场所有报名者推送「开奖啦」(不剧透奖品,引导回去转转盘)。幂等:match.notified 守门。 */
+async function notifyMatch(matchId: string, entries: Entry[]) {
+  const mref = db.collection('wc_lottery').doc(matchId);
+  const md = (await mref.get()).data() || {};
+  if ((md as any).notified) return;
+  const tokens: string[] = [];
+  for (const e of entries) {
+    const id = e.memberId || e.uid;
+    try {
+      const ms = await db.collection('members').doc(id).get();
+      const t = ms.exists && (ms.data() as any).push && (ms.data() as any).push.fcmTokens;
+      if (Array.isArray(t)) tokens.push(...t);
+    } catch (_) { /* ignore */ }
+  }
+  const uniq = Array.from(new Set(tokens));
+  for (let i = 0; i < uniq.length; i += 500) {
+    try {
+      await admin.messaging().sendEachForMulticast({
+        tokens: uniq.slice(i, i + 500),
+        notification: { title: '🎁 世界杯抽奖开奖啦', body: '点开转动幸运转盘,看看你中了什么!' },
+        webpush: { fcmOptions: { link: 'https://farm.easternmarket.ca/' },
+          notification: { icon: 'https://farm.easternmarket.ca/src/assets/images/wc2026-logo.png' } },
+      });
+    } catch (err) { console.error('[wc-lotto push]', matchId, err); }
+  }
+  await mref.set({ notified: true }, { merge: true });
+}
 
 async function resolveMatch(matchId: string, kickoffUtc: string, home: string, away: string,
   forcedWinner?: string): Promise<string> {
@@ -217,7 +245,11 @@ async function resolveMatch(matchId: string, kickoffUtc: string, home: string, a
   const failures = await payout(matchId, winnerTeam!, entries);
 
   // 5) 全部发完才标 drawn;有失败则留 resolved,下一个 tick 重试发奖
-  if (failures === 0) { await mref.set({ status: 'drawn' }, { merge: true }); return 'drawn'; }
+  if (failures === 0) {
+    await mref.set({ status: 'drawn' }, { merge: true });
+    await notifyMatch(matchId, entries);   // 推送「开奖啦」(幂等)
+    return 'drawn';
+  }
   return 'partial';
 }
 
