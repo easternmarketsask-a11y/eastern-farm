@@ -93,14 +93,15 @@
   function nowSkDayKey() { return skParts(new Date().toISOString()).dayKey; }
 
   function matchState(m) {
-    // returns 'done' | 'live' | 'upcoming'
+    // 'done' | 'live' | 'upcoming' | 'awaiting' (kicked off but no result in data yet)
     if (m.officialFinal && m.officialScore) return 'done';
+    if (m.officialScore) return 'done';            // score present even if final flag missing
     var k = new Date(m.kickoffUtc).getTime();
     var now = Date.now();
     if (m.apiStatus === 'LIVE') return 'live';
-    if (now >= k && now <= k + 115 * 60000 && !(m.officialFinal && m.officialScore)) return 'live';
+    if (now >= k && now <= k + 130 * 60000) return 'live';
     if (now < k) return 'upcoming';
-    return m.officialScore ? 'done' : 'upcoming';   // past kickoff but no score -> treat as upcoming/awaiting
+    return 'awaiting';   // past kickoff, no confirmed result in the data yet (stale / not entered)
   }
   function score(m) { return m.officialScore || m.apiScore || null; }
 
@@ -341,7 +342,7 @@
       if (!anyQuick) return true;
       var p = skParts(m.kickoffUtc), state = matchState(m);
       if (Q.today && p.dayKey !== nowSkDayKey()) return false;
-      if (Q.upcoming && state === 'done') return false;
+      if (Q.upcoming && state !== 'upcoming') return false;
       if (Q.done && state !== 'done') return false;
       if (Q.prime && !(p.hour >= 17 && p.hour <= 23)) return false;
       if (Q.mine && !involvesMine(m)) return false;
@@ -434,6 +435,8 @@
       timeBlock = '<div class="t">' + p.time + '</div><div class="s live"><span class="wc-pulse"></span> 进行中</div>';
     } else if (state === 'done') {
       timeBlock = '<div class="t">' + p.time + '</div><div class="s">FT 完场</div>';
+    } else if (state === 'awaiting') {
+      timeBlock = '<div class="t">' + p.time + '</div><div class="s">⏳ 待更新</div>';
     } else {
       timeBlock = '<div class="t">' + p.time + '</div><div class="cd" data-kickoff="' + esc(m.kickoffUtc) + '"></div>';
     }
@@ -556,6 +559,8 @@
       html += '<div class="wc-detail-empty">🙈 比分已隐藏 — 点上方比分揭晓</div>';
     } else if (state === 'live') {
       html += '<div class="wc-detail-empty"><span class="wc-pulse"></span> 比赛进行中 · 实时比分待官方确认</div>';
+    } else if (state === 'awaiting') {
+      html += '<div class="wc-detail-empty">⏳ 比赛已开赛 · 比分待更新</div>';
     } else {
       html += '<div class="wc-detail-empty">⏳ 比赛尚未开始</div>';
     }
