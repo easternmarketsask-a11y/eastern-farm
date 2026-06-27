@@ -76,6 +76,7 @@
   function placeholderLabel(code) {
     if (!code) return '待定';
     var m;
+    if (/^3RD$/i.test(code)) return '小组第三';                       // ESPN 第三名占位
     if ((m = /^([1-3])([A-L])$/.exec(code))) return m[2] + '组第' + m[1];
     if ((m = /^3([A-L]{2,})$/.exec(code))) return m[1].split('').join('/') + ' 组第三';
     if ((m = /^W-?SF(\d+)$/.exec(code))) return '半决赛' + m[1] + ' 胜者';
@@ -507,7 +508,7 @@
     var kicker, mid, cta;
     if (state === 'live') {
       kicker = '<span class="wc-pulse"></span> 正在进行 <span class="en">LIVE NOW</span>' + mineTag;
-      mid = '<div class="wc-focus-live-tag"><span class="wc-pulse"></span> 实时进行中 · 比分待确认</div>';
+      mid = '<div class="wc-focus-live-tag"><span class="wc-pulse"></span> 实时进行中' + (s ? '' : ' · 比分待确认') + '</div>';
       cta = '点开看详情 ›';
     } else if (state === 'upcoming') {
       kicker = '🔥 今日焦点战 <span class="en">FEATURED</span>' + mineTag;
@@ -522,8 +523,8 @@
     if (state === 'done' && s) {
       var reveal = canReveal(m);
       center = '<div class="wc-focus-score">' + (reveal ? s[0] + ' : ' + s[1] : '? : ?') + '</div>';
-    } else if (state === 'live') {
-      center = '<div class="wc-focus-vs">VS</div>';
+    } else if (state === 'live' && s) {
+      center = '<div class="wc-focus-score live">' + s[0] + ' : ' + s[1] + '</div>';
     } else {
       center = '<div class="wc-focus-vs">VS</div>';
     }
@@ -596,9 +597,8 @@
     var enHtml = isTeam(code) ? '<span class="en">' + esc(en(code)) + '</span>' : '';
     var fl = flag(code);
     var scHtml = '';
-    if (sc != null && state === 'done') {
-      if (canRevealCode()) {} // noop
-      scHtml = '<span class="sc">' + sc + '</span>';
+    if (sc != null && (state === 'done' || state === 'live')) {
+      scHtml = '<span class="sc' + (state === 'live' ? ' live' : '') + '">' + sc + '</span>';
     }
     return '<div class="wc-team' + cls + '">' +
       '<span class="fl wc-flag" data-team="' + esc(code) + '">' + (fl || '<span style="opacity:.4">◦</span>') + '</span>' +
@@ -898,26 +898,25 @@
     { id: 'f', lbl: '决赛', n: 1 }
   ];
 
-  function rowScore(r) { return { code: r.code, score: (r.Pts || 0) * 100 + (r.GD || 0) * 10 + (r.GF || 0) }; }
+  // Real R32 fixtures from ESPN (the OFFICIAL bracket draw), in kickoff order.
+  // Slots not yet decided by the group stage carry placeholders like "1L"/"3RD".
+  function r32Matches() {
+    return (data.matches || []).filter(function (m) { return m.stage === 'r32'; })
+      .sort(function (a, b) { return new Date(a.kickoffUtc) - new Date(b.kickoffUtc); });
+  }
   function seedR32() {
-    // 32 distinct qualifiers = 12 group winners + 12 runners-up + best 8 third places,
-    // seeded by current record and paired 1-vs-32, 2-vs-31 … (standard tournament seeding).
-    // Indicative only — NOT the official FIFA slot map — but every team appears exactly once.
-    var quals = [], thirds = [];
-    Object.keys(data.groups).forEach(function (g) {
-      var s = rankGroupForDisplay(g);
-      if (s[0]) quals.push(rowScore(s[0]));
-      if (s[1]) quals.push(rowScore(s[1]));
-      if (s[2]) thirds.push(rowScore(s[2]));
-    });
-    thirds.sort(function (a, b) { return b.score - a.score; });
-    quals = quals.concat(thirds.slice(0, 8));
-    quals.sort(function (a, b) { return b.score - a.score; });   // seed 1..32
-    var pairs = [];
-    for (var i = 0; i < 16; i++) {
-      pairs.push([quals[i] ? quals[i].code : null, quals[31 - i] ? quals[31 - i].code : null]);
-    }
+    var r = r32Matches(), pairs = [];
+    for (var i = 0; i < 16; i++) { var m = r[i]; pairs.push(m ? [m.home, m.away] : [null, null]); }
     return pairs;
+  }
+  // Real winner of a played knockout match (null if undecided / drawn-pending-PK).
+  function koWinner(m) {
+    if (!m) return null;
+    var s = score(m);
+    if (!(m.officialFinal && s)) return null;
+    if (s[0] > s[1]) return m.home;
+    if (s[1] > s[0]) return m.away;
+    return null;
   }
 
   function renderBracket() {
@@ -926,6 +925,11 @@
     var ties = {};
     r32.forEach(function (p, i) { ties['r32-' + i] = { a: p[0], b: p[1] }; });
 
+    // Real results lock R32 winners (auto-advance, not user-editable).
+    var r32m = r32Matches(), decided = {};
+    r32m.forEach(function (m, i) { var w = koWinner(m); if (w) decided['r32-' + i] = w; });
+    function pick(tie) { return decided[tie] || bracketPicks[tie] || null; }
+
     function slotsFor(ri) {
       var r = BR_ROUNDS[ri], out = [];
       for (var i = 0; i < r.n; i++) {
@@ -933,7 +937,7 @@
         if (r.id === 'r32') out.push({ id: id, a: ties[id].a, b: ties[id].b });
         else {
           var prev = BR_ROUNDS[ri - 1].id;
-          out.push({ id: id, a: bracketPicks[prev + '-' + (i * 2)] || null, b: bracketPicks[prev + '-' + (i * 2 + 1)] || null });
+          out.push({ id: id, a: pick(prev + '-' + (i * 2)), b: pick(prev + '-' + (i * 2 + 1)) });
         }
       }
       return out;
@@ -943,25 +947,28 @@
     BR_ROUNDS.forEach(function (r, ri) {
       var inner = '<div class="wc-round-lbl">' + r.lbl + '</div>';
       slotsFor(ri).forEach(function (sl) {
-        inner += '<div class="wc-tie">' + slotHtml(sl, sl.a) + slotHtml(sl, sl.b) + '</div>';
+        var locked = !!decided[sl.id];
+        inner += '<div class="wc-tie' + (locked ? ' locked' : '') + '">' +
+          slotHtml(sl, sl.a, pick(sl.id), locked) + slotHtml(sl, sl.b, pick(sl.id), locked) + '</div>';
       });
       cols += '<div class="wc-round">' + inner + '</div>';
     });
 
-    var champ = bracketPicks['f-0'];
+    var champ = pick('f-0');
     var picks = Object.keys(bracketPicks).length;
     root.innerHTML =
-      '<div class="wc-section-note">16强由各组前二 + 最佳 8 个第三名按当前战绩种子排序生成（示意性，非官方分区）。点任意球队让它晋级，一路点到决赛预测你的冠军。预测只存在本机。</div>' +
+      '<div class="wc-section-note">采用<b>真实 16 强对阵</b>(来源 ESPN)。已打完的比赛自动锁定晋级者;未定的位置(如「L组第1」「小组第三」)小组赛结束后自动填入。点球队预测后续晋级,一路点到决赛预测你的冠军 — 预测只存本机。</div>' +
       '<div class="wc-bracket-bar">' +
-        '<span class="wc-progress">已预测 <b>' + picks + '</b> 场</span>' +
+        '<span class="wc-progress">你的预测 <b>' + picks + '</b> 场</span>' +
         '<button class="wc-reset" id="wcBrReset">↺ 重置预测</button>' +
       '</div>' +
       '<div class="wc-bracket-wrap"><div class="wc-bracket">' + cols + '</div></div>' +
-      (champ ? '<div class="wc-champ"><span class="f">' + (flag(champ) || '🏆') + '</span>你的预测冠军<br>' + esc(cn(champ)) + (en(champ) ? ' · ' + esc(en(champ)) : '') + '</div>' : '');
+      (champ ? '<div class="wc-champ"><span class="f">' + (flag(champ) || '🏆') + '</span>' + (decided['f-0'] ? '🏆 冠军' : '你的预测冠军') + '<br>' + esc(cn(champ)) + (en(champ) ? ' · ' + esc(en(champ)) : '') + '</div>' : '');
 
     Array.prototype.forEach.call(root.querySelectorAll('.wc-slot[data-team]'), function (sl) {
       sl.onclick = function () {
         var tie = sl.getAttribute('data-tie'), team = sl.getAttribute('data-team');
+        if (decided[tie]) return;                 // real result — locked, not editable
         if (bracketPicks[tie] !== team) {
           bracketPicks[tie] = team;
           clearDownstream(tie);
@@ -977,14 +984,14 @@
     };
   }
 
-  function slotHtml(sl, team) {
+  function slotHtml(sl, team, effPick, locked) {
     if (!team) return '<div class="wc-slot tbd">待定 TBD</div>';
-    var picked = bracketPicks[sl.id] === team;
+    var picked = effPick === team;
     var label = isTeam(team) ? cn(team) : placeholderLabel(team);
     var fl = isTeam(team) ? flag(team) : '◦';
-    var clickable = true; // allow advancing placeholders too (shows TBD downstream resolves once picked)
-    return '<div class="wc-slot' + (picked ? ' picked' : '') + '" data-tie="' + esc(sl.id) + '" data-team="' + esc(team) + '">' +
-      '<span class="fl">' + fl + '</span><span class="nm">' + esc(label) + '</span></div>';
+    return '<div class="wc-slot' + (picked ? ' picked' : '') + (locked ? ' locked' : '') + '" data-tie="' + esc(sl.id) + '" data-team="' + esc(team) + '">' +
+      '<span class="fl">' + fl + '</span><span class="nm">' + esc(label) + '</span>' +
+      (picked && locked ? '<span class="wc-slot-win">✓</span>' : '') + '</div>';
   }
 
   function clearDownstream(tieId) {

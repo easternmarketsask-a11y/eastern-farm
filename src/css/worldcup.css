@@ -220,6 +220,8 @@
 .wc-sc-hidden { cursor: pointer; }
 .wc-sc-hidden .sc-blur { display: inline-block; min-width: 42px; text-align: center; font-family: var(--font-display); font-size: 11px; color: var(--wc-amber-deep); background: #fbeed0; border-radius: var(--radius-pill); padding: 3px 8px; }
 .wc-match.spoiler-hidden .wc-team .sc { filter: blur(7px); opacity: 0.55; }
+.wc-team .sc.live { color: var(--wc-barn-red, #c44536); }
+.wc-focus-score.live { color: #fff; text-shadow: 0 0 12px rgba(255,255,255,0.35); }
 
 .wc-match-meta { text-align: right; line-height: 1.45; }
 .wc-match-meta .stage { font-family: var(--font-en); font-size: 9px; color: var(--wc-faint); font-weight: 700; letter-spacing: 0.4px; display: block; }
@@ -287,7 +289,13 @@
 .wc-slot.tbd { color: var(--wc-faint); cursor: default; font-family: var(--font-en); font-size: 11px; }
 .wc-slot.picked { background: linear-gradient(90deg, rgba(106,176,76,0.18), rgba(106,176,76,0.05)); }
 .wc-slot.picked .nm { color: var(--wc-pitch); font-weight: 700; }
-.wc-slot:not(.tbd):active { background: #f1f7eb; }
+.wc-slot:not(.tbd):not(.locked):active { background: #f1f7eb; }
+/* locked = real result (auto-advanced, not editable) */
+.wc-slot.locked { cursor: default; }
+.wc-slot.locked.picked { background: linear-gradient(90deg, rgba(244,167,44,0.20), rgba(244,167,44,0.05)); }
+.wc-slot.locked.picked .nm { color: var(--wc-amber-deep); }
+.wc-slot.locked:not(.picked) { opacity: 0.5; }
+.wc-slot-win { flex: none; font-size: 11px; font-weight: 700; color: var(--wc-amber-deep); margin-left: 2px; }
 .wc-champ { text-align: center; font-family: var(--font-display); font-size: 14px; color: var(--wc-amber-deep);
   background: linear-gradient(160deg, #fff4d6, #fdeccb); border: 1px solid #f0d28a; border-radius: var(--radius-md);
   padding: 14px; margin-top: 12px; box-shadow: 0 4px 12px rgba(217,132,16,0.18); }
