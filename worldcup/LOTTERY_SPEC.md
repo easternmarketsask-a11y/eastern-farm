@@ -46,10 +46,13 @@ wc_lottery/{matchId}
   ├─ (doc) { kickoffUtc, deadline, status:'open|drawn',
   │          actualWinnerTeam, drawnAt }
   └─ entries/{uid}           { uid, name, phone, pickedTeam, createdAt }
-wc_lottery_winners/{matchId}/{uid}
+wc_lottery_winners/{matchId}/w/{uid}
                              { uid, name, phone,
                                prize:'shaqima|ryukakusan|yogurt_orig|yogurt_muscat|coins',
                                couponCode, coins, correct:bool, redeemed:false, drawnAt }
+wc_coupons/{couponCode}      { code, matchId, uid, name, phone, prize,
+                               redeemed, redeemedAt, drawnAt }   // 扁平索引,核销台按码秒查
+wc_lottery_admin/secret      { cashierPass }    // 收银口令(规则全锁,仅云函数可读)
 ```
 - 农场币发放:云函数(admin)直接给 `farm_players/{uid}.coins` 加值(服务端=安全,防刷)。
 
@@ -67,9 +70,12 @@ wc_lottery_winners/{matchId}/{uid}
 - **决赛后清仓**:全部 32 场 `drawn` 后,若库存仍 >0 → 在所有参与过的 uid 里去重随机抽满剩余库存,
   补发实物券码(`matchId='final-sweep'`)。
 
-## 奖品核销(到店)
-- 实物中奖者在观赛台看到「🎉 恭喜中奖 + 券码 + 奖品名」。
-- 到店出示券码 → 收银核对 → 给奖品 → 标 `redeemed=true`(收银用一个简单核销页/输码)。
+## 奖品核销(到店)— Phase 3 已做
+- 实物中奖者在观赛台转盘揭晓后看到「🎉 恭喜中奖 + 券码 + 奖品名」。
+- 收银核销页 `farm.easternmarket.ca/redeem`(farm 仓库 `redeem/index.html`):
+  收银员输口令 → 输券码 → 显示奖品/中奖人/状态 → 「确认核销」→ 标 `redeemed=true`。
+  已核销的码红字拦截,防重复领;另有记录页看全部实物券进度。
+- 页面只调云函数 `wcLotteryRedeem`(口令服务端校验),不直接读写库。
 - 农场币自动到账,无需核销。
 
 ## 安全(上线前必须)
@@ -89,6 +95,6 @@ wc_lottery_winners/{matchId}/{uid}
 - 库存:沙琪玛 22 / 龙角散 35 / 气泡饮原味 10 / 气泡饮青提 10(备货后填准)。
 
 ## 分阶段
-1. 前端竞猜报名 + 登录门 + 中奖展示(本仓库,可先上,不发奖也能跑)。
-2. Firestore 规则 + Cloud Function 自动开奖(Chris 部署)。
-3. 收银核销页 + App Check + 推送通知。
+1. ✅ 前端竞猜报名 + 登录门 + 中奖展示 + 幸运转盘揭晓(本仓库,可先上,不发奖也能跑)。
+2. ✅ Firestore 规则 + Cloud Function 自动开奖(交付在 worldcup/phase2/,Chris 部署)。
+3. ✅ 收银核销页(redeem/,随 deploy.sh 上线)。⬜ App Check ⬜ 推送通知(待做)。

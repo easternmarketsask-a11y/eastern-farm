@@ -29,15 +29,16 @@
 1. 拷 `functions/wcLottery.ts` 到 `EasternMarket_app/functions/src/wcLottery.ts`。
 2. 在 `functions/src/index.ts` 里导出(和现有 `onOrderStatusChange` 并列):
    ```ts
-   export { wcLotteryTick, wcLotteryDrawNow, wcLotterySetWinner } from './wcLottery';
+   export { wcLotteryTick, wcLotteryDrawNow, wcLotterySetWinner, wcLotteryRedeem } from './wcLottery';
    ```
 3. 依赖:用了 firebase-functions **v2**、Node 18+ 的全局 `fetch`(都已具备,无需装包)。
    如果 `tsconfig` 报 `fetch` 未定义,把 `"lib": ["es2022","dom"]` 或 Node18 类型补上即可。
 4. 部署:
    ```bash
-   firebase deploy --only functions:wcLotteryTick,functions:wcLotteryDrawNow,functions:wcLotterySetWinner --project eastern-market-members
+   firebase deploy --only functions:wcLotteryTick,functions:wcLotteryDrawNow,functions:wcLotterySetWinner,functions:wcLotteryRedeem --project eastern-market-members
    ```
    `wcLotteryTick` 会自动注册一个**每 30 分钟**的定时任务(Cloud Scheduler)。
+   `wcLotteryRedeem` 是收银核销页(Phase 3)调用的函数。
 
 **函数做了什么**:
 - **自动 seed**:把已确定双方的淘汰赛场写成 `wc_lottery/{matchId}`(deadline=开球时间)。
@@ -87,7 +88,30 @@
 3. 再部署**函数**;用 `wcLotteryDrawNow` 手动催一次,看日志与 `farm_players` 加币、
    `wc_lottery_winners` 是否正确。
 4. 开 App Check。
-5. Phase 3:收银核销页(输券码 → 标 `redeemed=true`)+ 推送通知(下一步我写)。
+5. Phase 3 收银核销页(见下)+ 推送通知。
+
+---
+
+## Phase 3 · 收银核销页(已做好)
+
+核销页在 **farm 仓库**里:`redeem/index.html` → 上线后地址
+**`https://farm.easternmarket.ca/redeem`**(随 `bash deploy.sh` 一起部署,无需另配)。
+
+**它怎么工作**:收银员开页面 → 输**收银口令** → 输顾客**券码** → 显示奖品/中奖人/状态 →
+点「确认核销并发奖」。已核销的码会红字拦截,防重复领。另有「核销记录」页看全部实物券进度。
+
+页面只调云函数 `wcLotteryRedeem`(口令服务端校验),自己不直接读写数据库,安全。
+
+### 设置收银口令(二选一)
+- **简单**:`wcLottery.ts` 顶部 `DEFAULT_CASHIER_PASS = '8888'` 改成你的口令,再部署。
+- **可随时改、更安全**:Firestore 控制台建文档 `wc_lottery_admin/secret`,字段
+  `cashierPass = "你的口令"`(此集合规则 read/write 全 false,只有云函数能读)。设了它就以它为准。
+
+### 数据(开奖时自动写)
+- `wc_coupons/{券码}` — 扁平券码索引,核销台按码秒查(规则全锁,只函数访问)。
+- 核销时同步把顾客 `wc_lottery_winners` 文档标 `redeemed=true`,顾客手机即显示「✓ 已核销」。
+
+> ⚠️ 若开了 App Check enforcement,核销页也要接 App Check(目前未接,零食级先不接亦可)。
 
 ---
 

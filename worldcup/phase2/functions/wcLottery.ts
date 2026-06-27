@@ -37,6 +37,17 @@ const KICKOFF_GRACE_MS = 150 * 60 * 1000; // 开球后 2.5h 才视为「可能�
 const PRIZE_KEYS = ['shaqima', 'ryukakusan', 'yogurt_orig', 'yogurt_muscat'] as const;
 type PrizeKey = typeof PRIZE_KEYS[number];
 
+// 中奖展示名(核销台/记录用)
+const PRIZE_CN: Record<string, string> = {
+  shaqima: '沙琪玛', ryukakusan: '龙角散',
+  yogurt_orig: '气泡饮·原味', yogurt_muscat: '气泡饮·青提', coins: '农场币',
+};
+function maskPhone(p?: string): string {
+  if (!p) return '';
+  const s = String(p).replace(/\s/g, '');
+  return s.length <= 4 ? s : '****' + s.slice(-4);
+}
+
 // 配置默认值(首次自动写入 wc_lottery_config/config;Chris 备货后可在控制台改)
 const DEFAULT_CONFIG = {
   coinsBase: 1000,
@@ -229,6 +240,7 @@ async function payout(matchId: string, winnerTeam: string, entries: Entry[]): Pr
     const phys = physByUid[e.uid];
     const wref = db.collection('wc_lottery_winners').doc(matchId).collection('w').doc(e.uid);
     const pref = db.collection('farm_players').doc(e.uid);
+    const cref = phys ? db.collection('wc_coupons').doc(phys.couponCode) : null;
     try {
       await db.runTransaction(async (tx) => {
         const wsnap = await tx.get(wref);
@@ -241,6 +253,10 @@ async function payout(matchId: string, winnerTeam: string, entries: Entry[]): Pr
           redeemed: false, paid: true, drawnAt: FieldValue.serverTimestamp(),
         }, { merge: true });
         tx.set(pref, { coins: FieldValue.increment(coins) }, { merge: true });
+        if (phys && cref) tx.set(cref, {   // 扁平券码索引,核销台按码直接查
+          code: phys.couponCode, matchId, uid: e.uid, name: e.name || '', phone: e.phone || '',
+          prize: phys.prize, redeemed: false, drawnAt: FieldValue.serverTimestamp(),
+        }, { merge: true });
       });
     } catch (err) { failures++; console.error('[wc-lotto payout]', matchId, e.uid, err); }
   }
@@ -289,6 +305,8 @@ async function finalSweep(fixtures: any) {
     let r = randInt(avail.reduce((s, k) => s + stock[k], 0));
     for (const k of avail) { if (r < stock[k]) { pick = k; break; } r -= stock[k]; }
     const wref = db.collection('wc_lottery_winners').doc(sweepId).collection('w').doc(e.uid);
+    const code = coupon();
+    const cref = db.collection('wc_coupons').doc(code);
     try {
       await db.runTransaction(async (tx) => {
         const wsnap = await tx.get(wref);
@@ -299,8 +317,10 @@ async function finalSweep(fixtures: any) {
         st[pick] -= 1;
         tx.update(CONFIG_REF(), { stock: st });
         tx.set(wref, { uid: e.uid, name: e.name || '', phone: e.phone || '', matchId: sweepId,
-          prize: pick, couponCode: coupon(), correct: false, coins: 0, redeemed: false, paid: true,
+          prize: pick, couponCode: code, correct: false, coins: 0, redeemed: false, paid: true,
           drawnAt: FieldValue.serverTimestamp() }, { merge: true });
+        tx.set(cref, { code, matchId: sweepId, uid: e.uid, name: e.name || '', phone: e.phone || '',
+          prize: pick, redeemed: false, drawnAt: FieldValue.serverTimestamp() }, { merge: true });
       });
       stock[pick] -= 1;
     } catch (err) { console.error('[wc-lotto sweep]', e.uid, err); }
@@ -361,3 +381,78 @@ function assertAdmin(req: CallableRequest) {
   if (token.admin === true || token.role === 'admin') return;
   throw new HttpsError('permission-denied', '仅管理员'); // 如无自定义 claim,改成校验固定 uid
 }
+
+// ============================================================
+// 收银核销(Phase 3):独立核销页 redeem/ 调用,口令校验,无需登录
+// 口令存 wc_lottery_admin/secret.cashierPass(read:false,只有云函数能读)
+// Chris 在控制台给该文档设 cashierPass;没设则用下面的默认值。
+// ============================================================
+const DEFAULT_CASHIER_PASS = '8888';   // ⚠️ Chris 部署前改掉,或在控制台设 wc_lottery_admin/secret
+
+async function assertCashier(pass?: string) {
+  let expected = DEFAULT_CASHIER_PASS;
+  try {
+    const s = await db.collection('wc_lottery_admin').doc('secret').get();
+    if (s.exists && (s.data() as any).cashierPass) expected = String((s.data() as any).cashierPass);
+  } catch (e) { /* 读不到就用默认 */ }
+  if (!pass || String(pass) !== expected) throw new HttpsError('permission-denied', '口令错误');
+}
+
+function fmtSK(ts: any): string {
+  if (!ts || !ts.toDate) return '';
+  const d = new Date(ts.toDate().getTime() - 6 * 3600 * 1000); // 萨省 UTC-6
+  const p = (n: number) => String(n).padStart(2, '0');
+  return (d.getUTCMonth() + 1) + '-' + d.getUTCDate() + ' ' + p(d.getUTCHours()) + ':' + p(d.getUTCMinutes());
+}
+
+export const wcLotteryRedeem = onCall({ region: REGION }, async (req: CallableRequest) => {
+  const { action, code, pass } = (req.data || {}) as { action?: string; code?: string; pass?: string };
+  await assertCashier(pass);
+
+  if (action === 'ping') return { ok: true };
+
+  if (action === 'list') {
+    const snap = await db.collection('wc_coupons').orderBy('drawnAt', 'desc').limit(300).get();
+    let redeemedCount = 0;
+    const items = snap.docs.map((d) => {
+      const x = d.data() as any;
+      if (x.redeemed) redeemedCount++;
+      return { code: x.code, prizeCn: PRIZE_CN[x.prize] || x.prize, name: x.name || '',
+        redeemed: !!x.redeemed, redeemedAt: fmtSK(x.redeemedAt) };
+    });
+    return { items, total: snap.size, redeemedCount };
+  }
+
+  const c = (code || '').trim().toUpperCase();
+  if (!c) throw new HttpsError('invalid-argument', '缺少券码');
+  const cref = db.collection('wc_coupons').doc(c);
+
+  if (action === 'lookup') {
+    const s = await cref.get();
+    if (!s.exists) return { found: false, code: c };
+    const x = s.data() as any;
+    return { found: true, code: c, prizeCn: PRIZE_CN[x.prize] || x.prize,
+      name: x.name || '', phone: maskPhone(x.phone), redeemed: !!x.redeemed, redeemedAt: fmtSK(x.redeemedAt),
+      matchId: x.matchId };
+  }
+
+  if (action === 'redeem') {
+    const out = await db.runTransaction(async (tx) => {
+      const s = await tx.get(cref);
+      if (!s.exists) throw new HttpsError('not-found', '查无此券码');
+      const x = s.data() as any;
+      const prizeCn = PRIZE_CN[x.prize] || x.prize;
+      if (x.redeemed) return { already: true, prizeCn, name: x.name || '' };
+      tx.set(cref, { redeemed: true, redeemedAt: FieldValue.serverTimestamp() }, { merge: true });
+      // 同步顾客的中奖文档,让其手机显示「✓ 已核销」
+      if (x.matchId && x.uid) {
+        const wref = db.collection('wc_lottery_winners').doc(x.matchId).collection('w').doc(x.uid);
+        tx.set(wref, { redeemed: true, redeemedAt: FieldValue.serverTimestamp() }, { merge: true });
+      }
+      return { already: false, prizeCn, name: x.name || '' };
+    });
+    return out;
+  }
+
+  throw new HttpsError('invalid-argument', '未知操作');
+});

@@ -54,6 +54,16 @@ match /wc_lottery_winners/{matchId}/w/{uid} {
   allow write: if false;
 }
 
+// ---- 券码索引:全不可读写(只有云函数 admin 访问;核销走 wcLotteryRedeem 函数)----
+match /wc_coupons/{code} {
+  allow read, write: if false;
+}
+
+// ---- 后台口令(收银核销口令):全不可读写,只有云函数能读 ----
+match /wc_lottery_admin/{doc} {
+  allow read, write: if false;
+}
+
 // ---- 注意:农场币加值走 farm_players/{uid}.coins ----
 // 云函数用 admin SDK 增量写,绕过规则。现有 farm_players 规则
 // (用户只能写自己 uid)无需改动,保持不变即可。
