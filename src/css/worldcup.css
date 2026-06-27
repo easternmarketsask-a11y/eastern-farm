@@ -334,6 +334,37 @@
 .wc-progress { font-size: 11.5px; color: var(--wc-soft); }
 .wc-progress b { color: var(--wc-pitch); }
 
+/* ===================== LOTTERY (竞猜抽奖) ===================== */
+.wc-lotto { margin: 12px 0 4px; }
+.wc-lotto-card { background: linear-gradient(160deg, #fff8e8, #fdf0d4); border: 1px solid #f0d28a; border-radius: var(--radius-md); padding: 12px; box-shadow: var(--wc-sh-sm); }
+.wc-lotto-head { font-family: var(--font-display); font-size: 13.5px; color: var(--wc-amber-deep); display: flex; align-items: center; gap: 7px; }
+.wc-lotto-tag { font-family: var(--font-display); font-size: 10px; color: #fff; background: var(--wc-amber-deep); padding: 2px 8px; border-radius: var(--radius-pill); }
+.wc-lotto-prizes { font-size: 11px; color: var(--wc-soft); margin: 6px 0 10px; line-height: 1.55; }
+.wc-lotto-picks { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.wc-lotto-pick { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; background: #fff; border: 2px solid var(--wc-line); border-radius: var(--radius-md); padding: 10px 6px; cursor: pointer; transition: all 0.15s; font-family: var(--font-zh); }
+.wc-lotto-pick .fl { font-size: 24px; line-height: 1; }
+.wc-lotto-pick .nm { font-size: 12.5px; font-weight: 600; color: var(--wc-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.wc-lotto-pick.sel { border-color: var(--wc-pitch); background: #f1f9ea; box-shadow: 0 0 0 3px rgba(106,176,76,0.18); }
+.wc-lotto-pick:active { transform: scale(0.97); }
+.wc-lotto-vs { font-family: var(--font-en); font-weight: 800; font-size: 11px; color: var(--wc-faint); flex: none; }
+.wc-lotto-submit, .wc-lotto-btn { display: block; width: 100%; border: 0; cursor: pointer; text-align: center; text-decoration: none;
+  background: linear-gradient(160deg, var(--wc-pitch-soft), var(--wc-pitch)); color: #fff; font-family: var(--font-display);
+  font-size: 13px; padding: 10px; border-radius: var(--radius-pill); box-shadow: 0 3px 9px rgba(58,125,44,0.3); transition: all 0.15s; }
+.wc-lotto-submit:disabled { background: #d8cdb5; box-shadow: none; cursor: default; }
+.wc-lotto-submit:active:not(:disabled), .wc-lotto-btn:active { transform: scale(0.97); }
+.wc-lotto-mypick { font-size: 13px; color: var(--wc-ink); margin-bottom: 6px; }
+.wc-lotto-mypick .fl { font-size: 16px; }
+.wc-lotto-wait, .wc-lotto-closed { font-size: 11.5px; color: var(--wc-soft); }
+.wc-lotto-card.win { background: linear-gradient(160deg, #fff4d6, #ffe9bf); border-color: #eaba5a; text-align: center; }
+.wc-lotto-card.win.coins { background: linear-gradient(160deg, #eaf6df, #dff0d3); border-color: #bfe0a8; }
+.wc-lotto-win-h { font-family: var(--font-display); font-size: 16px; color: var(--wc-amber-deep); }
+.wc-lotto-card.win.coins .wc-lotto-win-h { color: var(--wc-pitch); }
+.wc-lotto-prize { font-family: var(--font-display); font-size: 15px; margin: 4px 0; }
+.wc-lotto-code { font-size: 13px; margin: 4px 0; }
+.wc-lotto-code b { font-family: var(--font-en); letter-spacing: 1px; color: var(--wc-amber-deep); }
+.wc-lotto-redeem { font-size: 11px; color: var(--wc-soft); }
+.wc-lotto-coins { font-size: 11.5px; color: var(--wc-pitch); margin-top: 4px; }
+
 /* ===================== STREAK TOAST (easter egg) ===================== */
 .wc-streak {
   position: fixed; left: 50%; top: 18%; transform: translateX(-50%) translateY(-10px); z-index: 7200;

@@ -663,6 +663,8 @@
     // animate goal timeline
     var goals = det.querySelectorAll('.wc-goal');
     goals.forEach(function (g, i) { setTimeout(function () { g.classList.add('in'); }, 80 + i * 140); });
+    var lt = det.querySelector('.wc-lotto');
+    if (lt) lottoRender(lt, m);
     var fb = det.querySelector('.wc-follow-toggle');
     if (fb) fb.onclick = function (e) { e.stopPropagation(); toggleFollow(fb.getAttribute('data-team')); openCard(card, m); };
     var fb2 = det.querySelector('.wc-follow-toggle2');
@@ -673,6 +675,8 @@
   function detailHtml(m) {
     var state = matchState(m), s = score(m), p = skParts(m.kickoffUtc);
     var html = '<div class="wc-detail-venue">📍 ' + esc(m.venue) + ' · ' + esc(m.city) + ' &nbsp;·&nbsp; 🕐 ' + p.dayLabel + ' ' + p.time + ' 萨省</div>';
+    // knockout-stage prediction lottery (filled async after render)
+    if (isKO(m)) html += '<div class="wc-lotto" data-lotto="' + esc(m.id) + '"></div>';
 
     var lfD = liveFor(m);
     var scList = (lfD && lfD.scorers && lfD.scorers.length) ? lfD.scorers : (m.scorers || []);
@@ -730,6 +734,132 @@
   }
 
   function matchById(id) { return (data.matches || []).filter(function (m) { return m.id === id; })[0]; }
+
+  /* ============================================================
+     LOTTERY — 淘汰赛竞猜抽奖 · 百分百中奖 (Phase 1 front-end)
+     Reuses the farm's member login (Farm.fbAuth) + Firestore (Farm.fb.db).
+     KO matches only. Entry open until kickoff. Draw is server-side (Cloud
+     Function, Phase 2). Degrades gracefully: standalone page (no Firebase)
+     funnels users into the farm to log in & play. Deletes with the module.
+     ============================================================ */
+  var LOTTO_COL = 'wc_lottery';
+  var LOTTO_WIN_COL = 'wc_lottery_winners';
+  var PRIZE_CN = { shaqima: '沙琪玛', ryukakusan: '龙角散', coins: '农场币' };
+
+  function isKO(m) { return !!(m && m.stage && m.stage !== 'group'); }
+  function lottoOpen(m) { return matchState(m) === 'upcoming'; }   // entry until kickoff
+  function fbReady() { return !!(window.Farm && Farm.fb && Farm.fb.available && Farm.fb.db); }
+  function lottoUser() {
+    if (!window.Farm || !Farm.fbAuth || !Farm.fbAuth.isLoggedIn || !Farm.fbAuth.isLoggedIn()) return null;
+    var u = Farm.fbAuth.currentUser || {}, md = Farm.fbAuth.memberDoc || {};
+    return {
+      uid: (Farm.fbAuth.uid && Farm.fbAuth.uid()) || u.uid,
+      name: md.name || md.username || u.displayName || '会员',
+      phone: u.phoneNumber || md.phone || ''
+    };
+  }
+
+  function lottoPrizeLine() {
+    return '<div class="wc-lotto-prizes">猜对晋级队 → 抽 🐉龙角散 / 🥮沙琪玛(限量)· 人人保底 🪙1000 农场币</div>';
+  }
+  function lottoCard(title, bodyHtml, sub) {
+    return '<div class="wc-lotto-card">' +
+      '<div class="wc-lotto-head"><span class="wc-lotto-tag">竞猜抽奖</span>' + esc(title) + '</div>' +
+      (sub || '') + bodyHtml + '</div>';
+  }
+  function teamPickBtn(m, code) {
+    return '<button class="wc-lotto-pick" data-team="' + esc(code) + '">' +
+      '<span class="fl">' + (flag(code) || '⚽') + '</span>' +
+      '<span class="nm">' + esc(isTeam(code) ? cn(code) : placeholderLabel(code)) + '</span></button>';
+  }
+  function lottoFormHtml(m) {
+    return lottoCard('百发百中 · 猜谁晋级?',
+      '<div class="wc-lotto-picks">' + teamPickBtn(m, m.home) + '<span class="wc-lotto-vs">VS</span>' + teamPickBtn(m, m.away) + '</div>' +
+      '<button class="wc-lotto-submit" disabled>提交竞猜</button>',
+      lottoPrizeLine());
+  }
+  function lottoEnteredHtml(m, entry) {
+    var picked = entry.pickedTeam;
+    return lottoCard('已报名 · 等待开奖',
+      '<div class="wc-lotto-mypick">你猜:<span class="fl">' + (flag(picked) || '⚽') + '</span> <b>' +
+        esc(isTeam(picked) ? cn(picked) : placeholderLabel(picked)) + '</b> 晋级</div>' +
+      '<div class="wc-lotto-wait">赛后自动开奖 · 中奖会显示在这里</div>',
+      lottoPrizeLine());
+  }
+  function lottoWinHtml(win) {
+    var phys = win.prize && win.prize !== 'coins';
+    if (phys) {
+      return '<div class="wc-lotto-card win">' +
+        '<div class="wc-lotto-win-h">🎉 恭喜中奖!</div>' +
+        '<div class="wc-lotto-prize">🎁 ' + esc(PRIZE_CN[win.prize] || win.prize) + '</div>' +
+        (win.couponCode ? '<div class="wc-lotto-code">券码 <b>' + esc(win.couponCode) + '</b></div>' : '') +
+        '<div class="wc-lotto-redeem">' + (win.redeemed ? '✓ 已核销' : '到东方超市收银处出示此码领取') + '</div>' +
+        (win.coins ? '<div class="wc-lotto-coins">外加 🪙 ' + win.coins + ' 农场币已到账</div>' : '') +
+        '</div>';
+    }
+    return '<div class="wc-lotto-card win coins">' +
+      '<div class="wc-lotto-win-h">🪙 +' + (win.coins || 1000) + ' 农场币!</div>' +
+      '<div class="wc-lotto-redeem">已自动到账 · 回农场种菜用得上</div></div>';
+  }
+
+  function lottoRender(el, m) {
+    if (!el || !isKO(m)) { if (el) el.style.display = 'none'; return; }
+    if (!fbReady()) {   // standalone / no Firebase → funnel into the farm (goal: pull players in)
+      el.innerHTML = lottoCard('赢龙角散/沙琪玛 + 1000农场币',
+        '<a class="wc-lotto-btn" href="index.html">进入农场 · 登录参与 ›</a>', lottoPrizeLine());
+      return;
+    }
+    var u = lottoUser();
+    if (!u) {
+      el.innerHTML = lottoCard('百发百中 · 登录即可参与',
+        '<button class="wc-lotto-btn" data-act="login">用门店手机号登录参与 ›</button>', lottoPrizeLine());
+      var b = el.querySelector('[data-act="login"]');
+      if (b) b.onclick = function () { if (Farm.fbAuth && Farm.fbAuth.openLoginModal) Farm.fbAuth.openLoginModal(); };
+      return;
+    }
+    el.innerHTML = '<div class="wc-lotto-card"><div class="wc-lotto-wait">载入抽奖…</div></div>';
+    var db = Farm.fb.db;
+    Promise.all([
+      db.collection(LOTTO_COL).doc(m.id).collection('entries').doc(u.uid).get().catch(function () { return null; }),
+      db.collection(LOTTO_WIN_COL).doc(m.id).collection('w').doc(u.uid).get().catch(function () { return null; })
+    ]).then(function (res) {
+      var entry = res[0] && res[0].exists ? res[0].data() : null;
+      var win = res[1] && res[1].exists ? res[1].data() : null;
+      if (win) { el.innerHTML = lottoWinHtml(win); return; }
+      if (entry) { el.innerHTML = lottoEnteredHtml(m, entry); return; }
+      if (!lottoOpen(m)) { el.innerHTML = lottoCard('竞猜抽奖', '<div class="wc-lotto-closed">本场报名已截止 ⏱</div>', lottoPrizeLine()); return; }
+      el.innerHTML = lottoFormHtml(m);
+      wireLottoForm(el, m, u);
+    });
+  }
+
+  function wireLottoForm(el, m, u) {
+    var picked = null;
+    Array.prototype.forEach.call(el.querySelectorAll('.wc-lotto-pick'), function (btn) {
+      btn.onclick = function () {
+        picked = btn.getAttribute('data-team');
+        Array.prototype.forEach.call(el.querySelectorAll('.wc-lotto-pick'), function (b) { b.classList.toggle('sel', b === btn); });
+        var sub = el.querySelector('.wc-lotto-submit'); if (sub) sub.disabled = false;
+      };
+    });
+    var sub = el.querySelector('.wc-lotto-submit');
+    if (sub) sub.onclick = function () {
+      if (!picked) return;
+      if (!lottoOpen(m)) { if (Farm.ui) Farm.ui.toast('报名已截止'); lottoRender(el, m); return; }
+      sub.disabled = true; sub.textContent = '提交中…';
+      Farm.fb.db.collection(LOTTO_COL).doc(m.id).collection('entries').doc(u.uid).set({
+        uid: u.uid, name: u.name, phone: u.phone, pickedTeam: picked,
+        matchId: m.id, createdAt: Farm.fb.serverTimestamp()
+      }).then(function () {
+        if (Farm.audio) Farm.audio.play('coin');
+        miniConfetti();
+        lottoRender(el, m);
+      }).catch(function (e) {
+        sub.disabled = false; sub.textContent = '提交竞猜';
+        if (Farm.ui) Farm.ui.toast('提交失败,请重试'); console.warn('[wc-lotto]', e);
+      });
+    };
+  }
 
   /* ============================================================
      STANDINGS
