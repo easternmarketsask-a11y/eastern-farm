@@ -48,22 +48,22 @@
 /* ===================== TOP BAR ===================== */
 .wc-topbar {
   flex: 0 0 auto;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: max(10px, env(safe-area-inset-top)) 14px 10px;
+  padding: max(10px, env(safe-area-inset-top)) 12px 10px;
   border-bottom: 1px solid var(--wc-line);
   background: linear-gradient(180deg, rgba(255,253,246,0.92), rgba(255,253,246,0.6));
   backdrop-filter: blur(6px);
 }
-.wc-brand { display: flex; align-items: center; gap: 9px; min-width: 0; flex: 1; }
-.wc-brand .wc-emblem { height: 40px; width: auto; flex: none; object-fit: contain; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.18)); }
-.wc-brand-text { min-width: 0; line-height: 1.05; }
-.wc-brand-zh { font-family: var(--font-display); font-size: 16.5px; color: var(--wc-pitch); white-space: nowrap; }
-.wc-brand-en { font-family: var(--font-en); font-size: 9px; letter-spacing: 1.6px; color: var(--wc-amber-deep); font-weight: 700; text-transform: uppercase; margin-top: 1px; }
-.wc-clock { text-align: right; line-height: 1.15; flex: none; }
-.wc-clock .t { font-family: var(--font-en); font-variant-numeric: tabular-nums; font-weight: 700; font-size: 13px; color: var(--wc-ink); }
-.wc-clock .z { font-family: var(--font-en); font-size: 8.5px; letter-spacing: 0.5px; color: var(--wc-faint); }
+/* 3-zone bar: left = Eastern Market brand, center = World Cup logo (absolutely
+   centered so it's true-center regardless of side widths), right = clock + close. */
+.wc-topbar-inner { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 42px; }
+.wc-brand-em { flex: 0 0 auto; display: flex; align-items: center; text-decoration: none; }
+.wc-brand-em:active { transform: scale(0.96); }
+.wc-brand-em img { height: 26px; width: auto; display: block; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.08)); }
+.wc-emblem-center { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); height: 44px; width: auto; object-fit: contain; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.22)); pointer-events: none; }
+.wc-topbar-right { flex: 0 0 auto; display: flex; align-items: center; gap: 8px; }
+.wc-clock { text-align: right; line-height: 1.1; flex: none; }
+.wc-clock .t { display: block; font-family: var(--font-en); font-variant-numeric: tabular-nums; font-weight: 700; font-size: 12.5px; color: var(--wc-ink); }
+.wc-clock .z { display: block; font-family: var(--font-en); font-size: 8px; letter-spacing: 0.4px; color: var(--wc-faint); margin-top: 1px; }
 .wc-close {
   flex: none; width: 34px; height: 34px; border-radius: 50%;
   border: 1px solid var(--wc-border); background: var(--wc-card); color: var(--wc-soft);

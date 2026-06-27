@@ -128,14 +128,15 @@
     hub = document.createElement('div');
     hub.id = 'wc-hub';
     hub.innerHTML =
-      '<div class="wc-topbar">' +
-        '<div class="wc-brand"><img class="wc-emblem" src="assets/images/wc2026-logo.png" alt="FIFA World Cup 2026">' +
-          '<div class="wc-brand-text"><div class="wc-brand-zh">萨省观赛台</div>' +
-          '<div class="wc-brand-en">World Cup 26</div></div>' +
+      '<div class="wc-topbar"><div class="wc-topbar-inner">' +
+        '<a class="wc-brand-em" href="https://easternmarket.ca/" target="_blank" rel="noopener" title="东方超市 Eastern Market" aria-label="东方超市 Eastern Market">' +
+          '<img src="assets/images/logo-horizontal.png" alt="东方超市 Eastern Market"></a>' +
+        '<img class="wc-emblem-center" src="assets/images/wc2026-logo.png" alt="FIFA World Cup 2026">' +
+        '<div class="wc-topbar-right">' +
+          '<div class="wc-clock" id="wcClock"><span class="t">--:--</span><span class="z">SK · UTC−6</span></div>' +
+          '<button class="wc-close" id="wcClose" aria-label="关闭 Close">✕</button>' +
         '</div>' +
-        '<div class="wc-clock" id="wcClock"><span class="t">--:--</span><span class="z">SK · UTC−6</span></div>' +
-        '<button class="wc-close" id="wcClose" aria-label="关闭 Close">✕</button>' +
-      '</div>' +
+      '</div></div>' +
       '<div class="wc-tabs" role="tablist">' +
         tabBtn('schedule', '赛程赛果', 'SCHEDULE') +
         tabBtn('standings', '积分榜', 'STANDINGS') +
