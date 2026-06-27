@@ -27,10 +27,12 @@
 | 文件 | 作用 | 性质 |
 |---|---|---|
 | `data/wc2026.json` | 唯一数据源(seed + groupStats) | 新增 |
-| `src/js/worldcup.js` | 观赛台全部逻辑(`Farm.worldcup`) | 新增 |
+| `src/js/worldcup.js` | 观赛台全部逻辑(`Farm.worldcup`,含 `WC_STANDALONE` 独立模式) | 新增 |
 | `src/css/worldcup.css` | `.wc-*` scoped 样式(农场 token) | 新增 |
+| `src/worldcup.html` | 独立分享页(`/src/worldcup.html`,自动全屏打开观赛台) | 新增 |
+| `worldcup.html`(repo 根) | 短链重定向 → `src/worldcup.html`(`farm.easternmarket.ca/worldcup.html`) | 新增 |
 | `src/index.html` | +1 `<link>` +1 `<script>` + `#splash` 入口块 | 改(纯加法) |
-| `src/js/main.js` | wireSplash 里 +1 行绑定入口 | 改(纯加法) |
+| `src/assets/images/wc2026-logo.png` | 官方世界杯徽标(登录页 + 顶栏 + 独立页) | 新增 |
 
 ## 7 月底整体移除步骤
 

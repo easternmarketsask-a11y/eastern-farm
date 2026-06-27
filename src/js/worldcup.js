@@ -30,6 +30,10 @@
   var bracketPicks = prefs.bracket || {};
   var spoilerMode = prefs.spoilerMode || 'hidden';   // 'hidden' | 'shown'
 
+  // Standalone mode: the hub is the whole page (its own shareable URL), with no
+  // farm behind it. Set by worldcup.html before this script loads.
+  var WC_STANDALONE = !!(window.WC_STANDALONE);
+
   var hub = null;             // overlay element
   var activeTab = 'schedule';
   var rendered = {};
@@ -191,6 +195,8 @@
   }
 
   function close() {
+    // Standalone page has nothing behind the hub — "close" returns to the farm game.
+    if (WC_STANDALONE) { location.href = 'index.html'; return; }
     if (!hub) return;
     if (Farm.audio) Farm.audio.play('tap');
     stopTimers();
@@ -927,6 +933,8 @@
 
   /* ---------------------- init ---------------------- */
   function init() {
+    // Standalone page: just open the hub full-screen; no splash entry / reentry button.
+    if (WC_STANDALONE) { open(); return; }
     wireSplashEntry();
     ensureReentry();
     // splash may render slightly after us; re-check entry + reentry visibility briefly
