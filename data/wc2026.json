@@ -1,1740 +1,4418 @@
 {
-  "meta": {
-    "competition": "FIFA World Cup 2026",
-    "tzOffset": -6,
-    "lastUpdated": "2026-06-26T18:00:00Z",
-    "note": "Seed data. officialScore/officialFinal are human-confirmed truth. Group G/H/L finales pending. groupStats = authoritative cumulative table (rounds 1-2 not in matches[]); standings derive Pts/GD from it, h2h tiebreaks use matches[] where present."
+ "meta": {
+  "source": "ESPN (site.api.espn.com) FIFA World Cup 2026 — real fixtures/scores",
+  "tz": "America/Regina (UTC-6, no DST)"
+ },
+ "teams": [
+  {
+   "code": "MEX",
+   "name": "Mexico",
+   "cn": "墨西哥",
+   "flag": "🇲🇽",
+   "group": "A"
   },
-  "teams": [
-    {
-      "code": "MEX",
-      "name": "Mexico",
-      "cn": "墨西哥",
-      "flag": "🇲🇽",
-      "group": "A"
-    },
-    {
-      "code": "RSA",
-      "name": "South Africa",
-      "cn": "南非",
-      "flag": "🇿🇦",
-      "group": "A"
-    },
-    {
-      "code": "KOR",
-      "name": "South Korea",
-      "cn": "韩国",
-      "flag": "🇰🇷",
-      "group": "A"
-    },
-    {
-      "code": "CZE",
-      "name": "Czechia",
-      "cn": "捷克",
-      "flag": "🇨🇿",
-      "group": "A"
-    },
-    {
-      "code": "SUI",
-      "name": "Switzerland",
-      "cn": "瑞士",
-      "flag": "🇨🇭",
-      "group": "B"
-    },
-    {
-      "code": "CAN",
-      "name": "Canada",
-      "cn": "加拿大",
-      "flag": "🇨🇦",
-      "group": "B"
-    },
-    {
-      "code": "BIH",
-      "name": "Bosnia and Herzegovina",
-      "cn": "波黑",
-      "flag": "🇧🇦",
-      "group": "B"
-    },
-    {
-      "code": "QAT",
-      "name": "Qatar",
-      "cn": "卡塔尔",
-      "flag": "🇶🇦",
-      "group": "B"
-    },
-    {
-      "code": "BRA",
-      "name": "Brazil",
-      "cn": "巴西",
-      "flag": "🇧🇷",
-      "group": "C"
-    },
-    {
-      "code": "MAR",
-      "name": "Morocco",
-      "cn": "摩洛哥",
-      "flag": "🇲🇦",
-      "group": "C"
-    },
-    {
-      "code": "SCO",
-      "name": "Scotland",
-      "cn": "苏格兰",
-      "flag": "🏴",
-      "group": "C"
-    },
-    {
-      "code": "HAI",
-      "name": "Haiti",
-      "cn": "海地",
-      "flag": "🇭🇹",
-      "group": "C"
-    },
-    {
-      "code": "USA",
-      "name": "USA",
-      "cn": "美国",
-      "flag": "🇺🇸",
-      "group": "D"
-    },
-    {
-      "code": "AUS",
-      "name": "Australia",
-      "cn": "澳大利亚",
-      "flag": "🇦🇺",
-      "group": "D"
-    },
-    {
-      "code": "PAR",
-      "name": "Paraguay",
-      "cn": "巴拉圭",
-      "flag": "🇵🇾",
-      "group": "D"
-    },
-    {
-      "code": "TUR",
-      "name": "Turkiye",
-      "cn": "土耳其",
-      "flag": "🇹🇷",
-      "group": "D"
-    },
-    {
-      "code": "GER",
-      "name": "Germany",
-      "cn": "德国",
-      "flag": "🇩🇪",
-      "group": "E"
-    },
-    {
-      "code": "CIV",
-      "name": "Ivory Coast",
-      "cn": "科特迪瓦",
-      "flag": "🇨🇮",
-      "group": "E"
-    },
-    {
-      "code": "ECU",
-      "name": "Ecuador",
-      "cn": "厄瓜多尔",
-      "flag": "🇪🇨",
-      "group": "E"
-    },
-    {
-      "code": "CUW",
-      "name": "Curacao",
-      "cn": "库拉索",
-      "flag": "🇨🇼",
-      "group": "E"
-    },
-    {
-      "code": "NED",
-      "name": "Netherlands",
-      "cn": "荷兰",
-      "flag": "🇳🇱",
-      "group": "F"
-    },
-    {
-      "code": "JPN",
-      "name": "Japan",
-      "cn": "日本",
-      "flag": "🇯🇵",
-      "group": "F"
-    },
-    {
-      "code": "SWE",
-      "name": "Sweden",
-      "cn": "瑞典",
-      "flag": "🇸🇪",
-      "group": "F"
-    },
-    {
-      "code": "TUN",
-      "name": "Tunisia",
-      "cn": "突尼斯",
-      "flag": "🇹🇳",
-      "group": "F"
-    },
-    {
-      "code": "EGY",
-      "name": "Egypt",
-      "cn": "埃及",
-      "flag": "🇪🇬",
-      "group": "G"
-    },
-    {
-      "code": "IRN",
-      "name": "Iran",
-      "cn": "伊朗",
-      "flag": "🇮🇷",
-      "group": "G"
-    },
-    {
-      "code": "BEL",
-      "name": "Belgium",
-      "cn": "比利时",
-      "flag": "🇧🇪",
-      "group": "G"
-    },
-    {
-      "code": "NZL",
-      "name": "New Zealand",
-      "cn": "新西兰",
-      "flag": "🇳🇿",
-      "group": "G"
-    },
-    {
-      "code": "ESP",
-      "name": "Spain",
-      "cn": "西班牙",
-      "flag": "🇪🇸",
-      "group": "H"
-    },
-    {
-      "code": "URU",
-      "name": "Uruguay",
-      "cn": "乌拉圭",
-      "flag": "🇺🇾",
-      "group": "H"
-    },
-    {
-      "code": "CPV",
-      "name": "Cape Verde",
-      "cn": "佛得角",
-      "flag": "🇨🇻",
-      "group": "H"
-    },
-    {
-      "code": "KSA",
-      "name": "Saudi Arabia",
-      "cn": "沙特",
-      "flag": "🇸🇦",
-      "group": "H"
-    },
-    {
-      "code": "FRA",
-      "name": "France",
-      "cn": "法国",
-      "flag": "🇫🇷",
-      "group": "I"
-    },
-    {
-      "code": "NOR",
-      "name": "Norway",
-      "cn": "挪威",
-      "flag": "🇳🇴",
-      "group": "I"
-    },
-    {
-      "code": "SEN",
-      "name": "Senegal",
-      "cn": "塞内加尔",
-      "flag": "🇸🇳",
-      "group": "I"
-    },
-    {
-      "code": "IRQ",
-      "name": "Iraq",
-      "cn": "伊拉克",
-      "flag": "🇮🇶",
-      "group": "I"
-    },
-    {
-      "code": "ARG",
-      "name": "Argentina",
-      "cn": "阿根廷",
-      "flag": "🇦🇷",
-      "group": "J"
-    },
-    {
-      "code": "AUT",
-      "name": "Austria",
-      "cn": "奥地利",
-      "flag": "🇦🇹",
-      "group": "J"
-    },
-    {
-      "code": "ALG",
-      "name": "Algeria",
-      "cn": "阿尔及利亚",
-      "flag": "🇩🇿",
-      "group": "J"
-    },
-    {
-      "code": "JOR",
-      "name": "Jordan",
-      "cn": "约旦",
-      "flag": "🇯🇴",
-      "group": "J"
-    },
-    {
-      "code": "COL",
-      "name": "Colombia",
-      "cn": "哥伦比亚",
-      "flag": "🇨🇴",
-      "group": "K"
-    },
-    {
-      "code": "POR",
-      "name": "Portugal",
-      "cn": "葡萄牙",
-      "flag": "🇵🇹",
-      "group": "K"
-    },
-    {
-      "code": "COD",
-      "name": "DR Congo",
-      "cn": "刚果(金)",
-      "flag": "🇨🇩",
-      "group": "K"
-    },
-    {
-      "code": "UZB",
-      "name": "Uzbekistan",
-      "cn": "乌兹别克",
-      "flag": "🇺🇿",
-      "group": "K"
-    },
-    {
-      "code": "ENG",
-      "name": "England",
-      "cn": "英格兰",
-      "flag": "🏴",
-      "group": "L"
-    },
-    {
-      "code": "GHA",
-      "name": "Ghana",
-      "cn": "加纳",
-      "flag": "🇬🇭",
-      "group": "L"
-    },
-    {
-      "code": "CRO",
-      "name": "Croatia",
-      "cn": "克罗地亚",
-      "flag": "🇭🇷",
-      "group": "L"
-    },
-    {
-      "code": "PAN",
-      "name": "Panama",
-      "cn": "巴拿马",
-      "flag": "🇵🇦",
-      "group": "L"
-    }
+  {
+   "code": "CZE",
+   "name": "Czechia",
+   "cn": "捷克",
+   "flag": "🇨🇿",
+   "group": "A"
+  },
+  {
+   "code": "KOR",
+   "name": "South Korea",
+   "cn": "韩国",
+   "flag": "🇰🇷",
+   "group": "A"
+  },
+  {
+   "code": "RSA",
+   "name": "South Africa",
+   "cn": "南非",
+   "flag": "🇿🇦",
+   "group": "A"
+  },
+  {
+   "code": "CAN",
+   "name": "Canada",
+   "cn": "加拿大",
+   "flag": "🇨🇦",
+   "group": "B"
+  },
+  {
+   "code": "BIH",
+   "name": "Bosnia-Herzegovina",
+   "cn": "波黑",
+   "flag": "🇧🇦",
+   "group": "B"
+  },
+  {
+   "code": "SUI",
+   "name": "Switzerland",
+   "cn": "瑞士",
+   "flag": "🇨🇭",
+   "group": "B"
+  },
+  {
+   "code": "QAT",
+   "name": "Qatar",
+   "cn": "卡塔尔",
+   "flag": "🇶🇦",
+   "group": "B"
+  },
+  {
+   "code": "BRA",
+   "name": "Brazil",
+   "cn": "巴西",
+   "flag": "🇧🇷",
+   "group": "C"
+  },
+  {
+   "code": "SCO",
+   "name": "Scotland",
+   "cn": "苏格兰",
+   "flag": "🏴",
+   "group": "C"
+  },
+  {
+   "code": "HAI",
+   "name": "Haiti",
+   "cn": "海地",
+   "flag": "🇭🇹",
+   "group": "C"
+  },
+  {
+   "code": "MAR",
+   "name": "Morocco",
+   "cn": "摩洛哥",
+   "flag": "🇲🇦",
+   "group": "C"
+  },
+  {
+   "code": "PAR",
+   "name": "Paraguay",
+   "cn": "巴拉圭",
+   "flag": "🇵🇾",
+   "group": "D"
+  },
+  {
+   "code": "TUR",
+   "name": "Türkiye",
+   "cn": "土耳其",
+   "flag": "🇹🇷",
+   "group": "D"
+  },
+  {
+   "code": "AUS",
+   "name": "Australia",
+   "cn": "澳大利亚",
+   "flag": "🇦🇺",
+   "group": "D"
+  },
+  {
+   "code": "USA",
+   "name": "United States",
+   "cn": "美国",
+   "flag": "🇺🇸",
+   "group": "D"
+  },
+  {
+   "code": "ECU",
+   "name": "Ecuador",
+   "cn": "厄瓜多尔",
+   "flag": "🇪🇨",
+   "group": "E"
+  },
+  {
+   "code": "GER",
+   "name": "Germany",
+   "cn": "德国",
+   "flag": "🇩🇪",
+   "group": "E"
+  },
+  {
+   "code": "CIV",
+   "name": "Ivory Coast",
+   "cn": "科特迪瓦",
+   "flag": "🇨🇮",
+   "group": "E"
+  },
+  {
+   "code": "CUW",
+   "name": "Curaçao",
+   "cn": "库拉索",
+   "flag": "🇨🇼",
+   "group": "E"
+  },
+  {
+   "code": "NED",
+   "name": "Netherlands",
+   "cn": "荷兰",
+   "flag": "🇳🇱",
+   "group": "F"
+  },
+  {
+   "code": "SWE",
+   "name": "Sweden",
+   "cn": "瑞典",
+   "flag": "🇸🇪",
+   "group": "F"
+  },
+  {
+   "code": "JPN",
+   "name": "Japan",
+   "cn": "日本",
+   "flag": "🇯🇵",
+   "group": "F"
+  },
+  {
+   "code": "TUN",
+   "name": "Tunisia",
+   "cn": "突尼斯",
+   "flag": "🇹🇳",
+   "group": "F"
+  },
+  {
+   "code": "BEL",
+   "name": "Belgium",
+   "cn": "比利时",
+   "flag": "🇧🇪",
+   "group": "G"
+  },
+  {
+   "code": "IRN",
+   "name": "Iran",
+   "cn": "伊朗",
+   "flag": "🇮🇷",
+   "group": "G"
+  },
+  {
+   "code": "EGY",
+   "name": "Egypt",
+   "cn": "埃及",
+   "flag": "🇪🇬",
+   "group": "G"
+  },
+  {
+   "code": "NZL",
+   "name": "New Zealand",
+   "cn": "新西兰",
+   "flag": "🇳🇿",
+   "group": "G"
+  },
+  {
+   "code": "ESP",
+   "name": "Spain",
+   "cn": "西班牙",
+   "flag": "🇪🇸",
+   "group": "H"
+  },
+  {
+   "code": "URU",
+   "name": "Uruguay",
+   "cn": "乌拉圭",
+   "flag": "🇺🇾",
+   "group": "H"
+  },
+  {
+   "code": "KSA",
+   "name": "Saudi Arabia",
+   "cn": "沙特",
+   "flag": "🇸🇦",
+   "group": "H"
+  },
+  {
+   "code": "CPV",
+   "name": "Cape Verde",
+   "cn": "佛得角",
+   "flag": "🇨🇻",
+   "group": "H"
+  },
+  {
+   "code": "NOR",
+   "name": "Norway",
+   "cn": "挪威",
+   "flag": "🇳🇴",
+   "group": "I"
+  },
+  {
+   "code": "FRA",
+   "name": "France",
+   "cn": "法国",
+   "flag": "🇫🇷",
+   "group": "I"
+  },
+  {
+   "code": "SEN",
+   "name": "Senegal",
+   "cn": "塞内加尔",
+   "flag": "🇸🇳",
+   "group": "I"
+  },
+  {
+   "code": "IRQ",
+   "name": "Iraq",
+   "cn": "伊拉克",
+   "flag": "🇮🇶",
+   "group": "I"
+  },
+  {
+   "code": "ARG",
+   "name": "Argentina",
+   "cn": "阿根廷",
+   "flag": "🇦🇷",
+   "group": "J"
+  },
+  {
+   "code": "AUT",
+   "name": "Austria",
+   "cn": "奥地利",
+   "flag": "🇦🇹",
+   "group": "J"
+  },
+  {
+   "code": "ALG",
+   "name": "Algeria",
+   "cn": "阿尔及利亚",
+   "flag": "🇩🇿",
+   "group": "J"
+  },
+  {
+   "code": "JOR",
+   "name": "Jordan",
+   "cn": "约旦",
+   "flag": "🇯🇴",
+   "group": "J"
+  },
+  {
+   "code": "COL",
+   "name": "Colombia",
+   "cn": "哥伦比亚",
+   "flag": "🇨🇴",
+   "group": "K"
+  },
+  {
+   "code": "POR",
+   "name": "Portugal",
+   "cn": "葡萄牙",
+   "flag": "🇵🇹",
+   "group": "K"
+  },
+  {
+   "code": "UZB",
+   "name": "Uzbekistan",
+   "cn": "乌兹别克",
+   "flag": "🇺🇿",
+   "group": "K"
+  },
+  {
+   "code": "COD",
+   "name": "Congo DR",
+   "cn": "刚果(金)",
+   "flag": "🇨🇩",
+   "group": "K"
+  },
+  {
+   "code": "ENG",
+   "name": "England",
+   "cn": "英格兰",
+   "flag": "🏴",
+   "group": "L"
+  },
+  {
+   "code": "CRO",
+   "name": "Croatia",
+   "cn": "克罗地亚",
+   "flag": "🇭🇷",
+   "group": "L"
+  },
+  {
+   "code": "PAN",
+   "name": "Panama",
+   "cn": "巴拿马",
+   "flag": "🇵🇦",
+   "group": "L"
+  },
+  {
+   "code": "GHA",
+   "name": "Ghana",
+   "cn": "加纳",
+   "flag": "🇬🇭",
+   "group": "L"
+  }
+ ],
+ "groups": {
+  "A": [
+   "MEX",
+   "CZE",
+   "KOR",
+   "RSA"
   ],
-  "groups": {
-    "A": [
-      "MEX",
-      "RSA",
-      "KOR",
-      "CZE"
-    ],
-    "B": [
-      "SUI",
-      "CAN",
-      "BIH",
-      "QAT"
-    ],
-    "C": [
-      "BRA",
-      "MAR",
-      "SCO",
-      "HAI"
-    ],
-    "D": [
-      "USA",
-      "AUS",
-      "PAR",
-      "TUR"
-    ],
-    "E": [
-      "GER",
-      "CIV",
-      "ECU",
-      "CUW"
-    ],
-    "F": [
-      "NED",
-      "JPN",
-      "SWE",
-      "TUN"
-    ],
-    "G": [
-      "EGY",
-      "IRN",
-      "BEL",
-      "NZL"
-    ],
-    "H": [
-      "ESP",
-      "URU",
-      "CPV",
-      "KSA"
-    ],
-    "I": [
-      "FRA",
-      "NOR",
-      "SEN",
-      "IRQ"
-    ],
-    "J": [
-      "ARG",
-      "AUT",
-      "ALG",
-      "JOR"
-    ],
-    "K": [
-      "COL",
-      "POR",
-      "COD",
-      "UZB"
-    ],
-    "L": [
-      "ENG",
-      "GHA",
-      "CRO",
-      "PAN"
-    ]
-  },
-  "groupStats": {
-    "A": [
-      {
-        "code": "MEX",
-        "P": 3,
-        "W": 3,
-        "D": 0,
-        "L": 0,
-        "GF": 7,
-        "GA": 1,
-        "status": "q"
-      },
-      {
-        "code": "RSA",
-        "P": 3,
-        "W": 1,
-        "D": 1,
-        "L": 1,
-        "GF": 3,
-        "GA": 4,
-        "status": "q"
-      },
-      {
-        "code": "KOR",
-        "P": 3,
-        "W": 1,
-        "D": 0,
-        "L": 2,
-        "GF": 3,
-        "GA": 4,
-        "status": "alive"
-      },
-      {
-        "code": "CZE",
-        "P": 3,
-        "W": 0,
-        "D": 1,
-        "L": 2,
-        "GF": 1,
-        "GA": 5,
-        "status": "out"
-      }
-    ],
-    "B": [
-      {
-        "code": "SUI",
-        "P": 3,
-        "W": 2,
-        "D": 1,
-        "L": 0,
-        "GF": 7,
-        "GA": 3,
-        "status": "q"
-      },
-      {
-        "code": "CAN",
-        "P": 3,
-        "W": 1,
-        "D": 1,
-        "L": 1,
-        "GF": 8,
-        "GA": 3,
-        "status": "q"
-      },
-      {
-        "code": "BIH",
-        "P": 3,
-        "W": 1,
-        "D": 1,
-        "L": 1,
-        "GF": 4,
-        "GA": 5,
-        "status": "q"
-      },
-      {
-        "code": "QAT",
-        "P": 3,
-        "W": 0,
-        "D": 1,
-        "L": 2,
-        "GF": 2,
-        "GA": 10,
-        "status": "out"
-      }
-    ],
-    "C": [
-      {
-        "code": "BRA",
-        "P": 3,
-        "W": 2,
-        "D": 1,
-        "L": 0,
-        "GF": 9,
-        "GA": 3,
-        "status": "q"
-      },
-      {
-        "code": "MAR",
-        "P": 3,
-        "W": 2,
-        "D": 1,
-        "L": 0,
-        "GF": 6,
-        "GA": 3,
-        "status": "q"
-      },
-      {
-        "code": "SCO",
-        "P": 3,
-        "W": 1,
-        "D": 0,
-        "L": 2,
-        "GF": 3,
-        "GA": 6,
-        "status": "alive"
-      },
-      {
-        "code": "HAI",
-        "P": 3,
-        "W": 0,
-        "D": 0,
-        "L": 3,
-        "GF": 2,
-        "GA": 8,
-        "status": "out"
-      }
-    ],
-    "D": [
-      {
-        "code": "USA",
-        "P": 3,
-        "W": 2,
-        "D": 0,
-        "L": 1,
-        "GF": 7,
-        "GA": 3,
-        "status": "q"
-      },
-      {
-        "code": "AUS",
-        "P": 3,
-        "W": 1,
-        "D": 1,
-        "L": 1,
-        "GF": 4,
-        "GA": 4,
-        "status": "q"
-      },
-      {
-        "code": "PAR",
-        "P": 3,
-        "W": 1,
-        "D": 1,
-        "L": 1,
-        "GF": 3,
-        "GA": 5,
-        "status": "alive"
-      },
-      {
-        "code": "TUR",
-        "P": 3,
-        "W": 1,
-        "D": 0,
-        "L": 2,
-        "GF": 4,
-        "GA": 6,
-        "status": "out"
-      }
-    ],
-    "E": [
-      {
-        "code": "GER",
-        "P": 3,
-        "W": 2,
-        "D": 0,
-        "L": 1,
-        "GF": 8,
-        "GA": 2,
-        "status": "q"
-      },
-      {
-        "code": "CIV",
-        "P": 3,
-        "W": 2,
-        "D": 0,
-        "L": 1,
-        "GF": 5,
-        "GA": 3,
-        "status": "q"
-      },
-      {
-        "code": "ECU",
-        "P": 3,
-        "W": 1,
-        "D": 1,
-        "L": 1,
-        "GF": 4,
-        "GA": 4,
-        "status": "q"
-      },
-      {
-        "code": "CUW",
-        "P": 3,
-        "W": 0,
-        "D": 1,
-        "L": 2,
-        "GF": 2,
-        "GA": 10,
-        "status": "out"
-      }
-    ],
-    "F": [
-      {
-        "code": "NED",
-        "P": 3,
-        "W": 2,
-        "D": 1,
-        "L": 0,
-        "GF": 8,
-        "GA": 2,
-        "status": "q"
-      },
-      {
-        "code": "JPN",
-        "P": 3,
-        "W": 1,
-        "D": 2,
-        "L": 0,
-        "GF": 6,
-        "GA": 2,
-        "status": "q"
-      },
-      {
-        "code": "SWE",
-        "P": 3,
-        "W": 1,
-        "D": 1,
-        "L": 1,
-        "GF": 4,
-        "GA": 4,
-        "status": "q"
-      },
-      {
-        "code": "TUN",
-        "P": 3,
-        "W": 0,
-        "D": 0,
-        "L": 3,
-        "GF": 1,
-        "GA": 11,
-        "status": "out"
-      }
-    ],
-    "G": [
-      {
-        "code": "EGY",
-        "P": 2,
-        "W": 1,
-        "D": 1,
-        "L": 0,
-        "GF": 3,
-        "GA": 1,
-        "status": "alive"
-      },
-      {
-        "code": "IRN",
-        "P": 2,
-        "W": 0,
-        "D": 2,
-        "L": 0,
-        "GF": 2,
-        "GA": 2,
-        "status": "alive"
-      },
-      {
-        "code": "BEL",
-        "P": 2,
-        "W": 0,
-        "D": 2,
-        "L": 0,
-        "GF": 2,
-        "GA": 2,
-        "status": "alive"
-      },
-      {
-        "code": "NZL",
-        "P": 2,
-        "W": 0,
-        "D": 1,
-        "L": 1,
-        "GF": 1,
-        "GA": 3,
-        "status": "alive"
-      }
-    ],
-    "H": [
-      {
-        "code": "ESP",
-        "P": 2,
-        "W": 1,
-        "D": 1,
-        "L": 0,
-        "GF": 5,
-        "GA": 1,
-        "status": "alive"
-      },
-      {
-        "code": "URU",
-        "P": 2,
-        "W": 0,
-        "D": 2,
-        "L": 0,
-        "GF": 2,
-        "GA": 2,
-        "status": "alive"
-      },
-      {
-        "code": "CPV",
-        "P": 2,
-        "W": 0,
-        "D": 2,
-        "L": 0,
-        "GF": 2,
-        "GA": 2,
-        "status": "alive"
-      },
-      {
-        "code": "KSA",
-        "P": 2,
-        "W": 0,
-        "D": 1,
-        "L": 1,
-        "GF": 1,
-        "GA": 5,
-        "status": "alive"
-      }
-    ],
-    "I": [
-      {
-        "code": "FRA",
-        "P": 3,
-        "W": 2,
-        "D": 0,
-        "L": 1,
-        "GF": 7,
-        "GA": 2,
-        "status": "q"
-      },
-      {
-        "code": "NOR",
-        "P": 3,
-        "W": 2,
-        "D": 0,
-        "L": 1,
-        "GF": 6,
-        "GA": 2,
-        "status": "q"
-      },
-      {
-        "code": "SEN",
-        "P": 3,
-        "W": 1,
-        "D": 0,
-        "L": 2,
-        "GF": 2,
-        "GA": 5,
-        "status": "out"
-      },
-      {
-        "code": "IRQ",
-        "P": 3,
-        "W": 0,
-        "D": 0,
-        "L": 3,
-        "GF": 1,
-        "GA": 7,
-        "status": "out"
-      }
-    ],
-    "J": [
-      {
-        "code": "ARG",
-        "P": 3,
-        "W": 2,
-        "D": 0,
-        "L": 1,
-        "GF": 6,
-        "GA": 1,
-        "status": "q"
-      },
-      {
-        "code": "AUT",
-        "P": 3,
-        "W": 1,
-        "D": 0,
-        "L": 2,
-        "GF": 3,
-        "GA": 3,
-        "status": "alive"
-      },
-      {
-        "code": "ALG",
-        "P": 3,
-        "W": 1,
-        "D": 0,
-        "L": 2,
-        "GF": 3,
-        "GA": 5,
-        "status": "alive"
-      },
-      {
-        "code": "JOR",
-        "P": 3,
-        "W": 0,
-        "D": 0,
-        "L": 3,
-        "GF": 1,
-        "GA": 4,
-        "status": "out"
-      }
-    ],
-    "K": [
-      {
-        "code": "COL",
-        "P": 3,
-        "W": 2,
-        "D": 0,
-        "L": 1,
-        "GF": 5,
-        "GA": 2,
-        "status": "q"
-      },
-      {
-        "code": "POR",
-        "P": 3,
-        "W": 1,
-        "D": 1,
-        "L": 1,
-        "GF": 7,
-        "GA": 2,
-        "status": "alive"
-      },
-      {
-        "code": "COD",
-        "P": 3,
-        "W": 0,
-        "D": 1,
-        "L": 2,
-        "GF": 2,
-        "GA": 3,
-        "status": "alive"
-      },
-      {
-        "code": "UZB",
-        "P": 3,
-        "W": 0,
-        "D": 0,
-        "L": 3,
-        "GF": 1,
-        "GA": 8,
-        "status": "out"
-      }
-    ],
-    "L": [
-      {
-        "code": "ENG",
-        "P": 2,
-        "W": 1,
-        "D": 1,
-        "L": 0,
-        "GF": 3,
-        "GA": 1,
-        "status": "alive"
-      },
-      {
-        "code": "GHA",
-        "P": 2,
-        "W": 1,
-        "D": 1,
-        "L": 0,
-        "GF": 2,
-        "GA": 1,
-        "status": "alive"
-      },
-      {
-        "code": "CRO",
-        "P": 2,
-        "W": 1,
-        "D": 0,
-        "L": 1,
-        "GF": 2,
-        "GA": 3,
-        "status": "alive"
-      },
-      {
-        "code": "PAN",
-        "P": 2,
-        "W": 0,
-        "D": 0,
-        "L": 2,
-        "GF": 1,
-        "GA": 3,
-        "status": "out"
-      }
-    ]
-  },
-  "matches": [
-    {
-      "id": "M001",
-      "stage": "group",
-      "round": "小组赛 第1轮",
-      "group": "A",
-      "kickoffUtc": "2026-06-11T19:00:00Z",
-      "venue": "Estadio Azteca",
-      "city": "Mexico City",
-      "home": "MEX",
-      "away": "RSA",
-      "apiScore": [
-        2,
-        1
-      ],
-      "apiStatus": "FT",
-      "officialScore": [
-        2,
-        1
-      ],
-      "officialFinal": true,
-      "scorers": [
-        {
-          "team": "MEX",
-          "player": "S. Giménez",
-          "minute": 23
-        },
-        {
-          "team": "RSA",
-          "player": "P. Tau",
-          "minute": 58
-        },
-        {
-          "team": "MEX",
-          "player": "R. Jiménez",
-          "minute": 79
-        }
-      ]
-    },
-    {
-      "id": "M072",
-      "stage": "group",
-      "round": "小组赛 第3轮",
-      "group": "B",
-      "kickoffUtc": "2026-06-22T18:00:00Z",
-      "venue": "MetLife",
-      "city": "NY/NJ",
-      "home": "BIH",
-      "away": "CAN",
-      "apiScore": [
-        1,
-        2
-      ],
-      "apiStatus": "FT",
-      "officialScore": [
-        1,
-        2
-      ],
-      "officialFinal": true,
-      "scorers": [
-        {
-          "team": "BIH",
-          "player": "E. Džeko",
-          "minute": 40
-        },
-        {
-          "team": "CAN",
-          "player": "J. David",
-          "minute": 55
-        },
-        {
-          "team": "CAN",
-          "player": "C. Larin",
-          "minute": 78
-        }
-      ]
-    },
-    {
-      "id": "M071",
-      "stage": "group",
-      "round": "小组赛 第3轮",
-      "group": "B",
-      "kickoffUtc": "2026-06-22T18:00:00Z",
-      "venue": "MetLife",
-      "city": "NY/NJ",
-      "home": "SUI",
-      "away": "QAT",
-      "apiScore": [
-        3,
-        1
-      ],
-      "apiStatus": "FT",
-      "officialScore": [
-        3,
-        1
-      ],
-      "officialFinal": true,
-      "scorers": []
-    },
-    {
-      "id": "M070",
-      "stage": "group",
-      "round": "小组赛 第3轮",
-      "group": "A",
-      "kickoffUtc": "2026-06-22T22:00:00Z",
-      "venue": "Estadio Azteca",
-      "city": "Mexico City",
-      "home": "MEX",
-      "away": "CZE",
-      "apiScore": [
-        3,
-        0
-      ],
-      "apiStatus": "FT",
-      "officialScore": [
-        3,
-        0
-      ],
-      "officialFinal": true,
-      "scorers": [
-        {
-          "team": "MEX",
-          "player": "S. Giménez",
-          "minute": 12
-        },
-        {
-          "team": "MEX",
-          "player": "E. Álvarez",
-          "minute": 39
-        },
-        {
-          "team": "MEX",
-          "player": "U. Antuna",
-          "minute": 75
-        }
-      ]
-    },
-    {
-      "id": "M069",
-      "stage": "group",
-      "round": "小组赛 第3轮",
-      "group": "A",
-      "kickoffUtc": "2026-06-22T22:00:00Z",
-      "venue": "Akron",
-      "city": "Guadalajara",
-      "home": "KOR",
-      "away": "RSA",
-      "apiScore": [
-        1,
-        0
-      ],
-      "apiStatus": "FT",
-      "officialScore": [
-        1,
-        0
-      ],
-      "officialFinal": true,
-      "scorers": []
-    },
-    {
-      "id": "M068",
-      "stage": "group",
-      "round": "小组赛 第3轮",
-      "group": "D",
-      "kickoffUtc": "2026-06-23T18:00:00Z",
-      "venue": "Lumen",
-      "city": "Seattle",
-      "home": "USA",
-      "away": "TUR",
-      "apiScore": [
-        2,
-        1
-      ],
-      "apiStatus": "FT",
-      "officialScore": [
-        2,
-        1
-      ],
-      "officialFinal": true,
-      "scorers": [
-        {
-          "team": "USA",
-          "player": "C. Pulisic",
-          "minute": 25
-        },
-        {
-          "team": "TUR",
-          "player": "A. Güler",
-          "minute": 51
-        },
-        {
-          "team": "USA",
-          "player": "F. Balogun",
-          "minute": 63
-        }
-      ]
-    },
-    {
-      "id": "M067",
-      "stage": "group",
-      "round": "小组赛 第3轮",
-      "group": "D",
-      "kickoffUtc": "2026-06-23T18:00:00Z",
-      "venue": "Levi's",
-      "city": "SF",
-      "home": "PAR",
-      "away": "AUS",
-      "apiScore": [
-        1,
-        1
-      ],
-      "apiStatus": "FT",
-      "officialScore": [
-        1,
-        1
-      ],
-      "officialFinal": true,
-      "scorers": []
-    },
-    {
-      "id": "M066",
-      "stage": "group",
-      "round": "小组赛 第3轮",
-      "group": "C",
-      "kickoffUtc": "2026-06-23T22:00:00Z",
-      "venue": "SoFi",
-      "city": "LA",
-      "home": "BRA",
-      "away": "HAI",
-      "apiScore": [
-        4,
-        0
-      ],
-      "apiStatus": "FT",
-      "officialScore": [
-        4,
-        0
-      ],
-      "officialFinal": true,
-      "scorers": [
-        {
-          "team": "BRA",
-          "player": "Raphinha",
-          "minute": 9
-        },
-        {
-          "team": "BRA",
-          "player": "Vinícius Jr.",
-          "minute": 34
-        },
-        {
-          "team": "BRA",
-          "player": "Rodrygo",
-          "minute": 52
-        },
-        {
-          "team": "BRA",
-          "player": "Endrick",
-          "minute": 88
-        }
-      ]
-    },
-    {
-      "id": "M065",
-      "stage": "group",
-      "round": "小组赛 第3轮",
-      "group": "C",
-      "kickoffUtc": "2026-06-23T22:00:00Z",
-      "venue": "BC Place",
-      "city": "Vancouver",
-      "home": "SCO",
-      "away": "MAR",
-      "apiScore": [
-        1,
-        2
-      ],
-      "apiStatus": "FT",
-      "officialScore": [
-        1,
-        2
-      ],
-      "officialFinal": true,
-      "scorers": []
-    },
-    {
-      "id": "M064",
-      "stage": "group",
-      "round": "小组赛 第3轮",
-      "group": "F",
-      "kickoffUtc": "2026-06-24T18:00:00Z",
-      "venue": "BMO Field",
-      "city": "Toronto",
-      "home": "NED",
-      "away": "TUN",
-      "apiScore": [
-        3,
-        0
-      ],
-      "apiStatus": "FT",
-      "officialScore": [
-        3,
-        0
-      ],
-      "officialFinal": true,
-      "scorers": []
-    },
-    {
-      "id": "M063",
-      "stage": "group",
-      "round": "小组赛 第3轮",
-      "group": "F",
-      "kickoffUtc": "2026-06-24T18:00:00Z",
-      "venue": "Arrowhead",
-      "city": "Kansas City",
-      "home": "JPN",
-      "away": "SWE",
-      "apiScore": [
-        1,
-        1
-      ],
-      "apiStatus": "FT",
-      "officialScore": [
-        1,
-        1
-      ],
-      "officialFinal": true,
-      "scorers": []
-    },
-    {
-      "id": "M062",
-      "stage": "group",
-      "round": "小组赛 第3轮",
-      "group": "E",
-      "kickoffUtc": "2026-06-24T22:00:00Z",
-      "venue": "Lincoln",
-      "city": "Philadelphia",
-      "home": "GER",
-      "away": "CUW",
-      "apiScore": [
-        3,
-        0
-      ],
-      "apiStatus": "FT",
-      "officialScore": [
-        3,
-        0
-      ],
-      "officialFinal": true,
-      "scorers": []
-    },
-    {
-      "id": "M061",
-      "stage": "group",
-      "round": "小组赛 第3轮",
-      "group": "E",
-      "kickoffUtc": "2026-06-24T22:00:00Z",
-      "venue": "MetLife",
-      "city": "NY/NJ",
-      "home": "ECU",
-      "away": "CIV",
-      "apiScore": [
-        1,
-        1
-      ],
-      "apiStatus": "FT",
-      "officialScore": [
-        1,
-        1
-      ],
-      "officialFinal": true,
-      "scorers": []
-    },
-    {
-      "id": "M060",
-      "stage": "group",
-      "round": "小组赛 第3轮",
-      "group": "K",
-      "kickoffUtc": "2026-06-25T18:00:00Z",
-      "venue": "NRG",
-      "city": "Houston",
-      "home": "COL",
-      "away": "UZB",
-      "apiScore": [
-        2,
-        0
-      ],
-      "apiStatus": "FT",
-      "officialScore": [
-        2,
-        0
-      ],
-      "officialFinal": true,
-      "scorers": []
-    },
-    {
-      "id": "M059",
-      "stage": "group",
-      "round": "小组赛 第3轮",
-      "group": "K",
-      "kickoffUtc": "2026-06-25T18:00:00Z",
-      "venue": "Estadio BBVA",
-      "city": "Monterrey",
-      "home": "POR",
-      "away": "COD",
-      "apiScore": [
-        3,
-        1
-      ],
-      "apiStatus": "FT",
-      "officialScore": [
-        3,
-        1
-      ],
-      "officialFinal": true,
-      "scorers": [
-        {
-          "team": "POR",
-          "player": "G. Ramos",
-          "minute": 18
-        },
-        {
-          "team": "POR",
-          "player": "R. Leão",
-          "minute": 44
-        },
-        {
-          "team": "COD",
-          "player": "C. Bakambu",
-          "minute": 61
-        },
-        {
-          "team": "POR",
-          "player": "B. Fernandes",
-          "minute": 70
-        }
-      ]
-    },
-    {
-      "id": "M058",
-      "stage": "group",
-      "round": "小组赛 第3轮",
-      "group": "J",
-      "kickoffUtc": "2026-06-25T22:00:00Z",
-      "venue": "Hard Rock",
-      "city": "Miami",
-      "home": "ARG",
-      "away": "ALG",
-      "apiScore": [
-        2,
-        1
-      ],
-      "apiStatus": "FT",
-      "officialScore": [
-        2,
-        1
-      ],
-      "officialFinal": true,
-      "scorers": []
-    },
-    {
-      "id": "M057",
-      "stage": "group",
-      "round": "小组赛 第3轮",
-      "group": "J",
-      "kickoffUtc": "2026-06-25T22:00:00Z",
-      "venue": "Mercedes-Benz",
-      "city": "Atlanta",
-      "home": "JOR",
-      "away": "AUT",
-      "apiScore": [
-        0,
-        1
-      ],
-      "apiStatus": "FT",
-      "officialScore": [
-        0,
-        1
-      ],
-      "officialFinal": true,
-      "scorers": []
-    },
-    {
-      "id": "M056",
-      "stage": "group",
-      "round": "小组赛 第3轮",
-      "group": "I",
-      "kickoffUtc": "2026-06-26T18:00:00Z",
-      "venue": "Lumen",
-      "city": "Seattle",
-      "home": "FRA",
-      "away": "IRQ",
-      "apiScore": [
-        2,
-        0
-      ],
-      "apiStatus": "FT",
-      "officialScore": [
-        2,
-        0
-      ],
-      "officialFinal": true,
-      "scorers": []
-    },
-    {
-      "id": "M055",
-      "stage": "group",
-      "round": "小组赛 第3轮",
-      "group": "I",
-      "kickoffUtc": "2026-06-26T18:00:00Z",
-      "venue": "BC Place",
-      "city": "Vancouver",
-      "home": "NOR",
-      "away": "SEN",
-      "apiScore": [
-        1,
-        0
-      ],
-      "apiStatus": "FT",
-      "officialScore": [
-        1,
-        0
-      ],
-      "officialFinal": true,
-      "scorers": []
-    },
-    {
-      "id": "M073",
-      "stage": "group",
-      "round": "小组赛 第3轮",
-      "group": "G",
-      "kickoffUtc": "2026-06-26T22:00:00Z",
-      "venue": "AT&T",
-      "city": "Dallas",
-      "home": "BEL",
-      "away": "NZL",
-      "apiScore": null,
-      "apiStatus": "NS",
-      "officialScore": null,
-      "officialFinal": false,
-      "scorers": []
-    },
-    {
-      "id": "M074",
-      "stage": "group",
-      "round": "小组赛 第3轮",
-      "group": "G",
-      "kickoffUtc": "2026-06-26T22:00:00Z",
-      "venue": "NRG",
-      "city": "Houston",
-      "home": "IRN",
-      "away": "EGY",
-      "apiScore": null,
-      "apiStatus": "NS",
-      "officialScore": null,
-      "officialFinal": false,
-      "scorers": []
-    },
-    {
-      "id": "M075",
-      "stage": "group",
-      "round": "小组赛 第3轮",
-      "group": "H",
-      "kickoffUtc": "2026-06-27T01:00:00Z",
-      "venue": "Levi's",
-      "city": "SF",
-      "home": "ESP",
-      "away": "KSA",
-      "apiScore": null,
-      "apiStatus": "NS",
-      "officialScore": null,
-      "officialFinal": false,
-      "scorers": []
-    },
-    {
-      "id": "M076",
-      "stage": "group",
-      "round": "小组赛 第3轮",
-      "group": "H",
-      "kickoffUtc": "2026-06-27T01:00:00Z",
-      "venue": "SoFi",
-      "city": "LA",
-      "home": "CPV",
-      "away": "URU",
-      "apiScore": null,
-      "apiStatus": "NS",
-      "officialScore": null,
-      "officialFinal": false,
-      "scorers": []
-    },
-    {
-      "id": "M077",
-      "stage": "group",
-      "round": "小组赛 第3轮",
-      "group": "L",
-      "kickoffUtc": "2026-06-27T19:00:00Z",
-      "venue": "Gillette",
-      "city": "Boston",
-      "home": "ENG",
-      "away": "PAN",
-      "apiScore": null,
-      "apiStatus": "NS",
-      "officialScore": null,
-      "officialFinal": false,
-      "scorers": []
-    },
-    {
-      "id": "M078",
-      "stage": "group",
-      "round": "小组赛 第3轮",
-      "group": "L",
-      "kickoffUtc": "2026-06-27T19:00:00Z",
-      "venue": "Arrowhead",
-      "city": "Kansas City",
-      "home": "CRO",
-      "away": "GHA",
-      "apiScore": null,
-      "apiStatus": "NS",
-      "officialScore": null,
-      "officialFinal": false,
-      "scorers": []
-    },
-    {
-      "id": "M079",
-      "stage": "r32",
-      "round": "16强 (R32)",
-      "group": null,
-      "kickoffUtc": "2026-06-28T19:00:00Z",
-      "venue": "SoFi",
-      "city": "LA",
-      "home": "1A",
-      "away": "2B",
-      "apiScore": null,
-      "apiStatus": "NS",
-      "officialScore": null,
-      "officialFinal": false,
-      "scorers": []
-    },
-    {
-      "id": "M080",
-      "stage": "r32",
-      "round": "16强 (R32)",
-      "group": null,
-      "kickoffUtc": "2026-06-28T23:00:00Z",
-      "venue": "NRG",
-      "city": "Houston",
-      "home": "1C",
-      "away": "2F",
-      "apiScore": null,
-      "apiStatus": "NS",
-      "officialScore": null,
-      "officialFinal": false,
-      "scorers": []
-    },
-    {
-      "id": "M081",
-      "stage": "r32",
-      "round": "16强 (R32)",
-      "group": null,
-      "kickoffUtc": "2026-06-29T19:00:00Z",
-      "venue": "Lincoln",
-      "city": "Philadelphia",
-      "home": "1E",
-      "away": "2D",
-      "apiScore": null,
-      "apiStatus": "NS",
-      "officialScore": null,
-      "officialFinal": false,
-      "scorers": []
-    },
-    {
-      "id": "M082",
-      "stage": "r32",
-      "round": "16强 (R32)",
-      "group": null,
-      "kickoffUtc": "2026-06-29T23:00:00Z",
-      "venue": "Lumen",
-      "city": "Seattle",
-      "home": "1I",
-      "away": "3CDFGH",
-      "apiScore": null,
-      "apiStatus": "NS",
-      "officialScore": null,
-      "officialFinal": false,
-      "scorers": []
-    },
-    {
-      "id": "M095",
-      "stage": "r16",
-      "round": "8强 (R16)",
-      "group": null,
-      "kickoffUtc": "2026-07-04T19:00:00Z",
-      "venue": "Gillette",
-      "city": "Boston",
-      "home": "W73",
-      "away": "W74",
-      "apiScore": null,
-      "apiStatus": "NS",
-      "officialScore": null,
-      "officialFinal": false,
-      "scorers": []
-    },
-    {
-      "id": "M096",
-      "stage": "r16",
-      "round": "8强 (R16)",
-      "group": null,
-      "kickoffUtc": "2026-07-05T19:00:00Z",
-      "venue": "Mercedes-Benz",
-      "city": "Atlanta",
-      "home": "W75",
-      "away": "W76",
-      "apiScore": null,
-      "apiStatus": "NS",
-      "officialScore": null,
-      "officialFinal": false,
-      "scorers": []
-    },
-    {
-      "id": "M101",
-      "stage": "qf",
-      "round": "四分之一决赛",
-      "group": null,
-      "kickoffUtc": "2026-07-09T19:00:00Z",
-      "venue": "Hard Rock",
-      "city": "Miami",
-      "home": "W95",
-      "away": "W96",
-      "apiScore": null,
-      "apiStatus": "NS",
-      "officialScore": null,
-      "officialFinal": false,
-      "scorers": []
-    },
-    {
-      "id": "M102",
-      "stage": "qf",
-      "round": "四分之一决赛",
-      "group": null,
-      "kickoffUtc": "2026-07-10T19:00:00Z",
-      "venue": "Arrowhead",
-      "city": "Kansas City",
-      "home": "W97",
-      "away": "W98",
-      "apiScore": null,
-      "apiStatus": "NS",
-      "officialScore": null,
-      "officialFinal": false,
-      "scorers": []
-    },
-    {
-      "id": "M103",
-      "stage": "sf",
-      "round": "半决赛",
-      "group": null,
-      "kickoffUtc": "2026-07-14T19:00:00Z",
-      "venue": "AT&T",
-      "city": "Dallas",
-      "home": "W101",
-      "away": "W102",
-      "apiScore": null,
-      "apiStatus": "NS",
-      "officialScore": null,
-      "officialFinal": false,
-      "scorers": []
-    },
-    {
-      "id": "M104",
-      "stage": "sf",
-      "round": "半决赛",
-      "group": null,
-      "kickoffUtc": "2026-07-15T19:00:00Z",
-      "venue": "Mercedes-Benz",
-      "city": "Atlanta",
-      "home": "W103",
-      "away": "W104",
-      "apiScore": null,
-      "apiStatus": "NS",
-      "officialScore": null,
-      "officialFinal": false,
-      "scorers": []
-    },
-    {
-      "id": "M105",
-      "stage": "3p",
-      "round": "三四名决赛",
-      "group": null,
-      "kickoffUtc": "2026-07-18T15:00:00Z",
-      "venue": "Hard Rock",
-      "city": "Miami",
-      "home": "L-SF1",
-      "away": "L-SF2",
-      "apiScore": null,
-      "apiStatus": "NS",
-      "officialScore": null,
-      "officialFinal": false,
-      "scorers": []
-    },
-    {
-      "id": "M106",
-      "stage": "final",
-      "round": "决赛 FINAL",
-      "group": null,
-      "kickoffUtc": "2026-07-19T15:00:00Z",
-      "venue": "MetLife",
-      "city": "NY/NJ",
-      "home": "W-SF1",
-      "away": "W-SF2",
-      "apiScore": null,
-      "apiStatus": "NS",
-      "officialScore": null,
-      "officialFinal": false,
-      "scorers": []
-    }
+  "B": [
+   "CAN",
+   "BIH",
+   "SUI",
+   "QAT"
+  ],
+  "C": [
+   "BRA",
+   "SCO",
+   "HAI",
+   "MAR"
+  ],
+  "D": [
+   "PAR",
+   "TUR",
+   "AUS",
+   "USA"
+  ],
+  "E": [
+   "ECU",
+   "GER",
+   "CIV",
+   "CUW"
+  ],
+  "F": [
+   "NED",
+   "SWE",
+   "JPN",
+   "TUN"
+  ],
+  "G": [
+   "BEL",
+   "IRN",
+   "EGY",
+   "NZL"
+  ],
+  "H": [
+   "ESP",
+   "URU",
+   "KSA",
+   "CPV"
+  ],
+  "I": [
+   "NOR",
+   "FRA",
+   "SEN",
+   "IRQ"
+  ],
+  "J": [
+   "ARG",
+   "AUT",
+   "ALG",
+   "JOR"
+  ],
+  "K": [
+   "COL",
+   "POR",
+   "UZB",
+   "COD"
+  ],
+  "L": [
+   "ENG",
+   "CRO",
+   "PAN",
+   "GHA"
   ]
+ },
+ "groupStats": {
+  "A": [
+   {
+    "code": "MEX",
+    "P": 3,
+    "W": 3,
+    "D": 0,
+    "L": 0,
+    "GF": 6,
+    "GA": 0,
+    "status": "q"
+   },
+   {
+    "code": "RSA",
+    "P": 3,
+    "W": 1,
+    "D": 1,
+    "L": 1,
+    "GF": 2,
+    "GA": 3,
+    "status": "q"
+   },
+   {
+    "code": "KOR",
+    "P": 3,
+    "W": 1,
+    "D": 0,
+    "L": 2,
+    "GF": 2,
+    "GA": 3,
+    "status": "alive"
+   },
+   {
+    "code": "CZE",
+    "P": 3,
+    "W": 0,
+    "D": 1,
+    "L": 2,
+    "GF": 2,
+    "GA": 6,
+    "status": "out"
+   }
+  ],
+  "B": [
+   {
+    "code": "SUI",
+    "P": 3,
+    "W": 2,
+    "D": 1,
+    "L": 0,
+    "GF": 7,
+    "GA": 3,
+    "status": "q"
+   },
+   {
+    "code": "CAN",
+    "P": 3,
+    "W": 1,
+    "D": 1,
+    "L": 1,
+    "GF": 8,
+    "GA": 3,
+    "status": "q"
+   },
+   {
+    "code": "BIH",
+    "P": 3,
+    "W": 1,
+    "D": 1,
+    "L": 1,
+    "GF": 5,
+    "GA": 6,
+    "status": "alive"
+   },
+   {
+    "code": "QAT",
+    "P": 3,
+    "W": 0,
+    "D": 1,
+    "L": 2,
+    "GF": 2,
+    "GA": 10,
+    "status": "out"
+   }
+  ],
+  "C": [
+   {
+    "code": "BRA",
+    "P": 3,
+    "W": 2,
+    "D": 1,
+    "L": 0,
+    "GF": 7,
+    "GA": 1,
+    "status": "q"
+   },
+   {
+    "code": "MAR",
+    "P": 3,
+    "W": 2,
+    "D": 1,
+    "L": 0,
+    "GF": 6,
+    "GA": 3,
+    "status": "q"
+   },
+   {
+    "code": "SCO",
+    "P": 3,
+    "W": 1,
+    "D": 0,
+    "L": 2,
+    "GF": 1,
+    "GA": 4,
+    "status": "alive"
+   },
+   {
+    "code": "HAI",
+    "P": 3,
+    "W": 0,
+    "D": 0,
+    "L": 3,
+    "GF": 2,
+    "GA": 8,
+    "status": "out"
+   }
+  ],
+  "D": [
+   {
+    "code": "USA",
+    "P": 3,
+    "W": 2,
+    "D": 0,
+    "L": 1,
+    "GF": 8,
+    "GA": 4,
+    "status": "q"
+   },
+   {
+    "code": "AUS",
+    "P": 3,
+    "W": 1,
+    "D": 1,
+    "L": 1,
+    "GF": 2,
+    "GA": 2,
+    "status": "q"
+   },
+   {
+    "code": "PAR",
+    "P": 3,
+    "W": 1,
+    "D": 1,
+    "L": 1,
+    "GF": 2,
+    "GA": 4,
+    "status": "alive"
+   },
+   {
+    "code": "TUR",
+    "P": 3,
+    "W": 1,
+    "D": 0,
+    "L": 2,
+    "GF": 3,
+    "GA": 5,
+    "status": "out"
+   }
+  ],
+  "E": [
+   {
+    "code": "GER",
+    "P": 3,
+    "W": 2,
+    "D": 0,
+    "L": 1,
+    "GF": 10,
+    "GA": 4,
+    "status": "q"
+   },
+   {
+    "code": "CIV",
+    "P": 3,
+    "W": 2,
+    "D": 0,
+    "L": 1,
+    "GF": 4,
+    "GA": 2,
+    "status": "q"
+   },
+   {
+    "code": "ECU",
+    "P": 3,
+    "W": 1,
+    "D": 1,
+    "L": 1,
+    "GF": 2,
+    "GA": 2,
+    "status": "alive"
+   },
+   {
+    "code": "CUW",
+    "P": 3,
+    "W": 0,
+    "D": 1,
+    "L": 2,
+    "GF": 1,
+    "GA": 9,
+    "status": "out"
+   }
+  ],
+  "F": [
+   {
+    "code": "NED",
+    "P": 3,
+    "W": 2,
+    "D": 1,
+    "L": 0,
+    "GF": 10,
+    "GA": 4,
+    "status": "q"
+   },
+   {
+    "code": "JPN",
+    "P": 3,
+    "W": 1,
+    "D": 2,
+    "L": 0,
+    "GF": 7,
+    "GA": 3,
+    "status": "q"
+   },
+   {
+    "code": "SWE",
+    "P": 3,
+    "W": 1,
+    "D": 1,
+    "L": 1,
+    "GF": 7,
+    "GA": 7,
+    "status": "alive"
+   },
+   {
+    "code": "TUN",
+    "P": 3,
+    "W": 0,
+    "D": 0,
+    "L": 3,
+    "GF": 2,
+    "GA": 12,
+    "status": "out"
+   }
+  ],
+  "G": [
+   {
+    "code": "BEL",
+    "P": 3,
+    "W": 1,
+    "D": 2,
+    "L": 0,
+    "GF": 6,
+    "GA": 2,
+    "status": "q"
+   },
+   {
+    "code": "EGY",
+    "P": 3,
+    "W": 1,
+    "D": 2,
+    "L": 0,
+    "GF": 5,
+    "GA": 3,
+    "status": "q"
+   },
+   {
+    "code": "IRN",
+    "P": 3,
+    "W": 0,
+    "D": 3,
+    "L": 0,
+    "GF": 3,
+    "GA": 3,
+    "status": "alive"
+   },
+   {
+    "code": "NZL",
+    "P": 3,
+    "W": 0,
+    "D": 1,
+    "L": 2,
+    "GF": 4,
+    "GA": 10,
+    "status": "out"
+   }
+  ],
+  "H": [
+   {
+    "code": "ESP",
+    "P": 3,
+    "W": 2,
+    "D": 1,
+    "L": 0,
+    "GF": 5,
+    "GA": 0,
+    "status": "q"
+   },
+   {
+    "code": "CPV",
+    "P": 3,
+    "W": 0,
+    "D": 3,
+    "L": 0,
+    "GF": 2,
+    "GA": 2,
+    "status": "q"
+   },
+   {
+    "code": "URU",
+    "P": 3,
+    "W": 0,
+    "D": 2,
+    "L": 1,
+    "GF": 3,
+    "GA": 4,
+    "status": "alive"
+   },
+   {
+    "code": "KSA",
+    "P": 3,
+    "W": 0,
+    "D": 2,
+    "L": 1,
+    "GF": 1,
+    "GA": 5,
+    "status": "out"
+   }
+  ],
+  "I": [
+   {
+    "code": "FRA",
+    "P": 3,
+    "W": 3,
+    "D": 0,
+    "L": 0,
+    "GF": 10,
+    "GA": 2,
+    "status": "q"
+   },
+   {
+    "code": "NOR",
+    "P": 3,
+    "W": 2,
+    "D": 0,
+    "L": 1,
+    "GF": 8,
+    "GA": 7,
+    "status": "q"
+   },
+   {
+    "code": "SEN",
+    "P": 3,
+    "W": 1,
+    "D": 0,
+    "L": 2,
+    "GF": 8,
+    "GA": 6,
+    "status": "alive"
+   },
+   {
+    "code": "IRQ",
+    "P": 3,
+    "W": 0,
+    "D": 0,
+    "L": 3,
+    "GF": 1,
+    "GA": 12,
+    "status": "out"
+   }
+  ],
+  "J": [
+   {
+    "code": "ARG",
+    "P": 2,
+    "W": 2,
+    "D": 0,
+    "L": 0,
+    "GF": 5,
+    "GA": 0,
+    "status": "alive"
+   },
+   {
+    "code": "AUT",
+    "P": 2,
+    "W": 1,
+    "D": 0,
+    "L": 1,
+    "GF": 3,
+    "GA": 3,
+    "status": "alive"
+   },
+   {
+    "code": "ALG",
+    "P": 2,
+    "W": 1,
+    "D": 0,
+    "L": 1,
+    "GF": 2,
+    "GA": 4,
+    "status": "alive"
+   },
+   {
+    "code": "JOR",
+    "P": 2,
+    "W": 0,
+    "D": 0,
+    "L": 2,
+    "GF": 2,
+    "GA": 5,
+    "status": "alive"
+   }
+  ],
+  "K": [
+   {
+    "code": "COL",
+    "P": 2,
+    "W": 2,
+    "D": 0,
+    "L": 0,
+    "GF": 4,
+    "GA": 1,
+    "status": "alive"
+   },
+   {
+    "code": "POR",
+    "P": 2,
+    "W": 1,
+    "D": 1,
+    "L": 0,
+    "GF": 6,
+    "GA": 1,
+    "status": "alive"
+   },
+   {
+    "code": "COD",
+    "P": 2,
+    "W": 0,
+    "D": 1,
+    "L": 1,
+    "GF": 1,
+    "GA": 2,
+    "status": "alive"
+   },
+   {
+    "code": "UZB",
+    "P": 2,
+    "W": 0,
+    "D": 0,
+    "L": 2,
+    "GF": 1,
+    "GA": 8,
+    "status": "alive"
+   }
+  ],
+  "L": [
+   {
+    "code": "ENG",
+    "P": 2,
+    "W": 1,
+    "D": 1,
+    "L": 0,
+    "GF": 4,
+    "GA": 2,
+    "status": "alive"
+   },
+   {
+    "code": "GHA",
+    "P": 2,
+    "W": 1,
+    "D": 1,
+    "L": 0,
+    "GF": 1,
+    "GA": 0,
+    "status": "alive"
+   },
+   {
+    "code": "CRO",
+    "P": 2,
+    "W": 1,
+    "D": 0,
+    "L": 1,
+    "GF": 3,
+    "GA": 4,
+    "status": "alive"
+   },
+   {
+    "code": "PAN",
+    "P": 2,
+    "W": 0,
+    "D": 0,
+    "L": 2,
+    "GF": 0,
+    "GA": 2,
+    "status": "alive"
+   }
+  ]
+ },
+ "matches": [
+  {
+   "stage": "group",
+   "group": "A",
+   "kickoffUtc": "2026-06-11T19:00:00Z",
+   "venue": "Estadio Banorte",
+   "city": "Mexico City",
+   "home": "MEX",
+   "away": "RSA",
+   "apiScore": [
+    2,
+    0
+   ],
+   "apiStatus": "FT",
+   "officialScore": [
+    2,
+    0
+   ],
+   "officialFinal": true,
+   "scorers": [
+    {
+     "team": "MEX",
+     "player": "J. Quiñones",
+     "minute": 9,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "MEX",
+     "player": "R. Jiménez",
+     "minute": 67,
+     "pen": false,
+     "og": false
+    }
+   ],
+   "id": "M001",
+   "round": "小组赛 第1轮"
+  },
+  {
+   "stage": "group",
+   "group": "A",
+   "kickoffUtc": "2026-06-12T02:00:00Z",
+   "venue": "Estadio Akron",
+   "city": "Guadalajara",
+   "home": "KOR",
+   "away": "CZE",
+   "apiScore": [
+    2,
+    1
+   ],
+   "apiStatus": "FT",
+   "officialScore": [
+    2,
+    1
+   ],
+   "officialFinal": true,
+   "scorers": [
+    {
+     "team": "CZE",
+     "player": "L. Krejcí",
+     "minute": 59,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "KOR",
+     "player": "H. In-Beom",
+     "minute": 67,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "KOR",
+     "player": "O. Hyeon-Gyu",
+     "minute": 80,
+     "pen": false,
+     "og": false
+    }
+   ],
+   "id": "M002",
+   "round": "小组赛 第1轮"
+  },
+  {
+   "stage": "group",
+   "group": "B",
+   "kickoffUtc": "2026-06-12T19:00:00Z",
+   "venue": "BMO Field",
+   "city": "Toronto",
+   "home": "CAN",
+   "away": "BIH",
+   "apiScore": [
+    1,
+    1
+   ],
+   "apiStatus": "FT",
+   "officialScore": [
+    1,
+    1
+   ],
+   "officialFinal": true,
+   "scorers": [
+    {
+     "team": "BIH",
+     "player": "J. Lukic",
+     "minute": 21,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "CAN",
+     "player": "C. Larin",
+     "minute": 78,
+     "pen": false,
+     "og": false
+    }
+   ],
+   "id": "M003",
+   "round": "小组赛 第1轮"
+  },
+  {
+   "stage": "group",
+   "group": "D",
+   "kickoffUtc": "2026-06-13T01:00:00Z",
+   "venue": "SoFi Stadium",
+   "city": "Inglewood, California",
+   "home": "USA",
+   "away": "PAR",
+   "apiScore": [
+    4,
+    1
+   ],
+   "apiStatus": "FT",
+   "officialScore": [
+    4,
+    1
+   ],
+   "officialFinal": true,
+   "scorers": [
+    {
+     "team": "USA",
+     "player": "D. Bobadilla",
+     "minute": 7,
+     "pen": false,
+     "og": true
+    },
+    {
+     "team": "USA",
+     "player": "F. Balogun",
+     "minute": 31,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "USA",
+     "player": "F. Balogun",
+     "minute": 45,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "PAR",
+     "player": "Maurício",
+     "minute": 73,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "USA",
+     "player": "G. Reyna",
+     "minute": 90,
+     "pen": false,
+     "og": false
+    }
+   ],
+   "id": "M004",
+   "round": "小组赛 第1轮"
+  },
+  {
+   "stage": "group",
+   "group": "B",
+   "kickoffUtc": "2026-06-13T19:00:00Z",
+   "venue": "Levi's Stadium",
+   "city": "Santa Clara, California",
+   "home": "QAT",
+   "away": "SUI",
+   "apiScore": [
+    1,
+    1
+   ],
+   "apiStatus": "FT",
+   "officialScore": [
+    1,
+    1
+   ],
+   "officialFinal": true,
+   "scorers": [
+    {
+     "team": "SUI",
+     "player": "B. Embolo",
+     "minute": 17,
+     "pen": true,
+     "og": false
+    },
+    {
+     "team": "QAT",
+     "player": "M. Muheim",
+     "minute": 90,
+     "pen": false,
+     "og": true
+    }
+   ],
+   "id": "M005",
+   "round": "小组赛 第1轮"
+  },
+  {
+   "stage": "group",
+   "group": "C",
+   "kickoffUtc": "2026-06-13T22:00:00Z",
+   "venue": "MetLife Stadium",
+   "city": "East Rutherford, New Jersey",
+   "home": "BRA",
+   "away": "MAR",
+   "apiScore": [
+    1,
+    1
+   ],
+   "apiStatus": "FT",
+   "officialScore": [
+    1,
+    1
+   ],
+   "officialFinal": true,
+   "scorers": [
+    {
+     "team": "MAR",
+     "player": "I. Saibari",
+     "minute": 21,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "BRA",
+     "player": "Vinícius Júnior",
+     "minute": 32,
+     "pen": false,
+     "og": false
+    }
+   ],
+   "id": "M006",
+   "round": "小组赛 第1轮"
+  },
+  {
+   "stage": "group",
+   "group": "C",
+   "kickoffUtc": "2026-06-14T01:00:00Z",
+   "venue": "Gillette Stadium",
+   "city": "Foxborough, Massachusetts",
+   "home": "HAI",
+   "away": "SCO",
+   "apiScore": [
+    0,
+    1
+   ],
+   "apiStatus": "FT",
+   "officialScore": [
+    0,
+    1
+   ],
+   "officialFinal": true,
+   "scorers": [
+    {
+     "team": "SCO",
+     "player": "J. McGinn",
+     "minute": 28,
+     "pen": false,
+     "og": false
+    }
+   ],
+   "id": "M007",
+   "round": "小组赛 第1轮"
+  },
+  {
+   "stage": "group",
+   "group": "D",
+   "kickoffUtc": "2026-06-14T04:00:00Z",
+   "venue": "BC Place",
+   "city": "Vancouver",
+   "home": "AUS",
+   "away": "TUR",
+   "apiScore": [
+    2,
+    0
+   ],
+   "apiStatus": "FT",
+   "officialScore": [
+    2,
+    0
+   ],
+   "officialFinal": true,
+   "scorers": [
+    {
+     "team": "AUS",
+     "player": "N. Irankunda",
+     "minute": 27,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "AUS",
+     "player": "C. Metcalfe",
+     "minute": 75,
+     "pen": false,
+     "og": false
+    }
+   ],
+   "id": "M008",
+   "round": "小组赛 第1轮"
+  },
+  {
+   "stage": "group",
+   "group": "E",
+   "kickoffUtc": "2026-06-14T17:00:00Z",
+   "venue": "NRG Stadium",
+   "city": "Houston, Texas",
+   "home": "GER",
+   "away": "CUW",
+   "apiScore": [
+    7,
+    1
+   ],
+   "apiStatus": "FT",
+   "officialScore": [
+    7,
+    1
+   ],
+   "officialFinal": true,
+   "scorers": [
+    {
+     "team": "GER",
+     "player": "F. Nmecha",
+     "minute": 6,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "CUW",
+     "player": "L. Comenencia",
+     "minute": 21,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "GER",
+     "player": "N. Schlotterbeck",
+     "minute": 38,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "GER",
+     "player": "K. Havertz",
+     "minute": 45,
+     "pen": true,
+     "og": false
+    },
+    {
+     "team": "GER",
+     "player": "J. Musiala",
+     "minute": 47,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "GER",
+     "player": "N. Brown",
+     "minute": 68,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "GER",
+     "player": "D. Undav",
+     "minute": 78,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "GER",
+     "player": "K. Havertz",
+     "minute": 88,
+     "pen": false,
+     "og": false
+    }
+   ],
+   "id": "M009",
+   "round": "小组赛 第1轮"
+  },
+  {
+   "stage": "group",
+   "group": "F",
+   "kickoffUtc": "2026-06-14T20:00:00Z",
+   "venue": "AT&T Stadium",
+   "city": "Arlington, Texas",
+   "home": "NED",
+   "away": "JPN",
+   "apiScore": [
+    2,
+    2
+   ],
+   "apiStatus": "FT",
+   "officialScore": [
+    2,
+    2
+   ],
+   "officialFinal": true,
+   "scorers": [
+    {
+     "team": "NED",
+     "player": "V. van Dijk",
+     "minute": 51,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "JPN",
+     "player": "K. Nakamura",
+     "minute": 57,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "NED",
+     "player": "C. Summerville",
+     "minute": 64,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "JPN",
+     "player": "D. Kamada",
+     "minute": 89,
+     "pen": false,
+     "og": false
+    }
+   ],
+   "id": "M010",
+   "round": "小组赛 第1轮"
+  },
+  {
+   "stage": "group",
+   "group": "E",
+   "kickoffUtc": "2026-06-14T23:00:00Z",
+   "venue": "Lincoln Financial Field",
+   "city": "Philadelphia, Pennsylvania",
+   "home": "CIV",
+   "away": "ECU",
+   "apiScore": [
+    1,
+    0
+   ],
+   "apiStatus": "FT",
+   "officialScore": [
+    1,
+    0
+   ],
+   "officialFinal": true,
+   "scorers": [
+    {
+     "team": "CIV",
+     "player": "A. Diallo",
+     "minute": 90,
+     "pen": false,
+     "og": false
+    }
+   ],
+   "id": "M011",
+   "round": "小组赛 第1轮"
+  },
+  {
+   "stage": "group",
+   "group": "F",
+   "kickoffUtc": "2026-06-15T02:00:00Z",
+   "venue": "Estadio BBVA",
+   "city": "Guadalupe",
+   "home": "SWE",
+   "away": "TUN",
+   "apiScore": [
+    5,
+    1
+   ],
+   "apiStatus": "FT",
+   "officialScore": [
+    5,
+    1
+   ],
+   "officialFinal": true,
+   "scorers": [
+    {
+     "team": "SWE",
+     "player": "Y. Ayari",
+     "minute": 7,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "SWE",
+     "player": "A. Isak",
+     "minute": 30,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "TUN",
+     "player": "O. Rekik",
+     "minute": 43,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "SWE",
+     "player": "V. Gyökeres",
+     "minute": 59,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "SWE",
+     "player": "M. Svanberg",
+     "minute": 84,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "SWE",
+     "player": "Y. Ayari",
+     "minute": 90,
+     "pen": false,
+     "og": false
+    }
+   ],
+   "id": "M012",
+   "round": "小组赛 第1轮"
+  },
+  {
+   "stage": "group",
+   "group": "H",
+   "kickoffUtc": "2026-06-15T16:00:00Z",
+   "venue": "Mercedes-Benz Stadium",
+   "city": "Atlanta, Georgia",
+   "home": "ESP",
+   "away": "CPV",
+   "apiScore": [
+    0,
+    0
+   ],
+   "apiStatus": "FT",
+   "officialScore": [
+    0,
+    0
+   ],
+   "officialFinal": true,
+   "scorers": [],
+   "id": "M013",
+   "round": "小组赛 第1轮"
+  },
+  {
+   "stage": "group",
+   "group": "G",
+   "kickoffUtc": "2026-06-15T19:00:00Z",
+   "venue": "Lumen Field",
+   "city": "Seattle, Washington",
+   "home": "BEL",
+   "away": "EGY",
+   "apiScore": [
+    1,
+    1
+   ],
+   "apiStatus": "FT",
+   "officialScore": [
+    1,
+    1
+   ],
+   "officialFinal": true,
+   "scorers": [
+    {
+     "team": "EGY",
+     "player": "E. Ashour",
+     "minute": 20,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "BEL",
+     "player": "M. Hany",
+     "minute": 66,
+     "pen": false,
+     "og": true
+    }
+   ],
+   "id": "M014",
+   "round": "小组赛 第1轮"
+  },
+  {
+   "stage": "group",
+   "group": "H",
+   "kickoffUtc": "2026-06-15T22:00:00Z",
+   "venue": "Hard Rock Stadium",
+   "city": "Miami Gardens, Florida",
+   "home": "KSA",
+   "away": "URU",
+   "apiScore": [
+    1,
+    1
+   ],
+   "apiStatus": "FT",
+   "officialScore": [
+    1,
+    1
+   ],
+   "officialFinal": true,
+   "scorers": [
+    {
+     "team": "KSA",
+     "player": "A. Al-Amri",
+     "minute": 41,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "URU",
+     "player": "M. Araújo",
+     "minute": 80,
+     "pen": false,
+     "og": false
+    }
+   ],
+   "id": "M015",
+   "round": "小组赛 第1轮"
+  },
+  {
+   "stage": "group",
+   "group": "G",
+   "kickoffUtc": "2026-06-16T01:00:00Z",
+   "venue": "SoFi Stadium",
+   "city": "Inglewood, California",
+   "home": "IRN",
+   "away": "NZL",
+   "apiScore": [
+    2,
+    2
+   ],
+   "apiStatus": "FT",
+   "officialScore": [
+    2,
+    2
+   ],
+   "officialFinal": true,
+   "scorers": [
+    {
+     "team": "NZL",
+     "player": "E. Just",
+     "minute": 7,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "IRN",
+     "player": "R. Rezaeian",
+     "minute": 32,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "NZL",
+     "player": "E. Just",
+     "minute": 54,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "IRN",
+     "player": "M. Mohebbi",
+     "minute": 64,
+     "pen": false,
+     "og": false
+    }
+   ],
+   "id": "M016",
+   "round": "小组赛 第1轮"
+  },
+  {
+   "stage": "group",
+   "group": "I",
+   "kickoffUtc": "2026-06-16T19:00:00Z",
+   "venue": "MetLife Stadium",
+   "city": "East Rutherford, New Jersey",
+   "home": "FRA",
+   "away": "SEN",
+   "apiScore": [
+    3,
+    1
+   ],
+   "apiStatus": "FT",
+   "officialScore": [
+    3,
+    1
+   ],
+   "officialFinal": true,
+   "scorers": [
+    {
+     "team": "FRA",
+     "player": "K. Mbappé",
+     "minute": 66,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "FRA",
+     "player": "B. Barcola",
+     "minute": 82,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "SEN",
+     "player": "I. Mbaye",
+     "minute": 90,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "FRA",
+     "player": "K. Mbappé",
+     "minute": 90,
+     "pen": false,
+     "og": false
+    }
+   ],
+   "id": "M017",
+   "round": "小组赛 第1轮"
+  },
+  {
+   "stage": "group",
+   "group": "I",
+   "kickoffUtc": "2026-06-16T22:00:00Z",
+   "venue": "Gillette Stadium",
+   "city": "Foxborough, Massachusetts",
+   "home": "IRQ",
+   "away": "NOR",
+   "apiScore": [
+    1,
+    4
+   ],
+   "apiStatus": "FT",
+   "officialScore": [
+    1,
+    4
+   ],
+   "officialFinal": true,
+   "scorers": [
+    {
+     "team": "NOR",
+     "player": "E. Haaland",
+     "minute": 29,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "IRQ",
+     "player": "A. Hussein",
+     "minute": 39,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "NOR",
+     "player": "E. Haaland",
+     "minute": 43,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "NOR",
+     "player": "L. Østigard",
+     "minute": 76,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "NOR",
+     "player": "A. Hussein",
+     "minute": 90,
+     "pen": false,
+     "og": true
+    }
+   ],
+   "id": "M018",
+   "round": "小组赛 第1轮"
+  },
+  {
+   "stage": "group",
+   "group": "J",
+   "kickoffUtc": "2026-06-17T01:00:00Z",
+   "venue": "GEHA Field at Arrowhead Stadium",
+   "city": "Kansas City, Missouri",
+   "home": "ARG",
+   "away": "ALG",
+   "apiScore": [
+    3,
+    0
+   ],
+   "apiStatus": "FT",
+   "officialScore": [
+    3,
+    0
+   ],
+   "officialFinal": true,
+   "scorers": [
+    {
+     "team": "ARG",
+     "player": "L. Messi",
+     "minute": 17,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "ARG",
+     "player": "L. Messi",
+     "minute": 60,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "ARG",
+     "player": "L. Messi",
+     "minute": 76,
+     "pen": false,
+     "og": false
+    }
+   ],
+   "id": "M019",
+   "round": "小组赛 第1轮"
+  },
+  {
+   "stage": "group",
+   "group": "J",
+   "kickoffUtc": "2026-06-17T04:00:00Z",
+   "venue": "Levi's Stadium",
+   "city": "Santa Clara, California",
+   "home": "AUT",
+   "away": "JOR",
+   "apiScore": [
+    3,
+    1
+   ],
+   "apiStatus": "FT",
+   "officialScore": [
+    3,
+    1
+   ],
+   "officialFinal": true,
+   "scorers": [
+    {
+     "team": "AUT",
+     "player": "R. Schmid",
+     "minute": 21,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "JOR",
+     "player": "A. Olwan",
+     "minute": 50,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "AUT",
+     "player": "Y. Al-Arab",
+     "minute": 76,
+     "pen": false,
+     "og": true
+    },
+    {
+     "team": "AUT",
+     "player": "M. Arnautovic",
+     "minute": 90,
+     "pen": true,
+     "og": false
+    }
+   ],
+   "id": "M020",
+   "round": "小组赛 第1轮"
+  },
+  {
+   "stage": "group",
+   "group": "K",
+   "kickoffUtc": "2026-06-17T17:00:00Z",
+   "venue": "NRG Stadium",
+   "city": "Houston, Texas",
+   "home": "POR",
+   "away": "COD",
+   "apiScore": [
+    1,
+    1
+   ],
+   "apiStatus": "FT",
+   "officialScore": [
+    1,
+    1
+   ],
+   "officialFinal": true,
+   "scorers": [
+    {
+     "team": "POR",
+     "player": "J. Neves",
+     "minute": 6,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "COD",
+     "player": "Y. Wissa",
+     "minute": 45,
+     "pen": false,
+     "og": false
+    }
+   ],
+   "id": "M021",
+   "round": "小组赛 第1轮"
+  },
+  {
+   "stage": "group",
+   "group": "L",
+   "kickoffUtc": "2026-06-17T20:00:00Z",
+   "venue": "AT&T Stadium",
+   "city": "Arlington, Texas",
+   "home": "ENG",
+   "away": "CRO",
+   "apiScore": [
+    4,
+    2
+   ],
+   "apiStatus": "FT",
+   "officialScore": [
+    4,
+    2
+   ],
+   "officialFinal": true,
+   "scorers": [
+    {
+     "team": "ENG",
+     "player": "H. Kane",
+     "minute": 12,
+     "pen": true,
+     "og": false
+    },
+    {
+     "team": "CRO",
+     "player": "M. Baturina",
+     "minute": 36,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "ENG",
+     "player": "H. Kane",
+     "minute": 42,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "CRO",
+     "player": "P. Musa",
+     "minute": 45,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "ENG",
+     "player": "J. Bellingham",
+     "minute": 47,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "ENG",
+     "player": "M. Rashford",
+     "minute": 85,
+     "pen": false,
+     "og": false
+    }
+   ],
+   "id": "M022",
+   "round": "小组赛 第1轮"
+  },
+  {
+   "stage": "group",
+   "group": "L",
+   "kickoffUtc": "2026-06-17T23:00:00Z",
+   "venue": "BMO Field",
+   "city": "Toronto",
+   "home": "GHA",
+   "away": "PAN",
+   "apiScore": [
+    1,
+    0
+   ],
+   "apiStatus": "FT",
+   "officialScore": [
+    1,
+    0
+   ],
+   "officialFinal": true,
+   "scorers": [
+    {
+     "team": "GHA",
+     "player": "C. Yirenkyi",
+     "minute": 90,
+     "pen": false,
+     "og": false
+    }
+   ],
+   "id": "M023",
+   "round": "小组赛 第1轮"
+  },
+  {
+   "stage": "group",
+   "group": "K",
+   "kickoffUtc": "2026-06-18T02:00:00Z",
+   "venue": "Estadio Banorte",
+   "city": "Mexico City",
+   "home": "UZB",
+   "away": "COL",
+   "apiScore": [
+    1,
+    3
+   ],
+   "apiStatus": "FT",
+   "officialScore": [
+    1,
+    3
+   ],
+   "officialFinal": true,
+   "scorers": [
+    {
+     "team": "COL",
+     "player": "D. Muñoz",
+     "minute": 40,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "UZB",
+     "player": "A. Fayzullaev",
+     "minute": 60,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "COL",
+     "player": "L. Díaz",
+     "minute": 65,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "COL",
+     "player": "J. Campaz",
+     "minute": 90,
+     "pen": false,
+     "og": false
+    }
+   ],
+   "id": "M024",
+   "round": "小组赛 第1轮"
+  },
+  {
+   "stage": "group",
+   "group": "A",
+   "kickoffUtc": "2026-06-18T16:00:00Z",
+   "venue": "Mercedes-Benz Stadium",
+   "city": "Atlanta, Georgia",
+   "home": "CZE",
+   "away": "RSA",
+   "apiScore": [
+    1,
+    1
+   ],
+   "apiStatus": "FT",
+   "officialScore": [
+    1,
+    1
+   ],
+   "officialFinal": true,
+   "scorers": [
+    {
+     "team": "CZE",
+     "player": "M. Sadílek",
+     "minute": 6,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "RSA",
+     "player": "T. Mokoena",
+     "minute": 83,
+     "pen": true,
+     "og": false
+    }
+   ],
+   "id": "M025",
+   "round": "小组赛 第2轮"
+  },
+  {
+   "stage": "group",
+   "group": "B",
+   "kickoffUtc": "2026-06-18T19:00:00Z",
+   "venue": "SoFi Stadium",
+   "city": "Inglewood, California",
+   "home": "SUI",
+   "away": "BIH",
+   "apiScore": [
+    4,
+    1
+   ],
+   "apiStatus": "FT",
+   "officialScore": [
+    4,
+    1
+   ],
+   "officialFinal": true,
+   "scorers": [
+    {
+     "team": "SUI",
+     "player": "J. Manzambi",
+     "minute": 74,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "SUI",
+     "player": "R. Vargas",
+     "minute": 84,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "SUI",
+     "player": "J. Manzambi",
+     "minute": 90,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "BIH",
+     "player": "E. Mahmic",
+     "minute": 90,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "SUI",
+     "player": "G. Xhaka",
+     "minute": 90,
+     "pen": true,
+     "og": false
+    }
+   ],
+   "id": "M026",
+   "round": "小组赛 第2轮"
+  },
+  {
+   "stage": "group",
+   "group": "B",
+   "kickoffUtc": "2026-06-18T22:00:00Z",
+   "venue": "BC Place",
+   "city": "Vancouver",
+   "home": "CAN",
+   "away": "QAT",
+   "apiScore": [
+    6,
+    0
+   ],
+   "apiStatus": "FT",
+   "officialScore": [
+    6,
+    0
+   ],
+   "officialFinal": true,
+   "scorers": [
+    {
+     "team": "CAN",
+     "player": "C. Larin",
+     "minute": 16,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "CAN",
+     "player": "J. David",
+     "minute": 29,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "CAN",
+     "player": "J. David",
+     "minute": 45,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "CAN",
+     "player": "N. Saliba",
+     "minute": 64,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "CAN",
+     "player": "M. Manai",
+     "minute": 75,
+     "pen": false,
+     "og": true
+    },
+    {
+     "team": "CAN",
+     "player": "J. David",
+     "minute": 90,
+     "pen": false,
+     "og": false
+    }
+   ],
+   "id": "M027",
+   "round": "小组赛 第2轮"
+  },
+  {
+   "stage": "group",
+   "group": "A",
+   "kickoffUtc": "2026-06-19T01:00:00Z",
+   "venue": "Estadio Akron",
+   "city": "Guadalajara",
+   "home": "MEX",
+   "away": "KOR",
+   "apiScore": [
+    1,
+    0
+   ],
+   "apiStatus": "FT",
+   "officialScore": [
+    1,
+    0
+   ],
+   "officialFinal": true,
+   "scorers": [
+    {
+     "team": "MEX",
+     "player": "L. Romo",
+     "minute": 50,
+     "pen": false,
+     "og": false
+    }
+   ],
+   "id": "M028",
+   "round": "小组赛 第2轮"
+  },
+  {
+   "stage": "group",
+   "group": "D",
+   "kickoffUtc": "2026-06-19T19:00:00Z",
+   "venue": "Lumen Field",
+   "city": "Seattle, Washington",
+   "home": "USA",
+   "away": "AUS",
+   "apiScore": [
+    2,
+    0
+   ],
+   "apiStatus": "FT",
+   "officialScore": [
+    2,
+    0
+   ],
+   "officialFinal": true,
+   "scorers": [
+    {
+     "team": "USA",
+     "player": "C. Burgess",
+     "minute": 11,
+     "pen": false,
+     "og": true
+    },
+    {
+     "team": "USA",
+     "player": "A. Freeman",
+     "minute": 43,
+     "pen": false,
+     "og": false
+    }
+   ],
+   "id": "M029",
+   "round": "小组赛 第2轮"
+  },
+  {
+   "stage": "group",
+   "group": "C",
+   "kickoffUtc": "2026-06-19T22:00:00Z",
+   "venue": "Gillette Stadium",
+   "city": "Foxborough, Massachusetts",
+   "home": "SCO",
+   "away": "MAR",
+   "apiScore": [
+    0,
+    1
+   ],
+   "apiStatus": "FT",
+   "officialScore": [
+    0,
+    1
+   ],
+   "officialFinal": true,
+   "scorers": [
+    {
+     "team": "MAR",
+     "player": "I. Saibari",
+     "minute": 2,
+     "pen": false,
+     "og": false
+    }
+   ],
+   "id": "M030",
+   "round": "小组赛 第2轮"
+  },
+  {
+   "stage": "group",
+   "group": "C",
+   "kickoffUtc": "2026-06-20T00:30:00Z",
+   "venue": "Lincoln Financial Field",
+   "city": "Philadelphia, Pennsylvania",
+   "home": "BRA",
+   "away": "HAI",
+   "apiScore": [
+    3,
+    0
+   ],
+   "apiStatus": "FT",
+   "officialScore": [
+    3,
+    0
+   ],
+   "officialFinal": true,
+   "scorers": [
+    {
+     "team": "BRA",
+     "player": "M. Cunha",
+     "minute": 23,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "BRA",
+     "player": "M. Cunha",
+     "minute": 36,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "BRA",
+     "player": "Vinícius Júnior",
+     "minute": 45,
+     "pen": false,
+     "og": false
+    }
+   ],
+   "id": "M031",
+   "round": "小组赛 第2轮"
+  },
+  {
+   "stage": "group",
+   "group": "D",
+   "kickoffUtc": "2026-06-20T03:00:00Z",
+   "venue": "Levi's Stadium",
+   "city": "Santa Clara, California",
+   "home": "TUR",
+   "away": "PAR",
+   "apiScore": [
+    0,
+    1
+   ],
+   "apiStatus": "FT",
+   "officialScore": [
+    0,
+    1
+   ],
+   "officialFinal": true,
+   "scorers": [
+    {
+     "team": "PAR",
+     "player": "M. Galarza",
+     "minute": 2,
+     "pen": false,
+     "og": false
+    }
+   ],
+   "id": "M032",
+   "round": "小组赛 第2轮"
+  },
+  {
+   "stage": "group",
+   "group": "F",
+   "kickoffUtc": "2026-06-20T17:00:00Z",
+   "venue": "NRG Stadium",
+   "city": "Houston, Texas",
+   "home": "NED",
+   "away": "SWE",
+   "apiScore": [
+    5,
+    1
+   ],
+   "apiStatus": "FT",
+   "officialScore": [
+    5,
+    1
+   ],
+   "officialFinal": true,
+   "scorers": [
+    {
+     "team": "NED",
+     "player": "B. Brobbey",
+     "minute": 5,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "NED",
+     "player": "B. Brobbey",
+     "minute": 17,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "NED",
+     "player": "C. Gakpo",
+     "minute": 47,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "NED",
+     "player": "C. Gakpo",
+     "minute": 54,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "SWE",
+     "player": "A. Elanga",
+     "minute": 59,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "NED",
+     "player": "C. Summerville",
+     "minute": 89,
+     "pen": false,
+     "og": false
+    }
+   ],
+   "id": "M033",
+   "round": "小组赛 第2轮"
+  },
+  {
+   "stage": "group",
+   "group": "E",
+   "kickoffUtc": "2026-06-20T20:00:00Z",
+   "venue": "BMO Field",
+   "city": "Toronto",
+   "home": "GER",
+   "away": "CIV",
+   "apiScore": [
+    2,
+    1
+   ],
+   "apiStatus": "FT",
+   "officialScore": [
+    2,
+    1
+   ],
+   "officialFinal": true,
+   "scorers": [
+    {
+     "team": "CIV",
+     "player": "F. Kessié",
+     "minute": 30,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "GER",
+     "player": "D. Undav",
+     "minute": 68,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "GER",
+     "player": "D. Undav",
+     "minute": 90,
+     "pen": false,
+     "og": false
+    }
+   ],
+   "id": "M034",
+   "round": "小组赛 第2轮"
+  },
+  {
+   "stage": "group",
+   "group": "E",
+   "kickoffUtc": "2026-06-21T00:00:00Z",
+   "venue": "GEHA Field at Arrowhead Stadium",
+   "city": "Kansas City, Missouri",
+   "home": "ECU",
+   "away": "CUW",
+   "apiScore": [
+    0,
+    0
+   ],
+   "apiStatus": "FT",
+   "officialScore": [
+    0,
+    0
+   ],
+   "officialFinal": true,
+   "scorers": [],
+   "id": "M035",
+   "round": "小组赛 第2轮"
+  },
+  {
+   "stage": "group",
+   "group": "F",
+   "kickoffUtc": "2026-06-21T04:00:00Z",
+   "venue": "Estadio BBVA",
+   "city": "Guadalupe",
+   "home": "TUN",
+   "away": "JPN",
+   "apiScore": [
+    0,
+    4
+   ],
+   "apiStatus": "FT",
+   "officialScore": [
+    0,
+    4
+   ],
+   "officialFinal": true,
+   "scorers": [
+    {
+     "team": "JPN",
+     "player": "D. Kamada",
+     "minute": 4,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "JPN",
+     "player": "A. Ueda",
+     "minute": 31,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "JPN",
+     "player": "J. Ito",
+     "minute": 69,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "JPN",
+     "player": "A. Ueda",
+     "minute": 83,
+     "pen": false,
+     "og": false
+    }
+   ],
+   "id": "M036",
+   "round": "小组赛 第2轮"
+  },
+  {
+   "stage": "group",
+   "group": "H",
+   "kickoffUtc": "2026-06-21T16:00:00Z",
+   "venue": "Mercedes-Benz Stadium",
+   "city": "Atlanta, Georgia",
+   "home": "ESP",
+   "away": "KSA",
+   "apiScore": [
+    4,
+    0
+   ],
+   "apiStatus": "FT",
+   "officialScore": [
+    4,
+    0
+   ],
+   "officialFinal": true,
+   "scorers": [
+    {
+     "team": "ESP",
+     "player": "L. Yamal",
+     "minute": 10,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "ESP",
+     "player": "M. Oyarzabal",
+     "minute": 21,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "ESP",
+     "player": "M. Oyarzabal",
+     "minute": 24,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "ESP",
+     "player": "H. Al-Tambakti",
+     "minute": 49,
+     "pen": false,
+     "og": true
+    }
+   ],
+   "id": "M037",
+   "round": "小组赛 第2轮"
+  },
+  {
+   "stage": "group",
+   "group": "G",
+   "kickoffUtc": "2026-06-21T19:00:00Z",
+   "venue": "SoFi Stadium",
+   "city": "Inglewood, California",
+   "home": "BEL",
+   "away": "IRN",
+   "apiScore": [
+    0,
+    0
+   ],
+   "apiStatus": "FT",
+   "officialScore": [
+    0,
+    0
+   ],
+   "officialFinal": true,
+   "scorers": [],
+   "id": "M038",
+   "round": "小组赛 第2轮"
+  },
+  {
+   "stage": "group",
+   "group": "H",
+   "kickoffUtc": "2026-06-21T22:00:00Z",
+   "venue": "Hard Rock Stadium",
+   "city": "Miami Gardens, Florida",
+   "home": "URU",
+   "away": "CPV",
+   "apiScore": [
+    2,
+    2
+   ],
+   "apiStatus": "FT",
+   "officialScore": [
+    2,
+    2
+   ],
+   "officialFinal": true,
+   "scorers": [
+    {
+     "team": "CPV",
+     "player": "K. Pina",
+     "minute": 21,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "URU",
+     "player": "M. Araújo",
+     "minute": 44,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "URU",
+     "player": "A. Canobbio",
+     "minute": 45,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "CPV",
+     "player": "H. Varela",
+     "minute": 61,
+     "pen": false,
+     "og": false
+    }
+   ],
+   "id": "M039",
+   "round": "小组赛 第2轮"
+  },
+  {
+   "stage": "group",
+   "group": "G",
+   "kickoffUtc": "2026-06-22T01:00:00Z",
+   "venue": "BC Place",
+   "city": "Vancouver",
+   "home": "NZL",
+   "away": "EGY",
+   "apiScore": [
+    1,
+    3
+   ],
+   "apiStatus": "FT",
+   "officialScore": [
+    1,
+    3
+   ],
+   "officialFinal": true,
+   "scorers": [
+    {
+     "team": "NZL",
+     "player": "F. Surman",
+     "minute": 15,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "EGY",
+     "player": "M. Zico",
+     "minute": 58,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "EGY",
+     "player": "M. Salah",
+     "minute": 67,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "EGY",
+     "player": "Trézéguet",
+     "minute": 82,
+     "pen": false,
+     "og": false
+    }
+   ],
+   "id": "M040",
+   "round": "小组赛 第2轮"
+  },
+  {
+   "stage": "group",
+   "group": "J",
+   "kickoffUtc": "2026-06-22T17:00:00Z",
+   "venue": "AT&T Stadium",
+   "city": "Arlington, Texas",
+   "home": "ARG",
+   "away": "AUT",
+   "apiScore": [
+    2,
+    0
+   ],
+   "apiStatus": "FT",
+   "officialScore": [
+    2,
+    0
+   ],
+   "officialFinal": true,
+   "scorers": [
+    {
+     "team": "ARG",
+     "player": "L. Messi",
+     "minute": 38,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "ARG",
+     "player": "L. Messi",
+     "minute": 90,
+     "pen": false,
+     "og": false
+    }
+   ],
+   "id": "M041",
+   "round": "小组赛 第2轮"
+  },
+  {
+   "stage": "group",
+   "group": "I",
+   "kickoffUtc": "2026-06-22T21:00:00Z",
+   "venue": "Lincoln Financial Field",
+   "city": "Philadelphia, Pennsylvania",
+   "home": "FRA",
+   "away": "IRQ",
+   "apiScore": [
+    3,
+    0
+   ],
+   "apiStatus": "FT",
+   "officialScore": [
+    3,
+    0
+   ],
+   "officialFinal": true,
+   "scorers": [
+    {
+     "team": "FRA",
+     "player": "K. Mbappé",
+     "minute": 14,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "FRA",
+     "player": "K. Mbappé",
+     "minute": 54,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "FRA",
+     "player": "O. Dembélé",
+     "minute": 66,
+     "pen": false,
+     "og": false
+    }
+   ],
+   "id": "M042",
+   "round": "小组赛 第2轮"
+  },
+  {
+   "stage": "group",
+   "group": "I",
+   "kickoffUtc": "2026-06-23T00:00:00Z",
+   "venue": "MetLife Stadium",
+   "city": "East Rutherford, New Jersey",
+   "home": "NOR",
+   "away": "SEN",
+   "apiScore": [
+    3,
+    2
+   ],
+   "apiStatus": "FT",
+   "officialScore": [
+    3,
+    2
+   ],
+   "officialFinal": true,
+   "scorers": [
+    {
+     "team": "NOR",
+     "player": "M. Holmgren Pedersen",
+     "minute": 43,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "NOR",
+     "player": "E. Haaland",
+     "minute": 48,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "SEN",
+     "player": "I. Sarr",
+     "minute": 53,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "NOR",
+     "player": "E. Haaland",
+     "minute": 58,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "SEN",
+     "player": "I. Sarr",
+     "minute": 90,
+     "pen": false,
+     "og": false
+    }
+   ],
+   "id": "M043",
+   "round": "小组赛 第2轮"
+  },
+  {
+   "stage": "group",
+   "group": "J",
+   "kickoffUtc": "2026-06-23T03:00:00Z",
+   "venue": "Levi's Stadium",
+   "city": "Santa Clara, California",
+   "home": "JOR",
+   "away": "ALG",
+   "apiScore": [
+    1,
+    2
+   ],
+   "apiStatus": "FT",
+   "officialScore": [
+    1,
+    2
+   ],
+   "officialFinal": true,
+   "scorers": [
+    {
+     "team": "JOR",
+     "player": "N. Al-Rashdan",
+     "minute": 36,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "ALG",
+     "player": "N. Benbouali",
+     "minute": 69,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "ALG",
+     "player": "A. Gouiri",
+     "minute": 82,
+     "pen": false,
+     "og": false
+    }
+   ],
+   "id": "M044",
+   "round": "小组赛 第2轮"
+  },
+  {
+   "stage": "group",
+   "group": "K",
+   "kickoffUtc": "2026-06-23T17:00:00Z",
+   "venue": "NRG Stadium",
+   "city": "Houston, Texas",
+   "home": "POR",
+   "away": "UZB",
+   "apiScore": [
+    5,
+    0
+   ],
+   "apiStatus": "FT",
+   "officialScore": [
+    5,
+    0
+   ],
+   "officialFinal": true,
+   "scorers": [
+    {
+     "team": "POR",
+     "player": "C. Ronaldo",
+     "minute": 6,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "POR",
+     "player": "N. Mendes",
+     "minute": 17,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "POR",
+     "player": "C. Ronaldo",
+     "minute": 39,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "POR",
+     "player": "A. Nematov",
+     "minute": 60,
+     "pen": false,
+     "og": true
+    },
+    {
+     "team": "POR",
+     "player": "R. Leão",
+     "minute": 87,
+     "pen": false,
+     "og": false
+    }
+   ],
+   "id": "M045",
+   "round": "小组赛 第2轮"
+  },
+  {
+   "stage": "group",
+   "group": "L",
+   "kickoffUtc": "2026-06-23T20:00:00Z",
+   "venue": "Gillette Stadium",
+   "city": "Foxborough, Massachusetts",
+   "home": "ENG",
+   "away": "GHA",
+   "apiScore": [
+    0,
+    0
+   ],
+   "apiStatus": "FT",
+   "officialScore": [
+    0,
+    0
+   ],
+   "officialFinal": true,
+   "scorers": [],
+   "id": "M046",
+   "round": "小组赛 第2轮"
+  },
+  {
+   "stage": "group",
+   "group": "L",
+   "kickoffUtc": "2026-06-23T23:00:00Z",
+   "venue": "BMO Field",
+   "city": "Toronto",
+   "home": "PAN",
+   "away": "CRO",
+   "apiScore": [
+    0,
+    1
+   ],
+   "apiStatus": "FT",
+   "officialScore": [
+    0,
+    1
+   ],
+   "officialFinal": true,
+   "scorers": [
+    {
+     "team": "CRO",
+     "player": "A. Budimir",
+     "minute": 54,
+     "pen": false,
+     "og": false
+    }
+   ],
+   "id": "M047",
+   "round": "小组赛 第2轮"
+  },
+  {
+   "stage": "group",
+   "group": "K",
+   "kickoffUtc": "2026-06-24T02:00:00Z",
+   "venue": "Estadio Akron",
+   "city": "Guadalajara",
+   "home": "COL",
+   "away": "COD",
+   "apiScore": [
+    1,
+    0
+   ],
+   "apiStatus": "FT",
+   "officialScore": [
+    1,
+    0
+   ],
+   "officialFinal": true,
+   "scorers": [
+    {
+     "team": "COL",
+     "player": "D. Muñoz",
+     "minute": 76,
+     "pen": false,
+     "og": false
+    }
+   ],
+   "id": "M048",
+   "round": "小组赛 第2轮"
+  },
+  {
+   "stage": "group",
+   "group": "B",
+   "kickoffUtc": "2026-06-24T19:00:00Z",
+   "venue": "Lumen Field",
+   "city": "Seattle, Washington",
+   "home": "BIH",
+   "away": "QAT",
+   "apiScore": [
+    3,
+    1
+   ],
+   "apiStatus": "FT",
+   "officialScore": [
+    3,
+    1
+   ],
+   "officialFinal": true,
+   "scorers": [
+    {
+     "team": "BIH",
+     "player": "K. Alajbegovic",
+     "minute": 29,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "BIH",
+     "player": "M. Abunada",
+     "minute": 34,
+     "pen": false,
+     "og": true
+    },
+    {
+     "team": "QAT",
+     "player": "H. Al-Haydos",
+     "minute": 42,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "BIH",
+     "player": "E. Mahmic",
+     "minute": 80,
+     "pen": false,
+     "og": false
+    }
+   ],
+   "id": "M049",
+   "round": "小组赛 第3轮"
+  },
+  {
+   "stage": "group",
+   "group": "B",
+   "kickoffUtc": "2026-06-24T19:00:00Z",
+   "venue": "BC Place",
+   "city": "Vancouver",
+   "home": "SUI",
+   "away": "CAN",
+   "apiScore": [
+    2,
+    1
+   ],
+   "apiStatus": "FT",
+   "officialScore": [
+    2,
+    1
+   ],
+   "officialFinal": true,
+   "scorers": [
+    {
+     "team": "SUI",
+     "player": "R. Vargas",
+     "minute": 46,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "SUI",
+     "player": "J. Manzambi",
+     "minute": 57,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "CAN",
+     "player": "P. David",
+     "minute": 76,
+     "pen": false,
+     "og": false
+    }
+   ],
+   "id": "M050",
+   "round": "小组赛 第3轮"
+  },
+  {
+   "stage": "group",
+   "group": "C",
+   "kickoffUtc": "2026-06-24T22:00:00Z",
+   "venue": "Mercedes-Benz Stadium",
+   "city": "Atlanta, Georgia",
+   "home": "MAR",
+   "away": "HAI",
+   "apiScore": [
+    4,
+    2
+   ],
+   "apiStatus": "FT",
+   "officialScore": [
+    4,
+    2
+   ],
+   "officialFinal": true,
+   "scorers": [
+    {
+     "team": "HAI",
+     "player": "Y. Bounou",
+     "minute": 10,
+     "pen": false,
+     "og": true
+    },
+    {
+     "team": "MAR",
+     "player": "A. Hakimi",
+     "minute": 39,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "HAI",
+     "player": "W. Isidor",
+     "minute": 43,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "MAR",
+     "player": "I. Saibari",
+     "minute": 45,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "MAR",
+     "player": "S. Rahimi",
+     "minute": 78,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "MAR",
+     "player": "G. Yassine",
+     "minute": 89,
+     "pen": false,
+     "og": false
+    }
+   ],
+   "id": "M051",
+   "round": "小组赛 第3轮"
+  },
+  {
+   "stage": "group",
+   "group": "C",
+   "kickoffUtc": "2026-06-24T22:00:00Z",
+   "venue": "Hard Rock Stadium",
+   "city": "Miami Gardens, Florida",
+   "home": "SCO",
+   "away": "BRA",
+   "apiScore": [
+    0,
+    3
+   ],
+   "apiStatus": "FT",
+   "officialScore": [
+    0,
+    3
+   ],
+   "officialFinal": true,
+   "scorers": [
+    {
+     "team": "BRA",
+     "player": "Vinícius Júnior",
+     "minute": 7,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "BRA",
+     "player": "Vinícius Júnior",
+     "minute": 45,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "BRA",
+     "player": "M. Cunha",
+     "minute": 60,
+     "pen": false,
+     "og": false
+    }
+   ],
+   "id": "M052",
+   "round": "小组赛 第3轮"
+  },
+  {
+   "stage": "group",
+   "group": "A",
+   "kickoffUtc": "2026-06-25T01:00:00Z",
+   "venue": "Estadio BBVA",
+   "city": "Guadalupe",
+   "home": "RSA",
+   "away": "KOR",
+   "apiScore": [
+    1,
+    0
+   ],
+   "apiStatus": "FT",
+   "officialScore": [
+    1,
+    0
+   ],
+   "officialFinal": true,
+   "scorers": [
+    {
+     "team": "RSA",
+     "player": "T. Maseko",
+     "minute": 63,
+     "pen": false,
+     "og": false
+    }
+   ],
+   "id": "M053",
+   "round": "小组赛 第3轮"
+  },
+  {
+   "stage": "group",
+   "group": "A",
+   "kickoffUtc": "2026-06-25T01:00:00Z",
+   "venue": "Estadio Banorte",
+   "city": "Mexico City",
+   "home": "CZE",
+   "away": "MEX",
+   "apiScore": [
+    0,
+    3
+   ],
+   "apiStatus": "FT",
+   "officialScore": [
+    0,
+    3
+   ],
+   "officialFinal": true,
+   "scorers": [
+    {
+     "team": "MEX",
+     "player": "M. Chávez",
+     "minute": 55,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "MEX",
+     "player": "J. Quiñones",
+     "minute": 61,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "MEX",
+     "player": "Á. Fidalgo",
+     "minute": 90,
+     "pen": false,
+     "og": false
+    }
+   ],
+   "id": "M054",
+   "round": "小组赛 第3轮"
+  },
+  {
+   "stage": "group",
+   "group": "E",
+   "kickoffUtc": "2026-06-25T20:00:00Z",
+   "venue": "MetLife Stadium",
+   "city": "East Rutherford, New Jersey",
+   "home": "ECU",
+   "away": "GER",
+   "apiScore": [
+    2,
+    1
+   ],
+   "apiStatus": "FT",
+   "officialScore": [
+    2,
+    1
+   ],
+   "officialFinal": true,
+   "scorers": [
+    {
+     "team": "GER",
+     "player": "L. Sané",
+     "minute": 2,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "ECU",
+     "player": "N. Angulo",
+     "minute": 9,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "ECU",
+     "player": "G. Plata",
+     "minute": 77,
+     "pen": false,
+     "og": false
+    }
+   ],
+   "id": "M055",
+   "round": "小组赛 第3轮"
+  },
+  {
+   "stage": "group",
+   "group": "E",
+   "kickoffUtc": "2026-06-25T20:00:00Z",
+   "venue": "Lincoln Financial Field",
+   "city": "Philadelphia, Pennsylvania",
+   "home": "CUW",
+   "away": "CIV",
+   "apiScore": [
+    0,
+    2
+   ],
+   "apiStatus": "FT",
+   "officialScore": [
+    0,
+    2
+   ],
+   "officialFinal": true,
+   "scorers": [
+    {
+     "team": "CIV",
+     "player": "N. Pépé",
+     "minute": 7,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "CIV",
+     "player": "N. Pépé",
+     "minute": 64,
+     "pen": false,
+     "og": false
+    }
+   ],
+   "id": "M056",
+   "round": "小组赛 第3轮"
+  },
+  {
+   "stage": "group",
+   "group": "F",
+   "kickoffUtc": "2026-06-25T23:00:00Z",
+   "venue": "AT&T Stadium",
+   "city": "Arlington, Texas",
+   "home": "JPN",
+   "away": "SWE",
+   "apiScore": [
+    1,
+    1
+   ],
+   "apiStatus": "FT",
+   "officialScore": [
+    1,
+    1
+   ],
+   "officialFinal": true,
+   "scorers": [
+    {
+     "team": "JPN",
+     "player": "D. Maeda",
+     "minute": 56,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "SWE",
+     "player": "A. Elanga",
+     "minute": 62,
+     "pen": false,
+     "og": false
+    }
+   ],
+   "id": "M057",
+   "round": "小组赛 第3轮"
+  },
+  {
+   "stage": "group",
+   "group": "F",
+   "kickoffUtc": "2026-06-25T23:00:00Z",
+   "venue": "GEHA Field at Arrowhead Stadium",
+   "city": "Kansas City, Missouri",
+   "home": "TUN",
+   "away": "NED",
+   "apiScore": [
+    1,
+    3
+   ],
+   "apiStatus": "FT",
+   "officialScore": [
+    1,
+    3
+   ],
+   "officialFinal": true,
+   "scorers": [
+    {
+     "team": "NED",
+     "player": "E. Skhiri",
+     "minute": 3,
+     "pen": false,
+     "og": true
+    },
+    {
+     "team": "NED",
+     "player": "B. Brobbey",
+     "minute": 7,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "TUN",
+     "player": "H. Mastouri",
+     "minute": 54,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "NED",
+     "player": "J. van Hecke",
+     "minute": 62,
+     "pen": false,
+     "og": false
+    }
+   ],
+   "id": "M058",
+   "round": "小组赛 第3轮"
+  },
+  {
+   "stage": "group",
+   "group": "D",
+   "kickoffUtc": "2026-06-26T02:00:00Z",
+   "venue": "Levi's Stadium",
+   "city": "Santa Clara, California",
+   "home": "PAR",
+   "away": "AUS",
+   "apiScore": [
+    0,
+    0
+   ],
+   "apiStatus": "FT",
+   "officialScore": [
+    0,
+    0
+   ],
+   "officialFinal": true,
+   "scorers": [],
+   "id": "M059",
+   "round": "小组赛 第3轮"
+  },
+  {
+   "stage": "group",
+   "group": "D",
+   "kickoffUtc": "2026-06-26T02:00:00Z",
+   "venue": "SoFi Stadium",
+   "city": "Inglewood, California",
+   "home": "TUR",
+   "away": "USA",
+   "apiScore": [
+    3,
+    2
+   ],
+   "apiStatus": "FT",
+   "officialScore": [
+    3,
+    2
+   ],
+   "officialFinal": true,
+   "scorers": [
+    {
+     "team": "USA",
+     "player": "A. Trusty",
+     "minute": 3,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "TUR",
+     "player": "A. Güler",
+     "minute": 10,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "TUR",
+     "player": "B. Yilmaz",
+     "minute": 31,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "USA",
+     "player": "S. Berhalter",
+     "minute": 49,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "TUR",
+     "player": "K. Ayhan",
+     "minute": 90,
+     "pen": false,
+     "og": false
+    }
+   ],
+   "id": "M060",
+   "round": "小组赛 第3轮"
+  },
+  {
+   "stage": "group",
+   "group": "I",
+   "kickoffUtc": "2026-06-26T19:00:00Z",
+   "venue": "BMO Field",
+   "city": "Toronto",
+   "home": "SEN",
+   "away": "IRQ",
+   "apiScore": [
+    5,
+    0
+   ],
+   "apiStatus": "FT",
+   "officialScore": [
+    5,
+    0
+   ],
+   "officialFinal": true,
+   "scorers": [
+    {
+     "team": "SEN",
+     "player": "H. Diarra",
+     "minute": 4,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "SEN",
+     "player": "I. Sarr",
+     "minute": 56,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "SEN",
+     "player": "P. Gueye",
+     "minute": 59,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "SEN",
+     "player": "P. Gueye",
+     "minute": 71,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "SEN",
+     "player": "I. Ndiaye",
+     "minute": 82,
+     "pen": false,
+     "og": false
+    }
+   ],
+   "id": "M061",
+   "round": "小组赛 第3轮"
+  },
+  {
+   "stage": "group",
+   "group": "I",
+   "kickoffUtc": "2026-06-26T19:00:00Z",
+   "venue": "Gillette Stadium",
+   "city": "Foxborough, Massachusetts",
+   "home": "NOR",
+   "away": "FRA",
+   "apiScore": [
+    1,
+    4
+   ],
+   "apiStatus": "FT",
+   "officialScore": [
+    1,
+    4
+   ],
+   "officialFinal": true,
+   "scorers": [
+    {
+     "team": "FRA",
+     "player": "O. Dembélé",
+     "minute": 7,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "FRA",
+     "player": "O. Dembélé",
+     "minute": 20,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "NOR",
+     "player": "T. Aasgaard",
+     "minute": 21,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "FRA",
+     "player": "O. Dembélé",
+     "minute": 32,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "FRA",
+     "player": "D. Doué",
+     "minute": 90,
+     "pen": false,
+     "og": false
+    }
+   ],
+   "id": "M062",
+   "round": "小组赛 第3轮"
+  },
+  {
+   "stage": "group",
+   "group": "H",
+   "kickoffUtc": "2026-06-27T00:00:00Z",
+   "venue": "NRG Stadium",
+   "city": "Houston, Texas",
+   "home": "CPV",
+   "away": "KSA",
+   "apiScore": [
+    0,
+    0
+   ],
+   "apiStatus": "FT",
+   "officialScore": [
+    0,
+    0
+   ],
+   "officialFinal": true,
+   "scorers": [],
+   "id": "M063",
+   "round": "小组赛 第3轮"
+  },
+  {
+   "stage": "group",
+   "group": "H",
+   "kickoffUtc": "2026-06-27T00:00:00Z",
+   "venue": "Estadio Akron",
+   "city": "Guadalajara",
+   "home": "URU",
+   "away": "ESP",
+   "apiScore": [
+    0,
+    1
+   ],
+   "apiStatus": "FT",
+   "officialScore": [
+    0,
+    1
+   ],
+   "officialFinal": true,
+   "scorers": [
+    {
+     "team": "ESP",
+     "player": "Á. Baena",
+     "minute": 42,
+     "pen": false,
+     "og": false
+    }
+   ],
+   "id": "M064",
+   "round": "小组赛 第3轮"
+  },
+  {
+   "stage": "group",
+   "group": "G",
+   "kickoffUtc": "2026-06-27T03:00:00Z",
+   "venue": "Lumen Field",
+   "city": "Seattle, Washington",
+   "home": "EGY",
+   "away": "IRN",
+   "apiScore": [
+    1,
+    1
+   ],
+   "apiStatus": "FT",
+   "officialScore": [
+    1,
+    1
+   ],
+   "officialFinal": true,
+   "scorers": [
+    {
+     "team": "EGY",
+     "player": "M. Saber",
+     "minute": 5,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "IRN",
+     "player": "R. Rezaeian",
+     "minute": 14,
+     "pen": false,
+     "og": false
+    }
+   ],
+   "id": "M065",
+   "round": "小组赛 第3轮"
+  },
+  {
+   "stage": "group",
+   "group": "G",
+   "kickoffUtc": "2026-06-27T03:00:00Z",
+   "venue": "BC Place",
+   "city": "Vancouver",
+   "home": "NZL",
+   "away": "BEL",
+   "apiScore": [
+    1,
+    5
+   ],
+   "apiStatus": "FT",
+   "officialScore": [
+    1,
+    5
+   ],
+   "officialFinal": true,
+   "scorers": [
+    {
+     "team": "BEL",
+     "player": "L. Trossard",
+     "minute": 28,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "BEL",
+     "player": "L. Trossard",
+     "minute": 50,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "BEL",
+     "player": "K. De Bruyne",
+     "minute": 66,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "NZL",
+     "player": "E. Just",
+     "minute": 84,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "BEL",
+     "player": "R. Lukaku",
+     "minute": 86,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "BEL",
+     "player": "A. Saelemaekers",
+     "minute": 90,
+     "pen": false,
+     "og": false
+    }
+   ],
+   "id": "M066",
+   "round": "小组赛 第3轮"
+  },
+  {
+   "stage": "group",
+   "group": "L",
+   "kickoffUtc": "2026-06-27T21:00:00Z",
+   "venue": "Lincoln Financial Field",
+   "city": "Philadelphia, Pennsylvania",
+   "home": "CRO",
+   "away": "GHA",
+   "apiScore": null,
+   "apiStatus": "Scheduled",
+   "officialScore": null,
+   "officialFinal": false,
+   "scorers": [],
+   "id": "M067",
+   "round": "小组赛 第3轮"
+  },
+  {
+   "stage": "group",
+   "group": "L",
+   "kickoffUtc": "2026-06-27T21:00:00Z",
+   "venue": "MetLife Stadium",
+   "city": "East Rutherford, New Jersey",
+   "home": "PAN",
+   "away": "ENG",
+   "apiScore": null,
+   "apiStatus": "Scheduled",
+   "officialScore": null,
+   "officialFinal": false,
+   "scorers": [],
+   "id": "M068",
+   "round": "小组赛 第3轮"
+  },
+  {
+   "stage": "group",
+   "group": "K",
+   "kickoffUtc": "2026-06-27T23:30:00Z",
+   "venue": "Hard Rock Stadium",
+   "city": "Miami Gardens, Florida",
+   "home": "COL",
+   "away": "POR",
+   "apiScore": null,
+   "apiStatus": "Scheduled",
+   "officialScore": null,
+   "officialFinal": false,
+   "scorers": [],
+   "id": "M069",
+   "round": "小组赛 第3轮"
+  },
+  {
+   "stage": "group",
+   "group": "K",
+   "kickoffUtc": "2026-06-27T23:30:00Z",
+   "venue": "Mercedes-Benz Stadium",
+   "city": "Atlanta, Georgia",
+   "home": "COD",
+   "away": "UZB",
+   "apiScore": null,
+   "apiStatus": "Scheduled",
+   "officialScore": null,
+   "officialFinal": false,
+   "scorers": [],
+   "id": "M070",
+   "round": "小组赛 第3轮"
+  },
+  {
+   "stage": "group",
+   "group": "J",
+   "kickoffUtc": "2026-06-28T02:00:00Z",
+   "venue": "AT&T Stadium",
+   "city": "Arlington, Texas",
+   "home": "JOR",
+   "away": "ARG",
+   "apiScore": null,
+   "apiStatus": "Scheduled",
+   "officialScore": null,
+   "officialFinal": false,
+   "scorers": [],
+   "id": "M071",
+   "round": "小组赛 第3轮"
+  },
+  {
+   "stage": "group",
+   "group": "J",
+   "kickoffUtc": "2026-06-28T02:00:00Z",
+   "venue": "GEHA Field at Arrowhead Stadium",
+   "city": "Kansas City, Missouri",
+   "home": "ALG",
+   "away": "AUT",
+   "apiScore": null,
+   "apiStatus": "Scheduled",
+   "officialScore": null,
+   "officialFinal": false,
+   "scorers": [],
+   "id": "M072",
+   "round": "小组赛 第3轮"
+  },
+  {
+   "stage": "r32",
+   "group": null,
+   "kickoffUtc": "2026-06-28T19:00:00Z",
+   "venue": "SoFi Stadium",
+   "city": "Inglewood, California",
+   "home": "RSA",
+   "away": "CAN",
+   "apiScore": null,
+   "apiStatus": "Scheduled",
+   "officialScore": null,
+   "officialFinal": false,
+   "scorers": [],
+   "id": "M073",
+   "round": "16强 (R32)"
+  },
+  {
+   "stage": "r32",
+   "group": null,
+   "kickoffUtc": "2026-06-29T17:00:00Z",
+   "venue": "NRG Stadium",
+   "city": "Houston, Texas",
+   "home": "BRA",
+   "away": "JPN",
+   "apiScore": null,
+   "apiStatus": "Scheduled",
+   "officialScore": null,
+   "officialFinal": false,
+   "scorers": [],
+   "id": "M074",
+   "round": "16强 (R32)"
+  },
+  {
+   "stage": "r32",
+   "group": null,
+   "kickoffUtc": "2026-06-29T20:30:00Z",
+   "venue": "Gillette Stadium",
+   "city": "Foxborough, Massachusetts",
+   "home": "GER",
+   "away": "PAR",
+   "apiScore": null,
+   "apiStatus": "Scheduled",
+   "officialScore": null,
+   "officialFinal": false,
+   "scorers": [],
+   "id": "M075",
+   "round": "16强 (R32)"
+  },
+  {
+   "stage": "r32",
+   "group": null,
+   "kickoffUtc": "2026-06-30T01:00:00Z",
+   "venue": "Estadio BBVA",
+   "city": "Guadalupe",
+   "home": "NED",
+   "away": "MAR",
+   "apiScore": null,
+   "apiStatus": "Scheduled",
+   "officialScore": null,
+   "officialFinal": false,
+   "scorers": [],
+   "id": "M076",
+   "round": "16强 (R32)"
+  },
+  {
+   "stage": "r32",
+   "group": null,
+   "kickoffUtc": "2026-06-30T17:00:00Z",
+   "venue": "AT&T Stadium",
+   "city": "Arlington, Texas",
+   "home": "CIV",
+   "away": "NOR",
+   "apiScore": null,
+   "apiStatus": "Scheduled",
+   "officialScore": null,
+   "officialFinal": false,
+   "scorers": [],
+   "id": "M077",
+   "round": "16强 (R32)"
+  },
+  {
+   "stage": "r32",
+   "group": null,
+   "kickoffUtc": "2026-06-30T21:00:00Z",
+   "venue": "MetLife Stadium",
+   "city": "East Rutherford, New Jersey",
+   "home": "FRA",
+   "away": "SWE",
+   "apiScore": null,
+   "apiStatus": "Scheduled",
+   "officialScore": null,
+   "officialFinal": false,
+   "scorers": [],
+   "id": "M078",
+   "round": "16强 (R32)"
+  },
+  {
+   "stage": "r32",
+   "group": null,
+   "kickoffUtc": "2026-07-01T01:00:00Z",
+   "venue": "Estadio Banorte",
+   "city": "Mexico City",
+   "home": "MEX",
+   "away": "3RD",
+   "apiScore": null,
+   "apiStatus": "Scheduled",
+   "officialScore": null,
+   "officialFinal": false,
+   "scorers": [],
+   "id": "M079",
+   "round": "16强 (R32)"
+  },
+  {
+   "stage": "r32",
+   "group": null,
+   "kickoffUtc": "2026-07-01T16:00:00Z",
+   "venue": "Mercedes-Benz Stadium",
+   "city": "Atlanta, Georgia",
+   "home": "1L",
+   "away": "3RD",
+   "apiScore": null,
+   "apiStatus": "Scheduled",
+   "officialScore": null,
+   "officialFinal": false,
+   "scorers": [],
+   "id": "M080",
+   "round": "16强 (R32)"
+  },
+  {
+   "stage": "r32",
+   "group": null,
+   "kickoffUtc": "2026-07-01T20:00:00Z",
+   "venue": "Lumen Field",
+   "city": "Seattle, Washington",
+   "home": "BEL",
+   "away": "3RD",
+   "apiScore": null,
+   "apiStatus": "Scheduled",
+   "officialScore": null,
+   "officialFinal": false,
+   "scorers": [],
+   "id": "M081",
+   "round": "16强 (R32)"
+  },
+  {
+   "stage": "r32",
+   "group": null,
+   "kickoffUtc": "2026-07-02T00:00:00Z",
+   "venue": "Levi's Stadium",
+   "city": "Santa Clara, California",
+   "home": "USA",
+   "away": "BIH",
+   "apiScore": null,
+   "apiStatus": "Scheduled",
+   "officialScore": null,
+   "officialFinal": false,
+   "scorers": [],
+   "id": "M082",
+   "round": "16强 (R32)"
+  },
+  {
+   "stage": "r32",
+   "group": null,
+   "kickoffUtc": "2026-07-02T19:00:00Z",
+   "venue": "SoFi Stadium",
+   "city": "Inglewood, California",
+   "home": "ESP",
+   "away": "2J",
+   "apiScore": null,
+   "apiStatus": "Scheduled",
+   "officialScore": null,
+   "officialFinal": false,
+   "scorers": [],
+   "id": "M083",
+   "round": "16强 (R32)"
+  },
+  {
+   "stage": "r32",
+   "group": null,
+   "kickoffUtc": "2026-07-02T23:00:00Z",
+   "venue": "BMO Field",
+   "city": "Toronto",
+   "home": "2K",
+   "away": "2L",
+   "apiScore": null,
+   "apiStatus": "Scheduled",
+   "officialScore": null,
+   "officialFinal": false,
+   "scorers": [],
+   "id": "M084",
+   "round": "16强 (R32)"
+  },
+  {
+   "stage": "r32",
+   "group": null,
+   "kickoffUtc": "2026-07-03T03:00:00Z",
+   "venue": "BC Place",
+   "city": "Vancouver",
+   "home": "SUI",
+   "away": "3RD",
+   "apiScore": null,
+   "apiStatus": "Scheduled",
+   "officialScore": null,
+   "officialFinal": false,
+   "scorers": [],
+   "id": "M085",
+   "round": "16强 (R32)"
+  },
+  {
+   "stage": "r32",
+   "group": null,
+   "kickoffUtc": "2026-07-03T18:00:00Z",
+   "venue": "AT&T Stadium",
+   "city": "Arlington, Texas",
+   "home": "AUS",
+   "away": "EGY",
+   "apiScore": null,
+   "apiStatus": "Scheduled",
+   "officialScore": null,
+   "officialFinal": false,
+   "scorers": [],
+   "id": "M086",
+   "round": "16强 (R32)"
+  },
+  {
+   "stage": "r32",
+   "group": null,
+   "kickoffUtc": "2026-07-03T22:00:00Z",
+   "venue": "Hard Rock Stadium",
+   "city": "Miami Gardens, Florida",
+   "home": "ARG",
+   "away": "CPV",
+   "apiScore": null,
+   "apiStatus": "Scheduled",
+   "officialScore": null,
+   "officialFinal": false,
+   "scorers": [],
+   "id": "M087",
+   "round": "16强 (R32)"
+  },
+  {
+   "stage": "r32",
+   "group": null,
+   "kickoffUtc": "2026-07-04T01:30:00Z",
+   "venue": "GEHA Field at Arrowhead Stadium",
+   "city": "Kansas City, Missouri",
+   "home": "1K",
+   "away": "3RD",
+   "apiScore": null,
+   "apiStatus": "Scheduled",
+   "officialScore": null,
+   "officialFinal": false,
+   "scorers": [],
+   "id": "M088",
+   "round": "16强 (R32)"
+  },
+  {
+   "stage": "r16",
+   "group": null,
+   "kickoffUtc": "2026-07-04T17:00:00Z",
+   "venue": "NRG Stadium",
+   "city": "Houston, Texas",
+   "home": "RD32",
+   "away": "RD32",
+   "apiScore": null,
+   "apiStatus": "Scheduled",
+   "officialScore": null,
+   "officialFinal": false,
+   "scorers": [],
+   "id": "M089",
+   "round": "8强 (R16)"
+  },
+  {
+   "stage": "r16",
+   "group": null,
+   "kickoffUtc": "2026-07-04T21:00:00Z",
+   "venue": "Lincoln Financial Field",
+   "city": "Philadelphia, Pennsylvania",
+   "home": "RD32",
+   "away": "RD32",
+   "apiScore": null,
+   "apiStatus": "Scheduled",
+   "officialScore": null,
+   "officialFinal": false,
+   "scorers": [],
+   "id": "M090",
+   "round": "8强 (R16)"
+  },
+  {
+   "stage": "r16",
+   "group": null,
+   "kickoffUtc": "2026-07-05T20:00:00Z",
+   "venue": "MetLife Stadium",
+   "city": "East Rutherford, New Jersey",
+   "home": "RD32",
+   "away": "RD32",
+   "apiScore": null,
+   "apiStatus": "Scheduled",
+   "officialScore": null,
+   "officialFinal": false,
+   "scorers": [],
+   "id": "M091",
+   "round": "8强 (R16)"
+  },
+  {
+   "stage": "r16",
+   "group": null,
+   "kickoffUtc": "2026-07-06T00:00:00Z",
+   "venue": "Estadio Banorte",
+   "city": "Mexico City",
+   "home": "RD32",
+   "away": "RD32",
+   "apiScore": null,
+   "apiStatus": "Scheduled",
+   "officialScore": null,
+   "officialFinal": false,
+   "scorers": [],
+   "id": "M092",
+   "round": "8强 (R16)"
+  },
+  {
+   "stage": "r16",
+   "group": null,
+   "kickoffUtc": "2026-07-06T19:00:00Z",
+   "venue": "AT&T Stadium",
+   "city": "Arlington, Texas",
+   "home": "RD32",
+   "away": "RD32",
+   "apiScore": null,
+   "apiStatus": "Scheduled",
+   "officialScore": null,
+   "officialFinal": false,
+   "scorers": [],
+   "id": "M093",
+   "round": "8强 (R16)"
+  },
+  {
+   "stage": "r16",
+   "group": null,
+   "kickoffUtc": "2026-07-07T00:00:00Z",
+   "venue": "Lumen Field",
+   "city": "Seattle, Washington",
+   "home": "RD32",
+   "away": "RD32",
+   "apiScore": null,
+   "apiStatus": "Scheduled",
+   "officialScore": null,
+   "officialFinal": false,
+   "scorers": [],
+   "id": "M094",
+   "round": "8强 (R16)"
+  },
+  {
+   "stage": "r16",
+   "group": null,
+   "kickoffUtc": "2026-07-07T16:00:00Z",
+   "venue": "Mercedes-Benz Stadium",
+   "city": "Atlanta, Georgia",
+   "home": "RD32",
+   "away": "RD32",
+   "apiScore": null,
+   "apiStatus": "Scheduled",
+   "officialScore": null,
+   "officialFinal": false,
+   "scorers": [],
+   "id": "M095",
+   "round": "8强 (R16)"
+  },
+  {
+   "stage": "r16",
+   "group": null,
+   "kickoffUtc": "2026-07-07T20:00:00Z",
+   "venue": "BC Place",
+   "city": "Vancouver",
+   "home": "RD32",
+   "away": "RD32",
+   "apiScore": null,
+   "apiStatus": "Scheduled",
+   "officialScore": null,
+   "officialFinal": false,
+   "scorers": [],
+   "id": "M096",
+   "round": "8强 (R16)"
+  },
+  {
+   "stage": "qf",
+   "group": null,
+   "kickoffUtc": "2026-07-09T20:00:00Z",
+   "venue": "Gillette Stadium",
+   "city": "Foxborough, Massachusetts",
+   "home": "RD16 W1",
+   "away": "RD16 W2",
+   "apiScore": null,
+   "apiStatus": "Scheduled",
+   "officialScore": null,
+   "officialFinal": false,
+   "scorers": [],
+   "id": "M097",
+   "round": "四分之一决赛"
+  },
+  {
+   "stage": "qf",
+   "group": null,
+   "kickoffUtc": "2026-07-10T19:00:00Z",
+   "venue": "SoFi Stadium",
+   "city": "Inglewood, California",
+   "home": "RD16 W5",
+   "away": "RD16 W6",
+   "apiScore": null,
+   "apiStatus": "Scheduled",
+   "officialScore": null,
+   "officialFinal": false,
+   "scorers": [],
+   "id": "M098",
+   "round": "四分之一决赛"
+  },
+  {
+   "stage": "qf",
+   "group": null,
+   "kickoffUtc": "2026-07-11T21:00:00Z",
+   "venue": "Hard Rock Stadium",
+   "city": "Miami Gardens, Florida",
+   "home": "RD16 W3",
+   "away": "RD16 W4",
+   "apiScore": null,
+   "apiStatus": "Scheduled",
+   "officialScore": null,
+   "officialFinal": false,
+   "scorers": [],
+   "id": "M099",
+   "round": "四分之一决赛"
+  },
+  {
+   "stage": "qf",
+   "group": null,
+   "kickoffUtc": "2026-07-12T01:00:00Z",
+   "venue": "GEHA Field at Arrowhead Stadium",
+   "city": "Kansas City, Missouri",
+   "home": "RD16 W7",
+   "away": "RD16 W8",
+   "apiScore": null,
+   "apiStatus": "Scheduled",
+   "officialScore": null,
+   "officialFinal": false,
+   "scorers": [],
+   "id": "M100",
+   "round": "四分之一决赛"
+  },
+  {
+   "stage": "sf",
+   "group": null,
+   "kickoffUtc": "2026-07-14T19:00:00Z",
+   "venue": "AT&T Stadium",
+   "city": "Arlington, Texas",
+   "home": "QFW1",
+   "away": "QFW2",
+   "apiScore": null,
+   "apiStatus": "Scheduled",
+   "officialScore": null,
+   "officialFinal": false,
+   "scorers": [],
+   "id": "M101",
+   "round": "半决赛"
+  },
+  {
+   "stage": "sf",
+   "group": null,
+   "kickoffUtc": "2026-07-15T19:00:00Z",
+   "venue": "Mercedes-Benz Stadium",
+   "city": "Atlanta, Georgia",
+   "home": "QFW3",
+   "away": "QW4",
+   "apiScore": null,
+   "apiStatus": "Scheduled",
+   "officialScore": null,
+   "officialFinal": false,
+   "scorers": [],
+   "id": "M102",
+   "round": "半决赛"
+  },
+  {
+   "stage": "3p",
+   "group": null,
+   "kickoffUtc": "2026-07-18T21:00:00Z",
+   "venue": "Hard Rock Stadium",
+   "city": "Miami Gardens, Florida",
+   "home": "SF L1",
+   "away": "SF L2",
+   "apiScore": null,
+   "apiStatus": "Scheduled",
+   "officialScore": null,
+   "officialFinal": false,
+   "scorers": [],
+   "id": "M103",
+   "round": "三四名决赛"
+  },
+  {
+   "stage": "final",
+   "group": null,
+   "kickoffUtc": "2026-07-19T19:00:00Z",
+   "venue": "MetLife Stadium",
+   "city": "East Rutherford, New Jersey",
+   "home": "SFW1",
+   "away": "SFW2",
+   "apiScore": null,
+   "apiStatus": "Scheduled",
+   "officialScore": null,
+   "officialFinal": false,
+   "scorers": [],
+   "id": "M104",
+   "round": "决赛 FINAL"
+  }
+ ]
 }

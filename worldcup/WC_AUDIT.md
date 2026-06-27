@@ -22,14 +22,26 @@
 - 积分榜的 P/W/D/L/GF/GA 读 `groupStats`;**Pts/GD 自动算**;tiebreaker 链照 `docs/TIEBREAKER_REFERENCE.md`,正面交锋用 `matches[]` 里存在的对阵(主要是第3轮)能算则算,算不了标"待 h2h"。
 - 赛程页列 `matches[]` 现有真实比赛 + 淘汰赛空壳。**不编造缺失赛果**(守 "officialScore 是人工真相" 铁律)。Chris 往 JSON 补比赛 / scorers,页面自动呈现。
 
-## 实时数据(2026-06-26 加入,Chris 选「自动刷新」)
+## 实时数据(2026-06-27 改用 ESPN 真实数据源)
 
-前端打开观赛台 + 每 60s 从 **worldcup26.ir**(免费、无 auth、CORS `*`、`fifa_code` 与我们的 code 一一对应)拉 `/get/teams` + `/get/games`,客户端叠加:
-- **赛程**:小组赛比赛按 `home|away` code 配对,用实时比分/状态/射手覆盖显示(实时优先于静态 seed)。淘汰赛仍用静态占位(我方 KO 是占位 code,且 local_date 时区不可靠,不从实时源建 KO)。
-- **积分榜**:从实时源**全部 72 场小组赛**用 `rankGroupPure` 重算(终于是"从比赛自动算"),覆盖静态 groupStats。
-- **失败兜底**:任一 fetch 失败 → `live=null` → 完全回退静态行为,绝不白屏。
-- **标注**:顶部「⚡ 实时数据 · 更新于 HH:MM · 非官方来源,以官方为准」。
-- 实时源不可作权威(个人项目);要权威需后端 API-Football + 人工确认(大规格方案,未做)。
+> ⚠️ 历史:最初(06-26)接的 **worldcup26.ir** 实为社区**模拟/预测数据集**(虚构赛果、
+> 固定日期、波斯历、有一场永久卡在 in-play),不是真实赛事 → 已弃用。
+
+现在前端打开观赛台 + 每 60s 从 **ESPN 公开足球 API** 拉真实数据:
+- 端点:`site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=YYYYMMDD-YYYYMMDD`
+  - **真实赛果/赛程/射手**,免费、**无需 key**、`Access-Control-Allow-Origin: *`(纯前端可直拉)。
+  - 球队 `abbreviation` 与我们的 code **完全一致**;每队还自带真实国旗图(`espncdn.com/.../{code}.png`)。
+  - 两个日期区间(小组赛 `20260611-20260627` + 淘汰赛 `20260628-20260720`)绕开单响应 ~100 事件上限。
+- **赛程**:小组赛按 `home|away` code 配对,用实时比分/状态/射手覆盖静态。KO 用静态(已是 ESPN 真实数据)。
+- **积分榜**:从实时**全部 72 场小组赛** `rankGroupPure` 重算,覆盖静态 groupStats。
+- **失败兜底**:任一 fetch 失败 → `live=null` → 回退静态(静态本身也是 ESPN 生成的真实数据),绝不白屏。
+- **标注**:顶部「⚡ 实时比分 · 更新于 HH:MM 萨省 · 来源 ESPN · 60秒自动刷新」。
+- **真实时钟闸门**:`matchState` 只在当前萨省时间落入开球窗口时才显示「正在进行」(防模拟源/卡死状态造成的假 LIVE)。
+
+### 重建静态数据(`data/wc2026.json`)
+`node worldcup/tools/gen_wc2026_from_espn.js data/wc2026.json /tmp/out.json` 然后用 out.json 覆盖。
+从 ESPN 拉真实赛程/比分/小组/射手,复用现有中文名,生成完整 104 场 + 12 组。
+静态文件是「快照 + 兜底」;线上靠 60s 实时刷新保持最新。建议每天重跑一次刷新快照。
 
 ## 文件清单(本期新增)
 

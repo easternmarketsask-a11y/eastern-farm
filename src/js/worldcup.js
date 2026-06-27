@@ -11,10 +11,12 @@
   var SK_OFFSET = -6;                       // hours, no DST
   var PREFS_KEY = 'wc2026_prefs_v1';
   var DATA_URL = '../data/wc2026.json';
-  // Live scores: free, CORS-open, no key. Overlays onto the static JSON; official
-  // (manual) data and graceful fallback keep the page working if the source is down.
-  var LIVE_TEAMS_URL = 'https://worldcup26.ir/get/teams';
-  var LIVE_GAMES_URL = 'https://worldcup26.ir/get/games';
+  // Live scores: ESPN's public soccer API — REAL fixtures/scores, free, no key,
+  // CORS-open (Access-Control-Allow-Origin: *). Overlays onto the static JSON;
+  // graceful fallback keeps the page working if the source is down. Two date
+  // ranges dodge ESPN's ~100-event-per-response cap (group stage + knockout).
+  var LIVE_SB_URL = 'https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=';
+  var LIVE_RANGES = ['20260611-20260627', '20260628-20260720'];
   var live = null;   // { at, byPair:{ "HOME|AWAY": {...} }, standings:{ group: rows[] }, ok:true }
 
   // Approximate strength order (1 = strongest) for upset detection only.
@@ -96,6 +98,14 @@
   }
   function pad(n) { return String(n).padStart(2, '0'); }
   function nowSkDayKey() { return skParts(new Date().toISOString()).dayKey; }
+  // Label a dayKey ('YYYY-MM-DD', already a Saskatchewan-local date) WITHOUT
+  // re-applying the timezone offset — passing a date-only string back through
+  // skParts() would shift it a day earlier (parsed as UTC midnight − 6h).
+  function labelForDayKey(dk) {
+    var d = new Date(dk + 'T12:00:00Z');
+    var days = ['周日','周一','周二','周三','周四','周五','周六'];
+    return (d.getUTCMonth() + 1) + '月' + d.getUTCDate() + '日 ' + days[d.getUTCDay()];
+  }
 
   function matchState(m) {
     // 'done' | 'live' | 'upcoming' | 'awaiting' (kicked off but no result in data yet)
@@ -142,48 +152,63 @@
 
   /* ============================================================
      LIVE SCORES (client-side overlay onto the static truth source)
-     Source: worldcup26.ir (free, no auth, CORS *). fifa_code === our codes.
-     Never blocks render: failure leaves `live=null` → static behaviour.
+     Source: ESPN public soccer API (REAL fixtures/scores, no key, CORS *).
+     Team codes (abbreviation) === our codes. Never blocks render: failure
+     leaves `live=null` → static (which is itself real, ESPN-generated) data.
      ============================================================ */
-  function parseScorers(raw, teamCode) {
-    // Postgres array literal as a string: {"Player 27'","Other 75'"}  (or "null")
-    if (!raw || raw === 'null' || raw === '{}' || raw === 'NULL') return [];
-    var parts = String(raw).match(/"([^"]*)"/g) || [];
-    return parts.map(function (p) {
-      var s = p.replace(/^"|"$/g, '').trim();
-      var m = s.match(/^(.*?)\s*(\d{1,3})\s*'?(?:\s*\+\s*\d+)?\s*'?$/);
-      return m ? { team: teamCode, player: m[1].trim(), minute: parseInt(m[2], 10) }
-               : { team: teamCode, player: s, minute: null };
+  function espnMinute(c) {
+    if (!c || !c.displayValue) return null;
+    var n = parseInt(String(c.displayValue).replace(/'/g, '').trim(), 10);
+    return isNaN(n) ? null : n;
+  }
+  function espnScorers(c, idToCode) {
+    var out = [];
+    (c.details || []).forEach(function (dd) {
+      if (!dd.scoringPlay) return;
+      var ath = (dd.athletesInvolved && dd.athletesInvolved[0]) || null;
+      out.push({
+        team: idToCode[dd.team && dd.team.id] || null,
+        player: ath ? (ath.shortName || ath.displayName) : (dd.ownGoal ? 'OG' : ''),
+        minute: espnMinute(dd.clock), pen: !!dd.penaltyKick, og: !!dd.ownGoal
+      });
     });
+    return out;
   }
 
   function fetchLive() {
     if (!data) return Promise.resolve(false);
-    return Promise.all([
-      fetch(LIVE_TEAMS_URL, { cache: 'no-cache' }).then(function (r) { return r.json(); }),
-      fetch(LIVE_GAMES_URL, { cache: 'no-cache' }).then(function (r) { return r.json(); })
-    ]).then(function (res) {
-      var teams = (res[0] && res[0].teams) || [];
-      var games = (res[1] && res[1].games) || [];
-      if (!teams.length || !games.length) return false;
-      var idToCode = {};
-      teams.forEach(function (t) { idToCode[String(t.id)] = t.fifa_code; });
+    return Promise.all(LIVE_RANGES.map(function (r) {
+      return fetch(LIVE_SB_URL + r, { cache: 'no-cache' })
+        .then(function (res) { return res.ok ? res.json() : null; })
+        .catch(function () { return null; });
+    })).then(function (parts) {
+      var evById = {};
+      parts.forEach(function (p) { if (p && p.events) p.events.forEach(function (e) { evById[e.id] = e; }); });
+      var events = Object.keys(evById).map(function (k) { return evById[k]; });
+      if (!events.length) return false;
       var byPair = {}, groupGames = {};
-      games.forEach(function (g) {
-        if (g.type !== 'group') return;
-        var hc = idToCode[String(g.home_team_id)], ac = idToCode[String(g.away_team_id)];
-        if (!hc || !ac || !T[hc] || !T[ac]) return;
-        var finished = String(g.finished).toUpperCase() === 'TRUE';
-        var hasScore = g.home_score != null && g.home_score !== '' && String(g.home_score).toLowerCase() !== 'null';
+      events.forEach(function (ev) {
+        if (((ev.season && ev.season.slug) || '') !== 'group-stage') return;  // KO stays static
+        var c = ev.competitions[0];
+        var home = c.competitors.filter(function (x) { return x.homeAway === 'home'; })[0] || c.competitors[0];
+        var away = c.competitors.filter(function (x) { return x.homeAway === 'away'; })[0] || c.competitors[1];
+        var hc = home.team.abbreviation, ac = away.team.abbreviation;
+        if (!T[hc] || !T[ac]) return;
+        var stt = c.status.type;
+        var finished = !!stt.completed;
+        var inPlay = stt.state === 'in';
+        var hs = parseInt(home.score, 10), as = parseInt(away.score, 10);
+        var hasScore = !isNaN(hs) && !isNaN(as) && (finished || inPlay);
+        var idToCode = {}; c.competitors.forEach(function (x) { idToCode[x.team.id] = x.team.abbreviation; });
+        var grp = T[hc].group;
         var rec = {
-          home: hc, away: ac, group: g.group,
-          score: hasScore ? [parseInt(g.home_score, 10), parseInt(g.away_score, 10)] : null,
-          finished: finished,
-          inPlay: !finished && (g.time_elapsed && g.time_elapsed !== 'finished' && g.time_elapsed !== 'notstarted' && g.time_elapsed !== ''),
-          scorers: parseScorers(g.home_scorers, hc).concat(parseScorers(g.away_scorers, ac))
+          home: hc, away: ac, group: grp,
+          score: hasScore ? [hs, as] : null,
+          finished: finished, inPlay: inPlay,
+          scorers: espnScorers(c, idToCode)
         };
         byPair[hc + '|' + ac] = rec;
-        (groupGames[g.group] = groupGames[g.group] || []).push(rec);
+        (groupGames[grp] = groupGames[grp] || []).push(rec);
       });
       if (!Object.keys(byPair).length) return false;
       // Recompute standings per group from the COMPLETE set of live group games.
@@ -202,7 +227,7 @@
       });
       live = { at: Date.now(), byPair: byPair, standings: standings, ok: true };
       return true;
-    }).catch(function (e) { console.warn('[wc] live fetch failed — using static data', e); return false; });
+    }).catch(function (e) { console.warn('[wc] ESPN live fetch failed — using static data', e); return false; });
   }
 
   // Live record for one of OUR matches (group stage only; KO stays static/placeholder).
@@ -222,8 +247,8 @@
   function liveStamp() {
     if (!live || !live.ok) return '';
     var sk = new Date(live.at + SK_OFFSET * 3600 * 1000);
-    return '<div class="wc-live-note">⚡ 实时数据 · 更新于 ' + pad(sk.getUTCHours()) + ':' + pad(sk.getUTCMinutes()) +
-      ' 萨省 <span class="wc-live-src">非官方来源，以官方为准</span></div>';
+    return '<div class="wc-live-note">⚡ 实时比分 · 更新于 ' + pad(sk.getUTCHours()) + ':' + pad(sk.getUTCMinutes()) +
+      ' 萨省 <span class="wc-live-src">来源 ESPN · 60秒自动刷新</span></div>';
   }
 
   /* ============================================================
@@ -412,7 +437,7 @@
           var am = involvesMine(a) ? 0 : 1, bm = involvesMine(b) ? 0 : 1;
           return am - bm || new Date(a.kickoffUtc) - new Date(b.kickoffUtc);
         });
-        out += '<div class="wc-day">' + skParts(dk).dayLabel + '<span class="cnt">' + dayMatches.length + ' 场</span></div>';
+        out += '<div class="wc-day">' + labelForDayKey(dk) + '<span class="cnt">' + dayMatches.length + ' 场</span></div>';
         dayMatches.forEach(function (m) { out += matchCardHtml(m); });
       });
       listEl.innerHTML = out;
