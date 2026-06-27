@@ -564,10 +564,10 @@
             // authoritative capped balance.
             // 429 (daily cap / rate-limit) → server genuinely didn't credit,
             //   so undo the optimistic add (this is the jumpiness fix).
-            // 422 (source not yet server-whitelisted) → leave the optimistic
-            //   credit as-is so we don't break those earns before the server
-            //   whitelist catches up; the next successful sync reconciles.
-            if (r && r.rejected && r.code === 429) {
+            // 422 (source not whitelisted) → server also rejected the earn, so
+            //   undo the optimistic add too; otherwise local EP drifts above
+            //   the server's true capped balance (phantom EP exploit).
+            if (r && r.rejected && (r.code === 429 || r.code === 422)) {
               this.data.eastPoints = Math.max(0, this.data.eastPoints - n);
               this.save();
               if (window.Farm && Farm.ui && Farm.ui.refreshHUD) Farm.ui.refreshHUD();

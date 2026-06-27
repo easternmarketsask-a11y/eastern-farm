@@ -27,6 +27,11 @@
   const HELP_RECIPIENT_COINS = 20;
   const HELP_SENDER_COINS = 10;
   const STICKER_SENDER_COINS = 2;
+  // Largest legitimate single coin grant that can arrive via pendingGifts
+  // (INVITE_BONUS = 200; gift coins = 50; help = 20). Inbound gifts are
+  // written by OTHER players to our farm_players doc, so their amount is
+  // untrusted — clamp to this to block crafted huge-amount exploits.
+  const MAX_GIFT_COINS = 200;
   let _lastSyncAt = 0;
   let _pendingTimer = null;
   let _dirty = false;   // true when local state changed since the last successful cloud push
@@ -755,9 +760,14 @@
         for (const g of gifts) {
           if (g.kind === 'seed' && g.payload && g.payload.cropId) {
             Farm.state.addSeed(g.payload.cropId, 1);
-          } else if ((g.kind === 'coins' || g.kind === 'ep' || g.kind === 'help') && g.payload && g.payload.amount) {
+          } else if ((g.kind === 'coins' || g.kind === 'ep' || g.kind === 'help') && g.payload) {
             // 'ep' legacy; 'help' = neighbor watered your crops. All credited as coins.
-            Farm.state.addCoins(g.payload.amount);
+            // Amount is untrusted (cross-player write) → reject non-numeric /
+            // non-positive and clamp to the largest legit single grant.
+            const amt = Number(g.payload.amount);
+            if (Number.isFinite(amt) && amt > 0) {
+              Farm.state.addCoins(Math.min(amt, MAX_GIFT_COINS));
+            }
           }
           // 'sticker' carries no payout — it's a friendly hello (notice only,
           // surfaced by the reconcile toast in firebase-auth).
