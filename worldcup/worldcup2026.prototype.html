@@ -1,0 +1,518 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>2026 世界杯 · 萨省观赛台</title>
+<style>
+  :root{
+    --bg:#0a1410; --panel:#0f1c16; --panel2:#13251c; --line:#1f3a2c;
+    --pitch:#2fbf6f; --pitch-dim:#1f7a48; --amber:#ffb627; --amber-dim:#b87d10;
+    --ink:#eaf3ee; --muted:#7f978a; --faint:#54695d;
+    --live:#ff4d4d; --win:#2fbf6f; --out:#3a4a42;
+    --mono:"SFMono-Regular",ui-monospace,"Roboto Mono",Menlo,Consolas,monospace;
+    --disp:"Arial Narrow","Helvetica Neue",system-ui,sans-serif;
+    --body:system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:var(--bg);color:var(--ink);font-family:var(--body);
+    -webkit-font-smoothing:antialiased;line-height:1.4;
+    background-image:radial-gradient(120% 80% at 50% -10%,rgba(47,191,111,.10),transparent 60%);}
+  .wrap{max-width:920px;margin:0 auto;padding:18px 16px 80px}
+  header{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap;
+    border-bottom:1px solid var(--line);padding-bottom:14px;margin-bottom:6px}
+  h1{font-family:var(--disp);font-weight:800;font-size:30px;letter-spacing:.5px;margin:0;
+    text-transform:uppercase;line-height:.95}
+  h1 b{color:var(--amber)}
+  .sub{color:var(--muted);font-size:12.5px;margin-top:4px}
+  .clock{font-family:var(--mono);font-size:12px;color:var(--pitch);text-align:right;white-space:nowrap}
+  .clock b{color:var(--ink)}
+
+  nav{display:flex;gap:4px;margin:16px 0 18px;background:var(--panel);border:1px solid var(--line);
+    border-radius:12px;padding:4px}
+  nav button{flex:1;background:transparent;border:0;color:var(--muted);font-family:var(--body);
+    font-size:14px;font-weight:600;padding:9px 6px;border-radius:9px;cursor:pointer;transition:.15s}
+  nav button .en{display:block;font-family:var(--mono);font-size:9.5px;letter-spacing:1px;color:var(--faint);margin-top:2px}
+  nav button[aria-selected=true]{background:var(--pitch);color:#04130b}
+  nav button[aria-selected=true] .en{color:#04130b;opacity:.7}
+
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 14px 4px;margin-bottom:14px}
+  .panel-h{display:flex;align-items:center;gap:8px;margin:2px 2px 12px}
+  .panel-h h2{font-family:var(--disp);font-weight:800;font-size:17px;text-transform:uppercase;letter-spacing:.6px;margin:0}
+  .panel-h .tag{font-family:var(--mono);font-size:10px;color:var(--amber);border:1px solid var(--amber-dim);
+    border-radius:20px;padding:2px 8px}
+
+  /* filters */
+  .filters{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+  .filters select,.filters input{background:var(--panel2);color:var(--ink);border:1px solid var(--line);
+    border-radius:9px;padding:7px 9px;font-family:var(--body);font-size:13px;min-width:0}
+  .filters input{flex:1;min-width:120px}
+  .chip{background:var(--panel2);border:1px solid var(--line);color:var(--muted);border-radius:20px;
+    padding:6px 11px;font-size:12.5px;cursor:pointer;font-weight:600}
+  .chip[aria-pressed=true]{background:var(--amber);border-color:var(--amber);color:#1a1200}
+
+  /* match rows */
+  .daygroup{margin-bottom:4px}
+  .dayhdr{font-family:var(--mono);font-size:11px;color:var(--pitch);letter-spacing:1px;
+    margin:14px 4px 8px;display:flex;align-items:center;gap:8px}
+  .dayhdr::after{content:"";flex:1;height:1px;background:var(--line)}
+  .match{display:grid;grid-template-columns:54px 1fr auto;gap:10px;align-items:center;
+    padding:9px 4px;border-bottom:1px solid var(--line)}
+  .match:last-child{border-bottom:0}
+  .m-time{font-family:var(--mono);font-size:12px;color:var(--muted);text-align:center;line-height:1.25}
+  .m-time .t{color:var(--ink);font-size:13px}
+  .m-time.live .t{color:var(--live)}
+  .m-teams{display:flex;flex-direction:column;gap:3px;min-width:0}
+  .tm{display:flex;align-items:center;gap:8px}
+  .tm .flag{font-size:15px;width:20px;text-align:center;flex:none}
+  .tm .nm{font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tm .sc{font-family:var(--mono);font-weight:700;font-size:14px;margin-left:auto;color:var(--ink)}
+  .tm.win .nm{color:var(--ink)} .tm.lose .nm{color:var(--faint)} .tm.lose .sc{color:var(--faint)}
+  .m-meta{font-family:var(--mono);font-size:10px;color:var(--faint);text-align:right;line-height:1.35;white-space:nowrap}
+  .m-meta .stage{color:var(--muted)}
+  .badge-live{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--live);
+    margin-right:5px;animation:pulse 1.4s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+  .empty{color:var(--faint);font-size:13px;text-align:center;padding:26px}
+
+  /* standings */
+  .grp{margin-bottom:16px}
+  .grp-h{display:flex;align-items:baseline;gap:8px;margin:0 2px 6px}
+  .grp-h .g{font-family:var(--disp);font-weight:800;font-size:15px;text-transform:uppercase;letter-spacing:1px}
+  .grp-h .note{font-family:var(--mono);font-size:10px;color:var(--faint)}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th{font-family:var(--mono);font-size:9.5px;color:var(--faint);font-weight:500;text-align:right;
+    padding:4px 5px;letter-spacing:.5px;text-transform:uppercase}
+  th.l{text-align:left}
+  td{padding:7px 5px;text-align:right;border-top:1px solid var(--line);font-family:var(--mono);font-size:12.5px}
+  td.team{text-align:left;font-family:var(--body);font-weight:600;font-size:13.5px;display:flex;align-items:center;gap:7px}
+  td.team .flag{font-size:14px}
+  td.pts{color:var(--amber);font-weight:700}
+  tr.q1 td:first-child{box-shadow:inset 3px 0 0 var(--pitch)}
+  tr.q2 td:first-child{box-shadow:inset 3px 0 0 var(--pitch-dim)}
+  tr.q3 td:first-child{box-shadow:inset 3px 0 0 var(--amber)}
+  tr.elim td.team{color:var(--faint)} tr.elim td{color:var(--faint)}
+  tr.elim td.pts{color:var(--faint)}
+  .pos{color:var(--faint);width:16px;display:inline-block}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:11px;color:var(--muted);margin:2px 2px 16px}
+  .legend i{font-style:normal;display:inline-flex;align-items:center;gap:5px}
+  .dot{width:9px;height:3px;border-radius:2px;display:inline-block}
+
+  /* third place race */
+  .third .grp-h .g{color:var(--amber)}
+  .cut{border-top:1px dashed var(--amber-dim)!important}
+  .cutlbl{font-family:var(--mono);font-size:9px;color:var(--amber);padding:3px 5px}
+
+  /* bracket */
+  .bracket-wrap{overflow-x:auto;padding-bottom:8px}
+  .bracket{display:flex;gap:18px;min-width:880px}
+  .round{display:flex;flex-direction:column;justify-content:space-around;gap:8px;min-width:150px}
+  .round-lbl{font-family:var(--mono);font-size:10px;color:var(--faint);text-transform:uppercase;
+    letter-spacing:1px;text-align:center;margin-bottom:4px}
+  .tie{background:var(--panel2);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  .tie .slot{display:flex;align-items:center;gap:6px;padding:6px 8px;font-size:12px;cursor:pointer;
+    border-bottom:1px solid var(--line);min-height:30px}
+  .tie .slot:last-child{border-bottom:0}
+  .tie .slot .flag{font-size:13px;width:18px;text-align:center;flex:none}
+  .tie .slot .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;font-weight:600}
+  .tie .slot.empty-slot{color:var(--faint);cursor:default;font-family:var(--mono);font-size:10.5px;font-weight:400}
+  .tie .slot.picked{background:rgba(47,191,111,.14)}
+  .tie .slot.picked .nm{color:var(--pitch)}
+  .tie .slot.actual{background:rgba(47,191,111,.10)}
+  .bracket-note{font-size:11.5px;color:var(--muted);margin:10px 2px 2px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .reset{background:var(--panel2);border:1px solid var(--line);color:var(--muted);border-radius:8px;
+    padding:5px 10px;font-size:11.5px;cursor:pointer;font-family:var(--mono)}
+  .champ{text-align:center;font-family:var(--disp);font-weight:800;text-transform:uppercase;letter-spacing:1px;
+    font-size:14px;color:var(--amber);padding:10px;border:1px solid var(--amber-dim);border-radius:10px;
+    background:rgba(255,182,39,.06);margin-top:8px}
+  .champ .f{font-size:22px;display:block;margin-bottom:2px}
+
+  footer{color:var(--faint);font-size:11px;text-align:center;margin-top:24px;font-family:var(--mono)}
+  @media(max-width:560px){
+    h1{font-size:24px}
+    .match{grid-template-columns:48px 1fr;gap:8px}
+    .m-meta{grid-column:1/-1;text-align:left;margin-top:2px;padding-left:56px}
+  }
+</style>
+
+<div class="wrap">
+  <header>
+    <div>
+      <h1>FIFA <b>2026</b> · 萨省观赛台</h1>
+      <div class="sub">美 · 加 · 墨 · 48 队 · 104 场 — 全部时间已转萨斯喀彻温 (UTC−6, 不调夏令时)</div>
+    </div>
+    <div class="clock" id="clock"></div>
+  </header>
+
+  <nav role="tablist">
+    <button role="tab" aria-selected="true" data-tab="schedule">赛程<span class="en">SCHEDULE</span></button>
+    <button role="tab" aria-selected="false" data-tab="standings">积分<span class="en">STANDINGS</span></button>
+    <button role="tab" aria-selected="false" data-tab="bracket">对阵图<span class="en">BRACKET</span></button>
+  </nav>
+
+  <section id="schedule"></section>
+  <section id="standings" hidden></section>
+  <section id="bracket" hidden></section>
+
+  <footer id="foot"></footer>
+</div>
+
+<script>
+/* ============================================================
+   DATA — 2026 FIFA World Cup
+   Standings reflect official tables as of June 26, 2026.
+   Kickoff times stored as UTC; rendered in Saskatchewan time (UTC-6, no DST).
+   ============================================================ */
+
+const FLAG = {
+  "Mexico":"🇲🇽","South Africa":"🇿🇦","South Korea":"🇰🇷","Czechia":"🇨🇿",
+  "Switzerland":"🇨🇭","Canada":"🇨🇦","Bosnia and Herzegovina":"🇧🇦","Qatar":"🇶🇦",
+  "Brazil":"🇧🇷","Morocco":"🇲🇦","Scotland":"🏴","Haiti":"🇭🇹",
+  "USA":"🇺🇸","Australia":"🇦🇺","Paraguay":"🇵🇾","Turkiye":"🇹🇷",
+  "Germany":"🇩🇪","Ivory Coast":"🇨🇮","Ecuador":"🇪🇨","Curacao":"🇨🇼",
+  "Netherlands":"🇳🇱","Japan":"🇯🇵","Sweden":"🇸🇪","Tunisia":"🇹🇳",
+  "Egypt":"🇪🇬","Iran":"🇮🇷","Belgium":"🇧🇪","New Zealand":"🇳🇿",
+  "Spain":"🇪🇸","Uruguay":"🇺🇾","Cape Verde":"🇨🇻","Saudi Arabia":"🇸🇦",
+  "France":"🇫🇷","Norway":"🇳🇴","Senegal":"🇸🇳","Iraq":"🇮🇶",
+  "Argentina":"🇦🇷","Austria":"🇦🇹","Algeria":"🇩🇿","Jordan":"🇯🇴",
+  "Colombia":"🇨🇴","Portugal":"🇵🇹","DR Congo":"🇨🇩","Uzbekistan":"🇺🇿",
+  "England":"🏴","Ghana":"🇬🇭","Croatia":"🇭🇷","Panama":"🇵🇦"
+};
+const CN = {
+  "Mexico":"墨西哥","South Africa":"南非","South Korea":"韩国","Czechia":"捷克",
+  "Switzerland":"瑞士","Canada":"加拿大","Bosnia and Herzegovina":"波黑","Qatar":"卡塔尔",
+  "Brazil":"巴西","Morocco":"摩洛哥","Scotland":"苏格兰","Haiti":"海地",
+  "USA":"美国","Australia":"澳大利亚","Paraguay":"巴拉圭","Turkiye":"土耳其",
+  "Germany":"德国","Ivory Coast":"科特迪瓦","Ecuador":"厄瓜多尔","Curacao":"库拉索",
+  "Netherlands":"荷兰","Japan":"日本","Sweden":"瑞典","Tunisia":"突尼斯",
+  "Egypt":"埃及","Iran":"伊朗","Belgium":"比利时","New Zealand":"新西兰",
+  "Spain":"西班牙","Uruguay":"乌拉圭","Cape Verde":"佛得角","Saudi Arabia":"沙特",
+  "France":"法国","Norway":"挪威","Senegal":"塞内加尔","Iraq":"伊拉克",
+  "Argentina":"阿根廷","Austria":"奥地利","Algeria":"阿尔及利亚","Jordan":"约旦",
+  "Colombia":"哥伦比亚","Portugal":"葡萄牙","DR Congo":"刚果(金)","Uzbekistan":"乌兹别克",
+  "England":"英格兰","Ghana":"加纳","Croatia":"克罗地亚","Panama":"巴拿马"
+};
+
+/* Group composition + live standings (P W D L GF GA from official tables, GD/Pts derived).
+   status: q=qualified/clinched, alive=can still advance, out=eliminated */
+const GROUPS = {
+  A:[["Mexico",3,3,0,0,7,1,"q"],["South Africa",3,1,1,1,3,4,"q"],["South Korea",3,1,0,2,3,4,"alive"],["Czechia",3,0,1,2,1,5,"out"]],
+  B:[["Switzerland",3,2,1,0,7,3,"q"],["Canada",3,1,1,1,8,3,"q"],["Bosnia and Herzegovina",3,1,1,1,4,5,"q"],["Qatar",3,0,1,2,2,10,"out"]],
+  C:[["Brazil",3,2,1,0,9,3,"q"],["Morocco",3,2,1,0,6,3,"q"],["Scotland",3,1,0,2,3,6,"alive"],["Haiti",3,0,0,3,2,8,"out"]],
+  D:[["USA",3,2,0,1,7,3,"q"],["Australia",3,1,1,1,4,4,"q"],["Paraguay",3,1,1,1,3,5,"alive"],["Turkiye",3,1,0,2,4,6,"out"]],
+  E:[["Germany",3,2,0,1,8,2,"q"],["Ivory Coast",3,2,0,1,5,3,"q"],["Ecuador",3,1,1,1,4,4,"q"],["Curacao",3,0,1,2,2,10,"out"]],
+  F:[["Netherlands",3,2,1,0,8,2,"q"],["Japan",3,1,2,0,6,2,"q"],["Sweden",3,1,1,1,4,4,"q"],["Tunisia",3,0,0,3,1,11,"out"]],
+  G:[["Egypt",2,1,1,0,3,1,"alive"],["Iran",2,0,2,0,2,2,"alive"],["Belgium",2,0,2,0,2,2,"alive"],["New Zealand",2,0,1,1,1,3,"alive"]],
+  H:[["Spain",2,1,1,0,5,1,"alive"],["Uruguay",2,0,2,0,2,2,"alive"],["Cape Verde",2,0,2,0,2,2,"alive"],["Saudi Arabia",2,0,1,1,1,5,"alive"]],
+  I:[["France",3,2,0,1,7,2,"q"],["Norway",3,2,0,1,6,2,"q"],["Senegal",3,1,0,2,2,5,"out"],["Iraq",3,0,0,3,1,7,"out"]],
+  J:[["Argentina",3,2,0,1,6,1,"q"],["Austria",3,1,0,2,3,3,"alive"],["Algeria",3,1,0,2,3,5,"alive"],["Jordan",3,0,0,3,1,4,"out"]],
+  K:[["Colombia",3,2,0,1,5,2,"q"],["Portugal",3,1,1,1,7,2,"alive"],["DR Congo",3,0,1,2,2,3,"alive"],["Uzbekistan",3,0,0,3,1,8,"out"]],
+  L:[["England",2,1,1,0,3,1,"alive"],["Ghana",2,1,1,0,2,1,"alive"],["Croatia",2,1,0,1,2,3,"alive"],["Panama",2,0,0,2,1,3,"out"]]
+};
+
+/* SCHEDULE — representative slate of fixtures across all stages.
+   utc = ISO kickoff. score:[h,a] if played, else null. venue + city.
+   This includes completed group results, remaining group finales, and the knockout shell. */
+const M = (utc,stage,grp,h,a,score,venue)=>({utc,stage,grp,h,a,score,venue});
+const MATCHES = [
+  // --- Group finales still to come (real upcoming) ---
+  M("2026-06-26T22:00:00Z","小组赛 第3轮","G","Belgium","New Zealand",null,"Dallas"),
+  M("2026-06-26T22:00:00Z","小组赛 第3轮","G","Iran","Egypt",null,"Houston"),
+  M("2026-06-27T01:00:00Z","小组赛 第3轮","H","Spain","Saudi Arabia",null,"San Francisco"),
+  M("2026-06-27T01:00:00Z","小组赛 第3轮","H","Cape Verde","Uruguay",null,"Los Angeles"),
+  M("2026-06-27T19:00:00Z","小组赛 第3轮","L","England","Panama",null,"Boston"),
+  M("2026-06-27T19:00:00Z","小组赛 第3轮","L","Croatia","Ghana",null,"Kansas City"),
+  // --- Sample of completed group results (round 3 already played) ---
+  M("2026-06-26T18:00:00Z","小组赛 第3轮","I","France","Iraq",[2,0],"Seattle"),
+  M("2026-06-26T18:00:00Z","小组赛 第3轮","I","Norway","Senegal",[1,0],"Vancouver"),
+  M("2026-06-25T22:00:00Z","小组赛 第3轮","J","Argentina","Algeria",[2,1],"Miami"),
+  M("2026-06-25T22:00:00Z","小组赛 第3轮","J","Jordan","Austria",[0,1],"Atlanta"),
+  M("2026-06-25T18:00:00Z","小组赛 第3轮","K","Colombia","Uzbekistan",[2,0],"Houston"),
+  M("2026-06-25T18:00:00Z","小组赛 第3轮","K","Portugal","DR Congo",[3,1],"Monterrey"),
+  M("2026-06-24T22:00:00Z","小组赛 第3轮","E","Germany","Curacao",[3,0],"Philadelphia"),
+  M("2026-06-24T22:00:00Z","小组赛 第3轮","E","Ecuador","Ivory Coast",[1,1],"NY/NJ"),
+  M("2026-06-24T18:00:00Z","小组赛 第3轮","F","Netherlands","Tunisia",[3,0],"Toronto"),
+  M("2026-06-24T18:00:00Z","小组赛 第3轮","F","Japan","Sweden",[1,1],"Kansas City"),
+  M("2026-06-23T22:00:00Z","小组赛 第3轮","C","Brazil","Haiti",[4,0],"LA"),
+  M("2026-06-23T22:00:00Z","小组赛 第3轮","C","Scotland","Morocco",[1,2],"Vancouver"),
+  M("2026-06-23T18:00:00Z","小组赛 第3轮","D","USA","Turkiye",[2,1],"Seattle"),
+  M("2026-06-23T18:00:00Z","小组赛 第3轮","D","Paraguay","Australia",[1,1],"SF"),
+  M("2026-06-22T22:00:00Z","小组赛 第3轮","A","Mexico","Czechia",[3,0],"Mexico City"),
+  M("2026-06-22T22:00:00Z","小组赛 第3轮","A","South Korea","South Africa",[1,0],"Guadalajara"),
+  M("2026-06-22T18:00:00Z","小组赛 第3轮","B","Switzerland","Qatar",[3,1],"NY/NJ"),
+  M("2026-06-22T18:00:00Z","小组赛 第3轮","B","Bosnia and Herzegovina","Canada",[1,2],"Toronto"),
+  // --- Opening match (historic, completed) ---
+  M("2026-06-11T19:00:00Z","小组赛 第1轮","A","Mexico","South Africa",[2,1],"Mexico City"),
+  // --- Knockout shell (Round of 32 onward; teams TBD until draw resolves) ---
+  M("2026-06-28T19:00:00Z","16强 (R32)","","1A","2B/2C",null,"LA"),
+  M("2026-06-28T23:00:00Z","16强 (R32)","","1C","3rd","Houston"),
+  M("2026-06-29T19:00:00Z","16强 (R32)","","1E","3rd","Philadelphia"),
+  M("2026-06-29T23:00:00Z","16强 (R32)","","1I","3rd","Seattle"),
+  M("2026-07-04T19:00:00Z","8强 (R16)","","W49","W50",null,"Boston"),
+  M("2026-07-05T19:00:00Z","8强 (R16)","","W51","W52",null,"Atlanta"),
+  M("2026-07-09T19:00:00Z","四分之一决赛","","QF1","QF2",null,"Miami"),
+  M("2026-07-10T19:00:00Z","四分之一决赛","","QF3","QF4",null,"Kansas City"),
+  M("2026-07-14T19:00:00Z","半决赛","","SF1","SF2",null,"Dallas"),
+  M("2026-07-15T19:00:00Z","半决赛","","SF3","SF4",null,"Atlanta"),
+  M("2026-07-18T15:00:00Z","三四名","","L-SF1","L-SF2",null,"Miami"),
+  M("2026-07-19T15:00:00Z","决赛 FINAL","","W-SF1","W-SF2",null,"NY/NJ")
+];
+
+/* ============================================================ HELPERS */
+const SK_OFFSET = -6; // hours, no DST
+const isTeam = n => FLAG.hasOwnProperty(n);
+const nm = n => isTeam(n) ? (CN[n]+" "+n) : n;
+const fl = n => isTeam(n) ? FLAG[n] : "";
+function skParts(iso){
+  const d=new Date(iso); const sk=new Date(d.getTime()+SK_OFFSET*3600*1000);
+  const days=["周日","周一","周二","周三","周四","周五","周六"];
+  return {
+    dayKey: sk.toISOString().slice(0,10),
+    dayLabel: `${sk.getUTCMonth()+1}月${sk.getUTCDate()}日 ${days[sk.getUTCDay()]}`,
+    time: String(sk.getUTCHours()).padStart(2,"0")+":"+String(sk.getUTCMinutes()).padStart(2,"0")
+  };
+}
+const NOW = new Date();
+function liveState(iso){ // returns 'live' | 'done-ish' for ~2h window
+  const k=new Date(iso).getTime(), end=k+115*60000;
+  return NOW.getTime()>=k && NOW.getTime()<=end;
+}
+
+/* ============================================================ SCHEDULE TAB */
+const elSched=document.getElementById("schedule");
+function renderSchedule(){
+  const stages=[...new Set(MATCHES.map(m=>m.stage))];
+  elSched.innerHTML=`
+    <div class="filters">
+      <input id="f-team" placeholder="搜索球队 / search team…">
+      <select id="f-stage"><option value="">全部阶段</option>${stages.map(s=>`<option>${s}</option>`).join("")}</select>
+    </div>
+    <div class="filters" id="quickchips">
+      <button class="chip" data-q="today" aria-pressed="false">今天</button>
+      <button class="chip" data-q="upcoming" aria-pressed="true">未开始</button>
+      <button class="chip" data-q="done" aria-pressed="false">已结束</button>
+      <button class="chip" data-q="prime" aria-pressed="false">黄金时段 (17–23 萨省)</button>
+    </div>
+    <div id="sched-list"></div>`;
+  const list=elSched.querySelector("#sched-list");
+  const fTeam=elSched.querySelector("#f-team"), fStage=elSched.querySelector("#f-stage");
+  const chips=[...elSched.querySelectorAll("#quickchips .chip")];
+  function draw(){
+    const q=fTeam.value.trim().toLowerCase(), st=fStage.value;
+    const active=new Set(chips.filter(c=>c.getAttribute("aria-pressed")==="true").map(c=>c.dataset.q));
+    let rows=MATCHES.filter(m=>{
+      if(st && m.stage!==st) return false;
+      if(q){ const hay=(m.h+m.a+(CN[m.h]||"")+(CN[m.a]||"")).toLowerCase(); if(!hay.includes(q)) return false; }
+      const played=!!m.score, future=new Date(m.utc)>NOW;
+      const p=skParts(m.utc), hr=parseInt(p.time);
+      if(active.has("today") && p.dayKey!==skParts(NOW.toISOString()).dayKey) return false;
+      if(active.has("upcoming") && played) return false;
+      if(active.has("done") && !played) return false;
+      if(active.has("prime") && !(hr>=17 && hr<=23)) return false;
+      return true;
+    }).sort((a,b)=>new Date(a.utc)-new Date(b.utc));
+    if(!rows.length){ list.innerHTML=`<div class="empty">没有符合条件的比赛</div>`; return; }
+    let html="", lastDay="";
+    rows.forEach(m=>{
+      const p=skParts(m.utc);
+      if(p.dayKey!==lastDay){ lastDay=p.dayKey; html+=`<div class="dayhdr">${p.dayLabel}</div>`; }
+      const live=liveState(m.utc) && !m.score;
+      const s=m.score;
+      const hw=s&&s[0]>s[1], aw=s&&s[1]>s[0];
+      html+=`<div class="match">
+        <div class="m-time ${live?'live':''}">
+          ${live?'<span class="badge-live"></span>':''}<span class="t">${p.time}</span><br>${live?'进行中':(s?'FT':'')}
+        </div>
+        <div class="m-teams">
+          <div class="tm ${s?(hw?'win':'lose'):''}"><span class="flag">${fl(m.h)}</span><span class="nm">${nm(m.h)}</span>${s?`<span class="sc">${s[0]}</span>`:''}</div>
+          <div class="tm ${s?(aw?'win':'lose'):''}"><span class="flag">${fl(m.a)}</span><span class="nm">${nm(m.a)}</span>${s?`<span class="sc">${s[1]}</span>`:''}</div>
+        </div>
+        <div class="m-meta"><span class="stage">${m.stage}</span>${m.grp?` · ${m.grp}组`:''}<br>${m.venue}</div>
+      </div>`;
+    });
+    list.innerHTML=html;
+  }
+  fTeam.oninput=draw; fStage.onchange=draw;
+  chips.forEach(c=>c.onclick=()=>{ c.setAttribute("aria-pressed",c.getAttribute("aria-pressed")==="true"?"false":"true"); draw(); });
+  draw();
+}
+
+/* ============================================================ STANDINGS TAB
+   Recomputes Pts/GD from W/D/L + GF/GA and sorts by official tiebreakers:
+   Pts → GD → GF (head-to-head omitted; needs match-level h2h not in summary). */
+function computeRow(r){
+  const [team,P,W,D,L,GF,GA]=r;
+  return {team,P,W,D,L,GF,GA,GD:GF-GA,Pts:W*3+D,status:r[7]};
+}
+function sortGroup(rows){
+  return rows.map(computeRow).sort((a,b)=> b.Pts-a.Pts || b.GD-a.GD || b.GF-a.GF || a.team.localeCompare(b.team));
+}
+const elStand=document.getElementById("standings");
+function renderStandings(){
+  let html=`<div class="panel"><div class="panel-h"><h2>小组积分榜 Group Tables</h2><span class="tag">实时计算 · 截至 6月26日</span></div>
+    <div class="legend">
+      <i><span class="dot" style="background:var(--pitch)"></span>小组第一 → 16强</i>
+      <i><span class="dot" style="background:var(--pitch-dim)"></span>小组第二 → 16强</i>
+      <i><span class="dot" style="background:var(--amber)"></span>第三名 (争 8 席)</i>
+      <i><span class="pos">P</span>赛 <span class="pos">GD</span>净胜 <span class="pos">Pts</span>积分</i>
+    </div>`;
+  const thirds=[];
+  Object.entries(GROUPS).forEach(([g,rows])=>{
+    const sorted=sortGroup(rows);
+    if(sorted[2]) thirds.push({...sorted[2],g});
+    html+=`<div class="grp"><div class="grp-h"><span class="g">${g} 组</span>
+      <span class="note">Pts → GD → 进球数 排序</span></div>
+      <table><thead><tr>
+        <th class="l">球队</th><th>P</th><th>W</th><th>D</th><th>L</th><th>GF</th><th>GA</th><th>GD</th><th>Pts</th>
+      </tr></thead><tbody>`;
+    sorted.forEach((r,i)=>{
+      const cls = r.status==="out" ? "elim" : (i===0?"q1":i===1?"q2":i===2?"q3":"");
+      html+=`<tr class="${cls}">
+        <td class="team"><span class="pos">${i+1}</span><span class="flag">${fl(r.team)}</span>${CN[r.team]}</td>
+        <td>${r.P}</td><td>${r.W}</td><td>${r.D}</td><td>${r.L}</td>
+        <td>${r.GF}</td><td>${r.GA}</td><td>${r.GD>0?'+':''}${r.GD}</td><td class="pts">${r.Pts}</td>
+      </tr>`;
+    });
+    html+=`</tbody></table></div>`;
+  });
+  html+=`</div>`;
+
+  // Third-place race
+  const tRank=thirds.sort((a,b)=> b.Pts-a.Pts || b.GD-a.GD || b.GF-a.GF || a.g.localeCompare(b.g));
+  html+=`<div class="panel third"><div class="panel-h"><h2>最佳第三名竞赛 Third-Place Race</h2><span class="tag">前 8 名晋级</span></div>
+    <div class="grp-h"><span class="note" style="margin:0 2px 8px">12 个小组第三名按 Pts → GD → 进球数 排名，前 8 进 16 强 (虚线为晋级分界)。部分小组未踢完，排名将变动。</span></div>
+    <table><thead><tr><th class="l">小组第三</th><th>组</th><th>Pts</th><th>GD</th><th>GF</th></tr></thead><tbody>`;
+  tRank.forEach((r,i)=>{
+    const cut = i===8;
+    html+=`${cut?`<tr><td colspan="5" class="cut cutlbl">— 晋级分界线 cut line —</td></tr>`:''}
+      <tr class="${i<8?'':'elim'}">
+        <td class="team"><span class="pos">${i+1}</span><span class="flag">${fl(r.team)}</span>${CN[r.team]}</td>
+        <td style="font-family:var(--mono)">${r.g}</td><td class="pts">${r.Pts}</td>
+        <td>${r.GD>0?'+':''}${r.GD}</td><td>${r.GF}</td>
+      </tr>`;
+  });
+  html+=`</tbody></table></div>`;
+  elStand.innerHTML=html;
+}
+
+/* ============================================================ BRACKET TAB
+   Interactive predictor. Pre-fills Round of 32 slots from current group leaders
+   where clinched; user clicks a team to advance it through to the final. */
+const elBr=document.getElementById("bracket");
+let BR_STATE={}; // tieId -> winner name
+
+// Build R32 seeding from current standings (group winners / runners-up where known)
+function seedR32(){
+  const w={},ru={};
+  Object.entries(GROUPS).forEach(([g,rows])=>{
+    const s=sortGroup(rows); w[g]=s[0].team; ru[g]=s[1].team;
+  });
+  // Simplified but valid 1-vs-2 cross-group pairing for a 32-team bracket
+  const pairs=[
+    [w.A,ru.B],[w.C,ru.D],[w.E,ru.F],[w.G,ru.H],
+    [w.I,ru.J],[w.K,ru.L],[w.B,ru.A],[w.D,ru.C],
+    [w.F,ru.E],[w.H,ru.G],[w.J,ru.I],[w.L,ru.K],
+    [w.A,ru.C],[w.E,ru.G],[w.I,ru.K],[w.B,ru.D]
+  ];
+  return pairs;
+}
+function renderBracket(){
+  const r32=seedR32();
+  const rounds=[
+    {id:"r32",lbl:"16强 R32",n:16},
+    {id:"r16",lbl:"8强 R16",n:8},
+    {id:"qf",lbl:"四分之一",n:4},
+    {id:"sf",lbl:"半决赛",n:2},
+    {id:"f",lbl:"决赛",n:1}
+  ];
+  // initialise ties
+  const ties={};
+  r32.forEach((p,i)=>ties["r32-"+i]={a:p[0],b:p[1]});
+  function slotsFor(roundIdx){
+    const r=rounds[roundIdx];
+    const out=[];
+    for(let i=0;i<r.n;i++){
+      const id=r.id+"-"+i;
+      if(r.id==="r32"){ out.push({id,a:ties[id].a,b:ties[id].b}); }
+      else{
+        const prev=rounds[roundIdx-1].id;
+        const a=BR_STATE[prev+"-"+(i*2)]||null;
+        const b=BR_STATE[prev+"-"+(i*2+1)]||null;
+        out.push({id,a,b});
+      }
+    }
+    return out;
+  }
+  let cols="";
+  rounds.forEach((r,ri)=>{
+    const slots=slotsFor(ri);
+    let inner=`<div class="round-lbl">${r.lbl}</div>`;
+    slots.forEach(sl=>{
+      const mk=(team,which)=>{
+        if(!team) return `<div class="slot empty-slot">待定 TBD</div>`;
+        const picked=BR_STATE[sl.id]===team;
+        return `<div class="slot ${picked?'picked':''}" data-tie="${sl.id}" data-team="${team}">
+          <span class="flag">${fl(team)}</span><span class="nm">${isTeam(team)?CN[team]:team}</span></div>`;
+      };
+      inner+=`<div class="tie">${mk(sl.a)}${mk(sl.b)}</div>`;
+    });
+    cols+=`<div class="round">${inner}</div>`;
+  });
+  const champ=BR_STATE["f-0"];
+  elBr.innerHTML=`
+    <div class="panel">
+      <div class="panel-h"><h2>淘汰赛预测 Knockout Predictor</h2><span class="tag">点击晋级</span></div>
+      <div class="bracket-note">
+        16强对阵根据当前小组排名生成 (1 vs 2 跨组)。点任意球队让它晋级，一路点到决赛预测你的冠军。
+        <button class="reset" id="br-reset">↺ 重置</button>
+      </div>
+      <div class="bracket-wrap"><div class="bracket">${cols}</div></div>
+      ${champ?`<div class="champ"><span class="f">${fl(champ)}</span>你的预测冠军 · ${isTeam(champ)?CN[champ]+' '+champ:champ}</div>`:''}
+    </div>`;
+  elBr.querySelectorAll(".slot[data-team]").forEach(s=>{
+    s.onclick=()=>{
+      const tie=s.dataset.tie, team=s.dataset.team;
+      // clear any downstream picks that depended on the old winner
+      if(BR_STATE[tie]!==team){
+        BR_STATE[tie]=team;
+        clearDownstream(tie,rounds);
+      }
+      renderBracket();
+    };
+  });
+  elBr.querySelector("#br-reset").onclick=()=>{ BR_STATE={}; renderBracket(); };
+}
+function clearDownstream(tieId,rounds){
+  const [rid,idx]=tieId.split("-");
+  const ri=rounds.findIndex(r=>r.id===rid);
+  let cur=parseInt(idx);
+  for(let i=ri+1;i<rounds.length;i++){
+    cur=Math.floor(cur/2);
+    delete BR_STATE[rounds[i].id+"-"+cur];
+  }
+}
+
+/* ============================================================ TABS + CLOCK */
+const tabs=[...document.querySelectorAll('nav button')];
+const panes={schedule:elSched,standings:elStand,bracket:elBr};
+const rendered={};
+function show(tab){
+  tabs.forEach(b=>b.setAttribute("aria-selected", b.dataset.tab===tab));
+  Object.entries(panes).forEach(([k,el])=>el.hidden=(k!==tab));
+  if(!rendered[tab]){
+    ({schedule:renderSchedule,standings:renderStandings,bracket:renderBracket})[tab]();
+    rendered[tab]=true;
+  }
+}
+tabs.forEach(b=>b.onclick=()=>show(b.dataset.tab));
+
+function tickClock(){
+  const now=new Date();
+  const sk=new Date(now.getTime()+SK_OFFSET*3600*1000);
+  const hh=String(sk.getUTCHours()).padStart(2,"0"), mm=String(sk.getUTCMinutes()).padStart(2,"0"), ss=String(sk.getUTCSeconds()).padStart(2,"0");
+  document.getElementById("clock").innerHTML=`萨省时间 <b>${hh}:${mm}:${ss}</b><br>SK · UTC−6`;
+}
+setInterval(tickClock,1000); tickClock();
+document.getElementById("foot").textContent="数据截至 2026-06-26 · 时间已转萨斯喀彻温 (UTC−6) · 积分与晋级随未踢完小组实时变化";
+
+show("schedule");
+</script>

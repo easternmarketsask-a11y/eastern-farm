@@ -1,0 +1,73 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "WC2026 Source of Truth",
+  "type": "object",
+  "required": ["meta", "teams", "groups", "matches"],
+  "properties": {
+    "meta": {
+      "type": "object",
+      "required": ["competition", "tzOffset", "lastUpdated"],
+      "properties": {
+        "competition": { "type": "string" },
+        "tzOffset": { "type": "integer", "description": "Hours from UTC for display. Saskatchewan = -6, no DST." },
+        "lastUpdated": { "type": "string", "format": "date-time" }
+      }
+    },
+    "teams": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["code", "name", "cn", "flag", "group"],
+        "properties": {
+          "code": { "type": "string", "description": "Stable 3-letter id used everywhere else" },
+          "name": { "type": "string" },
+          "cn": { "type": "string", "description": "Chinese name" },
+          "flag": { "type": "string" },
+          "group": { "type": "string", "pattern": "^[A-L]$" }
+        }
+      }
+    },
+    "groups": {
+      "type": "object",
+      "patternProperties": {
+        "^[A-L]$": { "type": "array", "items": { "type": "string" }, "minItems": 4, "maxItems": 4 }
+      }
+    },
+    "matches": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "stage", "kickoffUtc", "home", "away"],
+        "properties": {
+          "id": { "type": "string" },
+          "stage": { "type": "string", "enum": ["group", "r32", "r16", "qf", "sf", "3p", "final"] },
+          "round": { "type": "string" },
+          "group": { "type": ["string", "null"], "pattern": "^[A-L]$" },
+          "kickoffUtc": { "type": "string", "format": "date-time" },
+          "venue": { "type": "string" },
+          "city": { "type": "string" },
+          "home": { "type": "string", "description": "team code, or placeholder like 1A/2B/W49 for knockout TBD" },
+          "away": { "type": "string" },
+          "apiScore": { "type": ["array", "null"], "items": { "type": "integer" }, "minItems": 2, "maxItems": 2,
+            "description": "WRITTEN BY FETCHER ONLY. Suggestion, not truth." },
+          "apiStatus": { "type": ["string", "null"], "enum": ["NS", "LIVE", "FT", null] },
+          "officialScore": { "type": ["array", "null"], "items": { "type": "integer" }, "minItems": 2, "maxItems": 2,
+            "description": "HUMAN-CONFIRMED truth. Standings + settlement read THIS." },
+          "officialFinal": { "type": "boolean", "default": false,
+            "description": "Human ticked 'this is the final score'. Required before settlement." },
+          "scorers": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "team": { "type": "string" },
+                "player": { "type": "string" },
+                "minute": { "type": "integer" }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -48,6 +48,9 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=ZCOOL+KuaiLe&display=swap">
 <link rel="stylesheet" href="css/style.css">
+<!-- WC2026 START — World Cup viewing hub (removable end of July) -->
+<link rel="stylesheet" href="css/worldcup.css">
+<!-- WC2026 END -->
 </head>
 <body>
 
@@ -69,6 +72,28 @@
       <span class="splash-tagline-zh">好菜自己种</span>
       <span class="splash-tagline-en">Grow your own</span>
     </div>
+    <!-- WC2026 START — World Cup entry (removable end of July) -->
+    <button class="splash-wc" id="splashWorldcup" aria-label="进入 2026 世界杯观赛台 / Open World Cup 2026 hub">
+      <span class="splash-wc-pill">LIVE</span>
+      <svg class="splash-wc-emblem" viewBox="0 0 60 72" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <path d="M16 8 H44 V20 Q44 34 30 38 Q16 34 16 20 Z" fill="#f4a72c" stroke="#d98410" stroke-width="2"/>
+        <path d="M16 11 H8 Q5 11 6 17 Q8 26 17 26" fill="none" stroke="#d98410" stroke-width="2.4"/>
+        <path d="M44 11 H52 Q55 11 54 17 Q52 26 43 26" fill="none" stroke="#d98410" stroke-width="2.4"/>
+        <rect x="25" y="37" width="10" height="8" fill="#e0961a"/>
+        <path d="M19 45 H41 L43 52 H17 Z" fill="#f4a72c" stroke="#d98410" stroke-width="2"/>
+        <circle cx="30" cy="20" r="8" fill="#fffdf6" stroke="#3a7d2c" stroke-width="1.6"/>
+        <path d="M30 14 l3 2.4 -1.2 3.6 h-3.6 L27 16.4 Z" fill="#3a7d2c"/>
+        <text x="30" y="66" text-anchor="middle" font-family="Arial, sans-serif" font-weight="800" font-size="15" fill="#fffdf6">26</text>
+      </svg>
+      <span class="splash-wc-txt">
+        <span class="splash-wc-zh">2026 世界杯 · 萨省观赛台</span>
+        <span class="splash-wc-en">FIFA World Cup 26 · Live Hub</span>
+        <span class="splash-wc-sub">赛程赛果 · 积分榜 · 对阵图 — 全部萨省时间</span>
+      </span>
+      <span class="splash-wc-go">›</span>
+    </button>
+    <!-- WC2026 END -->
+
     <!-- Reward hook + perks: pull guests over the login line. Hidden once
          signed in (see firebase-auth._renderSplash). -->
     <div class="splash-reward" id="splashReward">
@@ -337,6 +362,9 @@
 <script src="js/share.js"></script>
 <script src="js/mapview.js"></script>
 <script src="js/mapview-iso.js"></script>
+<!-- WC2026 START — World Cup viewing hub (removable end of July) -->
+<script src="js/worldcup.js"></script>
+<!-- WC2026 END -->
 <script src="js/main.js"></script>
 <script src="js/pwa-install.js"></script>
 
