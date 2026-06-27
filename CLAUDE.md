@@ -31,6 +31,23 @@ python3 -m http.server 8000
 
 ---
 
+## 部署 Deploy（一键）
+
+生产站 `farm.easternmarket.ca` 由 **GitHub Pages 从 `main` 分支根目录** 自动部署（无 Actions、无 build）。
+
+**一条命令部署全部**（在仓库根目录）：
+
+```bash
+bash deploy.sh                 # 自动提交未保存改动 → 推当前分支 → 快进推送到 main → Pages 上线
+bash deploy.sh "本次改动说明"   # 自定义提交信息
+```
+
+Windows 也可**双击 `deploy.bat`**。脚本用「快进推送到 main」(`git push origin HEAD:main`)——
+不切换你的分支、不会把你留在 main；若 main 上有分支外的独立改动会安全失败并提示先 merge。
+上线约 1–2 分钟生效；iPhone 看到旧版需删 App 重装清 PWA 缓存。
+
+---
+
 ## Why This Exists
 
 Eastern Market is a Saskatoon supermarket (2,000+ SKUs, run by Chris). Chris
