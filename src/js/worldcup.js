@@ -99,20 +99,23 @@
 
   function matchState(m) {
     // 'done' | 'live' | 'upcoming' | 'awaiting' (kicked off but no result in data yet)
-    var lf = liveFor(m);
-    if (lf) {
-      if (lf.finished && lf.score) return 'done';
-      if (lf.inPlay || lf.score) return 'live';
-      // live source says not-started → fall through to time-based logic
-    }
-    if (m.officialFinal && m.officialScore) return 'done';
-    if (m.officialScore) return 'done';            // score present even if final flag missing
     var k = new Date(m.kickoffUtc).getTime();
     var now = Date.now();
-    if (m.apiStatus === 'LIVE') return 'live';
-    if (now >= k && now <= k + 130 * 60000) return 'live';
+    var lf = liveFor(m);
+    // 1. Confirmed finals always win: human official first, then a finished live record.
+    if (m.officialFinal && m.officialScore) return 'done';
+    if (m.officialScore) return 'done';            // score present even if final flag missing
+    if (lf && lf.finished && lf.score) return 'done';
+    // 2. Real-clock gate. The auto data source is NOT a true real-time feed (it is a
+    //    fixed/simulated dataset and can leave a game stuck "in play"), so its in-play
+    //    flag must agree with the Saskatchewan clock before we ever show LIVE — otherwise
+    //    a phantom match shows "正在进行" at 凌晨. A match is live only inside its window.
     if (now < k) return 'upcoming';
-    return 'awaiting';   // past kickoff, no confirmed result in the data yet (stale / not entered)
+    if (now <= k + 130 * 60000) return 'live';
+    // 3. Past the window with no confirmed final:
+    if (lf && lf.score) return 'done';             // source carries a score → treat as played
+    if (m.apiScore) return 'done';
+    return 'awaiting';   // past kickoff, no result in the data yet (stale / not entered)
   }
   function score(m) { var lf = liveFor(m); if (lf && lf.score) return lf.score; return m.officialScore || m.apiScore || null; }
 
@@ -231,11 +234,13 @@
     hub.id = 'wc-hub';
     hub.innerHTML =
       '<div class="wc-topbar">' +
-        '<div class="wc-brand"><img class="wc-emblem" src="assets/images/wc2026-logo.png" alt="FIFA World Cup 2026">' +
-          '<div class="wc-brand-text"><div class="wc-brand-zh">萨省观赛台</div>' +
-          '<div class="wc-brand-en">World Cup 26</div></div>' +
+        '<div class="wc-brand">' +
+          '<a class="wc-em-logo" href="https://easternmarket.ca/" target="_blank" rel="noopener" title="东方超市 Eastern Market" aria-label="东方超市 Eastern Market">' +
+            '<img src="assets/images/logo-horizontal.png" alt="东方超市 Eastern Market"></a>' +
+          '<span class="wc-brand-divider" aria-hidden="true"></span>' +
+          '<img class="wc-emblem" src="assets/images/wc2026-logo.png" alt="FIFA World Cup 2026">' +
         '</div>' +
-        '<div class="wc-clock" id="wcClock"><span class="t">--:--</span><span class="z">SK · UTC−6</span></div>' +
+        '<div class="wc-clock" id="wcClock"><span class="t">--:--:--</span><span class="z">萨省时间</span></div>' +
         '<button class="wc-close" id="wcClose" aria-label="关闭 Close">✕</button>' +
       '</div>' +
       '<div class="wc-tabs" role="tablist">' +
