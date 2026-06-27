@@ -259,14 +259,13 @@
     hub.id = 'wc-hub';
     hub.innerHTML =
       '<div class="wc-topbar">' +
-        '<div class="wc-brand">' +
-          '<a class="wc-em-logo" href="https://easternmarket.ca/" target="_blank" rel="noopener" title="东方超市 Eastern Market" aria-label="东方超市 Eastern Market">' +
-            '<img src="assets/images/logo-horizontal.png" alt="东方超市 Eastern Market"></a>' +
-          '<span class="wc-brand-divider" aria-hidden="true"></span>' +
-          '<img class="wc-emblem" src="assets/images/wc2026-logo.png" alt="FIFA World Cup 2026">' +
+        '<a class="wc-em-logo" href="https://easternmarket.ca/" target="_blank" rel="noopener" title="东方超市 Eastern Market" aria-label="东方超市 Eastern Market">' +
+          '<img src="assets/images/logo-horizontal.png" alt="东方超市 Eastern Market"></a>' +
+        '<div class="wc-title"><span class="wc-title-zh">世界杯观赛台</span></div>' +
+        '<div class="wc-topbar-right">' +
+          '<div class="wc-clock" id="wcClock"><span class="t">--:--:--</span><span class="z">萨省</span></div>' +
+          '<button class="wc-close" id="wcClose" aria-label="关闭 Close">✕</button>' +
         '</div>' +
-        '<div class="wc-clock" id="wcClock"><span class="t">--:--:--</span><span class="z">萨省时间</span></div>' +
-        '<button class="wc-close" id="wcClose" aria-label="关闭 Close">✕</button>' +
       '</div>' +
       '<div class="wc-tabs" role="tablist">' +
         tabBtn('schedule', '赛程赛果', 'SCHEDULE') +
