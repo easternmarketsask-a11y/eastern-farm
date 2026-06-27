@@ -160,8 +160,11 @@
       for (const e of evts) {
         const name = e.thiefName || '邻居';
         if (e.kind === 'caught') {
-          // 狗替你抓住了贼：收下赔礼
-          Farm.state.addCoins(e.coins || socialConfig.DOG_CAUGHT_FINE);
+          // 狗替你抓住了贼：收下赔礼。e.coins 来自别人写入的跨用户 stealEvent
+          // （不可信），夹到合法罚金上限，防伪造 caught 事件刷币。
+          const fine = socialConfig.DOG_CAUGHT_FINE;
+          const amt = Number(e.coins);
+          Farm.state.addCoins(Number.isFinite(amt) && amt > 0 ? Math.min(amt, fine) : fine);
           out.helped.push({ kind: 'caught', name, cropId: e.cropId, realUid: e.thiefUid });
           continue;
         }
