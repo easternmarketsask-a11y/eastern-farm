@@ -59,7 +59,7 @@
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
   gap: 8px;
-  padding: max(10px, env(safe-area-inset-top)) 12px 11px;
+  padding: max(10px, env(safe-area-inset-top)) 12px 9px;
   border-bottom: 1px solid var(--wc-line);
   background: linear-gradient(180deg, rgba(255,253,246,0.94), rgba(255,253,246,0.62));
   backdrop-filter: blur(6px);
@@ -83,25 +83,28 @@
 .wc-close:active { transform: scale(0.9); background: #f3ead6; }
 
 /* ===================== TABS ===================== */
+/* 单行分段控件(segmented control):去掉每个 tab 下方那行 9px 大写英文小字 —— 那是高度
+   占用 + "业余感"的来源。改单行后更紧凑、更专业;选中态保留品牌绿做识别。 */
 .wc-tabs {
   flex: 0 0 auto;
-  display: flex; gap: 3px; margin: 10px 12px 10px; padding: 4px;
-  background: #f1e7d2; border-radius: var(--radius-pill);
-  box-shadow: inset 0 1px 2px rgba(83,58,28,0.08);
+  display: flex; gap: 3px; margin: 9px 12px; padding: 3px;
+  background: #ebe0c6; border-radius: var(--radius-pill);
+  box-shadow: inset 0 1px 2px rgba(83,58,28,0.10);
 }
 .wc-tabs button {
   flex: 1; border: 0; cursor: pointer; border-radius: var(--radius-pill);
   background: transparent; color: var(--wc-soft);
-  padding: 8px 4px 7px; line-height: 1.12; transition: all 0.18s;
+  padding: 8px 4px; line-height: 1; transition: color 0.2s, background 0.2s, box-shadow 0.2s, transform 0.12s;
   font-family: var(--font-display);
 }
-.wc-tabs button .zh { display: block; font-size: 15.5px; }
-.wc-tabs button .en { display: block; font-family: var(--font-en); font-size: 9px; letter-spacing: 1.4px; font-weight: 700; opacity: 0.55; margin-top: 2px; }
+.wc-tabs button .zh { display: block; font-size: 15px; letter-spacing: 0.6px; }
+.wc-tabs button .en { display: none; }   /* 单行更干净;英文标识从 DOM 保留但隐藏 */
+.wc-tabs button:active { transform: scale(0.97); }
 .wc-tabs button[aria-selected="true"] {
   background: linear-gradient(160deg, var(--wc-pitch-soft), var(--wc-pitch));
-  color: #fff; box-shadow: 0 3px 9px rgba(58,125,44,0.32);
+  color: #fff; box-shadow: 0 2px 8px rgba(58,125,44,0.30);
+  font-weight: 700;
 }
-.wc-tabs button[aria-selected="true"] .en { opacity: 0.8; }
 
 /* ===================== BODY (scroll) ===================== */
 .wc-body {
@@ -438,6 +441,7 @@
 .wc-mp-coincard { background: linear-gradient(160deg, #eaf6df, #dff0d3); border: 1px solid #bfe0a8; border-radius: var(--radius-md); padding: 14px; text-align: center; }
 .wc-mp-coin-amt { font-family: var(--font-display); font-size: 28px; font-weight: 800; color: var(--wc-pitch); display: flex; align-items: center; justify-content: center; gap: 6px; }
 .wc-mp-coin-sub { font-size: 12.5px; color: var(--wc-soft); margin-top: 5px; }
+.wc-mp-note { font-size: 12px; color: var(--wc-amber-deep); background: #fff5dc; border: 1px solid #f0d28a; border-radius: var(--radius-sm); padding: 9px 11px; margin-top: 12px; line-height: 1.5; text-align: center; }
 
 /* ===================== LUCKY WHEEL (转盘揭晓) ===================== */
 .wc-wheel-card { text-align: center;
@@ -561,4 +565,14 @@
   .wc-focus-team .fl { font-size: 34px; }
   .wc-lotto-banner .bn { font-size: 15.5px; }
   .wc-match-lotto { font-size: 13.5px; }
+}
+
+/* 尊重系统「减弱动态效果」:关掉横幅脉动 / CTA 呼吸 / ping 等循环动画(转盘的单次揭晓动画
+   保留,它是功能性的一次性反馈,但加速收尾)。专业 + 无障碍。 */
+@media (prefers-reduced-motion: reduce) {
+  .wc-lotto-banner { animation: none !important; }
+  .wc-gate-go { animation: none !important; }
+  .wc-gate-emoji { animation: none !important; }
+  .wc-pulse::after { animation: none !important; }
+  #wc-hub *, #wc-hub *::before, #wc-hub *::after { scroll-behavior: auto !important; }
 }

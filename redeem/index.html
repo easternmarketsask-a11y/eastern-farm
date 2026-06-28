@@ -133,6 +133,12 @@ window.addEventListener('load', function () {
   var call = firebase.app().functions('us-central1').httpsCallable('wcLotteryRedeem');
 
   var $ = function (id) { return document.getElementById(id); };
+  // 防 XSS:顾客姓名等字段进 innerHTML 前一律转义(会员名可含任意字符)
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
   var PASS = sessionStorage.getItem('wc_redeem_pass') || '';
 
   function showConsole() { $('gate').classList.add('hidden'); $('console').classList.remove('hidden'); }
@@ -175,11 +181,13 @@ window.addEventListener('load', function () {
     var el = $('res'); el.className = 'res show';
     if (!d.found) { el.classList.add('bad'); el.innerHTML = '<div class="st">❌ 查无此券码</div><div class="who">请核对顾客手机上的码</div>'; current = null; return; }
     if (d.redeemed) { el.classList.add('used');
-      el.innerHTML = '<div class="pz">🎁 ' + d.prizeCn + '</div><div class="who">' + (d.name || '') + ' · ' + (d.phone || '') + '</div>' +
-        '<div class="st">⚠️ 此券已核销' + (d.redeemedAt ? ' · ' + d.redeemedAt : '') + '</div><div class="who">不要重复发奖</div>'; current = null; return; }
+      el.innerHTML = '<div class="pz">🎁 ' + esc(d.prizeCn) + '</div><div class="who">' + esc(d.name) + ' · ' + esc(d.phone) + '</div>' +
+        '<div class="st">⚠️ 此券已核销' + (d.redeemedAt ? ' · ' + esc(d.redeemedAt) : '') + '</div><div class="who">不要重复发奖</div>' +
+        '<button class="btn ghost" id="unredeemBtn" style="margin-top:12px">↩︎ 撤销核销(误操作)</button>';
+      current = d.code; var ub = $('unredeemBtn'); if (ub) ub.onclick = doUnredeem; return; }
     el.classList.add('valid');
-    el.innerHTML = '<div class="pz">🎁 ' + d.prizeCn + '</div><div class="who">' + (d.name || '') + ' · ' + (d.phone || '') +
-      ' · <span class="code2">' + d.code + '</span></div>' +
+    el.innerHTML = '<div class="pz">🎁 ' + esc(d.prizeCn) + '</div><div class="who">' + esc(d.name) + ' · ' + esc(d.phone) +
+      ' · <span class="code2">' + esc(d.code) + '</span></div>' +
       '<div class="st">✅ 有效 · 可发奖</div>' +
       '<button class="btn amber" id="confirmBtn" style="margin-top:12px">确认核销并发奖</button>';
     current = d.code;
@@ -200,10 +208,23 @@ window.addEventListener('load', function () {
       var d = await api({ action: 'redeem', code: current });
       var el = $('res'); el.className = 'res show ' + (d.already ? 'used' : 'valid');
       el.innerHTML = '<div class="pz">' + (d.already ? '⚠️ 已核销过' : '🎉 核销成功') + '</div>' +
-        '<div class="who">🎁 ' + d.prizeCn + ' · ' + (d.name || '') + '</div>' +
+        '<div class="who">🎁 ' + esc(d.prizeCn) + ' · ' + esc(d.name) + '</div>' +
         '<div class="st">' + (d.already ? '请勿重复发奖' : '已发奖,可进行下一单') + '</div>';
       current = null; $('code').value = ''; $('code').focus();
     } catch (e) { b.disabled = false; b.textContent = '确认核销并发奖'; $('redeemErr').textContent = '核销失败:' + (e.message || e); }
+  }
+  async function doUnredeem() {
+    if (!current) return;
+    if (!window.confirm('确定撤销这张券的核销状态吗?撤销后顾客可再次领取。')) return;
+    var b = $('unredeemBtn'); if (b) { b.disabled = true; b.textContent = '撤销中…'; }
+    try {
+      var d = await api({ action: 'unredeem', code: current });
+      var el = $('res'); el.className = 'res show valid';
+      el.innerHTML = '<div class="pz">↩︎ 已撤销核销</div>' +
+        '<div class="who">🎁 ' + esc(d.prizeCn) + ' · ' + esc(d.name) + '</div>' +
+        '<div class="st">此券已恢复为「待领取」,可重新核销</div>';
+      current = null; $('code').value = ''; $('code').focus();
+    } catch (e) { if (b) { b.disabled = false; b.textContent = '↩︎ 撤销核销(误操作)'; } $('redeemErr').textContent = '撤销失败:' + (e.message || e); }
   }
   $('lookupBtn').onclick = lookup;
   $('code').addEventListener('keydown', function (e) { if (e.key === 'Enter') lookup(); });
@@ -216,8 +237,8 @@ window.addEventListener('load', function () {
       $('listStat').textContent = '实物奖 ' + d.total + ' 份 · 已核销 ' + d.redeemedCount + ' · 待领 ' + (d.total - d.redeemedCount);
       if (!d.items.length) { $('listBox').innerHTML = '<div class="muted">暂无实物中奖记录</div>'; return; }
       $('listBox').innerHTML = d.items.map(function (x) {
-        return '<div class="row"><span class="c">' + x.code + '</span>' +
-          '<span class="p">' + x.prizeCn + ' · ' + (x.name || '') + '</span>' +
+        return '<div class="row"><span class="c">' + esc(x.code) + '</span>' +
+          '<span class="p">' + esc(x.prizeCn) + ' · ' + esc(x.name) + '</span>' +
           '<span class="s ' + (x.redeemed ? 'y">已领' : 'n">待领') + '</span></div>';
       }).join('');
     } catch (e) { if (e && e.code === 'permission-denied') { lock(); } else $('listStat').textContent = '出错:' + (e.message || e); }

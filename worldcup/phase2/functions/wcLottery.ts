@@ -50,6 +50,13 @@ function maskPhone(p?: string): string {
   const s = String(p).replace(/\s/g, '');
   return s.length <= 4 ? s : '****' + s.slice(-4);
 }
+/** 姓名脱敏(批量记录列表用,降低 PII 暴露):只留首字,其余打点。单券当面核对仍用全名。 */
+function maskName(n?: string): string {
+  const s = String(n || '').trim();
+  if (!s) return '';
+  const first = Array.from(s)[0];
+  return s.length <= 1 ? first : first + '••';
+}
 
 // 配置默认值(首次自动写入 wc_lottery_config/config;Chris 备货后可在控制台改)
 const DEFAULT_CONFIG = {
@@ -101,11 +108,11 @@ async function ensureConfig() {
   const snap = await ref.get();
   if (!snap.exists) { await ref.set(DEFAULT_CONFIG); return DEFAULT_CONFIG; }
   const data = snap.data() as any;
-  // 给老配置补上 physChance(即抽机制新增),不覆盖其它字段
-  if (typeof data.physChance !== 'number') {
-    await ref.set({ physChance: DEFAULT_CONFIG.physChance }, { merge: true });
-    data.physChance = DEFAULT_CONFIG.physChance;
-  }
+  // 给老配置补上即抽机制新增字段(physChance / dailyLimit),不覆盖其它字段
+  const patch: any = {};
+  if (typeof data.physChance !== 'number') { patch.physChance = DEFAULT_CONFIG.physChance; data.physChance = DEFAULT_CONFIG.physChance; }
+  if (typeof data.dailyLimit !== 'number') { patch.dailyLimit = DEFAULT_CONFIG.dailyLimit; data.dailyLimit = DEFAULT_CONFIG.dailyLimit; }
+  if (Object.keys(patch).length) await ref.set(patch, { merge: true });
   return data as typeof DEFAULT_CONFIG;
 }
 
@@ -296,14 +303,17 @@ async function finalSweep(fixtures: any) {
   let remaining = PRIZE_KEYS.reduce((s, k) => s + (stock[k] || 0), 0);
   if (remaining <= 0) { await CONFIG_REF().set({ sweepDone: true }, { merge: true }); return; }
 
-  // 收集所有参与过的 uid(去重),优先没中过实物的人
+  // 收集所有参与过的 uid(去重),优先没中过实物的人。
+  // 只认 win 文档(云函数写,客户端不可伪造),不读 entries —— 防伪造 entry 混进清仓池。
   const seen = new Map<string, Entry>();
   const wonPhysical = new Set<string>();
   for (const id of koIds) {
-    const es = await db.collection('wc_lottery').doc(id).collection('entries').get();
-    es.forEach((d) => { if (!seen.has(d.id)) seen.set(d.id, { ...(d.data() as Entry), uid: d.id }); });
     const ws = await db.collection('wc_lottery_winners').doc(id).collection('w').get();
-    ws.forEach((d) => { const x = d.data() as any; if (x.prize && x.prize !== 'coins') wonPhysical.add(d.id); });
+    ws.forEach((d) => {
+      const x = d.data() as any;
+      if (!seen.has(d.id)) seen.set(d.id, { uid: d.id, name: x.name || '', phone: x.phone || '', pickedTeam: '' });
+      if (x.prize && x.prize !== 'coins') wonPhysical.add(d.id);
+    });
   }
   let pool = shuffle(Array.from(seen.values()));
   pool = pool.filter((e) => !wonPhysical.has(e.uid)).concat(pool.filter((e) => wonPhysical.has(e.uid)));
@@ -356,7 +366,7 @@ async function runTick(): Promise<{ seeded: boolean; processed: string[] }> {
   for (const m of ko) {
     try {
       const r = await resolveMatch(m.id, m.kickoffUtc, m.home, m.away);
-      if (r === 'drawn') processed.push(m.id);
+      if (r === 'done') processed.push(m.id);
     } catch (err) { console.error('[wc-lotto resolve]', m.id, err); }
   }
   await finalSweep(fixtures);
@@ -468,6 +478,8 @@ export const wcLotterySetWinner = onCall({ region: REGION }, async (req: Callabl
   const m = await db.collection('wc_lottery').doc(matchId).get();
   if (!m.exists) throw new HttpsError('not-found', '该场未 seed');
   const d = m.data() as any;
+  if (winnerTeam !== d.home && winnerTeam !== d.away)
+    throw new HttpsError('invalid-argument', 'winnerTeam 必须是本场双方之一(' + d.home + '/' + d.away + ')');
   const r = await resolveMatch(matchId, d.kickoffUtc, d.home, d.away, winnerTeam);
   return { result: r };
 });
@@ -515,7 +527,7 @@ export const wcLotteryRedeem = onCall({ region: REGION }, async (req: CallableRe
     const items = snap.docs.map((d) => {
       const x = d.data() as any;
       if (x.redeemed) redeemedCount++;
-      return { code: x.code, prizeCn: PRIZE_CN[x.prize] || x.prize, name: x.name || '',
+      return { code: x.code, prizeCn: PRIZE_CN[x.prize] || x.prize, name: maskName(x.name),
         redeemed: !!x.redeemed, redeemedAt: fmtSK(x.redeemedAt) };
     });
     return { items, total: snap.size, redeemedCount };
@@ -548,6 +560,23 @@ export const wcLotteryRedeem = onCall({ region: REGION }, async (req: CallableRe
         tx.set(wref, { redeemed: true, redeemedAt: FieldValue.serverTimestamp() }, { merge: true });
       }
       return { already: false, prizeCn, name: x.name || '' };
+    });
+    return out;
+  }
+
+  if (action === 'unredeem') {
+    const out = await db.runTransaction(async (tx) => {
+      const s = await tx.get(cref);
+      if (!s.exists) throw new HttpsError('not-found', '查无此券码');
+      const x = s.data() as any;
+      const prizeCn = PRIZE_CN[x.prize] || x.prize;
+      if (!x.redeemed) return { wasRedeemed: false, prizeCn, name: x.name || '' };
+      tx.set(cref, { redeemed: false, redeemedAt: FieldValue.delete(), unredeemedAt: FieldValue.serverTimestamp() }, { merge: true });
+      if (x.matchId && x.uid) {
+        const wref = db.collection('wc_lottery_winners').doc(x.matchId).collection('w').doc(x.uid);
+        tx.set(wref, { redeemed: false, redeemedAt: FieldValue.delete() }, { merge: true });
+      }
+      return { wasRedeemed: true, prizeCn, name: x.name || '' };
     });
     return out;
   }

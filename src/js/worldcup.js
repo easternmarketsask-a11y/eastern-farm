@@ -238,7 +238,9 @@
   }
   function refreshLive() {
     return fetchLive().then(function (ok) {
-      if (!ok || !hub) return;
+      if (!hub) return;
+      updateLottoBanner();                 // keep banner + 我的奖品 button state fresh (also catches fb-ready-after-open)
+      if (!ok) return;
       rendered.standings = false;          // standings depend on live too
       if (activeTab === 'schedule') renderSchedule();
       else if (activeTab === 'standings') { renderStandings(); rendered.standings = true; }
@@ -847,7 +849,7 @@
         '<div class="wc-lotto-win-h">🎉 您已抽中实物!</div>' +
         '<div class="wc-lotto-prize">🎁 ' + esc(PRIZE_CN[win.prize] || win.prize) + '</div>' +
         (win.couponCode ? '<div class="wc-lotto-code">兑奖码 <b>' + esc(win.couponCode) + '</b></div>' : '') +
-        '<div class="wc-lotto-redeem">' + (win.redeemed ? '✓ 已核销' : '到东方超市收银处出示此码领取 · 也可在「我的奖品」查看') + '</div>' +
+        '<div class="wc-lotto-redeem">' + (win.redeemed ? '✓ 已核销' : (win.couponCode ? '到东方超市收银处出示此码领取 · 也可在「我的奖品」查看' : '兑奖码稍后在「我的奖品」查看')) + '</div>' +
         (win.coins ? '<div class="wc-lotto-coins">外加 <span class="coin-icon"></span> ' + win.coins + ' 农场币已到账</div>' : '') +
         '</div>';
     }
@@ -1015,6 +1017,18 @@
       });
   }
 
+  // 云函数错误 → 顾客能懂的中文(后端显式抛的中文提示优先沿用,技术性错误码翻译)
+  function lottoErrMsg(e) {
+    var code = (e && e.code) ? String(e.code) : '';
+    var msg = (e && e.message) ? String(e.message) : '';
+    var hasZh = /[一-龥]/.test(msg);
+    if (/resource-exhausted|failed-precondition|invalid-argument|not-found/.test(code) && hasZh) return msg;
+    if (/unauthenticated/.test(code)) return '请先登录会员再参与';
+    if (/permission-denied/.test(code)) return '暂无参与权限,请确认已登录会员';
+    if (/unavailable|deadline-exceeded|internal|cancelled/.test(code)) return '网络不太稳,请稍后再试一次';
+    return hasZh ? msg : '提交失败,请重试';
+  }
+
   function wireLottoForm(el, m, u) {
     var picked = null;
     Array.prototype.forEach.call(el.querySelectorAll('.wc-lotto-pick'), function (btn) {
@@ -1042,8 +1056,9 @@
         })
         .catch(function (e) {
           sub.disabled = false; sub.textContent = '提交竞猜';
-          var msg = (e && e.message) ? String(e.message) : '提交失败,请重试';
-          if (Farm.ui) Farm.ui.toast(msg); console.warn('[wc-lotto]', e);
+          if (Farm.ui) Farm.ui.toast(lottoErrMsg(e)); console.warn('[wc-lotto]', e);
+          // 次数用完 → 当场刷新成「已抽完」状态(避免反复点)
+          if (e && /resource-exhausted/.test(String(e.code || ''))) lottoRender(el, m);
         });
     };
   }
@@ -1053,29 +1068,31 @@
     var db = Farm.fb.db;
     var ids = (data.matches || []).filter(isKO).map(function (m) { return m.id; });
     ids.push('final-sweep');
+    var failed = 0;
     var reads = ids.map(function (id) {
       return db.collection(LOTTO_WIN_COL).doc(id).collection('w').doc(u.uid).get()
         .then(function (s) { return s.exists ? Object.assign({ matchId: id }, s.data()) : null; })
-        .catch(function () { return null; });
+        .catch(function () { failed++; return null; });
     });
-    return Promise.all(reads).then(function (rows) { return rows.filter(Boolean); });
+    return Promise.all(reads).then(function (rows) { return { rows: rows.filter(Boolean), failed: failed }; });
   }
-  function myPrizesHtml(rows) {
-    var phys = rows.filter(function (r) { return r.prize && r.prize !== 'coins' && r.couponCode; });
+  function myPrizesHtml(rows, failed) {
+    var phys = rows.filter(function (r) { return r.prize && r.prize !== 'coins'; });
     var coinsTotal = rows.reduce(function (s, r) { return s + (r.coins || 0); }, 0);
     var drawCount = rows.length;
+    var note = failed ? '<div class="wc-mp-note">⚠️ 有 ' + failed + ' 条记录暂时没加载出来,请关闭重开或稍后再看</div>' : '';
     var h = '<div class="wc-mp-h">🎁 我的奖品</div>';
     if (!phys.length && coinsTotal <= 0) {
-      return h + '<div class="wc-mp-empty">还没有中奖记录~<br>多参与淘汰赛竞猜抽奖，中奖百分百！🎁</div>';
+      return h + note + '<div class="wc-mp-empty">还没有中奖记录~<br>多参与淘汰赛竞猜抽奖，中奖百分百！🎁</div>';
     }
-    // 实物奖品(带兑奖码)
+    // 实物奖品(带兑奖码;券码偶发缺失时给兜底文案,不漏掉奖品)
     if (phys.length) {
       h += '<div class="wc-mp-sub">🎁 实物奖品 · 到东方超市收银处出示券码领取 👇</div>';
       phys.forEach(function (r) {
         h += '<div class="wc-mp-item' + (r.redeemed ? ' done' : '') + '">' +
           '<div class="wc-mp-pz">🎁 ' + esc(PRIZE_CN[r.prize] || r.prize) + '</div>' +
-          '<div class="wc-mp-code">' + esc(r.couponCode) + '</div>' +
-          '<div class="wc-mp-st">' + (r.redeemed ? '✓ 已核销' : '待领取 · 到店出示此码') + '</div>' +
+          '<div class="wc-mp-code">' + (r.couponCode ? esc(r.couponCode) : '生成中…') + '</div>' +
+          '<div class="wc-mp-st">' + (r.redeemed ? '✓ 已核销' : (r.couponCode ? '待领取 · 到店出示此码' : '兑奖码生成中,请稍后刷新')) + '</div>' +
         '</div>';
       });
     }
@@ -1087,7 +1104,7 @@
           '<div class="wc-mp-coin-sub">' + drawCount + ' 次抽奖累计 · 已自动到账农场</div>' +
         '</div>';
     }
-    return h;
+    return h + note;
   }
   function openMyPrizes() {
     if (!hub) return;
@@ -1106,8 +1123,8 @@
     var close = function () { ov.remove(); };
     ov.onclick = function (e) { if (e.target === ov) close(); };
     var cb = ov.querySelector('.wc-mp-close'); if (cb) cb.onclick = close;
-    loadMyPrizes(u).then(function (rows) {
-      var body = ov.querySelector('.wc-mp-body'); if (body) body.innerHTML = myPrizesHtml(rows);
+    loadMyPrizes(u).then(function (res) {
+      var body = ov.querySelector('.wc-mp-body'); if (body) body.innerHTML = myPrizesHtml(res.rows, res.failed);
     }).catch(function () {
       var body = ov.querySelector('.wc-mp-body'); if (body) body.innerHTML = '<div class="wc-mp-empty">载入失败,请稍后重试</div>';
     });

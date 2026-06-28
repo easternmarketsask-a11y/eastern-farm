@@ -797,127 +797,127 @@
   "J": [
    {
     "code": "ARG",
-    "P": 2,
-    "W": 2,
+    "P": 3,
+    "W": 3,
     "D": 0,
     "L": 0,
-    "GF": 5,
-    "GA": 0,
-    "status": "alive"
+    "GF": 8,
+    "GA": 1,
+    "status": "q"
    },
    {
     "code": "AUT",
-    "P": 2,
+    "P": 3,
     "W": 1,
-    "D": 0,
+    "D": 1,
     "L": 1,
-    "GF": 3,
-    "GA": 3,
-    "status": "alive"
+    "GF": 6,
+    "GA": 6,
+    "status": "q"
    },
    {
     "code": "ALG",
-    "P": 2,
+    "P": 3,
     "W": 1,
-    "D": 0,
+    "D": 1,
     "L": 1,
-    "GF": 2,
-    "GA": 4,
+    "GF": 5,
+    "GA": 7,
     "status": "alive"
    },
    {
     "code": "JOR",
-    "P": 2,
+    "P": 3,
     "W": 0,
     "D": 0,
-    "L": 2,
-    "GF": 2,
-    "GA": 5,
-    "status": "alive"
+    "L": 3,
+    "GF": 3,
+    "GA": 8,
+    "status": "out"
    }
   ],
   "K": [
    {
     "code": "COL",
-    "P": 2,
+    "P": 3,
     "W": 2,
-    "D": 0,
+    "D": 1,
     "L": 0,
     "GF": 4,
     "GA": 1,
-    "status": "alive"
+    "status": "q"
    },
    {
     "code": "POR",
-    "P": 2,
+    "P": 3,
     "W": 1,
-    "D": 1,
+    "D": 2,
     "L": 0,
     "GF": 6,
     "GA": 1,
-    "status": "alive"
+    "status": "q"
    },
    {
     "code": "COD",
-    "P": 2,
-    "W": 0,
+    "P": 3,
+    "W": 1,
     "D": 1,
     "L": 1,
-    "GF": 1,
-    "GA": 2,
+    "GF": 4,
+    "GA": 3,
     "status": "alive"
    },
    {
     "code": "UZB",
-    "P": 2,
+    "P": 3,
     "W": 0,
     "D": 0,
-    "L": 2,
-    "GF": 1,
-    "GA": 8,
-    "status": "alive"
+    "L": 3,
+    "GF": 2,
+    "GA": 11,
+    "status": "out"
    }
   ],
   "L": [
    {
     "code": "ENG",
-    "P": 2,
-    "W": 1,
+    "P": 3,
+    "W": 2,
     "D": 1,
     "L": 0,
-    "GF": 4,
+    "GF": 6,
     "GA": 2,
-    "status": "alive"
-   },
-   {
-    "code": "GHA",
-    "P": 2,
-    "W": 1,
-    "D": 1,
-    "L": 0,
-    "GF": 1,
-    "GA": 0,
-    "status": "alive"
+    "status": "q"
    },
    {
     "code": "CRO",
-    "P": 2,
-    "W": 1,
+    "P": 3,
+    "W": 2,
     "D": 0,
     "L": 1,
-    "GF": 3,
-    "GA": 4,
+    "GF": 5,
+    "GA": 5,
+    "status": "q"
+   },
+   {
+    "code": "GHA",
+    "P": 3,
+    "W": 1,
+    "D": 1,
+    "L": 1,
+    "GF": 2,
+    "GA": 2,
     "status": "alive"
    },
    {
     "code": "PAN",
-    "P": 2,
+    "P": 3,
     "W": 0,
     "D": 0,
-    "L": 2,
+    "L": 3,
     "GF": 0,
-    "GA": 2,
-    "status": "alive"
+    "GA": 4,
+    "status": "out"
    }
   ]
  },
@@ -3814,11 +3814,39 @@
    "city": "Philadelphia, Pennsylvania",
    "home": "CRO",
    "away": "GHA",
-   "apiScore": null,
-   "apiStatus": "Scheduled",
-   "officialScore": null,
-   "officialFinal": false,
-   "scorers": [],
+   "apiScore": [
+    2,
+    1
+   ],
+   "apiStatus": "FT",
+   "officialScore": [
+    2,
+    1
+   ],
+   "officialFinal": true,
+   "scorers": [
+    {
+     "team": "CRO",
+     "player": "P. Sucic",
+     "minute": 31,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "GHA",
+     "player": "D. Luckassen",
+     "minute": 73,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "CRO",
+     "player": "N. Vlasic",
+     "minute": 83,
+     "pen": false,
+     "og": false
+    }
+   ],
    "id": "M067",
    "round": "小组赛 第3轮"
   },
@@ -3830,11 +3858,32 @@
    "city": "East Rutherford, New Jersey",
    "home": "PAN",
    "away": "ENG",
-   "apiScore": null,
-   "apiStatus": "Scheduled",
-   "officialScore": null,
-   "officialFinal": false,
-   "scorers": [],
+   "apiScore": [
+    0,
+    2
+   ],
+   "apiStatus": "FT",
+   "officialScore": [
+    0,
+    2
+   ],
+   "officialFinal": true,
+   "scorers": [
+    {
+     "team": "ENG",
+     "player": "J. Bellingham",
+     "minute": 62,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "ENG",
+     "player": "H. Kane",
+     "minute": 67,
+     "pen": false,
+     "og": false
+    }
+   ],
    "id": "M068",
    "round": "小组赛 第3轮"
   },
@@ -3846,10 +3895,16 @@
    "city": "Miami Gardens, Florida",
    "home": "COL",
    "away": "POR",
-   "apiScore": null,
-   "apiStatus": "Scheduled",
-   "officialScore": null,
-   "officialFinal": false,
+   "apiScore": [
+    0,
+    0
+   ],
+   "apiStatus": "FT",
+   "officialScore": [
+    0,
+    0
+   ],
+   "officialFinal": true,
    "scorers": [],
    "id": "M069",
    "round": "小组赛 第3轮"
@@ -3862,11 +3917,46 @@
    "city": "Atlanta, Georgia",
    "home": "COD",
    "away": "UZB",
-   "apiScore": null,
-   "apiStatus": "Scheduled",
-   "officialScore": null,
-   "officialFinal": false,
-   "scorers": [],
+   "apiScore": [
+    3,
+    1
+   ],
+   "apiStatus": "FT",
+   "officialScore": [
+    3,
+    1
+   ],
+   "officialFinal": true,
+   "scorers": [
+    {
+     "team": "UZB",
+     "player": "E. Shomurodov",
+     "minute": 10,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "COD",
+     "player": "Y. Wissa",
+     "minute": 68,
+     "pen": true,
+     "og": false
+    },
+    {
+     "team": "COD",
+     "player": "F. Mayele",
+     "minute": 78,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "COD",
+     "player": "Y. Wissa",
+     "minute": 90,
+     "pen": false,
+     "og": false
+    }
+   ],
    "id": "M070",
    "round": "小组赛 第3轮"
   },
@@ -3878,11 +3968,46 @@
    "city": "Arlington, Texas",
    "home": "JOR",
    "away": "ARG",
-   "apiScore": null,
-   "apiStatus": "Scheduled",
-   "officialScore": null,
-   "officialFinal": false,
-   "scorers": [],
+   "apiScore": [
+    1,
+    3
+   ],
+   "apiStatus": "FT",
+   "officialScore": [
+    1,
+    3
+   ],
+   "officialFinal": true,
+   "scorers": [
+    {
+     "team": "ARG",
+     "player": "G. Lo Celso",
+     "minute": 19,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "ARG",
+     "player": "L. Martínez",
+     "minute": 31,
+     "pen": true,
+     "og": false
+    },
+    {
+     "team": "JOR",
+     "player": "M. Al-Tamari",
+     "minute": 55,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "ARG",
+     "player": "L. Messi",
+     "minute": 80,
+     "pen": false,
+     "og": false
+    }
+   ],
    "id": "M071",
    "round": "小组赛 第3轮"
   },
@@ -3894,11 +4019,60 @@
    "city": "Kansas City, Missouri",
    "home": "ALG",
    "away": "AUT",
-   "apiScore": null,
-   "apiStatus": "Scheduled",
-   "officialScore": null,
-   "officialFinal": false,
-   "scorers": [],
+   "apiScore": [
+    3,
+    3
+   ],
+   "apiStatus": "FT",
+   "officialScore": [
+    3,
+    3
+   ],
+   "officialFinal": true,
+   "scorers": [
+    {
+     "team": "AUT",
+     "player": "M. Arnautovic",
+     "minute": 28,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "ALG",
+     "player": "R. Belghali",
+     "minute": 45,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "AUT",
+     "player": "M. Sabitzer",
+     "minute": 55,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "ALG",
+     "player": "R. Mahrez",
+     "minute": 60,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "ALG",
+     "player": "R. Mahrez",
+     "minute": 90,
+     "pen": false,
+     "og": false
+    },
+    {
+     "team": "AUT",
+     "player": "S. Kalajdzic",
+     "minute": 90,
+     "pen": false,
+     "og": false
+    }
+   ],
    "id": "M072",
    "round": "小组赛 第3轮"
   },
@@ -4005,7 +4179,7 @@
    "venue": "Estadio Banorte",
    "city": "Mexico City",
    "home": "MEX",
-   "away": "3RD",
+   "away": "ECU",
    "apiScore": null,
    "apiStatus": "Scheduled",
    "officialScore": null,
@@ -4020,8 +4194,8 @@
    "kickoffUtc": "2026-07-01T16:00:00Z",
    "venue": "Mercedes-Benz Stadium",
    "city": "Atlanta, Georgia",
-   "home": "1L",
-   "away": "3RD",
+   "home": "ENG",
+   "away": "COD",
    "apiScore": null,
    "apiStatus": "Scheduled",
    "officialScore": null,
@@ -4037,7 +4211,7 @@
    "venue": "Lumen Field",
    "city": "Seattle, Washington",
    "home": "BEL",
-   "away": "3RD",
+   "away": "SEN",
    "apiScore": null,
    "apiStatus": "Scheduled",
    "officialScore": null,
@@ -4069,7 +4243,7 @@
    "venue": "SoFi Stadium",
    "city": "Inglewood, California",
    "home": "ESP",
-   "away": "2J",
+   "away": "AUT",
    "apiScore": null,
    "apiStatus": "Scheduled",
    "officialScore": null,
@@ -4084,8 +4258,8 @@
    "kickoffUtc": "2026-07-02T23:00:00Z",
    "venue": "BMO Field",
    "city": "Toronto",
-   "home": "2K",
-   "away": "2L",
+   "home": "POR",
+   "away": "CRO",
    "apiScore": null,
    "apiStatus": "Scheduled",
    "officialScore": null,
@@ -4101,7 +4275,7 @@
    "venue": "BC Place",
    "city": "Vancouver",
    "home": "SUI",
-   "away": "3RD",
+   "away": "ALG",
    "apiScore": null,
    "apiStatus": "Scheduled",
    "officialScore": null,
@@ -4148,8 +4322,8 @@
    "kickoffUtc": "2026-07-04T01:30:00Z",
    "venue": "GEHA Field at Arrowhead Stadium",
    "city": "Kansas City, Missouri",
-   "home": "1K",
-   "away": "3RD",
+   "home": "COL",
+   "away": "GHA",
    "apiScore": null,
    "apiStatus": "Scheduled",
    "officialScore": null,
