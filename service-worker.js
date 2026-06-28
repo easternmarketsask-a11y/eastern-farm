@@ -62,7 +62,7 @@ self.addEventListener('notificationclick', (event) => {
   );
 });
 
-const CACHE_VERSION = 'ef-v102';
+const CACHE_VERSION = 'ef-v103';
 const CACHE = 'eastern-farm-' + CACHE_VERSION;
 // Precache the FULL app shell — HTML + CSS + every JS module + data JSON — so a SW
 // update (which clears the old cache) followed by a flaky mobile network can never leave
@@ -72,8 +72,10 @@ const CACHE = 'eastern-farm-' + CACHE_VERSION;
 const PRECACHE = [
   '/',                       // root redirect page — cached so a navigation fallback to "/" keeps correct relative paths
   '/src/index.html',
+  '/src/worldcup.html',
   '/src/css/style.css',
   '/src/css/animations.css',
+  '/src/css/worldcup.css',
   '/src/manifest.webmanifest',
   '/src/icons/icon-192.png',
   '/src/icons/icon-512.png',
@@ -90,8 +92,10 @@ const PRECACHE = [
   '/src/js/rewards.js', '/src/js/achievements.js', '/src/js/tutorial.js', '/src/js/guide.js',
   '/src/js/spotlight.js', '/src/js/login-nudge.js', '/src/js/promo.js', '/src/js/share.js',
   '/src/js/mapview.js', '/src/js/mapview-iso.js', '/src/js/main.js', '/src/js/pwa-install.js',
+  '/src/js/worldcup.js',
   '/data/achievements.json', '/data/ai-neighbors.json', '/data/coupons.json', '/data/crops.json',
   '/data/ep-shop.json', '/data/events.json', '/data/i18n.json', '/data/news.json', '/data/tasks.json',
+  '/data/wc2026.json',
 ];
 
 self.addEventListener('install', (event) => {
