@@ -269,7 +269,7 @@
         '</div>' +
       '</div>' +
       '<button class="wc-lotto-banner" id="wcLottoBanner" hidden>' +
-        '<span class="bn">🎁 会员竞猜抽奖，<b>中奖百分之百!</b> ›</span>' +
+        '<span class="bn">🎁 淘汰赛竞猜抽奖，<b>会员百分百中奖!</b> ›</span>' +
       '</button>' +
       '<div class="wc-tabs" role="tablist">' +
         tabBtn('schedule', '赛程赛果', 'SCHEDULE') +
