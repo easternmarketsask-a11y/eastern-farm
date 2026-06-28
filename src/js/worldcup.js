@@ -1369,13 +1369,22 @@
 
     var cols = '';
     BR_ROUNDS.forEach(function (r, ri) {
-      var inner = '<div class="wc-round-lbl">' + r.lbl + '</div>';
-      slotsFor(ri).forEach(function (sl) {
+      var isLast = ri === BR_ROUNDS.length - 1;
+      var ties = slotsFor(ri).map(function (sl) {
         var locked = !!decided[sl.id];
-        inner += '<div class="wc-tie' + (locked ? ' locked' : '') + '">' +
+        return '<div class="wc-tie' + (locked ? ' locked' : '') + '">' +
           slotHtml(sl, sl.a, pick(sl.id), locked) + slotHtml(sl, sl.b, pick(sl.id), locked) + '</div>';
       });
-      cols += '<div class="wc-round">' + inner + '</div>';
+      var body;
+      if (isLast) {
+        body = ties.join('');                       // 决赛单框,不成对、无连线
+      } else {
+        body = '';                                  // 成对包起来 → 每对画一根竖线 + 引向下一轮
+        for (var i = 0; i < ties.length; i += 2) body += '<div class="wc-pair">' + ties[i] + (ties[i + 1] || '') + '</div>';
+      }
+      cols += '<div class="wc-round' + (isLast ? ' final' : '') + '">' +
+        '<div class="wc-round-lbl">' + r.lbl + '</div>' +
+        '<div class="wc-round-body">' + body + '</div></div>';
     });
 
     var champ = pick('f-0');
