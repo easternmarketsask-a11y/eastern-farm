@@ -814,10 +814,10 @@
   // 0 绿=龙角散 / 1 金=1000币 / 2 琥珀=沙琪玛 / 3 红=气泡饮原味 / 4 金=2000币 / 5 浅绿=气泡饮青提
   var WHEEL_SEGS = [
     { key: 'ryukakusan',    label: '龙角散',       img: 'ryukakusan.png',    emoji: '🫙', dark: true },
-    { key: 'coins1000',     label: '1000币',       coin: true,               dark: false },
+    { key: 'coins1000',     label: '农场币<br><b class="amt">1000</b>', coin: true, dark: false },
     { key: 'shaqima',       label: '沙琪玛',       img: 'shaqima.png',       emoji: '🍪', dark: true },
     { key: 'yogurt_orig',   label: '气泡饮·原味',  img: 'yogurt_orig.png',   emoji: '🥤', dark: true },
-    { key: 'coins2000',     label: '2000币',       coin: true,               dark: false },
+    { key: 'coins2000',     label: '农场币<br><b class="amt">2000</b>', coin: true, dark: false },
     { key: 'yogurt_muscat', label: '气泡饮·青提',  img: 'yogurt_muscat.png', emoji: '🍇', dark: true }
   ];
   function wheelTargetIndex(win) {
