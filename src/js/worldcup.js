@@ -1063,9 +1063,14 @@
   function myPrizesHtml(rows) {
     var phys = rows.filter(function (r) { return r.prize && r.prize !== 'coins' && r.couponCode; });
     var coinsTotal = rows.reduce(function (s, r) { return s + (r.coins || 0); }, 0);
+    var drawCount = rows.length;
     var h = '<div class="wc-mp-h">🎁 我的奖品</div>';
+    if (!phys.length && coinsTotal <= 0) {
+      return h + '<div class="wc-mp-empty">还没有中奖记录~<br>多参与淘汰赛竞猜抽奖，中奖百分百！🎁</div>';
+    }
+    // 实物奖品(带兑奖码)
     if (phys.length) {
-      h += '<div class="wc-mp-tip">到东方超市收银处出示下方券码领取实物 👇</div>';
+      h += '<div class="wc-mp-sub">🎁 实物奖品 · 到东方超市收银处出示券码领取 👇</div>';
       phys.forEach(function (r) {
         h += '<div class="wc-mp-item' + (r.redeemed ? ' done' : '') + '">' +
           '<div class="wc-mp-pz">🎁 ' + esc(PRIZE_CN[r.prize] || r.prize) + '</div>' +
@@ -1073,10 +1078,15 @@
           '<div class="wc-mp-st">' + (r.redeemed ? '✓ 已核销' : '待领取 · 到店出示此码') + '</div>' +
         '</div>';
       });
-    } else {
-      h += '<div class="wc-mp-empty">还没有中实物奖品~<br>多参与淘汰赛竞猜抽奖，中奖百分百！🎁</div>';
     }
-    if (coinsTotal > 0) h += '<div class="wc-mp-coins"><span class="coin-icon"></span> 累计赢得 <b>' + coinsTotal + '</b> 农场币</div>';
+    // 农场币奖品(作为一张卡片显示)
+    if (coinsTotal > 0) {
+      h += '<div class="wc-mp-sub">🪙 农场币奖励</div>' +
+        '<div class="wc-mp-coincard">' +
+          '<div class="wc-mp-coin-amt"><span class="coin-icon"></span> ' + coinsTotal + '</div>' +
+          '<div class="wc-mp-coin-sub">' + drawCount + ' 次抽奖累计 · 已自动到账农场</div>' +
+        '</div>';
+    }
     return h;
   }
   function openMyPrizes() {
