@@ -62,7 +62,7 @@ self.addEventListener('notificationclick', (event) => {
   );
 });
 
-const CACHE_VERSION = 'ef-v110';
+const CACHE_VERSION = 'ef-v111';
 const CACHE = 'eastern-farm-' + CACHE_VERSION;
 // Precache the FULL app shell — HTML + CSS + every JS module + data JSON — so a SW
 // update (which clears the old cache) followed by a flaky mobile network can never leave

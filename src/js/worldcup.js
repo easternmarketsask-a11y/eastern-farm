@@ -305,7 +305,8 @@
     var lb = hub.querySelector('#wcLottoBanner');
     if (lb) lb.hidden = !nearestLottoMatch();
     var mp = hub.querySelector('#wcMyPrizes');
-    if (mp) mp.hidden = !(fbReady() && lottoUser());   // 登录会员才显示「我的奖品」
+    // 有 Firebase(农场内)就显示;点击时再按登录态给反馈(避开 hub 打开时 auth 尚未就绪的时序)
+    if (mp) mp.hidden = !fbReady();
   }
   function openLottoMatch(m) {
     switchTab('schedule');
@@ -1079,9 +1080,14 @@
     return h;
   }
   function openMyPrizes() {
-    if (!fbReady()) return;
+    if (!hub) return;
+    if (!fbReady()) { if (Farm.ui && Farm.ui.toast) Farm.ui.toast('请在农场里打开观赛台查看奖品'); return; }
     var u = lottoUser();
-    if (!u) { if (Farm.fbAuth && Farm.fbAuth.openLoginModal) Farm.fbAuth.openLoginModal(); return; }
+    if (!u) {
+      if (Farm.fbAuth && Farm.fbAuth.openLoginModal) Farm.fbAuth.openLoginModal();
+      else if (Farm.ui && Farm.ui.toast) Farm.ui.toast('请先登录会员再查看奖品');
+      return;
+    }
     var ov = document.createElement('div');
     ov.className = 'wc-mp-overlay';
     ov.innerHTML = '<div class="wc-mp-card"><button class="wc-mp-close" aria-label="关闭">✕</button>' +

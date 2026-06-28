@@ -412,6 +412,8 @@
   font-size: 14px; font-weight: 600; color: var(--wc-amber-deep); background: linear-gradient(160deg, #fff8e8, #fdeccb);
   box-shadow: var(--wc-sh-sm); }
 .wc-myprizes-btn:active { transform: scale(0.99); }
+/* [hidden] 默认 display:none 会被上面的 display 覆盖,显式补回(否则按钮在该隐藏时仍显示且点击无反应) */
+.wc-myprizes-btn[hidden], .wc-lotto-banner[hidden] { display: none !important; }
 
 /* 「我的奖品」弹层 */
 .wc-mp-overlay { position: absolute; inset: 0; z-index: 50; background: rgba(40,30,20,0.5); backdrop-filter: blur(3px);
