@@ -1322,11 +1322,28 @@
     { id: 'f', lbl: '决赛', n: 1 }
   ];
 
-  // Real R32 fixtures from ESPN (the OFFICIAL bracket draw), in kickoff order.
+  // Real R32 fixtures from ESPN (the OFFICIAL bracket draw), in BRACKET-TREE order.
+  // The bracket renders by adjacency — every round pairs slots (2i, 2i+1) — so the 16
+  // R32 fixtures must be listed top→bottom in true bracket-tree leaf order, NOT kickoff
+  // order. Kickoff order was the old bug: it put M073(RSA/CAN) and M074(BRA/JPN) adjacent,
+  // wrongly pairing them in the Round of 16. Officially they sit in the same QUARTER and
+  // can meet no earlier than the quarter-final.
+  // Leaf order derived from the official FIFA 2026 match-number linkage (matches 73-88):
+  //   R16: 89=(74,77) 90=(73,75) 91=(76,78) 92=(79,80) 93=(83,84) 94=(81,82) 95=(86,88) 96=(85,87)
+  //   QF:  97=(89,90) 98=(93,94) 99=(91,92) 100=(95,96)   SF: 101=(97,98) 102=(99,100)   F: 104=(101,102)
+  // (source: en.wikipedia.org/wiki/2026_FIFA_World_Cup_knockout_stage, corroborated by FIFA.com & ESPN)
   // Slots not yet decided by the group stage carry placeholders like "1L"/"3RD".
+  var BR_R32_ORDER = ['M074', 'M077', 'M073', 'M075', 'M083', 'M084', 'M081', 'M082',
+                      'M076', 'M078', 'M079', 'M080', 'M086', 'M088', 'M085', 'M087'];
   function r32Matches() {
-    return (data.matches || []).filter(function (m) { return m.stage === 'r32'; })
-      .sort(function (a, b) { return new Date(a.kickoffUtc) - new Date(b.kickoffUtc); });
+    var ms = (data.matches || []).filter(function (m) { return m.stage === 'r32'; });
+    return ms.sort(function (a, b) {
+      var ia = BR_R32_ORDER.indexOf(a.id), ib = BR_R32_ORDER.indexOf(b.id);
+      if (ia !== -1 && ib !== -1) return ia - ib;                  // both in official tree order
+      if (ia !== -1) return -1;                                    // known fixtures before any unknown
+      if (ib !== -1) return 1;
+      return new Date(a.kickoffUtc) - new Date(b.kickoffUtc);      // unknown ids: stable kickoff fallback
+    });
   }
   function seedR32() {
     var r = r32Matches(), pairs = [];
