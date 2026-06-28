@@ -64,7 +64,10 @@
   .rec-top .c{font-family:ui-monospace,monospace;font-weight:800;letter-spacing:2px;font-size:16px;color:var(--amber-d)}
   .rec-top .s{font-size:11px;font-weight:800;padding:3px 9px;border-radius:20px;flex:none}
   .rec-top .s.y{background:#e7f6ea;color:var(--ok)} .rec-top .s.n{background:#fdeee0;color:var(--amber-d)}
+  .rec-top .s.c{background:#eaf1fb;color:#3b6fb0}
+  .rec-top .rec-m{font-size:12.5px;color:var(--soft);font-weight:700;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .rec-pz{font-size:14px;font-weight:700;margin-top:6px}
+  .rec-pz .code2{font-family:ui-monospace,monospace;letter-spacing:1px;color:var(--amber-d)}
   .rec-who{font-size:12.5px;color:var(--ink);margin-top:3px}
   .rec-sub{font-size:11.5px;color:var(--soft);margin-top:3px}
   .muted{color:var(--soft);font-size:12.5px;text-align:center;padding:16px}
@@ -87,8 +90,9 @@
   <!-- 核销台 -->
   <div id="console" class="hidden">
     <div class="tabs">
-      <button class="tab on" id="tabRedeem">核销券码</button>
-      <button class="tab" id="tabList">核销记录</button>
+      <button class="tab on" id="tabRedeem">核销</button>
+      <button class="tab" id="tabList">实物券</button>
+      <button class="tab" id="tabAll">全部记录</button>
     </div>
 
     <!-- 核销 -->
@@ -102,12 +106,21 @@
       </div>
     </div>
 
-    <!-- 记录 -->
+    <!-- 实物券记录 -->
     <div id="paneList" class="hidden">
       <div class="card">
         <div class="stat" id="listStat">载入中…</div>
         <div class="list" id="listBox"></div>
         <button class="btn ghost" id="refreshBtn">刷新</button>
+      </div>
+    </div>
+
+    <!-- 全部中奖记录(含农场币) -->
+    <div id="paneAll" class="hidden">
+      <div class="card">
+        <div class="stat" id="allStat">载入中…</div>
+        <div class="list" id="allBox"></div>
+        <button class="btn ghost" id="refreshAllBtn">刷新</button>
       </div>
     </div>
 
@@ -173,11 +186,33 @@ window.addEventListener('load', function () {
   $('pass').addEventListener('keydown', function (e) { if (e.key === 'Enter') $('enterBtn').click(); });
 
   // ---- tabs ----
-  $('tabRedeem').onclick = function () { $('tabRedeem').classList.add('on'); $('tabList').classList.remove('on');
-    $('paneRedeem').classList.remove('hidden'); $('paneList').classList.add('hidden'); };
-  $('tabList').onclick = function () { $('tabList').classList.add('on'); $('tabRedeem').classList.remove('on');
-    $('paneList').classList.remove('hidden'); $('paneRedeem').classList.add('hidden'); loadList(); };
+  function showTab(which) {
+    ['Redeem', 'List', 'All'].forEach(function (t) {
+      $('tab' + t).classList.toggle('on', t === which);
+      $('pane' + t).classList.toggle('hidden', t !== which);
+    });
+    if (which === 'List') loadList();
+    if (which === 'All') loadAll();
+  }
+  $('tabRedeem').onclick = function () { showTab('Redeem'); };
+  $('tabList').onclick = function () { showTab('List'); };
+  $('tabAll').onclick = function () { showTab('All'); };
   $('lockBtn').onclick = lock;
+
+  // 赛程对照(拉一次 wc2026.json,把 matchId 显示成"队 vs 队")
+  var FIX = null;
+  async function ensureFix() {
+    if (FIX) return FIX;
+    try {
+      var r = await fetch('/data/wc2026.json', { cache: 'no-store' });
+      var d = await r.json();
+      var teams = {}; (d.teams || []).forEach(function (t) { teams[t.code] = t.cn || t.code; });
+      var m = {}; (d.matches || []).forEach(function (x) { m[x.id] = (teams[x.home] || x.home) + ' vs ' + (teams[x.away] || x.away); });
+      FIX = m;
+    } catch (e) { FIX = {}; }
+    return FIX;
+  }
+  function matchLabel(id) { if (id === 'final-sweep') return '决赛清仓'; return (FIX && FIX[id]) || id || '淘汰赛'; }
 
   // ---- redeem ----
   var current = null;
@@ -258,6 +293,34 @@ window.addEventListener('load', function () {
     } catch (e) { if (e && e.code === 'permission-denied') { lock(); } else $('listStat').textContent = '出错:' + (e.message || e); }
   }
   $('refreshBtn').onclick = loadList;
+
+  // ---- 全部中奖记录(含农场币,所有会员)----
+  async function loadAll() {
+    $('allStat').textContent = '载入中…'; $('allBox').innerHTML = '';
+    try {
+      await ensureFix();
+      var d = await api({ action: 'allwins' });
+      $('allStat').textContent = '共 ' + d.totalDraws + ' 次抽中 · 🪙 ' + d.coinsGiven +
+        ' 农场币 · 🎁 实物 ' + d.physGiven + '(已核销 ' + d.physRedeemed + ')';
+      if (!d.items.length) { $('allBox').innerHTML = '<div class="muted">暂无中奖记录</div>'; return; }
+      $('allBox').innerHTML = d.items.map(function (x) {
+        var isPhys = x.prize && x.prize !== 'coins';
+        var what = isPhys
+          ? ('🎁 ' + esc(x.prizeCn) + (x.couponCode ? ' <span class="code2">' + esc(x.couponCode) + '</span>' : ''))
+          : ('🪙 ' + x.coins + ' 农场币');
+        var stat = isPhys ? (x.redeemed ? '<span class="s y">✓已领</span>' : '<span class="s n">待领</span>')
+          : '<span class="s c">已到账</span>';
+        var who = []; if (x.name) who.push(esc(x.name)); if (x.phone) who.push('📱' + esc(x.phone));
+        return '<div class="rec ' + (isPhys && x.redeemed ? 'done' : '') + '">' +
+          '<div class="rec-top"><span class="rec-m">' + esc(matchLabel(x.matchId)) + (x.correct ? ' 🎯' : '') + '</span>' + stat + '</div>' +
+          '<div class="rec-pz">' + what + '</div>' +
+          (who.length ? '<div class="rec-who">' + who.join(' · ') + '</div>' : '') +
+          (x.drawnAt ? '<div class="rec-sub">' + esc(x.drawnAt) + '</div>' : '') +
+        '</div>';
+      }).join('');
+    } catch (e) { if (e && e.code === 'permission-denied') { lock(); } else $('allStat').textContent = '出错:' + (e.message || e); }
+  }
+  $('refreshAllBtn').onclick = loadAll;
 
   // auto-enter if pass remembered this session
   if (PASS) { api({ action: 'ping' }).then(showConsole).catch(function () { lock(); }); }

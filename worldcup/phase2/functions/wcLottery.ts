@@ -574,6 +574,26 @@ export const wcLotteryRedeem = onCall({ region: REGION }, async (req: CallableRe
     return { items, total: snap.size, redeemedCount };
   }
 
+  // 全部抽中记录(含农场币 + 实物,所有会员)——给店主/店员看活动全貌(成本/参与度/库存)
+  if (action === 'allwins') {
+    const snap = await db.collectionGroup('w').limit(3000).get();
+    let coinsGiven = 0, physGiven = 0, physRedeemed = 0;
+    const items = snap.docs.map((d) => {
+      const x = d.data() as any;
+      const isPhys = x.prize && x.prize !== 'coins';
+      coinsGiven += (x.coins || 0);
+      if (isPhys) { physGiven++; if (x.redeemed) physRedeemed++; }
+      const ts = x.drawnAt && x.drawnAt.toMillis ? x.drawnAt.toMillis() : 0;
+      return { matchId: x.matchId || '', name: x.name || '', phone: maskPhone(x.phone),
+        prize: x.prize, prizeCn: PRIZE_CN[x.prize] || x.prize, coins: x.coins || 0,
+        couponCode: x.couponCode || null, correct: x.correct === true, redeemed: !!x.redeemed,
+        redeemedAt: fmtSK(x.redeemedAt), drawnAt: fmtSK(x.drawnAt), _ts: ts };
+    });
+    items.sort((a, b) => b._ts - a._ts);
+    items.forEach((it) => { delete (it as any)._ts; });
+    return { items, totalDraws: snap.size, coinsGiven, physGiven, physRedeemed };
+  }
+
   const c = (code || '').trim().toUpperCase();
   if (!c) throw new HttpsError('invalid-argument', '缺少券码');
   const cref = db.collection('wc_coupons').doc(c);

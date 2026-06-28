@@ -444,6 +444,14 @@
 .wc-mp-coin-amt { font-family: var(--font-display); font-size: 28px; font-weight: 800; color: var(--wc-pitch); display: flex; align-items: center; justify-content: center; gap: 6px; }
 .wc-mp-coin-sub { font-size: 12.5px; color: var(--wc-soft); margin-top: 5px; }
 .wc-mp-note { font-size: 12px; color: var(--wc-amber-deep); background: #fff5dc; border: 1px solid #f0d28a; border-radius: var(--radius-sm); padding: 9px 11px; margin-top: 12px; line-height: 1.5; text-align: center; }
+.wc-mp-summary { font-size: 13px; color: var(--wc-soft); text-align: center; background: #f6efe0; border-radius: var(--radius-md); padding: 9px 12px; margin: 2px 0 6px; line-height: 1.5; }
+.wc-mp-summary b { color: var(--wc-pitch); font-family: var(--font-display); }
+.wc-mp-rec-m { font-size: 12.5px; color: var(--wc-soft); margin-bottom: 5px; }
+.wc-mp-correct { color: var(--wc-pitch); font-weight: 700; }
+.wc-mp-coinrec { background: linear-gradient(160deg, #eaf6df, #dff0d3); border: 1px solid #bfe0a8; border-radius: var(--radius-md); padding: 11px 13px; margin-bottom: 9px; text-align: left; }
+.wc-mp-rec-p { font-family: var(--font-display); font-size: 15px; color: var(--wc-pitch); display: flex; align-items: center; gap: 5px; }
+.wc-mp-item { text-align: left; }
+.wc-mp-item .wc-mp-pz, .wc-mp-item .wc-mp-code, .wc-mp-item .wc-mp-st { text-align: center; }
 
 /* ===================== LUCKY WHEEL (转盘揭晓) ===================== */
 .wc-wheel-card { text-align: center;

@@ -1090,34 +1090,45 @@
       return { rows: rows, failed: 0 };
     }).catch(function () { return { rows: [], failed: 1 }; });
   }
+  function mpMatchLabel(id) {
+    if (id === 'final-sweep') return '决赛清仓好礼';
+    var m = matchById(id);
+    if (!m) return '淘汰赛';
+    return cn(m.home) + ' vs ' + cn(m.away);
+  }
   function myPrizesHtml(rows, failed) {
-    var phys = rows.filter(function (r) { return r.prize && r.prize !== 'coins'; });
-    var coinsTotal = rows.reduce(function (s, r) { return s + (r.coins || 0); }, 0);
-    var drawCount = rows.length;
     var note = failed ? '<div class="wc-mp-note">⚠️ 有 ' + failed + ' 条记录暂时没加载出来,请关闭重开或稍后再看</div>' : '';
     var h = '<div class="wc-mp-h">🎁 我的奖品</div>';
-    if (!phys.length && coinsTotal <= 0) {
+    if (!rows.length) {
       return h + note + '<div class="wc-mp-empty">还没有领奖记录~<br>多参与淘汰赛竞猜有礼，人人有份！🎁</div>';
     }
-    // 实物奖品(带兑奖码;券码偶发缺失时给兜底文案,不漏掉奖品)
-    if (phys.length) {
-      h += '<div class="wc-mp-sub">🎁 实物奖品 · 到东方超市收银处出示券码领取 👇</div>';
-      phys.forEach(function (r) {
-        h += '<div class="wc-mp-item' + (r.redeemed ? ' done' : '') + '">' +
+    var phys = rows.filter(function (r) { return r.prize && r.prize !== 'coins'; });
+    var coinsTotal = rows.reduce(function (s, r) { return s + (r.coins || 0); }, 0);
+    // 概览
+    h += '<div class="wc-mp-summary">共参与 <b>' + rows.length + '</b> 次 · 🪙 累计 <b>' + coinsTotal + '</b> 农场币' +
+      (phys.length ? ' · 🎁 <b>' + phys.length + '</b> 件实物' : '') + '</div>';
+    // 每一次抽中的明细:待领实物排最前(要行动),已核销实物 + 农场币随后
+    var ordered = rows.slice().sort(function (a, b) {
+      var rank = function (r) { var p = r.prize && r.prize !== 'coins'; return p ? (r.redeemed ? 1 : 0) : 2; };
+      return rank(a) - rank(b);
+    });
+    h += '<div class="wc-mp-sub">📋 全部抽中记录</div>';
+    ordered.forEach(function (r) {
+      var isPhys = r.prize && r.prize !== 'coins';
+      var head = '<div class="wc-mp-rec-m">' + esc(mpMatchLabel(r.matchId)) +
+        (r.correct ? ' <span class="wc-mp-correct">🎯 猜中</span>' : '') + '</div>';
+      if (isPhys) {
+        h += '<div class="wc-mp-item' + (r.redeemed ? ' done' : '') + '">' + head +
           '<div class="wc-mp-pz">🎁 ' + esc(PRIZE_CN[r.prize] || r.prize) + '</div>' +
           '<div class="wc-mp-code">' + (r.couponCode ? esc(r.couponCode) : '生成中…') + '</div>' +
           '<div class="wc-mp-st">' + (r.redeemed ? '✓ 已核销' : (r.couponCode ? '待领取 · 到店出示此码' : '兑奖码生成中,请稍后刷新')) + '</div>' +
         '</div>';
-      });
-    }
-    // 农场币奖品(作为一张卡片显示)
-    if (coinsTotal > 0) {
-      h += '<div class="wc-mp-sub">🪙 农场币奖励</div>' +
-        '<div class="wc-mp-coincard">' +
-          '<div class="wc-mp-coin-amt"><span class="coin-icon"></span> ' + coinsTotal + '</div>' +
-          '<div class="wc-mp-coin-sub">' + drawCount + ' 次参与累计 · 已自动到账农场</div>' +
+      } else {
+        h += '<div class="wc-mp-coinrec">' + head +
+          '<div class="wc-mp-rec-p"><span class="coin-icon"></span> ' + (r.coins || 0) + ' 农场币 · 已到账农场</div>' +
         '</div>';
-    }
+      }
+    });
     return h + note;
   }
   function openMyPrizes() {
