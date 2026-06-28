@@ -622,16 +622,11 @@
           '<span class="chev">⌄</span>' +
         '</div>' +
       '</div>' +
-      lottoChip(m) +
       '<div class="wc-match-detail" data-detail="' + esc(m.id) + '"></div>' +
     '</div>';
   }
-
-  // 每张"可报名"的淘汰赛卡片底部加一条竞猜徽章,点击展开报名
-  function lottoChip(m) {
-    if (!(isKO(m) && lottoOpen(m) && isTeam(m.home) && isTeam(m.away))) return '';
-    return '<button class="wc-match-lotto" type="button">🎁 会员竞猜抽奖，<b>中奖百分之百！</b></button>';
-  }
+  // 竞猜入口不再用每场卡片的促销徽章(显廉价);点开卡片展开的详情里就有竞猜表单,
+  // 加顶部横幅直达 —— 列表更干净、更高档。
 
   function teamRow(code, sc, state, isWin, isLose) {
     var cls = '';
@@ -695,13 +690,6 @@
         }
         if (card.classList.contains('open')) closeCard(card);
         else openCard(card, m);
-      };
-      var chip = card.querySelector('.wc-match-lotto');
-      if (chip) chip.onclick = function (ev) {
-        ev.stopPropagation();
-        if (!card.classList.contains('open')) openCard(card, m);
-        var lt = card.querySelector('.wc-lotto');
-        if (lt && lt.scrollIntoView) lt.scrollIntoView({ behavior: 'smooth', block: 'center' });
       };
     });
   }
