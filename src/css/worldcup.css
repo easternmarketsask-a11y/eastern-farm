@@ -335,6 +335,33 @@
 .wc-progress b { color: var(--wc-pitch); }
 
 /* ===================== LOTTERY (竞猜抽奖) ===================== */
+/* hub 顶部醒目横幅:打开观赛台就看到活动,点击直达最近一场竞猜 */
+.wc-lotto-banner {
+  flex: 0 0 auto; display: flex; align-items: center; justify-content: center;
+  width: calc(100% - 24px); margin: 8px 12px 0; padding: 10px 14px; border: 0;
+  border-radius: var(--radius-pill); cursor: pointer; color: #fff; font-family: var(--font-zh);
+  background: linear-gradient(100deg, #ffa42e 0%, #f4632c 60%, #e23b2e 100%);
+  box-shadow: 0 4px 14px rgba(226,90,40,0.42); animation: wc-banner-pulse 2.2s ease-in-out infinite;
+}
+.wc-lotto-banner .bn { font-size: 13.5px; font-weight: 700; white-space: nowrap; }
+.wc-lotto-banner .bn b { font-family: var(--font-display); letter-spacing: 0.3px; }
+.wc-lotto-banner:active { transform: scale(0.99); }
+@keyframes wc-banner-pulse {
+  0%, 100% { box-shadow: 0 4px 14px rgba(226,90,40,0.42); }
+  50% { box-shadow: 0 5px 22px rgba(244,99,44,0.78); }
+}
+
+/* 比赛卡片底部的竞猜徽章 */
+.wc-match-lotto {
+  display: block; width: 100%; border: 0; cursor: pointer; text-align: center;
+  padding: 8px 10px; font-family: var(--font-zh); font-size: 12.5px; color: #fff; letter-spacing: 0.2px;
+  background: linear-gradient(100deg, var(--wc-amber), var(--wc-amber-deep));
+  border-top: 1px dashed rgba(255,255,255,0.55);
+}
+.wc-match-lotto b { font-family: var(--font-display); }
+.wc-match-lotto:active { filter: brightness(0.96); }
+.wc-match:not(.open) .wc-match-lotto { border-radius: 0 0 var(--radius-md) var(--radius-md); }
+
 .wc-lotto { margin: 12px 0 4px; }
 .wc-lotto-card { background: linear-gradient(160deg, #fff8e8, #fdf0d4); border: 1px solid #f0d28a; border-radius: var(--radius-md); padding: 12px; box-shadow: var(--wc-sh-sm); }
 .wc-lotto-head { font-family: var(--font-display); font-size: 13.5px; color: var(--wc-amber-deep); display: flex; align-items: center; gap: 7px; }

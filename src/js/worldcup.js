@@ -268,6 +268,9 @@
           '<button class="wc-close" id="wcClose" aria-label="关闭 Close">✕</button>' +
         '</div>' +
       '</div>' +
+      '<button class="wc-lotto-banner" id="wcLottoBanner" hidden>' +
+        '<span class="bn">🎁 淘汰赛竞猜，<b>百发百中奖!</b> ›</span>' +
+      '</button>' +
       '<div class="wc-tabs" role="tablist">' +
         tabBtn('schedule', '赛程赛果', 'SCHEDULE') +
         tabBtn('standings', '积分榜', 'STANDINGS') +
@@ -284,6 +287,29 @@
     Array.prototype.forEach.call(hub.querySelectorAll('.wc-tabs button'), function (b) {
       b.onclick = function () { switchTab(b.getAttribute('data-tab')); };
     });
+    var lb = hub.querySelector('#wcLottoBanner');
+    if (lb) lb.onclick = function () { var m = nearestLottoMatch(); if (m) openLottoMatch(m); };
+  }
+
+  // 有"可报名(开球前、双方已定)"的淘汰赛场 → 横幅出现,点它直达最近一场竞猜
+  function nearestLottoMatch() {
+    return (data.matches || []).filter(function (m) {
+      return isKO(m) && lottoOpen(m) && isTeam(m.home) && isTeam(m.away);
+    }).sort(function (a, b) { return new Date(a.kickoffUtc) - new Date(b.kickoffUtc); })[0];
+  }
+  function updateLottoBanner() {
+    if (!hub) return;
+    var lb = hub.querySelector('#wcLottoBanner');
+    if (lb) lb.hidden = !nearestLottoMatch();
+  }
+  function openLottoMatch(m) {
+    switchTab('schedule');
+    schedFilters.team = ''; schedFilters.stage = ''; schedFilters.quick = {};
+    renderSchedule();
+    setTimeout(function () {
+      var card = hub.querySelector('#wcSchedList [data-id="' + m.id + '"]');
+      if (card) { openCard(card, m); if (card.scrollIntoView) card.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+    }, 70);
   }
 
   function tabBtn(id, zh, enTxt) {
@@ -303,6 +329,7 @@
     else if (tab === 'standings') { if (!rendered.standings) renderStandings(); rendered.standings = true; }
     else if (tab === 'bracket') renderBracket();      // re-render to reflect picks
     hub.querySelector('.wc-body').scrollTop = 0;
+    updateLottoBanner();
   }
 
   function open() {
@@ -587,8 +614,15 @@
           '<span class="chev">⌄</span>' +
         '</div>' +
       '</div>' +
+      lottoChip(m) +
       '<div class="wc-match-detail" data-detail="' + esc(m.id) + '"></div>' +
     '</div>';
+  }
+
+  // 每张"可报名"的淘汰赛卡片底部加一条竞猜徽章,点击展开报名
+  function lottoChip(m) {
+    if (!(isKO(m) && lottoOpen(m) && isTeam(m.home) && isTeam(m.away))) return '';
+    return '<button class="wc-match-lotto" type="button">🎁 点我竞猜抽奖 · <b>百发百中奖</b> ›</button>';
   }
 
   function teamRow(code, sc, state, isWin, isLose) {
@@ -653,6 +687,13 @@
         }
         if (card.classList.contains('open')) closeCard(card);
         else openCard(card, m);
+      };
+      var chip = card.querySelector('.wc-match-lotto');
+      if (chip) chip.onclick = function (ev) {
+        ev.stopPropagation();
+        if (!card.classList.contains('open')) openCard(card, m);
+        var lt = card.querySelector('.wc-lotto');
+        if (lt && lt.scrollIntoView) lt.scrollIntoView({ behavior: 'smooth', block: 'center' });
       };
     });
   }
@@ -766,7 +807,7 @@
   }
 
   function lottoPrizeLine() {
-    return '<div class="wc-lotto-prizes">进入即抽 龙角散 / 沙琪玛 / 气泡饮 等好礼(限量)· 人人保底 🪙1000 · 猜对晋级队 🪙翻倍 2000</div>';
+    return '<div class="wc-lotto-prizes">百发百中奖 · 人人有份 🎁</div>';
   }
   function lottoCard(title, bodyHtml, sub) {
     return '<div class="wc-lotto-card">' +
@@ -779,18 +820,17 @@
       '<span class="nm">' + esc(isTeam(code) ? cn(code) : placeholderLabel(code)) + '</span></button>';
   }
   function lottoFormHtml(m) {
-    return lottoCard('百发百中 · 猜谁晋级?',
+    return lottoCard('猜谁晋级?',
       '<div class="wc-lotto-picks">' + teamPickBtn(m, m.home) + '<span class="wc-lotto-vs">VS</span>' + teamPickBtn(m, m.away) + '</div>' +
       '<button class="wc-lotto-submit" disabled>提交竞猜</button>',
       lottoPrizeLine());
   }
   function lottoEnteredHtml(m, entry) {
     var picked = entry.pickedTeam;
-    return lottoCard('已报名 · 等待开奖',
-      '<div class="wc-lotto-mypick">你猜:<span class="fl">' + (flag(picked) || '⚽') + '</span> <b>' +
+    return lottoCard('已参与 · 等开奖',
+      '<div class="wc-lotto-mypick">你猜 <span class="fl">' + (flag(picked) || '⚽') + '</span> <b>' +
         esc(isTeam(picked) ? cn(picked) : placeholderLabel(picked)) + '</b> 晋级</div>' +
-      '<div class="wc-lotto-wait">赛后自动开奖 · 中奖会显示在这里</div>',
-      lottoPrizeLine());
+      '<div class="wc-lotto-wait">赛后开奖 · 中奖见这里 🎁</div>', '');
   }
   // ---- 中奖结果卡(转盘转完 / 再次打开时显示) ----
   function lottoResultCard(win) {
@@ -907,14 +947,14 @@
   function lottoRender(el, m) {
     if (!el || !isKO(m)) { if (el) el.style.display = 'none'; return; }
     if (!fbReady()) {   // standalone / no Firebase → funnel into the farm (goal: pull players in)
-      el.innerHTML = lottoCard('赢龙角散/沙琪玛 + 1000农场币',
-        '<a class="wc-lotto-btn" href="index.html">进入农场 · 登录参与 ›</a>', lottoPrizeLine());
+      el.innerHTML = lottoCard('淘汰赛竞猜 · 百发百中奖',
+        '<a class="wc-lotto-btn" href="index.html">进农场登录参与 ›</a>', lottoPrizeLine());
       return;
     }
     var u = lottoUser();
     if (!u) {
-      el.innerHTML = lottoCard('百发百中 · 登录即可参与',
-        '<button class="wc-lotto-btn" data-act="login">用门店手机号登录参与 ›</button>', lottoPrizeLine());
+      el.innerHTML = lottoCard('淘汰赛竞猜 · 百发百中奖',
+        '<button class="wc-lotto-btn" data-act="login">登录参与 ›</button>', lottoPrizeLine());
       var b = el.querySelector('[data-act="login"]');
       if (b) b.onclick = function () { if (Farm.fbAuth && Farm.fbAuth.openLoginModal) Farm.fbAuth.openLoginModal(); };
       return;
