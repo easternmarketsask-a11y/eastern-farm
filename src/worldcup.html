@@ -38,6 +38,22 @@
 <!-- Standalone World Cup hub: the overlay IS the page. No farm game loaded here.
      worldcup.js (standalone mode) auto-opens the hub on load; its ✕ returns to
      the farm game (index.html). Reads the same data/wc2026.json. -->
+<script>
+  // 与 index.html 一致:新 SW 接管时自动刷新一次,确保观赛台始终是最新代码。
+  if ('serviceWorker' in navigator) {
+    var __hadController = !!navigator.serviceWorker.controller;
+    navigator.serviceWorker.addEventListener('controllerchange', function () {
+      if (!__hadController || window.__wcReloaded) return;
+      window.__wcReloaded = true;
+      window.location.reload();
+    });
+    window.addEventListener('load', function () {
+      navigator.serviceWorker.register('/service-worker.js', { scope: '/' })
+        .then(function (reg) { if (reg && reg.update) { try { reg.update(); } catch (e) {} } })
+        .catch(function () {});
+    });
+  }
+</script>
 <script>window.WC_STANDALONE = true;</script>
 <script src="js/worldcup.js"></script>
 </body>

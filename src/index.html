@@ -363,8 +363,17 @@
      app shell and apply network-first to /data/. Failure is non-fatal. -->
 <script>
   if ('serviceWorker' in navigator) {
+    // 新版本上线后自动应用:旧 SW 被新 SW 顶替(skipWaiting+clients.claim)时,
+    // controllerchange 触发 → 自动刷新一次,加载最新代码。免去用户手动清 PWA 缓存。
+    var __hadController = !!navigator.serviceWorker.controller;
+    navigator.serviceWorker.addEventListener('controllerchange', function () {
+      if (!__hadController || window.__wcReloaded) return;   // 首次安装不刷;只刷一次
+      window.__wcReloaded = true;
+      window.location.reload();
+    });
     window.addEventListener('load', function () {
       navigator.serviceWorker.register('/service-worker.js', { scope: '/' })
+        .then(function (reg) { if (reg && reg.update) { try { reg.update(); } catch (e) {} } })
         .catch(function (e) { console.warn('[pwa] SW registration failed:', e); });
     });
   }

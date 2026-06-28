@@ -807,7 +807,7 @@
   }
 
   function lottoPrizeLine() {
-    return '<div class="wc-lotto-prizes">中奖百分之百 · 人人有份 🎁</div>';
+    return '<div class="wc-lotto-prizes">竞猜中奖百分百！</div>';
   }
   function lottoCard(title, bodyHtml, sub) {
     return '<div class="wc-lotto-card">' +
