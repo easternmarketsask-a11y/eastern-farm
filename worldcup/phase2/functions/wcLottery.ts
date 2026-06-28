@@ -335,8 +335,8 @@ async function finalSweep(fixtures: any) {
         tx.set(wref, { uid: e.uid, name: e.name || '', phone: e.phone || '', matchId: sweepId,
           prize: pick, couponCode: code, correct: false, coins: 0, redeemed: false, paid: true,
           drawnAt: FieldValue.serverTimestamp() }, { merge: true });
-        tx.set(cref, { code, matchId: sweepId, uid: e.uid, name: e.name || '', phone: e.phone || '',
-          prize: pick, redeemed: false, drawnAt: FieldValue.serverTimestamp() }, { merge: true });
+        tx.create(cref, { code, matchId: sweepId, uid: e.uid, name: e.name || '', phone: e.phone || '',
+          prize: pick, redeemed: false, drawnAt: FieldValue.serverTimestamp() });
       });
       stock[pick] -= 1;
     } catch (err) { console.error('[wc-lotto sweep]', e.uid, err); }
@@ -454,10 +454,12 @@ export const wcLotteryEnter = onCall({ region: REGION }, async (req: CallableReq
     }, { merge: true });
     tx.set(dailyRef, { uid, date: dayKey, count: dayCount + 1, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
     if (prize !== 'coins' && couponCode) {
-      tx.set(db.collection('wc_coupons').doc(couponCode), {
+      // create(非 merge):极小概率撞码时整笔事务报错回滚 → 用户重试拿到新码,
+      // 而不是 merge 静默覆盖别人的券码索引(撞码会让收银台查出错误顾客)。
+      tx.create(db.collection('wc_coupons').doc(couponCode), {
         code: couponCode, matchId, uid, name: name || '', phone: phone || '',
         prize, redeemed: false, drawnAt: FieldValue.serverTimestamp(),
-      }, { merge: true });
+      });
     }
     return { prize, coins, couponCode };
   });
