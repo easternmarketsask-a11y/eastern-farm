@@ -50,13 +50,6 @@ function maskPhone(p?: string): string {
   const s = String(p).replace(/\s/g, '');
   return s.length <= 4 ? s : '****' + s.slice(-4);
 }
-/** 姓名脱敏(批量记录列表用,降低 PII 暴露):只留首字,其余打点。单券当面核对仍用全名。 */
-function maskName(n?: string): string {
-  const s = String(n || '').trim();
-  if (!s) return '';
-  const first = Array.from(s)[0];
-  return s.length <= 1 ? first : first + '••';
-}
 
 // 配置默认值(首次自动写入 wc_lottery_config/config;Chris 备货后可在控制台改)
 const DEFAULT_CONFIG = {
@@ -478,8 +471,6 @@ export const wcLotterySetWinner = onCall({ region: REGION }, async (req: Callabl
   const m = await db.collection('wc_lottery').doc(matchId).get();
   if (!m.exists) throw new HttpsError('not-found', '该场未 seed');
   const d = m.data() as any;
-  if (winnerTeam !== d.home && winnerTeam !== d.away)
-    throw new HttpsError('invalid-argument', 'winnerTeam 必须是本场双方之一(' + d.home + '/' + d.away + ')');
   const r = await resolveMatch(matchId, d.kickoffUtc, d.home, d.away, winnerTeam);
   return { result: r };
 });
@@ -527,7 +518,7 @@ export const wcLotteryRedeem = onCall({ region: REGION }, async (req: CallableRe
     const items = snap.docs.map((d) => {
       const x = d.data() as any;
       if (x.redeemed) redeemedCount++;
-      return { code: x.code, prizeCn: PRIZE_CN[x.prize] || x.prize, name: maskName(x.name),
+      return { code: x.code, prizeCn: PRIZE_CN[x.prize] || x.prize, name: x.name || '',
         redeemed: !!x.redeemed, redeemedAt: fmtSK(x.redeemedAt) };
     });
     return { items, total: snap.size, redeemedCount };
