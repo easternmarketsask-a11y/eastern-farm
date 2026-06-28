@@ -332,10 +332,10 @@ async function finalSweep(fixtures: any) {
         if ((st[pick] || 0) <= 0) throw new Error('oos ' + pick);
         st[pick] -= 1;
         tx.update(CONFIG_REF(), { stock: st });
-        tx.set(wref, { uid: e.uid, name: e.name || '', phone: e.phone || '', matchId: sweepId,
+        tx.set(wref, { memberId: e.uid, uid: e.uid, name: e.name || '', phone: e.phone || '', matchId: sweepId,
           prize: pick, couponCode: code, correct: false, coins: 0, redeemed: false, paid: true,
           drawnAt: FieldValue.serverTimestamp() }, { merge: true });
-        tx.create(cref, { code, matchId: sweepId, uid: e.uid, name: e.name || '', phone: e.phone || '',
+        tx.create(cref, { code, matchId: sweepId, memberId: e.uid, uid: e.uid, name: e.name || '', phone: e.phone || '',
           prize: pick, redeemed: false, drawnAt: FieldValue.serverTimestamp() });
       });
       stock[pick] -= 1;
@@ -378,22 +378,45 @@ export const wcLotteryDrawNow = onCall({ region: REGION }, async (req: CallableR
   return await runTick();
 });
 
-// ---- 玩家报名即抽(登录玩家调用)----
+// 把 auth 账号解析成「稳定的会员档案 ID」—— 用手机号 / firebase_uid 双锚定。
+// 同一会员可能有手机+邮箱两个 auth uid(uid 不稳),但会员档案 ID 唯一稳定。
+// 竞猜的奖品/报名/计数/券码全部以它为 key,确保不论用哪种方式登录都归到同一会员名下。
+// 返回 null = 该账号不是东方超市会员。
+async function resolveMemberId(uid: string, token: any): Promise<string | null> {
+  const byUid = await db.collection('members').where('firebase_uid', '==', uid).limit(1).get();
+  if (!byUid.empty) return byUid.docs[0].id;
+  const phone = (token && (token.phone_number || token.phoneNumber)) || '';
+  if (phone) {
+    const byPhone = await db.collection('members').where('phone', '==', phone).limit(1).get();
+    if (!byPhone.empty) return byPhone.docs[0].id;
+  }
+  return null;
+}
+
+// ---- 玩家报名即抽(登录会员调用)----
 // 提交竞猜 → 原子:校验截止 + 即时抽奖(底币必发 + physChance 概率中实物) + 写 entry/win/券码 + 加币
 // 返回 { prize, coins, couponCode } 供前端转盘揭晓。幂等:已抽过直接回原结果。
+// 所有 key 用「会员档案 ID」(server 解析,手机号锚定),不用 auth uid —— 见 resolveMemberId。
 export const wcLotteryEnter = onCall({ region: REGION }, async (req: CallableRequest) => {
   if (!req.auth) throw new HttpsError('unauthenticated', '需登录');
   const uid = req.auth.uid;
-  const { matchId, pickedTeam, name, phone, memberId } =
-    (req.data || {}) as { matchId?: string; pickedTeam?: string; name?: string; phone?: string; memberId?: string };
+  const token: any = req.auth.token || {};
+  const { matchId, pickedTeam, name, phone } =
+    (req.data || {}) as { matchId?: string; pickedTeam?: string; name?: string; phone?: string };
   if (!matchId || !pickedTeam || typeof pickedTeam !== 'string' || pickedTeam.length === 0 || pickedTeam.length > 8)
     throw new HttpsError('invalid-argument', '参数错误');
 
+  // 会员专属 + 稳定身份:用会员档案 ID 做 key,不用 auth uid(手机/邮箱登录都归一处,奖品永不错位)
+  const memberId = await resolveMemberId(uid, token);
+  if (!memberId)
+    throw new HttpsError('failed-precondition', '竞猜有礼是东方超市会员专属,请用会员手机号登录参与 🎁');
+  const memPhone = phone || token.phone_number || token.phoneNumber || '';
+
   const mref = db.collection('wc_lottery').doc(matchId);
-  const eref = mref.collection('entries').doc(uid);
-  const wref = db.collection('wc_lottery_winners').doc(matchId).collection('w').doc(uid);
+  const eref = mref.collection('entries').doc(memberId);
+  const wref = db.collection('wc_lottery_winners').doc(matchId).collection('w').doc(memberId);
   const dayKey = skDateStr(Date.now());
-  const dailyRef = db.collection('wc_lottery_daily').doc(uid + '_' + dayKey);
+  const dailyRef = db.collection('wc_lottery_daily').doc(memberId + '_' + dayKey);
 
   // 快路径:已抽过直接回原结果(免事务,不计入当日次数)
   const existing = await wref.get();
@@ -401,22 +424,6 @@ export const wcLotteryEnter = onCall({ region: REGION }, async (req: CallableReq
     const x = existing.data() as any;
     return { prize: x.prize, coins: x.coins, couponCode: x.couponCode || null, already: true };
   }
-
-  // 会员专属:校验该账号确实关联了东方超市会员(防绕过前端直接调用云函数)。
-  // 已抽过的走上面快路径,不受影响。会员库查询异常时放行,不误伤真会员。
-  const token: any = req.auth.token || {};
-  const authPhone = token.phone_number || token.phoneNumber || '';
-  let isMember = false;
-  try {
-    const byUid = await db.collection('members').where('firebase_uid', '==', uid).limit(1).get();
-    isMember = !byUid.empty;
-    if (!isMember && authPhone) {
-      const byPhone = await db.collection('members').where('phone', '==', authPhone).limit(1).get();
-      isMember = !byPhone.empty;
-    }
-  } catch (e) { isMember = true; }
-  if (!isMember)
-    throw new HttpsError('failed-precondition', '竞猜有礼是东方超市会员专属,请用会员手机号登录参与 🎁');
 
   return await db.runTransaction(async (tx) => {
     const msnap = await tx.get(mref);
@@ -459,26 +466,50 @@ export const wcLotteryEnter = onCall({ region: REGION }, async (req: CallableReq
     const coins = coinsBase;
 
     tx.set(eref, {
-      uid, memberId: memberId || uid, name: name || '', phone: phone || '',
+      memberId, uid, name: name || '', phone: memPhone,
       pickedTeam, matchId, createdAt: FieldValue.serverTimestamp(), prize, coins,
     }, { merge: true });
     // win 文档是「币」的可信来源:前端读它把 coins 加到本地存档(农场币不存 farm_players,见隐私规则)
     tx.set(wref, {
-      uid, name: name || '', phone: phone || '', matchId,
+      memberId, uid, name: name || '', phone: memPhone, matchId,
       prize, couponCode, coins, correct: null, bonusPaid: false,
       redeemed: false, paid: true, drawnAt: FieldValue.serverTimestamp(),
     }, { merge: true });
-    tx.set(dailyRef, { uid, date: dayKey, count: dayCount + 1, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+    tx.set(dailyRef, { memberId, uid, date: dayKey, count: dayCount + 1, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
     if (prize !== 'coins' && couponCode) {
       // create(非 merge):极小概率撞码时整笔事务报错回滚 → 用户重试拿到新码,
       // 而不是 merge 静默覆盖别人的券码索引(撞码会让收银台查出错误顾客)。
       tx.create(db.collection('wc_coupons').doc(couponCode), {
-        code: couponCode, matchId, uid, name: name || '', phone: phone || '',
+        code: couponCode, matchId, memberId, uid, name: name || '', phone: memPhone,
         prize, redeemed: false, drawnAt: FieldValue.serverTimestamp(),
       });
     }
     return { prize, coins, couponCode };
   });
+});
+
+// ---- 读「我的中奖」(登录会员调用)----
+// 前端传 ids=[淘汰赛场 id... , 'final-sweep'];server 解析会员身份,逐个读该会员的 win 文档。
+// 用会员档案 ID 读(不是 auth uid),所以手机/邮箱登录都能看到自己全部奖品,绝不错位。
+export const wcLotteryMine = onCall({ region: REGION }, async (req: CallableRequest) => {
+  if (!req.auth) throw new HttpsError('unauthenticated', '需登录');
+  const memberId = await resolveMemberId(req.auth.uid, req.auth.token || {});
+  if (!memberId) return { memberId: null, wins: {} };
+  const raw = (req.data && (req.data as any).ids) || [];
+  const ids: string[] = Array.isArray(raw)
+    ? raw.filter((x: any) => typeof x === 'string' && x.length < 64).slice(0, 300) : [];
+  const wins: Record<string, any> = {};
+  await Promise.all(ids.map(async (id) => {
+    try {
+      const s = await db.collection('wc_lottery_winners').doc(id).collection('w').doc(memberId).get();
+      if (s.exists) {
+        const x = s.data() as any;
+        wins[id] = { matchId: id, prize: x.prize, coins: x.coins || 0,
+          couponCode: x.couponCode || null, correct: x.correct, redeemed: !!x.redeemed };
+      }
+    } catch (e) { /* 单场读失败忽略 */ }
+  }));
+  return { memberId, wins };
 });
 
 // ---- 人工指定晋级队并强制开奖(ESPN 失灵兜底,admin)----
@@ -564,9 +595,10 @@ export const wcLotteryRedeem = onCall({ region: REGION }, async (req: CallableRe
       const prizeCn = PRIZE_CN[x.prize] || x.prize;
       if (x.redeemed) return { already: true, prizeCn, name: x.name || '' };
       tx.set(cref, { redeemed: true, redeemedAt: FieldValue.serverTimestamp() }, { merge: true });
-      // 同步顾客的中奖文档,让其手机显示「✓ 已核销」
-      if (x.matchId && x.uid) {
-        const wref = db.collection('wc_lottery_winners').doc(x.matchId).collection('w').doc(x.uid);
+      // 同步顾客的中奖文档,让其手机显示「✓ 已核销」(用会员 ID 定位,兼容旧 uid)
+      const owner = x.memberId || x.uid;
+      if (x.matchId && owner) {
+        const wref = db.collection('wc_lottery_winners').doc(x.matchId).collection('w').doc(owner);
         tx.set(wref, { redeemed: true, redeemedAt: FieldValue.serverTimestamp() }, { merge: true });
       }
       return { already: false, prizeCn, name: x.name || '' };
@@ -582,8 +614,9 @@ export const wcLotteryRedeem = onCall({ region: REGION }, async (req: CallableRe
       const prizeCn = PRIZE_CN[x.prize] || x.prize;
       if (!x.redeemed) return { wasRedeemed: false, prizeCn, name: x.name || '' };
       tx.set(cref, { redeemed: false, redeemedAt: FieldValue.delete(), unredeemedAt: FieldValue.serverTimestamp() }, { merge: true });
-      if (x.matchId && x.uid) {
-        const wref = db.collection('wc_lottery_winners').doc(x.matchId).collection('w').doc(x.uid);
+      const owner = x.memberId || x.uid;
+      if (x.matchId && owner) {
+        const wref = db.collection('wc_lottery_winners').doc(x.matchId).collection('w').doc(owner);
         tx.set(wref, { redeemed: false, redeemedAt: FieldValue.delete() }, { merge: true });
       }
       return { wasRedeemed: true, prizeCn, name: x.name || '' };

@@ -946,7 +946,7 @@
   }
   function revealResult(el, m, win, u) {
     if (el._revealed) return; el._revealed = true;
-    lottoMarkReveal(u.uid, m.id);
+    lottoMarkReveal(u.memberId, m.id);
     var box = el.querySelector('.wc-wheel-result');
     if (box) { box.innerHTML = lottoResultCard(win); box.style.display = ''; }
     var hub = el.querySelector('.wc-wheel-hub');
@@ -999,23 +999,41 @@
       return;
     }
     el.innerHTML = '<div class="wc-lotto-card"><div class="wc-lotto-wait">载入中…</div></div>';
-    var db = Farm.fb.db;
-    // 报名即抽:win 文档由 wcLotteryEnter 在提交时写入。只读它即可判断状态。
-    db.collection(LOTTO_WIN_COL).doc(m.id).collection('w').doc(u.uid).get()
-      .catch(function () { return null; })
-      .then(function (ws) {
-        var win = ws && ws.exists ? ws.data() : null;
-        if (win) {
-          lottoApplyWin(u.uid, m, win);   // 到账/补差额(幂等)
-          if (lottoSeenReveal(u.uid, m.id)) { el.innerHTML = lottoResultCard(win); }
-          else { showChanceThenWheel(el, m, win, u); }   // 已报名未揭晓 → 重新进入「抽奖机会→转盘」
-          return;
-        }
-        if (!lottoOpen(m)) { el.innerHTML = lottoCard('竞猜有礼', '<div class="wc-lotto-closed">本场参与已截止 ⏱</div>', lottoPrizeLine()); return; }
-        if (!isTeam(m.home) || !isTeam(m.away)) { el.innerHTML = lottoCard('竞猜有礼', '<div class="wc-lotto-closed">对阵未定 · 双方确定后开放竞猜</div>', lottoPrizeLine()); return; }
-        el.innerHTML = lottoFormHtml(m);
-        wireLottoForm(el, m, u);
-      });
+    // 「我的中奖」由 wcLotteryMine 按稳定会员身份(server 解析)返回 —— 手机/邮箱登录都归一处,奖品不错位。
+    lottoLoadMine().then(function (mine) {
+      var win = mine[m.id] || null;
+      if (win) {
+        lottoApplyWin(u.memberId, m, win);   // 到账/补差额(幂等)
+        if (lottoSeenReveal(u.memberId, m.id)) { el.innerHTML = lottoResultCard(win); }
+        else { showChanceThenWheel(el, m, win, u); }   // 已报名未揭晓 → 重新进入「过渡卡→转盘」
+        return;
+      }
+      if (!lottoOpen(m)) { el.innerHTML = lottoCard('竞猜有礼', '<div class="wc-lotto-closed">本场参与已截止 ⏱</div>', lottoPrizeLine()); return; }
+      if (!isTeam(m.home) || !isTeam(m.away)) { el.innerHTML = lottoCard('竞猜有礼', '<div class="wc-lotto-closed">对阵未定 · 双方确定后开放竞猜</div>', lottoPrizeLine()); return; }
+      el.innerHTML = lottoFormHtml(m);
+      wireLottoForm(el, m, u);
+    });
+  }
+
+  // 「我的中奖」缓存:调一次 wcLotteryMine 拿全部场次的 win(按会员身份),hub 内复用。
+  var lottoMineCache = null, lottoMinePromise = null;
+  function lottoAllIds() {
+    var ids = (data.matches || []).filter(isKO).map(function (m) { return m.id; });
+    ids.push('final-sweep');
+    return ids;
+  }
+  function lottoLoadMine(force) {
+    if (!force && lottoMineCache) return Promise.resolve(lottoMineCache);
+    if (lottoMinePromise) return lottoMinePromise;
+    var fn = Farm.fb && Farm.fb.callable && Farm.fb.callable('wcLotteryMine');
+    if (!fn) return Promise.resolve(lottoMineCache || {});
+    lottoMinePromise = fn({ ids: lottoAllIds() })
+      .then(function (resp) {
+        lottoMineCache = (resp && resp.data && resp.data.wins) || {};
+        lottoMinePromise = null; return lottoMineCache;
+      })
+      .catch(function (e) { lottoMinePromise = null; console.warn('[wc-lotto mine]', e); return lottoMineCache || {}; });
+    return lottoMinePromise;
   }
 
   // 云函数错误 → 顾客能懂的中文(后端显式抛的中文提示优先沿用,技术性错误码翻译)
@@ -1047,10 +1065,13 @@
       if (!fn) { if (Farm.ui) Farm.ui.toast('暂时无法参与,请稍后重试'); return; }
       sub.disabled = true; sub.textContent = '好礼准备中…';
       // 报名即抽:服务器原子抽奖(扣库存+发币),返回奖品 → 直接进入「抽奖机会→转盘」
-      fn({ matchId: m.id, pickedTeam: picked, name: u.name, phone: u.phone, memberId: u.memberId })
+      fn({ matchId: m.id, pickedTeam: picked, name: u.name, phone: u.phone })
         .then(function (resp) {
           var win = (resp && resp.data) ? resp.data : {};
-          lottoApplyWin(u.uid, m, win);   // 底币立即到账(幂等)
+          if (!lottoMineCache) lottoMineCache = {};
+          lottoMineCache[m.id] = { matchId: m.id, prize: win.prize, coins: win.coins || 0,
+            couponCode: win.couponCode || null, correct: null, redeemed: false };
+          lottoApplyWin(u.memberId, m, win);   // 底币立即到账(幂等)
           try { if (Farm.audio) Farm.audio.play('coin'); } catch (e) {}
           try { if (Farm.push && Farm.push.maybePromptAfterHarvest) Farm.push.maybePromptAfterHarvest(); } catch (e) {}
           showChanceThenWheel(el, m, win, u);
@@ -1062,18 +1083,12 @@
     };
   }
 
-  // ---- 我的奖品 / 兑奖码(读本人所有 KO 场 + 清仓场的中奖记录;现有规则允许读自己的)----
-  function loadMyPrizes(u) {
-    var db = Farm.fb.db;
-    var ids = (data.matches || []).filter(isKO).map(function (m) { return m.id; });
-    ids.push('final-sweep');
-    var failed = 0;
-    var reads = ids.map(function (id) {
-      return db.collection(LOTTO_WIN_COL).doc(id).collection('w').doc(u.uid).get()
-        .then(function (s) { return s.exists ? Object.assign({ matchId: id }, s.data()) : null; })
-        .catch(function () { failed++; return null; });
-    });
-    return Promise.all(reads).then(function (rows) { return { rows: rows.filter(Boolean), failed: failed }; });
+  // ---- 我的奖品 / 兑奖码(调 wcLotteryMine,按稳定会员身份返回全部中奖,手机/邮箱登录都看得到)----
+  function loadMyPrizes() {
+    return lottoLoadMine(true).then(function (mine) {
+      var rows = Object.keys(mine || {}).map(function (id) { return mine[id]; });
+      return { rows: rows, failed: 0 };
+    }).catch(function () { return { rows: [], failed: 1 }; });
   }
   function myPrizesHtml(rows, failed) {
     var phys = rows.filter(function (r) { return r.prize && r.prize !== 'coins'; });

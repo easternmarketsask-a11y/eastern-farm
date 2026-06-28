@@ -27,16 +27,16 @@ match /wc_lottery/{matchId} {
   }
 }
 
-// ---- 中奖名单:只能读自己的,写仅限云函数 ----
-match /wc_lottery_winners/{matchId}/w/{uid} {
-  allow read: if request.auth != null && request.auth.uid == uid;
-  allow write: if false;
+// ---- 中奖名单:全部经云函数访问,客户端不直读直写 ----
+// (2026-06-28 起按「会员档案 ID」存,不再是 auth uid;读取走 wcLotteryMine callable,
+//  由 server 解析会员身份后用 admin SDK 读 —— 所以 read 也关掉,更安全。)
+match /wc_lottery_winners/{matchId}/w/{memberId} {
+  allow read, write: if false;
 }
 
-// ---- 每日抽奖次数计数器:只能读自己的,写仅限云函数(事务内原子计数)----
+// ---- 每日抽奖次数计数器:仅云函数(admin SDK)----
 match /wc_lottery_daily/{doc} {
-  allow read: if request.auth != null && doc.matches(request.auth.uid + '_.*');
-  allow write: if false;
+  allow read, write: if false;
 }
 
 // ---- 券码索引:全不可读写(只有云函数 admin 访问;核销走 wcLotteryRedeem 函数)----
