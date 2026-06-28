@@ -393,6 +393,15 @@
 .wc-lotto-redeem { font-size: 13px; color: var(--wc-soft); }
 .wc-lotto-coins { font-size: 13.5px; color: var(--wc-pitch); margin-top: 5px; }
 
+/* 抽奖机会过渡卡:提交竞猜后报喜,点击进入转盘 */
+.wc-lotto-card.wc-gate { text-align: center; background: linear-gradient(160deg, #fff4d6, #ffe6b8); border-color: #eaba5a; padding: 18px 14px; }
+.wc-gate-emoji { font-size: 40px; line-height: 1; animation: wc-gate-pop 0.5s cubic-bezier(0.22,1,0.36,1); }
+@keyframes wc-gate-pop { 0% { transform: scale(0.3); opacity: 0; } 60% { transform: scale(1.15); } 100% { transform: scale(1); opacity: 1; } }
+.wc-gate-h { font-family: var(--font-display); font-size: 19px; color: var(--wc-amber-deep); margin-top: 6px; }
+.wc-gate-sub { font-size: 14px; color: var(--wc-soft); margin: 4px 0 14px; }
+.wc-gate-go { animation: wc-gate-cta 1.6s ease-in-out infinite; }
+@keyframes wc-gate-cta { 0%,100% { transform: scale(1); box-shadow: 0 3px 9px rgba(58,125,44,0.3); } 50% { transform: scale(1.03); box-shadow: 0 5px 16px rgba(58,125,44,0.5); } }
+
 /* ===================== LUCKY WHEEL (转盘揭晓) ===================== */
 .wc-wheel-card { text-align: center;
   --wc-wheel-size: min(300px, 80vw);

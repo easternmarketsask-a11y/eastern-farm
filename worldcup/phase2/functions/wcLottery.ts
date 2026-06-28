@@ -8,11 +8,14 @@
  *   wcLotteryDrawNow— 可调用(admin):立刻跑一次(测试/手动催)
  *   wcLotterySetWinner— 可调用(admin):人工指定某场晋级队并强制开奖(ESPN 失灵兜底)
  *
- * 机制(方案 A):
- *   - 实物:全部 entries 纯随机抽,不看猜对猜错;名额 = quota + carry(滚存)
- *   - 农场币:人人 coinsBase(1000),猜对晋级队 coinsCorrectTotal(2000)
- *   - 决赛后所有 KO 场开完仍有库存 → 在所有参与者里清仓抽光
- *   - 幂等:claim 用 status 推进;发币用「中奖文档 + 玩家币」同事务,不重复发
+ * 机制(方案 A · 2026-06-27 改为「报名即抽」):
+ *   - 报名即抽:玩家提交竞猜时,wcLotteryEnter 当场原子抽奖
+ *       · 必发底币 coinsBase(1000) → farm_players
+ *       · physChance 概率中实物(仍有库存才中,加权随机,原子扣库存),否则只发币
+ *       · 写 entry + win 记录 + 券码索引;前端转盘据此动画揭晓
+ *   - 猜对追加:赛后 resolveMatch 判定晋级队,猜对者追加 (coinsCorrectTotal-coinsBase) 币 + 推送
+ *   - 决赛后所有 KO 场结算完仍有库存 → finalSweep 在所有参与者里清仓抽光(没中过实物者优先)
+ *   - 幂等:win.paid 防重复发币;win.bonusPaid 防重复追加;库存扣减在事务内
  *
  * 真相源:
  *   - 赛程/队伍:拉部署站点 data/wc2026.json(KO 场次 + kickoff + 双方代码)
@@ -52,8 +55,9 @@ function maskPhone(p?: string): string {
 const DEFAULT_CONFIG = {
   coinsBase: 1000,
   coinsCorrectTotal: 2000,
-  perMatchQuota: 2,
-  carryQuota: 0,
+  physChance: 0.18,        // 报名即抽时,单次中实物的概率(仍有库存才生效;可在控制台调)
+  perMatchQuota: 2,        // (旧·已不用于即抽;保留兼容)
+  carryQuota: 0,           // (旧·已不用于即抽;保留兼容)
   sweepDone: false,
   stock: { shaqima: 22, ryukakusan: 35, yogurt_orig: 10, yogurt_muscat: 10 } as Record<PrizeKey, number>,
 };
@@ -93,7 +97,13 @@ async function ensureConfig() {
   const ref = CONFIG_REF();
   const snap = await ref.get();
   if (!snap.exists) { await ref.set(DEFAULT_CONFIG); return DEFAULT_CONFIG; }
-  return snap.data() as typeof DEFAULT_CONFIG;
+  const data = snap.data() as any;
+  // 给老配置补上 physChance(即抽机制新增),不覆盖其它字段
+  if (typeof data.physChance !== 'number') {
+    await ref.set({ physChance: DEFAULT_CONFIG.physChance }, { merge: true });
+    data.physChance = DEFAULT_CONFIG.physChance;
+  }
+  return data as typeof DEFAULT_CONFIG;
 }
 
 /** ESPN:确认某场是否终场 + 晋级队代码(含点球)。codeA/codeB = 我们的队代码(== ESPN abbreviation) */
@@ -155,11 +165,8 @@ async function seedMatches(fixtures: any) {
 // ============================================================
 type Entry = { uid: string; memberId?: string; name?: string; phone?: string; pickedTeam: string; createdAt?: any };
 
-/** 给本场所有报名者推送「开奖啦」(不剧透奖品,引导回去转转盘)。幂等:match.notified 守门。 */
-async function notifyMatch(matchId: string, entries: Entry[]) {
-  const mref = db.collection('wc_lottery').doc(matchId);
-  const md = (await mref.get()).data() || {};
-  if ((md as any).notified) return;
+/** 收集一批 entries 的推送 token(去重)。 */
+async function tokensFor(entries: Entry[]): Promise<string[]> {
   const tokens: string[] = [];
   for (const e of entries) {
     const id = e.memberId || e.uid;
@@ -169,16 +176,29 @@ async function notifyMatch(matchId: string, entries: Entry[]) {
       if (Array.isArray(t)) tokens.push(...t);
     } catch (_) { /* ignore */ }
   }
-  const uniq = Array.from(new Set(tokens));
-  for (let i = 0; i < uniq.length; i += 500) {
+  return Array.from(new Set(tokens));
+}
+async function pushTo(tokens: string[], title: string, body: string) {
+  for (let i = 0; i < tokens.length; i += 500) {
     try {
       await admin.messaging().sendEachForMulticast({
-        tokens: uniq.slice(i, i + 500),
-        notification: { title: '🎁 世界杯抽奖开奖啦', body: '点开转动幸运转盘,看看你中了什么!' },
+        tokens: tokens.slice(i, i + 500),
+        notification: { title, body },
         webpush: { fcmOptions: { link: 'https://farm.easternmarket.ca/' },
           notification: { icon: 'https://farm.easternmarket.ca/src/assets/images/wc2026-logo.png' } },
       });
-    } catch (err) { console.error('[wc-lotto push]', matchId, err); }
+    } catch (err) { console.error('[wc-lotto push]', err); }
+  }
+}
+/** 赛后给「猜中晋级队」的报名者推送结果(奖品当场已抽,这里只报喜+追加币)。幂等:match.notified 守门。 */
+async function notifyResult(matchId: string, winnerTeam: string, entries: Entry[]) {
+  const mref = db.collection('wc_lottery').doc(matchId);
+  const md = (await mref.get()).data() || {};
+  if ((md as any).notified) return;
+  const correct = entries.filter((e) => e.pickedTeam === winnerTeam);
+  if (correct.length) {
+    const tokens = await tokensFor(correct);
+    await pushTo(tokens, '🎯 你猜对了!', '竞猜结果出炉,你猜中晋级队,农场币奖励已到账!');
   }
   await mref.set({ notified: true }, { merge: true });
 }
@@ -188,7 +208,7 @@ async function resolveMatch(matchId: string, kickoffUtc: string, home: string, a
   const mref = db.collection('wc_lottery').doc(matchId);
   const msnap = await mref.get();
   const mdoc = msnap.exists ? (msnap.data() as any) : {};
-  if (mdoc.status === 'drawn') return 'already-drawn';
+  if (mdoc.status === 'bonus-done') return 'already-done';
 
   // 1) 确认终场 + 晋级队
   let winnerTeam = forcedWinner || mdoc.actualWinnerTeam;
@@ -199,7 +219,7 @@ async function resolveMatch(matchId: string, kickoffUtc: string, home: string, a
     winnerTeam = r.winner;
   }
 
-  // 2) 读全部报名(deadline 后不可变,tx 外读安全);兜底剔除迟到报名
+  // 2) 读全部报名(deadline 后不可变);兜底剔除迟到报名
   const ksMs = new Date(kickoffUtc).getTime();
   const esnap = await mref.collection('entries').get();
   const entries: Entry[] = [];
@@ -209,93 +229,47 @@ async function resolveMatch(matchId: string, kickoffUtc: string, home: string, a
     if (!t || t <= ksMs) entries.push({ ...e, uid: d.id });
   });
 
-  // 3) claim + 预留库存 + 落定中奖名单(事务,幂等核心)
-  const result = await db.runTransaction(async (tx) => {
-    const cfgSnap = await tx.get(CONFIG_REF());
-    const cfg = (cfgSnap.exists ? cfgSnap.data() : DEFAULT_CONFIG) as typeof DEFAULT_CONFIG;
-    const m2 = await tx.get(mref);
-    const md = m2.exists ? (m2.data() as any) : {};
-    if (md.status === 'drawn' || md.status === 'resolved') return md.resolved || { skip: true };
+  // 3) 猜对追加币(逐人幂等):奖品在报名时已即抽即发,这里只补「猜中晋级队」的追加币
+  const cfg = await ensureConfig();
+  const failures = await payoutBonus(matchId, winnerTeam!, entries, cfg);
 
-    const stock = { ...(cfg.stock || {}) } as Record<PrizeKey, number>;
-    let remaining = PRIZE_KEYS.reduce((s, k) => s + (stock[k] || 0), 0);
-    const slots = (cfg.perMatchQuota || 0) + (cfg.carryQuota || 0);
-    const physN = Math.min(slots, remaining, entries.length);
-
-    const pool = shuffle(entries.slice());
-    const winners: any[] = [];
-    for (let i = 0; i < physN; i++) {
-      const e = pool[i];
-      // 在仍有库存的奖品里按剩余量加权随机选一款
-      const avail = PRIZE_KEYS.filter((k) => (stock[k] || 0) > 0);
-      let pick: PrizeKey = avail[0];
-      let r = randInt(avail.reduce((s, k) => s + stock[k], 0));
-      for (const k of avail) { if (r < stock[k]) { pick = k; break; } r -= stock[k]; }
-      stock[pick] -= 1; remaining -= 1;
-      winners.push({ uid: e.uid, name: e.name || '', phone: e.phone || '', pickedTeam: e.pickedTeam,
-        prize: pick, couponCode: coupon() });
-    }
-    const newCarry = slots - physN; // 没抽满的名额滚存
-
-    const resolved = { winnerTeam, winners, coinsBase: cfg.coinsBase, coinsCorrectTotal: cfg.coinsCorrectTotal };
-    tx.update(CONFIG_REF(), { stock, carryQuota: newCarry });
-    tx.set(mref, { status: 'resolved', actualWinnerTeam: winnerTeam, resolved,
-      drawnAt: FieldValue.serverTimestamp() }, { merge: true });
-    return resolved;
-  });
-
-  if ((result as any).skip) { /* 另一次运行已 resolve,继续做发奖(幂等) */ }
-
-  // 4) 发奖(逐人幂等):中奖文档 + farm_players 加币 同事务
-  const failures = await payout(matchId, winnerTeam!, entries);
-
-  // 5) 全部发完才标 drawn;有失败则留 resolved,下一个 tick 重试发奖
+  // 4) 全部处理完才标 bonus-done;有失败则下一个 tick 重试
   if (failures === 0) {
-    await mref.set({ status: 'drawn' }, { merge: true });
-    await notifyMatch(matchId, entries);   // 推送「开奖啦」(幂等)
-    return 'drawn';
+    await mref.set({ status: 'bonus-done', actualWinnerTeam: winnerTeam }, { merge: true });
+    await notifyResult(matchId, winnerTeam!, entries);   // 推送「你猜对了」(幂等)
+    return 'done';
   }
   return 'partial';
 }
 
-/** 逐 entry 发奖:实物者写 winner 文档;所有人加农场币。每人一个事务,已发过则跳过。
- *  返回失败人数(0 = 全部成功)。 */
-async function payout(matchId: string, winnerTeam: string, entries: Entry[]): Promise<number> {
-  const mref = db.collection('wc_lottery').doc(matchId);
-  const md = (await mref.get()).data() as any;
-  const resolved = md && md.resolved;
-  if (!resolved) return 0;
+/** 赛后逐 entry 处理猜对追加币:猜中晋级队 → 追加 (coinsCorrectTotal - coinsBase) 币 + 标 correct。
+ *  奖品(实物/底币)报名时已发,这里不再动库存。每人一个事务,bonusPaid 防重复。返回失败人数。 */
+async function payoutBonus(matchId: string, winnerTeam: string, entries: Entry[],
+  cfg: typeof DEFAULT_CONFIG): Promise<number> {
+  const coinsBase = cfg.coinsBase || 1000;
+  const coinsCorrect = cfg.coinsCorrectTotal || 2000;
+  const bonus = Math.max(0, coinsCorrect - coinsBase);
   let failures = 0;
-  const physByUid: Record<string, any> = {};
-  for (const w of (resolved.winners || [])) physByUid[w.uid] = w;
-  const coinsBase = resolved.coinsBase || 1000;
-  const coinsCorrect = resolved.coinsCorrectTotal || 2000;
 
   for (const e of entries) {
     const correct = e.pickedTeam === winnerTeam;
-    const coins = correct ? coinsCorrect : coinsBase;
-    const phys = physByUid[e.uid];
     const wref = db.collection('wc_lottery_winners').doc(matchId).collection('w').doc(e.uid);
     const pref = db.collection('farm_players').doc(e.uid);
-    const cref = phys ? db.collection('wc_coupons').doc(phys.couponCode) : null;
     try {
       await db.runTransaction(async (tx) => {
         const wsnap = await tx.get(wref);
-        if (wsnap.exists && (wsnap.data() as any).paid) return; // 已发,跳过
-        tx.set(wref, {
-          uid: e.uid, name: e.name || '', phone: e.phone || '',
-          matchId, correct, coins,
-          prize: phys ? phys.prize : 'coins',
-          couponCode: phys ? phys.couponCode : null,
-          redeemed: false, paid: true, drawnAt: FieldValue.serverTimestamp(),
-        }, { merge: true });
-        tx.set(pref, { coins: FieldValue.increment(coins) }, { merge: true });
-        if (phys && cref) tx.set(cref, {   // 扁平券码索引,核销台按码直接查
-          code: phys.couponCode, matchId, uid: e.uid, name: e.name || '', phone: e.phone || '',
-          prize: phys.prize, redeemed: false, drawnAt: FieldValue.serverTimestamp(),
-        }, { merge: true });
+        if (!wsnap.exists) return;             // 没抽过(没转过转盘)→ 不处理
+        const w = wsnap.data() as any;
+        if (w.bonusPaid) return;               // 已追加过,跳过
+        if (correct && bonus > 0) {
+          tx.set(wref, { correct: true, bonusPaid: true, bonusCoins: bonus,
+            coins: (w.coins || coinsBase) + bonus }, { merge: true });
+          tx.set(pref, { coins: FieldValue.increment(bonus) }, { merge: true });
+        } else {
+          tx.set(wref, { correct: false, bonusPaid: true }, { merge: true });
+        }
       });
-    } catch (err) { failures++; console.error('[wc-lotto payout]', matchId, e.uid, err); }
+    } catch (err) { failures++; console.error('[wc-lotto bonus]', matchId, e.uid, err); }
   }
   return failures;
 }
@@ -311,10 +285,10 @@ async function finalSweep(fixtures: any) {
     .filter((m: any) => m.stage && m.stage !== 'group' && codes.has(m.home) && codes.has(m.away))
     .map((m: any) => m.id);
   if (!koIds.length) return;
-  // 所有 KO 场都开完了吗
+  // 所有 KO 场都结算完了吗
   for (const id of koIds) {
     const s = await db.collection('wc_lottery').doc(id).get();
-    if (!s.exists || (s.data() as any).status !== 'drawn') return;
+    if (!s.exists || (s.data() as any).status !== 'bonus-done') return;
   }
   const stock = { ...(cfg.stock || {}) } as Record<PrizeKey, number>;
   let remaining = PRIZE_KEYS.reduce((s, k) => s + (stock[k] || 0), 0);
@@ -397,6 +371,82 @@ export const wcLotteryTick = onSchedule(
 export const wcLotteryDrawNow = onCall({ region: REGION }, async (req: CallableRequest) => {
   assertAdmin(req);
   return await runTick();
+});
+
+// ---- 玩家报名即抽(登录玩家调用)----
+// 提交竞猜 → 原子:校验截止 + 即时抽奖(底币必发 + physChance 概率中实物) + 写 entry/win/券码 + 加币
+// 返回 { prize, coins, couponCode } 供前端转盘揭晓。幂等:已抽过直接回原结果。
+export const wcLotteryEnter = onCall({ region: REGION }, async (req: CallableRequest) => {
+  if (!req.auth) throw new HttpsError('unauthenticated', '需登录');
+  const uid = req.auth.uid;
+  const { matchId, pickedTeam, name, phone, memberId } =
+    (req.data || {}) as { matchId?: string; pickedTeam?: string; name?: string; phone?: string; memberId?: string };
+  if (!matchId || !pickedTeam || typeof pickedTeam !== 'string' || pickedTeam.length === 0 || pickedTeam.length > 8)
+    throw new HttpsError('invalid-argument', '参数错误');
+
+  const mref = db.collection('wc_lottery').doc(matchId);
+  const eref = mref.collection('entries').doc(uid);
+  const wref = db.collection('wc_lottery_winners').doc(matchId).collection('w').doc(uid);
+  const pref = db.collection('farm_players').doc(uid);
+
+  // 快路径:已抽过直接回原结果(免事务)
+  const existing = await wref.get();
+  if (existing.exists) {
+    const x = existing.data() as any;
+    return { prize: x.prize, coins: x.coins, couponCode: x.couponCode || null, already: true };
+  }
+
+  return await db.runTransaction(async (tx) => {
+    const msnap = await tx.get(mref);
+    if (!msnap.exists) throw new HttpsError('failed-precondition', '该场暂未开放竞猜');
+    const md = msnap.data() as any;
+    if (md.deadline && md.deadline.toMillis && Date.now() >= md.deadline.toMillis())
+      throw new HttpsError('failed-precondition', '本场报名已截止');
+
+    const wsnap = await tx.get(wref);          // 事务内再确认一次幂等
+    if (wsnap.exists) {
+      const x = wsnap.data() as any;
+      return { prize: x.prize, coins: x.coins, couponCode: x.couponCode || null, already: true };
+    }
+
+    const cfgSnap = await tx.get(CONFIG_REF());
+    const cfg = (cfgSnap.exists ? cfgSnap.data() : DEFAULT_CONFIG) as any;
+    const coinsBase = cfg.coinsBase || 1000;
+    const physChance = typeof cfg.physChance === 'number' ? cfg.physChance : DEFAULT_CONFIG.physChance;
+    const stock = { ...(cfg.stock || {}) } as Record<PrizeKey, number>;
+
+    // 即时抽奖:physChance 概率中实物(仅在仍有库存时),按剩余量加权选款,原子扣库存;否则只发底币
+    let prize: string = 'coins';
+    let couponCode: string | null = null;
+    const avail = PRIZE_KEYS.filter((k) => (stock[k] || 0) > 0);
+    if (avail.length && Math.random() < physChance) {
+      let r = randInt(avail.reduce((s, k) => s + stock[k], 0));
+      let pick: PrizeKey = avail[0];
+      for (const k of avail) { if (r < stock[k]) { pick = k; break; } r -= stock[k]; }
+      stock[pick] -= 1;
+      prize = pick; couponCode = coupon();
+      tx.update(CONFIG_REF(), { stock });
+    }
+    const coins = coinsBase;
+
+    tx.set(eref, {
+      uid, memberId: memberId || uid, name: name || '', phone: phone || '',
+      pickedTeam, matchId, createdAt: FieldValue.serverTimestamp(), prize, coins,
+    }, { merge: true });
+    tx.set(wref, {
+      uid, name: name || '', phone: phone || '', matchId,
+      prize, couponCode, coins, correct: null, bonusPaid: false,
+      redeemed: false, paid: true, drawnAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
+    tx.set(pref, { coins: FieldValue.increment(coins) }, { merge: true });
+    if (prize !== 'coins' && couponCode) {
+      tx.set(db.collection('wc_coupons').doc(couponCode), {
+        code: couponCode, matchId, uid, name: name || '', phone: phone || '',
+        prize, redeemed: false, drawnAt: FieldValue.serverTimestamp(),
+      }, { merge: true });
+    }
+    return { prize, coins, couponCode };
+  });
 });
 
 // ---- 人工指定晋级队并强制开奖(ESPN 失灵兜底,admin)----

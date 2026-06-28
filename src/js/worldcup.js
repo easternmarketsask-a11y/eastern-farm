@@ -849,7 +849,22 @@
       '<div class="wc-lotto-redeem">已自动到账 · 回农场种菜用得上</div></div>';
   }
 
-  // ---- 幸运转盘(揭晓动画;结果由后台公平开奖预先定好,转盘必停在真奖)----
+  // ---- 抽奖机会过渡卡(报名即抽:提交后先报喜,点击进入转盘)----
+  function lottoChanceGate() {
+    return '<div class="wc-lotto-card wc-gate">' +
+      '<div class="wc-gate-emoji">🎉</div>' +
+      '<div class="wc-gate-h">报名成功！</div>' +
+      '<div class="wc-gate-sub">您获得一次抽奖机会</div>' +
+      '<button class="wc-lotto-submit wc-gate-go" type="button">🎡 立即抽奖</button>' +
+    '</div>';
+  }
+  function showChanceThenWheel(el, m, win, u) {
+    el.innerHTML = lottoChanceGate();
+    var go = el.querySelector('.wc-gate-go');
+    if (go) go.onclick = function () { el.innerHTML = wheelStageHtml(win); wireWheel(el, m, win, u); };
+  }
+
+  // ---- 幸运转盘(揭晓动画;结果由后台报名即抽时定好,转盘必停在真奖)----
   // 6 格,顺序须与 worldcup.css 里 conic-gradient 一致(从 0° 顺时针):
   // 0 绿=龙角散 / 1 金=1000币 / 2 琥珀=沙琪玛 / 3 红=气泡饮原味 / 4 金=2000币 / 5 浅绿=气泡饮青提
   var WHEEL_SEGS = [
@@ -961,23 +976,21 @@
     }
     el.innerHTML = '<div class="wc-lotto-card"><div class="wc-lotto-wait">载入抽奖…</div></div>';
     var db = Farm.fb.db;
-    Promise.all([
-      db.collection(LOTTO_COL).doc(m.id).collection('entries').doc(u.uid).get().catch(function () { return null; }),
-      db.collection(LOTTO_WIN_COL).doc(m.id).collection('w').doc(u.uid).get().catch(function () { return null; })
-    ]).then(function (res) {
-      var entry = res[0] && res[0].exists ? res[0].data() : null;
-      var win = res[1] && res[1].exists ? res[1].data() : null;
-      if (win) {
-        if (lottoSeenReveal(u.uid, m.id)) { el.innerHTML = lottoResultCard(win); }
-        else { el.innerHTML = wheelStageHtml(win); wireWheel(el, m, win, u); }
-        return;
-      }
-      if (entry) { el.innerHTML = lottoEnteredHtml(m, entry); return; }
-      if (!lottoOpen(m)) { el.innerHTML = lottoCard('竞猜抽奖', '<div class="wc-lotto-closed">本场报名已截止 ⏱</div>', lottoPrizeLine()); return; }
-      if (!isTeam(m.home) || !isTeam(m.away)) { el.innerHTML = lottoCard('竞猜抽奖', '<div class="wc-lotto-closed">对阵未定 · 双方确定后开放竞猜</div>', lottoPrizeLine()); return; }
-      el.innerHTML = lottoFormHtml(m);
-      wireLottoForm(el, m, u);
-    });
+    // 报名即抽:win 文档由 wcLotteryEnter 在提交时写入。只读它即可判断状态。
+    db.collection(LOTTO_WIN_COL).doc(m.id).collection('w').doc(u.uid).get()
+      .catch(function () { return null; })
+      .then(function (ws) {
+        var win = ws && ws.exists ? ws.data() : null;
+        if (win) {
+          if (lottoSeenReveal(u.uid, m.id)) { el.innerHTML = lottoResultCard(win); }
+          else { showChanceThenWheel(el, m, win, u); }   // 已报名未揭晓 → 重新进入「抽奖机会→转盘」
+          return;
+        }
+        if (!lottoOpen(m)) { el.innerHTML = lottoCard('竞猜抽奖', '<div class="wc-lotto-closed">本场报名已截止 ⏱</div>', lottoPrizeLine()); return; }
+        if (!isTeam(m.home) || !isTeam(m.away)) { el.innerHTML = lottoCard('竞猜抽奖', '<div class="wc-lotto-closed">对阵未定 · 双方确定后开放竞猜</div>', lottoPrizeLine()); return; }
+        el.innerHTML = lottoFormHtml(m);
+        wireLottoForm(el, m, u);
+      });
   }
 
   function wireLottoForm(el, m, u) {
@@ -993,20 +1006,22 @@
     if (sub) sub.onclick = function () {
       if (!picked) return;
       if (!lottoOpen(m)) { if (Farm.ui) Farm.ui.toast('报名已截止'); lottoRender(el, m); return; }
-      sub.disabled = true; sub.textContent = '提交中…';
-      Farm.fb.db.collection(LOTTO_COL).doc(m.id).collection('entries').doc(u.uid).set({
-        uid: u.uid, memberId: u.memberId, name: u.name, phone: u.phone, pickedTeam: picked,
-        matchId: m.id, createdAt: Farm.fb.serverTimestamp()
-      }).then(function () {
-        if (Farm.audio) Farm.audio.play('coin');
-        miniConfetti();
-        // 顺势邀请开启提醒,开奖时推送通知(已开过/拒过的不打扰)
-        try { if (Farm.push && Farm.push.maybePromptAfterHarvest) Farm.push.maybePromptAfterHarvest(); } catch (e) {}
-        lottoRender(el, m);
-      }).catch(function (e) {
-        sub.disabled = false; sub.textContent = '提交竞猜';
-        if (Farm.ui) Farm.ui.toast('提交失败,请重试'); console.warn('[wc-lotto]', e);
-      });
+      var fn = Farm.fb && Farm.fb.callable && Farm.fb.callable('wcLotteryEnter');
+      if (!fn) { if (Farm.ui) Farm.ui.toast('暂时无法参与,请稍后重试'); return; }
+      sub.disabled = true; sub.textContent = '抽奖准备中…';
+      // 报名即抽:服务器原子抽奖(扣库存+发币),返回奖品 → 直接进入「抽奖机会→转盘」
+      fn({ matchId: m.id, pickedTeam: picked, name: u.name, phone: u.phone, memberId: u.memberId })
+        .then(function (resp) {
+          var win = (resp && resp.data) ? resp.data : {};
+          try { if (Farm.audio) Farm.audio.play('coin'); } catch (e) {}
+          try { if (Farm.push && Farm.push.maybePromptAfterHarvest) Farm.push.maybePromptAfterHarvest(); } catch (e) {}
+          showChanceThenWheel(el, m, win, u);
+        })
+        .catch(function (e) {
+          sub.disabled = false; sub.textContent = '提交竞猜';
+          var msg = (e && e.message) ? String(e.message) : '提交失败,请重试';
+          if (Farm.ui) Farm.ui.toast(msg); console.warn('[wc-lotto]', e);
+        });
     };
   }
 

@@ -50,6 +50,11 @@
       // Convenient sentinel
       serverTimestamp: () => firebase.firestore.FieldValue.serverTimestamp(),
       increment: (n) => firebase.firestore.FieldValue.increment(n),
+      // Callable factory (needs firebase-functions-compat.js). Returns null if unavailable.
+      callable: (name) => {
+        try { return firebase.app().functions('us-central1').httpsCallable(name); }
+        catch (e) { return null; }
+      },
     };
     console.log('🔥 Firebase initialized (project: eastern-market-members)');
   } catch (e) {
