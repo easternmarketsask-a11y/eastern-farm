@@ -402,6 +402,38 @@
 .wc-gate-go { animation: wc-gate-cta 1.6s ease-in-out infinite; }
 @keyframes wc-gate-cta { 0%,100% { transform: scale(1); box-shadow: 0 3px 9px rgba(58,125,44,0.3); } 50% { transform: scale(1.03); box-shadow: 0 5px 16px rgba(58,125,44,0.5); } }
 
+/* 已抽奖标签 */
+.wc-lotto-done-tag { display: inline-block; font-family: var(--font-display); font-size: 11.5px; color: #fff;
+  background: var(--wc-pitch); padding: 3px 11px; border-radius: var(--radius-pill); margin-bottom: 7px; }
+
+/* 「我的奖品」入口按钮(横幅下) */
+.wc-myprizes-btn { flex: 0 0 auto; display: block; width: calc(100% - 24px); margin: 8px 12px 0; padding: 9px 14px;
+  border: 1px solid #f0d28a; border-radius: var(--radius-pill); cursor: pointer; font-family: var(--font-zh);
+  font-size: 14px; font-weight: 600; color: var(--wc-amber-deep); background: linear-gradient(160deg, #fff8e8, #fdeccb);
+  box-shadow: var(--wc-sh-sm); }
+.wc-myprizes-btn:active { transform: scale(0.99); }
+
+/* 「我的奖品」弹层 */
+.wc-mp-overlay { position: absolute; inset: 0; z-index: 50; background: rgba(40,30,20,0.5); backdrop-filter: blur(3px);
+  display: flex; align-items: center; justify-content: center; padding: 20px; animation: wc-mp-in 0.2s ease; }
+@keyframes wc-mp-in { from { opacity: 0; } to { opacity: 1; } }
+.wc-mp-card { position: relative; width: 100%; max-width: 380px; max-height: 80%; overflow-y: auto;
+  background: var(--wc-cream); border-radius: var(--radius-lg); padding: 20px 16px 18px; box-shadow: var(--wc-sh-lg); }
+.wc-mp-close { position: absolute; top: 10px; right: 10px; width: 32px; height: 32px; border-radius: 50%;
+  border: 1px solid var(--wc-border); background: var(--wc-card); color: var(--wc-soft); font-size: 17px; cursor: pointer; }
+.wc-mp-h { font-family: var(--font-display); font-size: 18.5px; color: var(--wc-amber-deep); text-align: center; margin-bottom: 10px; }
+.wc-mp-tip { font-size: 13px; color: var(--wc-soft); text-align: center; margin-bottom: 13px; line-height: 1.55; }
+.wc-mp-item { background: var(--wc-card); border: 1px solid #f0d28a; border-radius: var(--radius-md); padding: 13px; margin-bottom: 10px; text-align: center; }
+.wc-mp-item.done { opacity: 0.6; }
+.wc-mp-pz { font-family: var(--font-display); font-size: 16px; color: var(--wc-ink); }
+.wc-mp-code { font-family: var(--font-en); font-size: 25px; font-weight: 800; letter-spacing: 3px; color: var(--wc-amber-deep);
+  background: #fff8e8; border: 1px dashed #eaba5a; border-radius: var(--radius-sm); padding: 9px; margin: 9px 0 7px; }
+.wc-mp-st { font-size: 12.5px; color: var(--wc-soft); }
+.wc-mp-item.done .wc-mp-st { color: var(--wc-pitch); font-weight: 700; }
+.wc-mp-empty { text-align: center; color: var(--wc-soft); font-size: 14.5px; line-height: 1.7; padding: 26px 8px; }
+.wc-mp-coins { text-align: center; font-size: 14px; color: var(--wc-pitch); margin-top: 10px; }
+.wc-mp-coins b { color: var(--wc-amber-deep); }
+
 /* ===================== LUCKY WHEEL (转盘揭晓) ===================== */
 .wc-wheel-card { text-align: center;
   --wc-wheel-size: min(300px, 80vw);

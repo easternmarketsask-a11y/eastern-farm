@@ -271,6 +271,7 @@
       '<button class="wc-lotto-banner" id="wcLottoBanner" hidden>' +
         '<span class="bn">🎁 淘汰赛竞猜抽奖，<b>会员百分百中奖!</b> ›</span>' +
       '</button>' +
+      '<button class="wc-myprizes-btn" id="wcMyPrizes" hidden>🎁 我的奖品 · 兑奖码 ›</button>' +
       '<div class="wc-tabs" role="tablist">' +
         tabBtn('schedule', '赛程赛果', 'SCHEDULE') +
         tabBtn('standings', '积分榜', 'STANDINGS') +
@@ -289,6 +290,8 @@
     });
     var lb = hub.querySelector('#wcLottoBanner');
     if (lb) lb.onclick = function () { var m = nearestLottoMatch(); if (m) openLottoMatch(m); };
+    var mp = hub.querySelector('#wcMyPrizes');
+    if (mp) mp.onclick = openMyPrizes;
   }
 
   // 有"可报名(开球前、双方已定)"的淘汰赛场 → 横幅出现,点它直达最近一场竞猜
@@ -301,6 +304,8 @@
     if (!hub) return;
     var lb = hub.querySelector('#wcLottoBanner');
     if (lb) lb.hidden = !nearestLottoMatch();
+    var mp = hub.querySelector('#wcMyPrizes');
+    if (mp) mp.hidden = !(fbReady() && lottoUser());   // 登录会员才显示「我的奖品」
   }
   function openLottoMatch(m) {
     switchTab('schedule');
@@ -835,17 +840,18 @@
   // ---- 中奖结果卡(转盘转完 / 再次打开时显示) ----
   function lottoResultCard(win) {
     var phys = win.prize && win.prize !== 'coins';
+    var doneTag = '<div class="wc-lotto-done-tag">✅ 本场已抽奖</div>';
     if (phys) {
-      return '<div class="wc-lotto-card win">' +
-        '<div class="wc-lotto-win-h">🎉 恭喜中奖!</div>' +
+      return '<div class="wc-lotto-card win">' + doneTag +
+        '<div class="wc-lotto-win-h">🎉 您已抽中实物!</div>' +
         '<div class="wc-lotto-prize">🎁 ' + esc(PRIZE_CN[win.prize] || win.prize) + '</div>' +
-        (win.couponCode ? '<div class="wc-lotto-code">券码 <b>' + esc(win.couponCode) + '</b></div>' : '') +
-        '<div class="wc-lotto-redeem">' + (win.redeemed ? '✓ 已核销' : '到东方超市收银处出示此码领取') + '</div>' +
+        (win.couponCode ? '<div class="wc-lotto-code">兑奖码 <b>' + esc(win.couponCode) + '</b></div>' : '') +
+        '<div class="wc-lotto-redeem">' + (win.redeemed ? '✓ 已核销' : '到东方超市收银处出示此码领取 · 也可在「我的奖品」查看') + '</div>' +
         (win.coins ? '<div class="wc-lotto-coins">外加 <span class="coin-icon"></span> ' + win.coins + ' 农场币已到账</div>' : '') +
         '</div>';
     }
-    return '<div class="wc-lotto-card win coins">' +
-      '<div class="wc-lotto-win-h"><span class="coin-icon"></span> +' + (win.coins || 1000) + ' 农场币!</div>' +
+    return '<div class="wc-lotto-card win coins">' + doneTag +
+      '<div class="wc-lotto-win-h">您已抽奖，获得 <span class="coin-icon"></span> ' + (win.coins || 1000) + ' 农场币!</div>' +
       '<div class="wc-lotto-redeem">已自动到账 · 回农场种菜用得上</div></div>';
   }
 
@@ -1039,6 +1045,56 @@
           if (Farm.ui) Farm.ui.toast(msg); console.warn('[wc-lotto]', e);
         });
     };
+  }
+
+  // ---- 我的奖品 / 兑奖码(读本人所有 KO 场 + 清仓场的中奖记录;现有规则允许读自己的)----
+  function loadMyPrizes(u) {
+    var db = Farm.fb.db;
+    var ids = (data.matches || []).filter(isKO).map(function (m) { return m.id; });
+    ids.push('final-sweep');
+    var reads = ids.map(function (id) {
+      return db.collection(LOTTO_WIN_COL).doc(id).collection('w').doc(u.uid).get()
+        .then(function (s) { return s.exists ? Object.assign({ matchId: id }, s.data()) : null; })
+        .catch(function () { return null; });
+    });
+    return Promise.all(reads).then(function (rows) { return rows.filter(Boolean); });
+  }
+  function myPrizesHtml(rows) {
+    var phys = rows.filter(function (r) { return r.prize && r.prize !== 'coins' && r.couponCode; });
+    var coinsTotal = rows.reduce(function (s, r) { return s + (r.coins || 0); }, 0);
+    var h = '<div class="wc-mp-h">🎁 我的奖品</div>';
+    if (phys.length) {
+      h += '<div class="wc-mp-tip">到东方超市收银处出示下方券码领取实物 👇</div>';
+      phys.forEach(function (r) {
+        h += '<div class="wc-mp-item' + (r.redeemed ? ' done' : '') + '">' +
+          '<div class="wc-mp-pz">🎁 ' + esc(PRIZE_CN[r.prize] || r.prize) + '</div>' +
+          '<div class="wc-mp-code">' + esc(r.couponCode) + '</div>' +
+          '<div class="wc-mp-st">' + (r.redeemed ? '✓ 已核销' : '待领取 · 到店出示此码') + '</div>' +
+        '</div>';
+      });
+    } else {
+      h += '<div class="wc-mp-empty">还没有中实物奖品~<br>多参与淘汰赛竞猜抽奖，中奖百分百！🎁</div>';
+    }
+    if (coinsTotal > 0) h += '<div class="wc-mp-coins"><span class="coin-icon"></span> 累计赢得 <b>' + coinsTotal + '</b> 农场币</div>';
+    return h;
+  }
+  function openMyPrizes() {
+    if (!fbReady()) return;
+    var u = lottoUser();
+    if (!u) { if (Farm.fbAuth && Farm.fbAuth.openLoginModal) Farm.fbAuth.openLoginModal(); return; }
+    var ov = document.createElement('div');
+    ov.className = 'wc-mp-overlay';
+    ov.innerHTML = '<div class="wc-mp-card"><button class="wc-mp-close" aria-label="关闭">✕</button>' +
+      '<div class="wc-mp-body"><div class="wc-mp-empty">载入中…</div></div></div>';
+    hub.appendChild(ov);
+    var close = function () { ov.remove(); };
+    ov.onclick = function (e) { if (e.target === ov) close(); };
+    var cb = ov.querySelector('.wc-mp-close'); if (cb) cb.onclick = close;
+    loadMyPrizes(u).then(function (rows) {
+      var body = ov.querySelector('.wc-mp-body'); if (body) body.innerHTML = myPrizesHtml(rows);
+    }).catch(function () {
+      var body = ov.querySelector('.wc-mp-body'); if (body) body.innerHTML = '<div class="wc-mp-empty">载入失败,请稍后重试</div>';
+    });
   }
 
   /* ============================================================
