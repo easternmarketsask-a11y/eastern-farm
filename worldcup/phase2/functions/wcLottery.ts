@@ -402,6 +402,22 @@ export const wcLotteryEnter = onCall({ region: REGION }, async (req: CallableReq
     return { prize: x.prize, coins: x.coins, couponCode: x.couponCode || null, already: true };
   }
 
+  // 会员专属:校验该账号确实关联了东方超市会员(防绕过前端直接调用云函数)。
+  // 已抽过的走上面快路径,不受影响。会员库查询异常时放行,不误伤真会员。
+  const token: any = req.auth.token || {};
+  const authPhone = token.phone_number || token.phoneNumber || '';
+  let isMember = false;
+  try {
+    const byUid = await db.collection('members').where('firebase_uid', '==', uid).limit(1).get();
+    isMember = !byUid.empty;
+    if (!isMember && authPhone) {
+      const byPhone = await db.collection('members').where('phone', '==', authPhone).limit(1).get();
+      isMember = !byPhone.empty;
+    }
+  } catch (e) { isMember = true; }
+  if (!isMember)
+    throw new HttpsError('failed-precondition', '竞猜有礼是东方超市会员专属,请用会员手机号登录参与 🎁');
+
   return await db.runTransaction(async (tx) => {
     const msnap = await tx.get(mref);
     if (!msnap.exists) throw new HttpsError('failed-precondition', '该场暂未开放竞猜');
@@ -521,6 +537,7 @@ export const wcLotteryRedeem = onCall({ region: REGION }, async (req: CallableRe
       const x = d.data() as any;
       if (x.redeemed) redeemedCount++;
       return { code: x.code, prizeCn: PRIZE_CN[x.prize] || x.prize, name: x.name || '',
+        phone: maskPhone(x.phone), drawnAt: fmtSK(x.drawnAt),
         redeemed: !!x.redeemed, redeemedAt: fmtSK(x.redeemedAt) };
     });
     return { items, total: snap.size, redeemedCount };

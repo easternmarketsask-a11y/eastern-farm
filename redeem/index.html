@@ -57,12 +57,16 @@
   .res .code2{font-family:ui-monospace,monospace;letter-spacing:2px;font-weight:800;color:var(--amber-d)}
 
   .stat{font-size:12px;color:var(--soft);text-align:center;margin:10px 0 0}
-  .list{margin-top:6px}
-  .row{display:flex;align-items:center;gap:10px;padding:11px 4px;border-bottom:1px solid #f0e8d6;font-size:13px}
-  .row .c{font-family:ui-monospace,monospace;font-weight:800;color:var(--amber-d);width:74px;flex:none}
-  .row .p{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .row .s{font-size:11px;font-weight:700;padding:3px 8px;border-radius:20px;flex:none}
-  .row .s.y{background:#e7f6ea;color:var(--ok)} .row .s.n{background:#fdeee0;color:var(--amber-d)}
+  .list{margin-top:8px;display:flex;flex-direction:column;gap:8px}
+  .rec{border:1px solid var(--line);border-radius:12px;padding:11px 12px;background:#fffdf7}
+  .rec.done{opacity:.66;background:#faf6ee}
+  .rec-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .rec-top .c{font-family:ui-monospace,monospace;font-weight:800;letter-spacing:2px;font-size:16px;color:var(--amber-d)}
+  .rec-top .s{font-size:11px;font-weight:800;padding:3px 9px;border-radius:20px;flex:none}
+  .rec-top .s.y{background:#e7f6ea;color:var(--ok)} .rec-top .s.n{background:#fdeee0;color:var(--amber-d)}
+  .rec-pz{font-size:14px;font-weight:700;margin-top:6px}
+  .rec-who{font-size:12.5px;color:var(--ink);margin-top:3px}
+  .rec-sub{font-size:11.5px;color:var(--soft);margin-top:3px}
   .muted{color:var(--soft);font-size:12.5px;text-align:center;padding:16px}
   .foot{text-align:center;font-size:11px;color:#a99e90;margin-top:20px}
 </style>
@@ -237,9 +241,19 @@ window.addEventListener('load', function () {
       $('listStat').textContent = '实物奖 ' + d.total + ' 份 · 已核销 ' + d.redeemedCount + ' · 待领 ' + (d.total - d.redeemedCount);
       if (!d.items.length) { $('listBox').innerHTML = '<div class="muted">暂无实物好礼记录</div>'; return; }
       $('listBox').innerHTML = d.items.map(function (x) {
-        return '<div class="row"><span class="c">' + esc(x.code) + '</span>' +
-          '<span class="p">' + esc(x.prizeCn) + ' · ' + esc(x.name) + '</span>' +
-          '<span class="s ' + (x.redeemed ? 'y">已领' : 'n">待领') + '</span></div>';
+        var meta = [];
+        if (x.name) meta.push(esc(x.name));
+        if (x.phone) meta.push('📱' + esc(x.phone));
+        var sub = [];
+        if (x.drawnAt) sub.push('抽中 ' + esc(x.drawnAt));
+        if (x.redeemed && x.redeemedAt) sub.push('核销 ' + esc(x.redeemedAt));
+        return '<div class="rec ' + (x.redeemed ? 'done' : '') + '">' +
+          '<div class="rec-top"><span class="c">' + esc(x.code) + '</span>' +
+            '<span class="s ' + (x.redeemed ? 'y">✓ 已领' : 'n">待领') + '</span></div>' +
+          '<div class="rec-pz">🎁 ' + esc(x.prizeCn) + '</div>' +
+          (meta.length ? '<div class="rec-who">' + meta.join(' · ') + '</div>' : '') +
+          (sub.length ? '<div class="rec-sub">' + sub.join(' · ') + '</div>' : '') +
+        '</div>';
       }).join('');
     } catch (e) { if (e && e.code === 'permission-denied') { lock(); } else $('listStat').textContent = '出错:' + (e.message || e); }
   }

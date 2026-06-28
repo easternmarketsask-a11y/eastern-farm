@@ -988,6 +988,16 @@
       if (b) b.onclick = function () { if (Farm.fbAuth && Farm.fbAuth.openLoginModal) Farm.fbAuth.openLoginModal(); };
       return;
     }
+    // 会员专属:登录了但手机号不在会员库(memberDoc 为空)→ 不放行,引导用会员手机号登录。
+    // 这样奖品永远绑在稳定的会员账号上,不会像非会员临时号那样事后找不回(Chris 踩过)。
+    if (!(Farm.fbAuth && Farm.fbAuth.memberDoc)) {
+      el.innerHTML = lottoCard('会员专属 · 竞猜有礼',
+        '<div class="wc-lotto-closed">🎁 竞猜有礼是东方超市会员专属福利<br>请用你在东方超市登记的会员手机号登录参与</div>' +
+        '<button class="wc-lotto-btn" data-act="login">用会员手机号登录 ›</button>', lottoPrizeLine());
+      var bm = el.querySelector('[data-act="login"]');
+      if (bm) bm.onclick = function () { if (Farm.fbAuth && Farm.fbAuth.openLoginModal) Farm.fbAuth.openLoginModal(); };
+      return;
+    }
     el.innerHTML = '<div class="wc-lotto-card"><div class="wc-lotto-wait">载入中…</div></div>';
     var db = Farm.fb.db;
     // 报名即抽:win 文档由 wcLotteryEnter 在提交时写入。只读它即可判断状态。
