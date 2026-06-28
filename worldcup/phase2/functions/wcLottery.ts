@@ -56,6 +56,7 @@ const DEFAULT_CONFIG = {
   coinsBase: 1000,
   coinsCorrectTotal: 2000,
   physChance: 0.18,        // 报名即抽时,单次中实物的概率(仍有库存才生效;可在控制台调)
+  dailyLimit: 2,           // 每个会员每天最多参与抽奖次数(萨省日)
   perMatchQuota: 2,        // (旧·已不用于即抽;保留兼容)
   carryQuota: 0,           // (旧·已不用于即抽;保留兼容)
   sweepDone: false,
@@ -81,6 +82,8 @@ function ymd(d: Date): string {
     String(d.getUTCMonth() + 1).padStart(2, '0') +
     String(d.getUTCDate()).padStart(2, '0');
 }
+/** 萨省(UTC-6)日期串 YYYYMMDD,用于每日抽奖次数计数 */
+function skDateStr(ms: number): string { return ymd(new Date(ms - 6 * 3600 * 1000)); }
 
 // wc2026.json 的 teams 是数组 [{code,...}] —— 转成代码集合做归属判断
 function teamCodeSet(fx: any): Set<string> {
@@ -254,7 +257,6 @@ async function payoutBonus(matchId: string, winnerTeam: string, entries: Entry[]
   for (const e of entries) {
     const correct = e.pickedTeam === winnerTeam;
     const wref = db.collection('wc_lottery_winners').doc(matchId).collection('w').doc(e.uid);
-    const pref = db.collection('farm_players').doc(e.uid);
     try {
       await db.runTransaction(async (tx) => {
         const wsnap = await tx.get(wref);
@@ -262,9 +264,9 @@ async function payoutBonus(matchId: string, winnerTeam: string, entries: Entry[]
         const w = wsnap.data() as any;
         if (w.bonusPaid) return;               // 已追加过,跳过
         if (correct && bonus > 0) {
+          // 只更新 win.coins(追加后总额);前端读到增量后加到本地存档
           tx.set(wref, { correct: true, bonusPaid: true, bonusCoins: bonus,
             coins: (w.coins || coinsBase) + bonus }, { merge: true });
-          tx.set(pref, { coins: FieldValue.increment(bonus) }, { merge: true });
         } else {
           tx.set(wref, { correct: false, bonusPaid: true }, { merge: true });
         }
@@ -387,9 +389,10 @@ export const wcLotteryEnter = onCall({ region: REGION }, async (req: CallableReq
   const mref = db.collection('wc_lottery').doc(matchId);
   const eref = mref.collection('entries').doc(uid);
   const wref = db.collection('wc_lottery_winners').doc(matchId).collection('w').doc(uid);
-  const pref = db.collection('farm_players').doc(uid);
+  const dayKey = skDateStr(Date.now());
+  const dailyRef = db.collection('wc_lottery_daily').doc(uid + '_' + dayKey);
 
-  // 快路径:已抽过直接回原结果(免事务)
+  // 快路径:已抽过直接回原结果(免事务,不计入当日次数)
   const existing = await wref.get();
   if (existing.exists) {
     const x = existing.data() as any;
@@ -413,7 +416,14 @@ export const wcLotteryEnter = onCall({ region: REGION }, async (req: CallableReq
     const cfg = (cfgSnap.exists ? cfgSnap.data() : DEFAULT_CONFIG) as any;
     const coinsBase = cfg.coinsBase || 1000;
     const physChance = typeof cfg.physChance === 'number' ? cfg.physChance : DEFAULT_CONFIG.physChance;
+    const dailyLimit = typeof cfg.dailyLimit === 'number' ? cfg.dailyLimit : DEFAULT_CONFIG.dailyLimit;
     const stock = { ...(cfg.stock || {}) } as Record<PrizeKey, number>;
+
+    // 每日次数限制(萨省日):新报名才计数,重开同场不计
+    const daySnap = await tx.get(dailyRef);    // ⚠️ 所有 read 必须在 write 之前
+    const dayCount = daySnap.exists ? ((daySnap.data() as any).count || 0) : 0;
+    if (dayCount >= dailyLimit)
+      throw new HttpsError('resource-exhausted', '今天的抽奖机会用完啦(每天' + dailyLimit + '次),明天再来 🎁');
 
     // 即时抽奖:physChance 概率中实物(仅在仍有库存时),按剩余量加权选款,原子扣库存;否则只发底币
     let prize: string = 'coins';
@@ -433,12 +443,13 @@ export const wcLotteryEnter = onCall({ region: REGION }, async (req: CallableReq
       uid, memberId: memberId || uid, name: name || '', phone: phone || '',
       pickedTeam, matchId, createdAt: FieldValue.serverTimestamp(), prize, coins,
     }, { merge: true });
+    // win 文档是「币」的可信来源:前端读它把 coins 加到本地存档(农场币不存 farm_players,见隐私规则)
     tx.set(wref, {
       uid, name: name || '', phone: phone || '', matchId,
       prize, couponCode, coins, correct: null, bonusPaid: false,
       redeemed: false, paid: true, drawnAt: FieldValue.serverTimestamp(),
     }, { merge: true });
-    tx.set(pref, { coins: FieldValue.increment(coins) }, { merge: true });
+    tx.set(dailyRef, { uid, date: dayKey, count: dayCount + 1, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
     if (prize !== 'coins' && couponCode) {
       tx.set(db.collection('wc_coupons').doc(couponCode), {
         code: couponCode, matchId, uid, name: name || '', phone: phone || '',

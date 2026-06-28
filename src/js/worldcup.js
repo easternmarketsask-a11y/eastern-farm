@@ -955,6 +955,20 @@
     if (typeof miniConfetti === 'function') miniConfetti();
     if (box && box.scrollIntoView) try { box.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch (e) {}
   }
+  // 把中奖农场币加到本地存档:币不存 farm_players(隐私),后台只写 win 文档。
+  // 按 localStorage 记的已发额做幂等增量 —— 兼顾赛后「猜对追加」(1000→2000 只补差额)。
+  function lottoCreditKey(uid, id) { return 'wc_lotto_cr_' + uid + '_' + id; }
+  function lottoApplyWin(uid, m, win) {
+    try {
+      if (!win || !win.coins || !uid || !m) return;
+      if (!window.Farm || !Farm.state || !Farm.state.addCoins) return;
+      var k = lottoCreditKey(uid, m.id);
+      var had = Number(localStorage.getItem(k)) || 0;
+      var delta = (win.coins || 0) - had;
+      if (delta > 0) { Farm.state.addCoins(delta); localStorage.setItem(k, String(win.coins)); }
+    } catch (e) {}
+  }
+
   function lottoRevealKey(uid, id) { return 'wc_lotto_rv_' + uid + '_' + id; }
   function lottoSeenReveal(uid, id) { try { return localStorage.getItem(lottoRevealKey(uid, id)) === '1'; } catch (e) { return false; } }
   function lottoMarkReveal(uid, id) { try { localStorage.setItem(lottoRevealKey(uid, id), '1'); } catch (e) {} }
@@ -982,6 +996,7 @@
       .then(function (ws) {
         var win = ws && ws.exists ? ws.data() : null;
         if (win) {
+          lottoApplyWin(u.uid, m, win);   // 到账/补差额(幂等)
           if (lottoSeenReveal(u.uid, m.id)) { el.innerHTML = lottoResultCard(win); }
           else { showChanceThenWheel(el, m, win, u); }   // 已报名未揭晓 → 重新进入「抽奖机会→转盘」
           return;
@@ -1013,6 +1028,7 @@
       fn({ matchId: m.id, pickedTeam: picked, name: u.name, phone: u.phone, memberId: u.memberId })
         .then(function (resp) {
           var win = (resp && resp.data) ? resp.data : {};
+          lottoApplyWin(u.uid, m, win);   // 底币立即到账(幂等)
           try { if (Farm.audio) Farm.audio.play('coin'); } catch (e) {}
           try { if (Farm.push && Farm.push.maybePromptAfterHarvest) Farm.push.maybePromptAfterHarvest(); } catch (e) {}
           showChanceThenWheel(el, m, win, u);
