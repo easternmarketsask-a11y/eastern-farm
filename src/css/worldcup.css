@@ -344,7 +344,7 @@
   background: linear-gradient(100deg, #ffa42e 0%, #f4632c 60%, #e23b2e 100%);
   box-shadow: 0 5px 16px rgba(226,90,40,0.44); animation: wc-banner-pulse 2.2s ease-in-out infinite;
 }
-.wc-lotto-banner .bn { font-size: 15.5px; font-weight: 700; white-space: nowrap; }
+.wc-lotto-banner .bn { font-size: 17px; font-weight: 700; white-space: normal; line-height: 1.32; text-align: center; }
 .wc-lotto-banner .bn b { font-family: var(--font-display); letter-spacing: 0.3px; }
 .wc-lotto-banner:active { transform: scale(0.99); }
 @keyframes wc-banner-pulse {
@@ -559,6 +559,6 @@
 @media (max-width: 380px) {
   .wc-team .nm .en { display: none; }
   .wc-focus-team .fl { font-size: 34px; }
-  .wc-lotto-banner .bn { font-size: 12.5px; }
+  .wc-lotto-banner .bn { font-size: 15.5px; }
   .wc-match-lotto { font-size: 13.5px; }
 }
