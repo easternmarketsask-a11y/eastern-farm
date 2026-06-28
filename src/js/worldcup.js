@@ -1162,8 +1162,8 @@
     var root = hub.querySelector('#wc-standings');
     var html = liveStamp() +
       '<div class="wc-legend">' +
-        '<i><span class="dot" style="background:var(--wc-pitch)"></span>小组第1 → 16强</i>' +
-        '<i><span class="dot" style="background:var(--wc-pitch-soft)"></span>小组第2 → 16强</i>' +
+        '<i><span class="dot" style="background:var(--wc-pitch)"></span>小组第1 → 32强</i>' +
+        '<i><span class="dot" style="background:var(--wc-pitch-soft)"></span>小组第2 → 32强</i>' +
         '<i><span class="dot" style="background:var(--wc-amber)"></span>第3名(争8席)</i>' +
       '</div>' +
       '<div class="wc-section-note">P 赛 / W 胜 / D 平 / L 负 / GF 进 / GA 失 / GD 净胜 / Pts 积分。Pts、GD 自动计算，按 积分→净胜球→进球→正面交锋 排序。' + (live && live.ok ? '实时计算。' : '截至 ' + dataDate() + '。') + '</div>';
@@ -1315,9 +1315,9 @@
      KNOCKOUT BRACKET PREDICTOR
      ============================================================ */
   var BR_ROUNDS = [
-    { id: 'r32', lbl: '16强 R32', n: 16 },
-    { id: 'r16', lbl: '8强 R16', n: 8 },
-    { id: 'qf', lbl: '四分之一', n: 4 },
+    { id: 'r32', lbl: '32强', n: 16 },
+    { id: 'r16', lbl: '16强', n: 8 },
+    { id: 'qf', lbl: '8强', n: 4 },
     { id: 'sf', lbl: '半决赛', n: 2 },
     { id: 'f', lbl: '决赛', n: 1 }
   ];
@@ -1407,7 +1407,7 @@
     var champ = pick('f-0');
     var picks = Object.keys(bracketPicks).length;
     root.innerHTML =
-      '<div class="wc-section-note">采用<b>真实 16 强对阵</b>(来源 ESPN)。已打完的比赛自动锁定晋级者;未定的位置(如「L组第1」「小组第三」)小组赛结束后自动填入。点球队预测后续晋级,一路点到决赛预测你的冠军 — 预测只存本机。</div>' +
+      '<div class="wc-section-note">采用<b>真实 32强对阵</b>(来源 ESPN)。已打完的比赛自动锁定晋级者;未定的位置(如「L组第1」「小组第三」)小组赛结束后自动填入。点球队预测后续晋级,一路点到决赛预测你的冠军 — 预测只存本机。</div>' +
       '<div class="wc-bracket-bar">' +
         '<span class="wc-progress">你的预测 <b>' + picks + '</b> 场</span>' +
         '<button class="wc-reset" id="wcBrReset">↺ 重置预测</button>' +
