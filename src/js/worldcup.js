@@ -934,6 +934,7 @@
       }
       if (entry) { el.innerHTML = lottoEnteredHtml(m, entry); return; }
       if (!lottoOpen(m)) { el.innerHTML = lottoCard('竞猜抽奖', '<div class="wc-lotto-closed">本场报名已截止 ⏱</div>', lottoPrizeLine()); return; }
+      if (!isTeam(m.home) || !isTeam(m.away)) { el.innerHTML = lottoCard('竞猜抽奖', '<div class="wc-lotto-closed">对阵未定 · 双方确定后开放竞猜</div>', lottoPrizeLine()); return; }
       el.innerHTML = lottoFormHtml(m);
       wireLottoForm(el, m, u);
     });

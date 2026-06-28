@@ -78,6 +78,11 @@ function ymd(d: Date): string {
     String(d.getUTCDate()).padStart(2, '0');
 }
 
+// wc2026.json 的 teams 是数组 [{code,...}] —— 转成代码集合做归属判断
+function teamCodeSet(fx: any): Set<string> {
+  return new Set((((fx && fx.teams) || []) as any[]).map((t) => t && t.code));
+}
+
 async function loadFixtures(): Promise<any> {
   const r = await fetch(DATA_URL, { headers: { 'cache-control': 'no-cache' } });
   if (!r.ok) throw new Error('fetch wc2026.json ' + r.status);
@@ -128,8 +133,8 @@ async function espnResult(kickoffUtc: string, codeA: string, codeB: string):
 // seed:为已确定双方的 KO 场写 wc_lottery/{id} 文档(deadline=kickoff)
 // ============================================================
 async function seedMatches(fixtures: any) {
-  const teams = fixtures.teams || {};
-  const isTeam = (c: string) => !!teams[c];
+  const codes = teamCodeSet(fixtures);
+  const isTeam = (c: string) => codes.has(c);
   const ko = (fixtures.matches || []).filter((m: any) => m.stage && m.stage !== 'group');
   for (const m of ko) {
     if (!isTeam(m.home) || !isTeam(m.away)) continue; // 双方未定,先不开放
@@ -301,9 +306,9 @@ async function payout(matchId: string, winnerTeam: string, entries: Entry[]): Pr
 async function finalSweep(fixtures: any) {
   const cfg = await ensureConfig();
   if (cfg.sweepDone) return;
-  const teams = fixtures.teams || {};
+  const codes = teamCodeSet(fixtures);
   const koIds = (fixtures.matches || [])
-    .filter((m: any) => m.stage && m.stage !== 'group' && teams[m.home] && teams[m.away])
+    .filter((m: any) => m.stage && m.stage !== 'group' && codes.has(m.home) && codes.has(m.away))
     .map((m: any) => m.id);
   if (!koIds.length) return;
   // 所有 KO 场都开完了吗
@@ -368,9 +373,9 @@ async function runTick(): Promise<{ seeded: boolean; processed: string[] }> {
   const fixtures = await loadFixtures();
   await seedMatches(fixtures);
 
-  const teams = fixtures.teams || {};
+  const codes = teamCodeSet(fixtures);
   const ko = (fixtures.matches || [])
-    .filter((m: any) => m.stage && m.stage !== 'group' && teams[m.home] && teams[m.away]);
+    .filter((m: any) => m.stage && m.stage !== 'group' && codes.has(m.home) && codes.has(m.away));
   const processed: string[] = [];
   for (const m of ko) {
     try {
