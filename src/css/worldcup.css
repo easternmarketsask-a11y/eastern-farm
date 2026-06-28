@@ -554,6 +554,6 @@
 @media (max-width: 380px) {
   .wc-team .nm .en { display: none; }
   .wc-focus-team .fl { font-size: 34px; }
-  .wc-lotto-banner .bn { font-size: 14px; }
+  .wc-lotto-banner .bn { font-size: 12.5px; }
   .wc-match-lotto { font-size: 13.5px; }
 }
