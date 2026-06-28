@@ -1057,8 +1057,6 @@
         .catch(function (e) {
           sub.disabled = false; sub.textContent = '提交竞猜';
           if (Farm.ui) Farm.ui.toast(lottoErrMsg(e)); console.warn('[wc-lotto]', e);
-          // 次数用完 → 当场刷新成「已抽完」状态(避免反复点)
-          if (e && /resource-exhausted/.test(String(e.code || ''))) lottoRender(el, m);
         });
     };
   }
