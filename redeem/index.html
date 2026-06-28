@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex,nofollow">
-<title>东方超市 · 世界杯抽奖核销</title>
+<title>东方超市 · 世界杯竞猜核销</title>
 <style>
   :root{
     --green:#3a8c50; --green-d:#2a5c34; --leaf:#6ab04c; --amber:#f4a72c; --amber-d:#d98410;
@@ -69,8 +69,8 @@
 </head>
 <body>
 <div class="wrap">
-  <div class="brand"><span class="logo">🛒</span><h1>东方超市 · 抽奖核销</h1></div>
-  <div class="tagline">世界杯观赛台 · 实物奖券码核销台</div>
+  <div class="brand"><span class="logo">🛒</span><h1>东方超市 · 竞猜核销</h1></div>
+  <div class="tagline">世界杯观赛台 · 实物好礼券码核销台</div>
 
   <!-- 口令门 -->
   <div id="gate" class="card">
@@ -235,7 +235,7 @@ window.addEventListener('load', function () {
     try {
       var d = await api({ action: 'list' });
       $('listStat').textContent = '实物奖 ' + d.total + ' 份 · 已核销 ' + d.redeemedCount + ' · 待领 ' + (d.total - d.redeemedCount);
-      if (!d.items.length) { $('listBox').innerHTML = '<div class="muted">暂无实物中奖记录</div>'; return; }
+      if (!d.items.length) { $('listBox').innerHTML = '<div class="muted">暂无实物好礼记录</div>'; return; }
       $('listBox').innerHTML = d.items.map(function (x) {
         return '<div class="row"><span class="c">' + esc(x.code) + '</span>' +
           '<span class="p">' + esc(x.prizeCn) + ' · ' + esc(x.name) + '</span>' +

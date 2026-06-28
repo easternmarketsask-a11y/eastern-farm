@@ -271,7 +271,7 @@
         '</div>' +
       '</div>' +
       '<button class="wc-lotto-banner" id="wcLottoBanner" hidden>' +
-        '<span class="bn">🎁 淘汰赛竞猜抽奖进行中，<b>会员百分百中奖!</b> ›</span>' +
+        '<span class="bn">🎁 淘汰赛竞猜有礼进行中，<b>会员参与即得好礼!</b> ›</span>' +
       '</button>' +
       '<button class="wc-myprizes-btn" id="wcMyPrizes" hidden>🎁 我的奖品 · 兑奖码 ›</button>' +
       '<div class="wc-tabs" role="tablist">' +
@@ -803,11 +803,11 @@
   }
 
   function lottoPrizeLine() {
-    return '<div class="wc-lotto-prizes">竞猜中奖百分百！</div>';
+    return '<div class="wc-lotto-prizes">竞猜参与，人人有礼！</div>';
   }
   function lottoCard(title, bodyHtml, sub) {
     return '<div class="wc-lotto-card">' +
-      '<div class="wc-lotto-head"><span class="wc-lotto-tag">竞猜抽奖</span>' + esc(title) + '</div>' +
+      '<div class="wc-lotto-head"><span class="wc-lotto-tag">竞猜有礼</span>' + esc(title) + '</div>' +
       (sub || '') + bodyHtml + '</div>';
   }
   function teamPickBtn(m, code) {
@@ -826,12 +826,12 @@
     return lottoCard('已参与 · 等开奖',
       '<div class="wc-lotto-mypick">你猜 <span class="fl">' + (flag(picked) || '⚽') + '</span> <b>' +
         esc(isTeam(picked) ? cn(picked) : placeholderLabel(picked)) + '</b> 晋级</div>' +
-      '<div class="wc-lotto-wait">赛后开奖 · 中奖见这里 🎁</div>', '');
+      '<div class="wc-lotto-wait">赛后揭晓 · 好礼见这里 🎁</div>', '');
   }
   // ---- 中奖结果卡(转盘转完 / 再次打开时显示) ----
   function lottoResultCard(win) {
     var phys = win.prize && win.prize !== 'coins';
-    var doneTag = '<div class="wc-lotto-done-tag">✅ 本场已抽奖</div>';
+    var doneTag = '<div class="wc-lotto-done-tag">✅ 本场已参与</div>';
     if (phys) {
       return '<div class="wc-lotto-card win">' + doneTag +
         '<div class="wc-lotto-win-h">🎉 您已抽中实物!</div>' +
@@ -842,17 +842,17 @@
         '</div>';
     }
     return '<div class="wc-lotto-card win coins">' + doneTag +
-      '<div class="wc-lotto-win-h">您已抽奖，获得 <span class="coin-icon"></span> ' + (win.coins || 1000) + ' 农场币!</div>' +
+      '<div class="wc-lotto-win-h">您已参与，获得 <span class="coin-icon"></span> ' + (win.coins || 1000) + ' 农场币!</div>' +
       '<div class="wc-lotto-redeem">已自动到账 · 回农场种菜用得上</div></div>';
   }
 
-  // ---- 抽奖机会过渡卡(报名即抽:提交后先报喜,点击进入转盘)----
+  // ---- 好礼过渡卡(报名即得:提交后先报喜,点击进入转盘揭晓礼物)----
   function lottoChanceGate() {
     return '<div class="wc-lotto-card wc-gate">' +
       '<div class="wc-gate-emoji">🎉</div>' +
-      '<div class="wc-gate-h">报名成功！</div>' +
-      '<div class="wc-gate-sub">您获得一次抽奖机会</div>' +
-      '<button class="wc-lotto-submit wc-gate-go" type="button">🎡 立即抽奖</button>' +
+      '<div class="wc-gate-h">参与成功！</div>' +
+      '<div class="wc-gate-sub">您的专属好礼已就绪</div>' +
+      '<button class="wc-lotto-submit wc-gate-go" type="button">🎡 立即开启</button>' +
     '</div>';
   }
   function showChanceThenWheel(el, m, win, u) {
@@ -897,9 +897,9 @@
     var dots = '';
     for (var d = 0; d < 12; d++)
       dots += '<i class="wc-wheel-dot" style="transform:translate(-50%,-50%) rotate(' + (d * 30) + 'deg) translateY(calc(-1 * var(--wc-wheel-dotr)))"></i>';
-    var head = win.correct ? '🎯 你猜中了晋级队,手气正旺!' : '🎁 开奖啦,转一转试试手气';
+    var head = win.correct ? '🎯 你猜中了晋级队,好礼加码!' : '🎁 转一转,揭晓你的专属好礼';
     return '<div class="wc-lotto-card wc-wheel-card">' +
-      '<div class="wc-wheel-title">🎡 幸运转盘 · 揭晓你的奖</div>' +
+      '<div class="wc-wheel-title">🎡 好礼转盘 · 揭晓你的礼物</div>' +
       '<div class="wc-wheel-sub">' + head + '</div>' +
       '<div class="wc-wheel-stage">' +
         '<i class="wc-wheel-ptr"></i>' +
@@ -973,19 +973,19 @@
   function lottoRender(el, m) {
     if (!el || !isKO(m)) { if (el) el.style.display = 'none'; return; }
     if (!fbReady()) {   // standalone / no Firebase → funnel into the farm (goal: pull players in)
-      el.innerHTML = lottoCard('会员竞猜抽奖 · 中奖百分之百',
+      el.innerHTML = lottoCard('会员竞猜有礼 · 人人有份',
         '<a class="wc-lotto-btn" href="index.html">进农场登录参与 ›</a>', lottoPrizeLine());
       return;
     }
     var u = lottoUser();
     if (!u) {
-      el.innerHTML = lottoCard('会员竞猜抽奖 · 中奖百分之百',
+      el.innerHTML = lottoCard('会员竞猜有礼 · 人人有份',
         '<button class="wc-lotto-btn" data-act="login">登录参与 ›</button>', lottoPrizeLine());
       var b = el.querySelector('[data-act="login"]');
       if (b) b.onclick = function () { if (Farm.fbAuth && Farm.fbAuth.openLoginModal) Farm.fbAuth.openLoginModal(); };
       return;
     }
-    el.innerHTML = '<div class="wc-lotto-card"><div class="wc-lotto-wait">载入抽奖…</div></div>';
+    el.innerHTML = '<div class="wc-lotto-card"><div class="wc-lotto-wait">载入中…</div></div>';
     var db = Farm.fb.db;
     // 报名即抽:win 文档由 wcLotteryEnter 在提交时写入。只读它即可判断状态。
     db.collection(LOTTO_WIN_COL).doc(m.id).collection('w').doc(u.uid).get()
@@ -998,8 +998,8 @@
           else { showChanceThenWheel(el, m, win, u); }   // 已报名未揭晓 → 重新进入「抽奖机会→转盘」
           return;
         }
-        if (!lottoOpen(m)) { el.innerHTML = lottoCard('竞猜抽奖', '<div class="wc-lotto-closed">本场报名已截止 ⏱</div>', lottoPrizeLine()); return; }
-        if (!isTeam(m.home) || !isTeam(m.away)) { el.innerHTML = lottoCard('竞猜抽奖', '<div class="wc-lotto-closed">对阵未定 · 双方确定后开放竞猜</div>', lottoPrizeLine()); return; }
+        if (!lottoOpen(m)) { el.innerHTML = lottoCard('竞猜有礼', '<div class="wc-lotto-closed">本场参与已截止 ⏱</div>', lottoPrizeLine()); return; }
+        if (!isTeam(m.home) || !isTeam(m.away)) { el.innerHTML = lottoCard('竞猜有礼', '<div class="wc-lotto-closed">对阵未定 · 双方确定后开放竞猜</div>', lottoPrizeLine()); return; }
         el.innerHTML = lottoFormHtml(m);
         wireLottoForm(el, m, u);
       });
@@ -1032,7 +1032,7 @@
       if (!lottoOpen(m)) { if (Farm.ui) Farm.ui.toast('报名已截止'); lottoRender(el, m); return; }
       var fn = Farm.fb && Farm.fb.callable && Farm.fb.callable('wcLotteryEnter');
       if (!fn) { if (Farm.ui) Farm.ui.toast('暂时无法参与,请稍后重试'); return; }
-      sub.disabled = true; sub.textContent = '抽奖准备中…';
+      sub.disabled = true; sub.textContent = '好礼准备中…';
       // 报名即抽:服务器原子抽奖(扣库存+发币),返回奖品 → 直接进入「抽奖机会→转盘」
       fn({ matchId: m.id, pickedTeam: picked, name: u.name, phone: u.phone, memberId: u.memberId })
         .then(function (resp) {
@@ -1069,7 +1069,7 @@
     var note = failed ? '<div class="wc-mp-note">⚠️ 有 ' + failed + ' 条记录暂时没加载出来,请关闭重开或稍后再看</div>' : '';
     var h = '<div class="wc-mp-h">🎁 我的奖品</div>';
     if (!phys.length && coinsTotal <= 0) {
-      return h + note + '<div class="wc-mp-empty">还没有中奖记录~<br>多参与淘汰赛竞猜抽奖，中奖百分百！🎁</div>';
+      return h + note + '<div class="wc-mp-empty">还没有领奖记录~<br>多参与淘汰赛竞猜有礼，人人有份！🎁</div>';
     }
     // 实物奖品(带兑奖码;券码偶发缺失时给兜底文案,不漏掉奖品)
     if (phys.length) {
@@ -1087,7 +1087,7 @@
       h += '<div class="wc-mp-sub">🪙 农场币奖励</div>' +
         '<div class="wc-mp-coincard">' +
           '<div class="wc-mp-coin-amt"><span class="coin-icon"></span> ' + coinsTotal + '</div>' +
-          '<div class="wc-mp-coin-sub">' + drawCount + ' 次抽奖累计 · 已自动到账农场</div>' +
+          '<div class="wc-mp-coin-sub">' + drawCount + ' 次参与累计 · 已自动到账农场</div>' +
         '</div>';
     }
     return h + note;
