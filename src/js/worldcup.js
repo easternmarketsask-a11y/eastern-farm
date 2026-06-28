@@ -269,7 +269,7 @@
         '</div>' +
       '</div>' +
       '<button class="wc-lotto-banner" id="wcLottoBanner" hidden>' +
-        '<span class="bn">🎁 淘汰赛竞猜，<b>百发百中奖!</b> ›</span>' +
+        '<span class="bn">🎁 会员竞猜抽奖，<b>中奖百分之百!</b> ›</span>' +
       '</button>' +
       '<div class="wc-tabs" role="tablist">' +
         tabBtn('schedule', '赛程赛果', 'SCHEDULE') +
@@ -622,7 +622,7 @@
   // 每张"可报名"的淘汰赛卡片底部加一条竞猜徽章,点击展开报名
   function lottoChip(m) {
     if (!(isKO(m) && lottoOpen(m) && isTeam(m.home) && isTeam(m.away))) return '';
-    return '<button class="wc-match-lotto" type="button">🎁 点我竞猜抽奖 · <b>百发百中奖</b> ›</button>';
+    return '<button class="wc-match-lotto" type="button">🎁 会员竞猜抽奖，<b>中奖百分之百！</b></button>';
   }
 
   function teamRow(code, sc, state, isWin, isLose) {
@@ -807,7 +807,7 @@
   }
 
   function lottoPrizeLine() {
-    return '<div class="wc-lotto-prizes">百发百中奖 · 人人有份 🎁</div>';
+    return '<div class="wc-lotto-prizes">中奖百分之百 · 人人有份 🎁</div>';
   }
   function lottoCard(title, bodyHtml, sub) {
     return '<div class="wc-lotto-card">' +
@@ -947,13 +947,13 @@
   function lottoRender(el, m) {
     if (!el || !isKO(m)) { if (el) el.style.display = 'none'; return; }
     if (!fbReady()) {   // standalone / no Firebase → funnel into the farm (goal: pull players in)
-      el.innerHTML = lottoCard('淘汰赛竞猜 · 百发百中奖',
+      el.innerHTML = lottoCard('会员竞猜抽奖 · 中奖百分之百',
         '<a class="wc-lotto-btn" href="index.html">进农场登录参与 ›</a>', lottoPrizeLine());
       return;
     }
     var u = lottoUser();
     if (!u) {
-      el.innerHTML = lottoCard('淘汰赛竞猜 · 百发百中奖',
+      el.innerHTML = lottoCard('会员竞猜抽奖 · 中奖百分之百',
         '<button class="wc-lotto-btn" data-act="login">登录参与 ›</button>', lottoPrizeLine());
       var b = el.querySelector('[data-act="login"]');
       if (b) b.onclick = function () { if (Farm.fbAuth && Farm.fbAuth.openLoginModal) Farm.fbAuth.openLoginModal(); };
