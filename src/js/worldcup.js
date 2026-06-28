@@ -271,7 +271,10 @@
         '</div>' +
       '</div>' +
       '<button class="wc-lotto-banner" id="wcLottoBanner" hidden>' +
-        '<span class="bn">🎁 淘汰赛竞猜有礼进行中，<b>会员参与即得好礼!</b> ›</span>' +
+        '<span class="bn">' +
+          '<span class="bn-l1">🎁 淘汰赛竞猜有礼进行中</span>' +
+          '<span class="bn-l2">会员参与即得好礼 <i class="bn-go">›</i></span>' +
+        '</span>' +
       '</button>' +
       '<button class="wc-myprizes-btn" id="wcMyPrizes" hidden>🎁 我的奖品 · 兑奖码 ›</button>' +
       '<div class="wc-tabs" role="tablist">' +

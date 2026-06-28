@@ -347,8 +347,10 @@
   background: linear-gradient(100deg, #ffa42e 0%, #f4632c 60%, #e23b2e 100%);
   box-shadow: 0 5px 16px rgba(226,90,40,0.44); animation: wc-banner-pulse 2.2s ease-in-out infinite;
 }
-.wc-lotto-banner .bn { font-size: 17px; font-weight: 700; white-space: normal; line-height: 1.32; text-align: center; }
-.wc-lotto-banner .bn b { font-family: var(--font-display); letter-spacing: 0.3px; }
+.wc-lotto-banner .bn { display: flex; flex-direction: column; align-items: center; gap: 3px; text-align: center; line-height: 1.25; }
+.wc-lotto-banner .bn-l1 { font-size: 14.5px; font-weight: 600; opacity: 0.96; letter-spacing: 0.3px; }
+.wc-lotto-banner .bn-l2 { font-family: var(--font-display); font-size: 18.5px; font-weight: 800; letter-spacing: 0.6px; display: inline-flex; align-items: center; gap: 5px; }
+.wc-lotto-banner .bn-go { font-style: normal; font-weight: 700; opacity: 0.9; }
 .wc-lotto-banner:active { transform: scale(0.99); }
 @keyframes wc-banner-pulse {
   0%, 100% { box-shadow: 0 5px 16px rgba(226,90,40,0.44); }
@@ -563,7 +565,8 @@
 @media (max-width: 380px) {
   .wc-team .nm .en { display: none; }
   .wc-focus-team .fl { font-size: 34px; }
-  .wc-lotto-banner .bn { font-size: 15.5px; }
+  .wc-lotto-banner .bn-l1 { font-size: 13px; }
+  .wc-lotto-banner .bn-l2 { font-size: 16.5px; }
   .wc-match-lotto { font-size: 13.5px; }
 }
 
