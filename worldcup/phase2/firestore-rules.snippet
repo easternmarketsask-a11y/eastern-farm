@@ -3,18 +3,8 @@
 // 项目:eastern-market-members
 // 把下面这一段合并进现有 firestore.rules 的
 //   match /databases/{database}/documents { ... } 块内部。
-// 顶部的 wcEntryBeforeDeadline() 辅助函数也放在同一个 documents 块里。
 // 七月底删除观赛台时,把这一段整段删掉即可。
 // ============================================================
-
-// ---- 辅助:报名必须在开球(deadline)之前 ----
-// 若该场的 wc_lottery/{matchId} 文档还没被云函数 seed(没有 deadline 字段),
-// 则放行(云函数开奖时会用服务端 createdAt 再过滤掉迟到报名做兜底)。
-function wcEntryBeforeDeadline(matchId) {
-  return !exists(/databases/$(database)/documents/wc_lottery/$(matchId))
-    || !('deadline' in get(/databases/$(database)/documents/wc_lottery/$(matchId)).data)
-    || request.time < get(/databases/$(database)/documents/wc_lottery/$(matchId)).data.deadline;
-}
 
 // ---- 配置:人人只读,写仅限云函数(admin SDK 绕过规则)----
 match /wc_lottery_config/{doc} {
@@ -31,26 +21,21 @@ match /wc_lottery/{matchId} {
     // 只能读自己的报名
     allow read: if request.auth != null && request.auth.uid == uid;
 
-    // 只能创建自己的、一人一场一次(docId==uid)、开球前、字段干净
-    allow create: if request.auth != null
-      && request.auth.uid == uid
-      && request.resource.data.uid == uid
-      && request.resource.data.matchId == matchId
-      && request.resource.data.pickedTeam is string
-      && request.resource.data.pickedTeam.size() > 0
-      && request.resource.data.pickedTeam.size() < 8
-      && request.resource.data.createdAt == request.time
-      && request.resource.data.keys().hasOnly(['uid','memberId','name','phone','pickedTeam','matchId','createdAt'])
-      && wcEntryBeforeDeadline(matchId);
-
-    // 提交后不可改 / 不可删(锁定竞猜)
-    allow update, delete: if false;
+    // 报名即抽改版后,entries 一律由云函数 wcLotteryEnter(admin SDK)写入,
+    // 客户端不再直写 → 全部关闭(防伪造 entry)。云函数绕过规则不受影响。
+    allow write: if false;
   }
 }
 
 // ---- 中奖名单:只能读自己的,写仅限云函数 ----
 match /wc_lottery_winners/{matchId}/w/{uid} {
   allow read: if request.auth != null && request.auth.uid == uid;
+  allow write: if false;
+}
+
+// ---- 每日抽奖次数计数器:只能读自己的,写仅限云函数(事务内原子计数)----
+match /wc_lottery_daily/{doc} {
+  allow read: if request.auth != null && doc.matches(request.auth.uid + '_.*');
   allow write: if false;
 }
 
@@ -64,6 +49,8 @@ match /wc_lottery_admin/{doc} {
   allow read, write: if false;
 }
 
-// ---- 注意:农场币加值走 farm_players/{uid}.coins ----
-// 云函数用 admin SDK 增量写,绕过规则。现有 farm_players 规则
-// (用户只能写自己 uid)无需改动,保持不变即可。
+// ---- 注意:农场币不存 farm_players,存 members/{uid}.gameSave 存档(隐私) ----
+// 云函数只把中奖币写进可信的 win 文档(wc_lottery_winners/.../w/{uid}),
+// 前端读 win.coins 按 localStorage 幂等增量加到本地存档(见 lottoApplyWin)。
+// 后台绝不写 farm_players.coins —— game-sync 故意把 coins 从公开镜像删掉,写了也读不到。
+// 现有 members / farm_players 规则无需改动。
