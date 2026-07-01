@@ -129,6 +129,7 @@
     return 'awaiting';   // past kickoff, no result in the data yet (stale / not entered)
   }
   function score(m) { var lf = liveFor(m); if (lf && lf.score) return lf.score; return m.officialScore || m.apiScore || null; }
+  function shootout(m) { var lf = liveFor(m); return (lf && lf.shootout) || null; }   // [homePK, awayPK] for penalty-decided KO ties
 
   function fmtCountdown(ms) {
     if (ms <= 0) return null;
@@ -189,7 +190,9 @@
       if (!events.length) return false;
       var byPair = {}, groupGames = {};
       events.forEach(function (ev) {
-        if (((ev.season && ev.season.slug) || '') !== 'group-stage') return;  // KO stays static
+        // Process BOTH group and knockout events. KO records power the bracket auto-advance;
+        // only group games feed the standings table (gated below).
+        var isGroup = ((ev.season && ev.season.slug) || '') === 'group-stage';
         var c = ev.competitions[0];
         var home = c.competitors.filter(function (x) { return x.homeAway === 'home'; })[0] || c.competitors[0];
         var away = c.competitors.filter(function (x) { return x.homeAway === 'away'; })[0] || c.competitors[1];
@@ -200,16 +203,28 @@
         var inPlay = stt.state === 'in';
         var hs = parseInt(home.score, 10), as = parseInt(away.score, 10);
         var hasScore = !isNaN(hs) && !isNaN(as) && (finished || inPlay);
+        // Knockout winner: trust ESPN's per-competitor `winner` flag — it already accounts for
+        // extra time AND penalty shootouts. Fall back to the shootout score, then the score line.
+        var hSo = parseInt(home.shootoutScore, 10), aSo = parseInt(away.shootoutScore, 10);
+        var hasSo = !isNaN(hSo) && !isNaN(aSo) && (hSo || aSo);
+        var winner = null;
+        if (finished) {
+          if (home.winner === true) winner = hc;
+          else if (away.winner === true) winner = ac;
+          else if (hasSo && hSo !== aSo) winner = hSo > aSo ? hc : ac;
+          else if (hasScore && hs !== as) winner = hs > as ? hc : ac;
+        }
         var idToCode = {}; c.competitors.forEach(function (x) { idToCode[x.team.id] = x.team.abbreviation; });
         var grp = T[hc].group;
         var rec = {
           home: hc, away: ac, group: grp,
           score: hasScore ? [hs, as] : null,
-          finished: finished, inPlay: inPlay,
+          shootout: hasSo ? [hSo, aSo] : null,
+          finished: finished, inPlay: inPlay, winner: winner,
           scorers: espnScorers(c, idToCode)
         };
         byPair[hc + '|' + ac] = rec;
-        (groupGames[grp] = groupGames[grp] || []).push(rec);
+        if (isGroup) (groupGames[grp] = groupGames[grp] || []).push(rec);   // KO stays out of the group table
       });
       if (!Object.keys(byPair).length) return false;
       // Recompute standings per group from the COMPLETE set of live group games.
@@ -231,10 +246,17 @@
     }).catch(function (e) { console.warn('[wc] ESPN live fetch failed — using static data', e); return false; });
   }
 
-  // Live record for one of OUR matches (group stage only; KO stays static/placeholder).
+  // Live record for one of OUR matches, keyed by exact home|away. Works for group AND for
+  // R32 (our snapshot carries the fixed R32 pairings). Later KO rounds have no fixed home/away
+  // in our data, so they're matched by liveResult() (order-independent) instead.
   function liveFor(m) {
-    if (!live || !live.ok || !m || m.stage !== 'group') return null;
+    if (!live || !live.ok || !m) return null;
     return live.byPair[m.home + '|' + m.away] || null;
+  }
+  // Real result between two known teams, regardless of which side ESPN listed as home.
+  function liveResult(a, b) {
+    if (!live || !live.ok || !a || !b) return null;
+    return live.byPair[a + '|' + b] || live.byPair[b + '|' + a] || null;
   }
   function refreshLive() {
     return fetchLive().then(function (ok) {
@@ -541,7 +563,7 @@
   }
 
   function focusCardHtml(m) {
-    var state = matchState(m), p = skParts(m.kickoffUtc), s = score(m);
+    var state = matchState(m), p = skParts(m.kickoffUtc), s = score(m), so = shootout(m);
     var mineTag = involvesMine(m) ? '<span class="wc-badge mine">⭐ 我的球队</span>' : '';
     var kicker, mid, cta;
     if (state === 'live') {
@@ -560,7 +582,8 @@
     var center;
     if (state === 'done' && s) {
       var reveal = canReveal(m);
-      center = '<div class="wc-focus-score">' + (reveal ? s[0] + ' : ' + s[1] : '? : ?') + '</div>';
+      center = '<div class="wc-focus-score">' + (reveal ? (s[0] + ' : ' + s[1] +
+        (so ? '<span class="wc-focus-pk">点球 ' + so[0] + ':' + so[1] + '</span>' : '')) : '? : ?') + '</div>';
     } else if (state === 'live' && s) {
       center = '<div class="wc-focus-score live">' + s[0] + ' : ' + s[1] + '</div>';
     } else {
@@ -595,29 +618,31 @@
 
   /* ----- match card ----- */
   function matchCardHtml(m) {
-    var state = matchState(m), p = skParts(m.kickoffUtc), s = score(m);
+    var state = matchState(m), p = skParts(m.kickoffUtc), s = score(m), so = shootout(m);
     var mine = involvesMine(m);
     var spoilerHidden = state === 'done' && !canReveal(m);
     var timeBlock;
     if (state === 'live') {
       timeBlock = '<div class="t">' + p.time + '</div><div class="s live"><span class="wc-pulse"></span> 进行中</div>';
     } else if (state === 'done') {
-      timeBlock = '<div class="t">' + p.time + '</div><div class="s">FT 完场</div>';
+      timeBlock = '<div class="t">' + p.time + '</div><div class="s">FT 完场' + (so ? ' · 点球' : '') + '</div>';
     } else if (state === 'awaiting') {
       timeBlock = '<div class="t">' + p.time + '</div><div class="s">⏳ 待更新</div>';
     } else {
       timeBlock = '<div class="t">' + p.time + '</div><div class="cd" data-kickoff="' + esc(m.kickoffUtc) + '"></div>';
     }
 
-    var hw = s && s[0] > s[1], aw = s && s[1] > s[0];
+    // In a KO tie level after ET, the penalty shootout decides win/loss.
+    var hw = s && (s[0] > s[1] || (s[0] === s[1] && so && so[0] > so[1]));
+    var aw = s && (s[1] > s[0] || (s[0] === s[1] && so && so[1] > so[0]));
     var badges = matchBadges(m, state, s);
 
     return '<div class="wc-match' + (mine ? ' mine' : '') + (spoilerHidden ? ' spoiler-hidden' : '') + '" data-id="' + esc(m.id) + '">' +
       '<div class="wc-match-head">' +
         '<div class="wc-match-time">' + timeBlock + '</div>' +
         '<div class="wc-teams">' +
-          teamRow(m.home, s ? s[0] : null, state, hw, aw === false) +
-          teamRow(m.away, s ? s[1] : null, state, aw, hw === false) +
+          teamRow(m.home, s ? s[0] : null, state, hw, aw === false, so ? so[0] : null) +
+          teamRow(m.away, s ? s[1] : null, state, aw, hw === false, so ? so[1] : null) +
         '</div>' +
         '<div class="wc-match-meta">' +
           '<span class="stage">' + esc(stageShort(m)) + '</span>' +
@@ -631,14 +656,15 @@
   // 竞猜入口不再用每场卡片的促销徽章(显廉价);点开卡片展开的详情里就有竞猜表单,
   // 加顶部横幅直达 —— 列表更干净、更高档。
 
-  function teamRow(code, sc, state, isWin, isLose) {
+  function teamRow(code, sc, state, isWin, isLose, soSc) {
     var cls = '';
     if (state === 'done' && sc != null) { cls = isWin ? ' win' : (isLose ? ' lose' : ''); }
     var enHtml = isTeam(code) ? '<span class="en">' + esc(en(code)) + '</span>' : '';
     var fl = flag(code);
     var scHtml = '';
     if (sc != null && (state === 'done' || state === 'live')) {
-      scHtml = '<span class="sc' + (state === 'live' ? ' live' : '') + '">' + sc + '</span>';
+      scHtml = '<span class="sc' + (state === 'live' ? ' live' : '') + '">' + sc +
+        (soSc != null ? '<span class="pk">(' + soSc + ')</span>' : '') + '</span>';
     }
     return '<div class="wc-team' + cls + '">' +
       '<span class="fl wc-flag" data-team="' + esc(code) + '">' + (fl || '<span style="opacity:.4">◦</span>') + '</span>' +
@@ -1350,13 +1376,17 @@
     for (var i = 0; i < 16; i++) { var m = r[i]; pairs.push(m ? [m.home, m.away] : [null, null]); }
     return pairs;
   }
-  // Real winner of a played knockout match (null if undecided / drawn-pending-PK).
+  // Real winner of a played knockout match (null if undecided). Prefers the live ESPN result
+  // (its winner flag is penalty/extra-time aware), then a confirmed static final.
   function koWinner(m) {
     if (!m) return null;
-    var s = score(m);
-    if (!(m.officialFinal && s)) return null;
-    if (s[0] > s[1]) return m.home;
-    if (s[1] > s[0]) return m.away;
+    var lf = liveFor(m);
+    if (lf && lf.finished) return lf.winner;      // penalty/ET-aware; null only if truly undecided
+    var s = m.officialScore || m.apiScore;
+    if (m.officialFinal && s) {
+      if (s[0] > s[1]) return m.home;
+      if (s[1] > s[0]) return m.away;
+    }
     return null;
   }
 
@@ -1366,9 +1396,22 @@
     var ties = {};
     r32.forEach(function (p, i) { ties['r32-' + i] = { a: p[0], b: p[1] }; });
 
-    // Real results lock R32 winners (auto-advance, not user-editable).
+    // Real results lock winners (auto-advance, not user-editable) — ALL the way to the final,
+    // refreshed live every 60s. R32 comes from each fixture's own result. Each later round
+    // locks once BOTH its real feeder winners are known AND their real match has finished.
+    // Gating on both feeders being *real*-decided keeps us on the true bracket path, so the
+    // team pair is unambiguous (two teams meet in exactly one round of the real draw).
     var r32m = r32Matches(), decided = {};
     r32m.forEach(function (m, i) { var w = koWinner(m); if (w) decided['r32-' + i] = w; });
+    for (var dri = 1; dri < BR_ROUNDS.length; dri++) {
+      var dr = BR_ROUNDS[dri], dprev = BR_ROUNDS[dri - 1].id;
+      for (var dii = 0; dii < dr.n; dii++) {
+        var fa = decided[dprev + '-' + (dii * 2)], fb = decided[dprev + '-' + (dii * 2 + 1)];
+        if (!fa || !fb) continue;
+        var lr = liveResult(fa, fb);
+        if (lr && lr.finished && lr.winner) decided[dr.id + '-' + dii] = lr.winner;
+      }
+    }
     function pick(tie) { return decided[tie] || bracketPicks[tie] || null; }
 
     function slotsFor(ri) {
@@ -1407,7 +1450,8 @@
     var champ = pick('f-0');
     var picks = Object.keys(bracketPicks).length;
     root.innerHTML =
-      '<div class="wc-section-note">采用<b>真实 32强对阵</b>(来源 ESPN)。已打完的比赛自动锁定晋级者;未定的位置(如「L组第1」「小组第三」)小组赛结束后自动填入。点球队预测后续晋级,一路点到决赛预测你的冠军 — 预测只存本机。</div>' +
+      liveStamp() +
+      '<div class="wc-section-note">采用<b>真实对阵</b>(来源 ESPN)。已打完的比赛<b>自动锁定晋级者并每 60 秒实时刷新</b>,一路更新到决赛(含加时/点球);未定的位置(如「L组第1」「小组第三」)小组赛结束后自动填入。你也可以点球队预测后续晋级,一路点到决赛预测冠军 — 预测只存本机,不影响真实赛果。</div>' +
       '<div class="wc-bracket-bar">' +
         '<span class="wc-progress">你的预测 <b>' + picks + '</b> 场</span>' +
         '<button class="wc-reset" id="wcBrReset">↺ 重置预测</button>' +

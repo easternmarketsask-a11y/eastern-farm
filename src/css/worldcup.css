@@ -246,7 +246,9 @@
 .wc-sc-hidden .sc-blur { display: inline-block; min-width: 44px; text-align: center; font-family: var(--font-display); font-size: 12px; color: var(--wc-amber-deep); background: #fbeed0; border-radius: var(--radius-pill); padding: 3px 9px; }
 .wc-match.spoiler-hidden .wc-team .sc { filter: blur(7px); opacity: 0.55; }
 .wc-team .sc.live { color: var(--wc-barn-red, #c44536); }
+.wc-team .sc .pk { font-size: 11px; font-weight: 700; margin-left: 2px; color: var(--wc-faint); vertical-align: 1px; }
 .wc-focus-score.live { color: #fff; text-shadow: 0 0 12px rgba(255,255,255,0.35); }
+.wc-focus-pk { display: block; font-family: var(--font-zh); font-weight: 600; font-size: 12px; letter-spacing: 1px; color: rgba(255,255,255,0.82); margin-top: 3px; }
 
 .wc-match-meta { text-align: right; line-height: 1.45; }
 .wc-match-meta .stage { font-family: var(--font-en); font-size: 10.5px; color: var(--wc-faint); font-weight: 700; letter-spacing: 0.3px; display: block; }
