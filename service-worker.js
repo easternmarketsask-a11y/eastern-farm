@@ -62,7 +62,9 @@ self.addEventListener('notificationclick', (event) => {
   );
 });
 
-const CACHE_VERSION = 'ef-v125';
+// CACHE_VERSION 由 deploy.sh 在每次部署时自动注入时间戳（ef-YYMMDDHHMM），
+// 不再手动 +1 —— 忘 bump 会让全体 PWA 用户静默停在旧版（iOS 要删 App 才能救）。
+const CACHE_VERSION = 'ef-2607021934';
 const CACHE = 'eastern-farm-' + CACHE_VERSION;
 // Precache the FULL app shell — HTML + CSS + every JS module + data JSON — so a SW
 // update (which clears the old cache) followed by a flaky mobile network can never leave
@@ -74,7 +76,6 @@ const PRECACHE = [
   '/src/index.html',
   '/src/worldcup.html',
   '/src/css/style.css',
-  '/src/css/animations.css',
   '/src/css/worldcup.css',
   '/src/manifest.webmanifest',
   '/src/icons/icon-192.png',
