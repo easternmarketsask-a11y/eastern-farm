@@ -946,38 +946,61 @@
       }
     },
 
+    // 今天签到会发生什么（signTodayCalendar 与日历预览 UI 共用的唯一真相源，
+    // 别在两处各写一份镜像逻辑——2026-07-02 抽取）。
+    //   signed   已签过
+    //   continue 昨天签了且周期中段 → 连签 +1
+    //   repair   恰好错过一天、周期中段、本自然周补签卡未用 → 视同连签 +1
+    //   newcycle 昨天刚满 7 天 → 开新周期第 1 天
+    //   reset    断签 ≥2 天或首签 → 第 1 天重开
+    _calendarPlan() {
+      const today = getDateString();
+      const cal = this.data.loginCalendar;
+      if (cal.lastSignDate === today) return { kind: 'signed' };
+      const yesterday = getDateString(new Date(Date.now() - 86400000));
+      const dayBefore = getDateString(new Date(Date.now() - 2 * 86400000));
+      if (cal.lastSignDate === yesterday && cal.dayIndex >= 1 && cal.dayIndex < 7) return { kind: 'continue' };
+      if (cal.lastSignDate === yesterday && cal.dayIndex >= 7) return { kind: 'newcycle' };
+      // 补签卡（cozy 缓冲）：错过恰好一天且本周没用过 → 帮你把昨天补上。
+      // 断更久（≥2 天空档）不适用——那已经不是「忘了一天」而是离开了。
+      if (cal.lastSignDate === dayBefore && cal.dayIndex >= 1 && cal.dayIndex < 7
+          && cal.repairWeekId !== getWeekId()) return { kind: 'repair' };
+      return { kind: 'reset', hadHistory: cal.lastSignDate !== '' };
+    },
+
     // Sign in to today's slot of the 7-day calendar. Handles the
     // today/yesterday/gap bookkeeping and persists. Does NOT grant the
     // reward itself (that's login-calendar.js's job, via addCoins/addSeed/
     // addEastPoints) — this just advances the cycle pointer.
     //
-    // Returns { dayIndex, reset } where dayIndex is 1-7 (the day just
-    // claimed) and reset is true if a missed day started a fresh cycle.
+    // Returns { dayIndex, reset, repaired } where dayIndex is 1-7 (the day
+    // just claimed), reset is true if a missed gap started a fresh cycle,
+    // repaired is true if the weekly repair card bridged a 1-day miss.
     signTodayCalendar() {
       const today = getDateString();
       const cal = this.data.loginCalendar;
-      if (cal.lastSignDate === today) {
+      const plan = this._calendarPlan();
+      if (plan.kind === 'signed') {
         // Already signed today — no-op. claimed:false lets the caller skip
         // re-granting the reward (guards rapid double-tap double-pay).
-        return { dayIndex: cal.dayIndex, reset: false, claimed: false };
+        return { dayIndex: cal.dayIndex, reset: false, repaired: false, claimed: false };
       }
-      const yesterday = getDateString(new Date(Date.now() - 86400000));
       let reset = false;
-      if (cal.lastSignDate === yesterday && cal.dayIndex >= 1 && cal.dayIndex < 7) {
+      let repaired = false;
+      if (plan.kind === 'continue') {
         cal.dayIndex += 1;
-      } else if (cal.lastSignDate === yesterday && cal.dayIndex >= 7) {
-        // Completed a full cycle yesterday — start a fresh one today.
-        cal.dayIndex = 1;
-        cal.cycleStartDate = today;
+      } else if (plan.kind === 'repair') {
+        cal.dayIndex += 1;
+        cal.repairWeekId = getWeekId();   // 每自然周一张，用掉记周号
+        repaired = true;
       } else {
-        // First sign-in ever, or a gap of ≥1 missed day.
-        reset = (cal.lastSignDate !== '' && cal.lastSignDate !== yesterday);
+        reset = plan.kind === 'reset' && plan.hadHistory;
         cal.dayIndex = 1;
         cal.cycleStartDate = today;
       }
       cal.lastSignDate = today;
       this.save();
-      return { dayIndex: cal.dayIndex, reset, claimed: true };
+      return { dayIndex: cal.dayIndex, reset, repaired, claimed: true };
     },
 
     getDateString,

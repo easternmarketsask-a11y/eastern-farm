@@ -135,12 +135,18 @@
       // raw stored dayIndex showed phantom states — "Day 8 ready" with all cells
       // ticked after a finished week, or "Day 4 ready" right before a gap reset
       // that actually grants Day 1.
-      const yesterday = Farm.state.getDateString(new Date(Date.now() - 86400000));
+      // 用 state._calendarPlan()（签到落账的同一真相源）判断预览：continue 与
+      // repair（补签卡接上昨天的空档）都算连签，其余情况回到第 1 天。
+      const plan = Farm.state._calendarPlan ? Farm.state._calendarPlan() : null;
       let dayIndex = rawDayIndex;  // days already completed in the cycle being shown
       if (!alreadySignedToday) {
-        const continues = cal.lastSignDate === yesterday && rawDayIndex >= 1 && rawDayIndex < 7;
+        const continues = plan
+          ? (plan.kind === 'continue' || plan.kind === 'repair')
+          : (cal.lastSignDate === Farm.state.getDateString(new Date(Date.now() - 86400000))
+             && rawDayIndex >= 1 && rawDayIndex < 7);
         if (!continues) dayIndex = 0;   // gap or completed cycle → fresh week, day 1 claimable
       }
+      const willRepair = !alreadySignedToday && plan && plan.kind === 'repair';
 
       const cells = REWARDS.map((r, idx) => {
         const dayNum = idx + 1;
@@ -156,9 +162,14 @@
       }).join('');
 
       const nextDay = alreadySignedToday ? null : (dayIndex + 1);
-      const statusText = alreadySignedToday
+      let statusText = alreadySignedToday
         ? (lang === 'en' ? "You've signed in today — come back tomorrow!" : '今天已签到，明天再来吧！')
         : (lang === 'en' ? `Day ${nextDay} ready to claim` : `第 ${nextDay} 天奖励可领取`);
+      if (willRepair) {
+        statusText += lang === 'en'
+          ? '<br><span style="font-size:12px;color:var(--warm-text-soft);">🩹 Missed yesterday — this week\'s repair card will bridge it, streak continues!</span>'
+          : '<br><span style="font-size:12px;color:var(--warm-text-soft);">🩹 昨天没来？本周补签卡帮你接上，连签不断！</span>';
+      }
 
       const html = `
         <h2 class="modal-title">📅 ${lang === 'en' ? '7-Day Sign-in' : '七日签到'}</h2>
@@ -212,7 +223,12 @@
           ? `📅 Day ${dayIndex} sign-in: ${rewardLine(reward, lang)}`
           : `📅 第 ${dayIndex} 天签到：${rewardLine(reward, lang)}`;
         Farm.ui.toast(msg, 3200);
-        if (result.reset) {
+        if (result.repaired) {
+          // 正向表达（cozy）：不说「你断签了」，说「帮你补上了」。
+          setTimeout(() => Farm.ui.toast(lang === 'en'
+            ? '🩹 Weekly repair card used — yesterday is bridged, streak continues!'
+            : '🩹 用掉本周补签卡，昨天帮你补上了，连签不断！', 3200), 1100);
+        } else if (result.reset) {
           Farm.ui.toast(lang === 'en' ? 'A fresh week begins!' : '新的一轮开始啦', 2600);
         }
         // 签完直接收起（toast 已说明奖励）——不再回弹日历让用户多关一次
