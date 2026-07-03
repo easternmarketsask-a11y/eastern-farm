@@ -44,7 +44,14 @@ bash deploy.sh "本次改动说明"   # 自定义提交信息
 
 Windows 也可**双击 `deploy.bat`**。脚本用「快进推送到 main」(`git push origin HEAD:main`)——
 不切换你的分支、不会把你留在 main；若 main 上有分支外的独立改动会安全失败并提示先 merge。
-上线约 1–2 分钟生效；iPhone 看到旧版需删 App 重装清 PWA 缓存。
+上线约 1–2 分钟生效。
+
+**deploy.sh 自带两件事（2026-07-02 起）：**
+1. **自动注入 SW 缓存版本**：`service-worker.js` 的 `CACHE_VERSION` 每次部署自动改成
+   `ef-YYMMDDHHMM` 时间戳，**不要再手动 +1**。已装 PWA 下次打开自动刷新，无需删 App。
+2. **发布闸门**：全部 JS `node --check` + 无头 Chrome 冒烟启动（有未捕获异常 → 部署中止）。
+   误报时可 `SKIP_SMOKE=1 bash deploy.sh` 跳过冒烟（语法检查不可跳）。
+   冒烟依赖本机 Chrome + python，缺了会警告并降级为仅语法检查。
 
 ---
 
