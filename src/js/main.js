@@ -65,21 +65,27 @@
       if (bootDone && !hadSave) _storageBroken = true;
     } catch (_) {}
 
-    // 1. Load data files in parallel. Each loader is wrapped in .catch so a single
-    // failed/hung fetch on a flaky mobile network can NEVER reject the whole boot —
-    // that was leaving the splash up with a dead "进入农场" button (Chris's recurring
+    // 1. Load data files in parallel. Each loader is wrapped so a single failed/hung
+    // fetch on a flaky mobile network can NEVER reject the whole boot — that was
+    // leaving the splash up with a dead "进入农场" button (Chris's recurring
     // "stuck, can't enter"). Each loader already degrades internally on failure.
-    await Promise.all([
-      Farm.i18n.load(),
-      Farm.crops.load(),
-      Farm.rewards.load(),
-      Farm.achievements.load(),
-      Farm.epShop.load(),
-      Farm.daily.load(),
-      Farm.aiNeighbors.load(),
-      Farm.tasks.load(),
-      Farm.kitchen.load(),
-    ].map(function (p) { return (p && p.catch) ? p.catch(function (e) { console.warn('[boot] a data loader failed (continuing):', e); }) : p; }));
+    //
+    // ⚠️ 关键加固（2026-07-03，Chris 手机开屏冻死的根因）：模块对象本身也可能
+    // 不存在——弱网/部署构建窗口里任何一个 <script> 加载失败（例如新增的
+    // kitchen.js 不在旧 SW 缓存里、网络又恰好 404），直接写 Farm.kitchen.load()
+    // 会在 await 之前同步 TypeError，把 boot 炸死在 wireSplash 之前 → 开屏按钮
+    // 全死、页面「完全不能动」。所以必须按名字取模块、逐个 try：缺哪个跳哪个
+    // （所有消费方都有 Farm.xxx && 守卫，缺模块只是少个功能，绝不能是死机）。
+    await Promise.all(['i18n', 'crops', 'rewards', 'achievements', 'epShop', 'daily',
+      'aiNeighbors', 'tasks', 'kitchen'].map(function (k) {
+      try {
+        const m = Farm[k];
+        const p = (m && typeof m.load === 'function') ? m.load() : null;
+        return (p && p.catch)
+          ? p.catch(function (e) { console.warn('[boot] loader failed (continuing):', k, e); })
+          : p;
+      } catch (e) { console.warn('[boot] loader threw (continuing):', k, e); return null; }
+    }));
 
     // 1b. 邀请链接：进场就把 ?ref=<会员id> 存下（登录后 applyReferral 发奖）。
     try {
@@ -192,7 +198,7 @@
       }
 
       try { checkDailyLogin(); } catch (e) { console.warn('[boot] checkDailyLogin failed', e); }
-      Farm.achievements.checkAll();
+      if (Farm.achievements && Farm.achievements.checkAll) Farm.achievements.checkAll();
       refreshTodayBadge();
       // First-time welcome overlay (3-step). Defer past the daily-login toast
       // so it lands on a clean screen, not under another notification.
@@ -745,10 +751,26 @@
     };
   }
 
-  // Start when DOM ready
+  // Start when DOM ready. boot 内部已层层兜底，这里是最后一道防线
+  // （2026-07-03）：若 boot 仍在 wireSplash 之前致命失败，给开屏按钮接一个
+  // 最小 dismiss —— 页面永远不允许「完全不能动」。
+  function bootSafe() {
+    let p;
+    try { p = boot(); } catch (e) { p = Promise.reject(e); }
+    if (p && p.catch) p.catch(function (e) {
+      console.error('[boot] FATAL before splash wiring — installing emergency dismiss', e);
+      try {
+        const splash = document.getElementById('splash');
+        ['splashStart', 'splashLogin', 'splashWorldcup'].forEach(function (id) {
+          const b = document.getElementById(id);
+          if (b && !b.onclick) b.onclick = function () { if (splash && splash.parentNode) splash.remove(); };
+        });
+      } catch (_) {}
+    });
+  }
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', boot);
+    document.addEventListener('DOMContentLoaded', bootSafe);
   } else {
-    boot();
+    bootSafe();
   }
 })();
