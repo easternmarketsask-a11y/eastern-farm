@@ -61,10 +61,11 @@
     maybeStart() {
       const d = Farm.state.data;
       if (!d || d.spotlightDone) return;
-      // The spotlight points at .plot / .warehouse-img DOM, which the buildable
-      // maps hide (they're a canvas). Skip it on either canvas view — the guide
-      // modal + intuitive tap-to-plant cover onboarding. Classic view keeps it.
-      if ((Farm.mapView && Farm.mapView._on) || (Farm.isoView && Farm.isoView._on)) return;
+      // iso（默认视图）自 2026-07-02 起支持：isoView.plotScreenRect/barnScreenRect
+      // 提供 canvas 上的目标矩形。仅剩 topdown 像素视图仍无定位 API → 跳过
+      // （它不是默认视图，留给 guide 弹窗兜底）。
+      if (Farm.mapView && Farm.mapView._on) return;
+      if (Farm.isoView && Farm.isoView._on && !Farm.isoView.plotScreenRect) return;
       // Only for genuine newcomers — never grown anything yet.
       if ((d.cropsEverGrown || []).length > 0) { d.spotlightDone = true; Farm.state.save(); return; }
       if (this._active) return;
@@ -120,11 +121,18 @@
         : '点谷仓，把菜卖给东方超市换农场币。';
     },
 
-    _targetEl() {
+    // 目标屏幕矩形 {left, top, width, height} —— classic 视图查 DOM，
+    // iso 视图问 isoView 的坐标 API。返回 null = 暂无目标（气泡居中显示）。
+    _targetRect() {
+      const iso = Farm.isoView && Farm.isoView._on;
       if (this._step === 0 || this._step === 1) {
-        return document.querySelector('.plot[data-plot-id="' + this._targetIdx + '"]');
+        if (iso) return Farm.isoView.plotScreenRect(this._targetIdx);
+        const el = document.querySelector('.plot[data-plot-id="' + this._targetIdx + '"]');
+        return el ? el.getBoundingClientRect() : null;
       }
-      return document.querySelector('.warehouse-img');
+      if (iso) return Farm.isoView.barnScreenRect ? Farm.isoView.barnScreenRect() : null;
+      const el = document.querySelector('.warehouse-img');
+      return el ? el.getBoundingClientRect() : null;
     },
 
     _update() {
@@ -163,7 +171,8 @@
         }
         // The barn sits at the bottom of the farm — usually below the fold.
         // Scroll it into view once so the spotlight isn't pointing off-screen.
-        if (!this._scrolled2 && !modalOpen()) {
+        // (classic 视图专用；iso 是全屏 canvas 无滚动，谷仓由相机取景保证在画面里)
+        if (!this._scrolled2 && !modalOpen() && !(Farm.isoView && Farm.isoView._on)) {
           const barn = document.querySelector('.warehouse-img');
           if (barn) { barn.scrollIntoView({ block: 'center', behavior: 'smooth' }); this._scrolled2 = true; }
         }
@@ -173,14 +182,20 @@
       if (modalOpen()) { this._el.style.display = 'none'; return; }
       this._el.style.display = 'block';
 
-      const target = this._targetEl();
+      let r = this._targetRect();
+      // iso 相机可能把目标平移出视口——目标中心在屏幕外时退回居中气泡，
+      // 免得聚光洞指向看不见的地方。
+      if (r) {
+        const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+        if (cx < 0 || cx > window.innerWidth || cy < 0 || cy > window.innerHeight) r = null;
+      }
       const hole = document.getElementById('slHole');
       const bubble = document.getElementById('slBubble');
       const bubbleText = document.getElementById('slBubbleText');
       const arrow = document.getElementById('slArrow');
       bubbleText.textContent = this._stepCopy();
 
-      if (!target) {
+      if (!r) {
         // Target not on screen yet — show bubble centered, no hole.
         hole.style.display = 'none';
         arrow.style.display = 'none';
@@ -190,7 +205,8 @@
         return;
       }
 
-      const r = target.getBoundingClientRect();
+      r = { left: r.left, top: r.top, width: r.width, height: r.height,
+            right: r.left + r.width, bottom: r.top + r.height };
       const pad = 8;
       hole.style.display = 'block';
       hole.style.left = (r.left - pad) + 'px';

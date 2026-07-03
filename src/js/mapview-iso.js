@@ -495,6 +495,30 @@
       return { target: { getBoundingClientRect: () => rect } };
     },
 
+    // ===== spotlight 新手引导用的屏幕矩形（CSS px，含相机/缩放）=====
+    // spotlight.js 在 iso 视图下用这两个 API 定位「点这块地」「点谷仓」，
+    // 不再因 canvas 无 DOM 而整段跳过手把手引导（2026-07-02 移植）。
+    plotScreenRect(idx) {
+      if (!this._on || !this._cv) return null;
+      const p = (Farm.state.data.plots || [])[idx];
+      if (!p) return null;
+      const c = this._cell(this._plotGX(idx), this._plotGY(idx));
+      const r = this._cv.getBoundingClientRect();
+      const tw = this._tw(), th = this._th();
+      return { left: r.left + c.x - tw / 2, top: r.top + c.y - th * 1.6, width: tw, height: th * 2.2 };
+    },
+    barnScreenRect() {
+      if (!this._on || !this._cv) return null;
+      const map = Farm.state.data.map || [];
+      const o = map.find(m => m && m.type === 'barn');
+      if (!o) return null;
+      const b = BUILDINGS.barn;
+      const c = this._cell(o.gx + (b.w - 1) / 2, o.gy + (b.h - 1) / 2);
+      const r = this._cv.getBoundingClientRect();
+      const s = this._tw() * b.sc;   // 建筑贴图宽度近似
+      return { left: r.left + c.x - s / 2, top: r.top + c.y - s * 0.95, width: s, height: s * 1.05 };
+    },
+
     // ===== editor (build / terrain / decoration), iso-aware =====
     _terrain() { return (Farm.state.data.mapTerrain = Farm.state.data.mapTerrain || {}); },
     _plotCellSet() {
