@@ -32,6 +32,11 @@
   // written by OTHER players to our farm_players doc, so their amount is
   // untrusted — clamp to this to block crafted huge-amount exploits.
   const MAX_GIFT_COINS = 200;
+  // 周榜官方发奖（weeklyLeaderboardRewards 云函数）冠军 2000 币，走同一个
+  // pendingGifts 收件箱 — 旧钳制把 2000 吞成 200（冠军只到账 10%）。
+  // fromUid:'system' 理论上可被其他玩家伪造，但农场币本就是客户端权威
+  // （本地存档说了算），此钳制只防意外灌币，2000 上限风险可接受。
+  const MAX_SYSTEM_GIFT_COINS = 2000;
   let _lastSyncAt = 0;
   let _pendingTimer = null;
   let _dirty = false;   // true when local state changed since the last successful cloud push
@@ -774,7 +779,9 @@
             // non-positive and clamp to the largest legit single grant.
             const amt = Number(g.payload.amount);
             if (Number.isFinite(amt) && amt > 0) {
-              Farm.state.addCoins(Math.min(amt, MAX_GIFT_COINS));
+              const isSystemWeekly = g.fromUid === 'system'
+                && typeof g.id === 'string' && g.id.indexOf('weekly_') === 0;
+              Farm.state.addCoins(Math.min(amt, isSystemWeekly ? MAX_SYSTEM_GIFT_COINS : MAX_GIFT_COINS));
             }
           }
           // 'sticker' carries no payout — it's a friendly hello (notice only,
