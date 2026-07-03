@@ -1,0 +1,111 @@
+{
+  "_comment": "小东厨房菜谱（kitchen.js 加载）。ingredients 消耗仓库作物；sell_price ≈ 原料散卖价 ×2~2.5（加工溢价，给长线作物需求端出口）；xp ≈ 原料 XP 合计 ×1.5。改这里即可调菜谱，无需动代码。unlock_level 控制解锁。",
+  "_schema_version": 1,
+
+  "recipes": [
+    {
+      "id": "shanghai_stirfry",
+      "name_zh": "清炒上海苗",
+      "name_en": "Stir-fried Bok Choy",
+      "icon": "🥬",
+      "ingredients": { "shanghai_miao": 3 },
+      "cook_minutes": 6,
+      "sell_price": 125,
+      "xp": 9,
+      "unlock_level": 3,
+      "tip_zh": "猛火快炒，出锅前一点蒜末，就是店里最常卖的家常味。",
+      "tip_en": "High heat, quick toss, garlic at the end — the everyday classic."
+    },
+    {
+      "id": "smashed_cucumber",
+      "name_zh": "拍黄瓜",
+      "name_en": "Smashed Cucumber Salad",
+      "icon": "🥒",
+      "ingredients": { "cucumber": 2 },
+      "cook_minutes": 8,
+      "sell_price": 585,
+      "xp": 30,
+      "unlock_level": 4,
+      "tip_zh": "刀背一拍更入味，蒜末香醋一拌，夏天的开胃第一名。",
+      "tip_en": "Smack it with the flat of the knife — garlic and black vinegar do the rest."
+    },
+    {
+      "id": "tomato_eggs",
+      "name_zh": "番茄炒蛋",
+      "name_en": "Tomato & Scrambled Eggs",
+      "icon": "🍳",
+      "ingredients": { "tomato": 2 },
+      "cook_minutes": 15,
+      "sell_price": 830,
+      "xp": 36,
+      "unlock_level": 4,
+      "tip_zh": "国民下饭菜。鸡蛋用自家鸡舍的，先炒蛋后下番茄。",
+      "tip_en": "The national comfort dish — eggs first, tomatoes after (coop eggs included)."
+    },
+    {
+      "id": "chive_pockets",
+      "name_zh": "韭菜盒子",
+      "name_en": "Chive Pockets",
+      "icon": "🥟",
+      "ingredients": { "jiucai": 3 },
+      "cook_minutes": 25,
+      "sell_price": 745,
+      "xp": 36,
+      "unlock_level": 5,
+      "tip_zh": "韭菜 + 鸡蛋 + 粉丝，烙到两面金黄。割三茬正好包一锅。",
+      "tip_en": "Chives, egg and glass noodles, pan-fried golden — three cuttings make one batch."
+    },
+    {
+      "id": "baby_cabbage_soup",
+      "name_zh": "上汤娃娃菜",
+      "name_en": "Baby Cabbage in Broth",
+      "icon": "🍲",
+      "ingredients": { "wa_wa_cai": 2 },
+      "cook_minutes": 12,
+      "sell_price": 315,
+      "xp": 15,
+      "unlock_level": 3,
+      "tip_zh": "皮蛋咸蛋吊出的上汤，娃娃菜煮到透亮，清爽不寡淡。",
+      "tip_en": "Century-egg broth, cabbage simmered translucent — light but never bland."
+    },
+    {
+      "id": "wintermelon_soup",
+      "name_zh": "冬瓜排骨汤",
+      "name_en": "Winter Melon Pork Rib Soup",
+      "icon": "🍜",
+      "ingredients": { "dong_gua": 1 },
+      "cook_minutes": 40,
+      "sell_price": 925,
+      "xp": 41,
+      "unlock_level": 7,
+      "tip_zh": "夏天的下火汤。冬瓜炖到半透明，汤色清甜。",
+      "tip_en": "Summer's cooling soup — simmer until the melon turns translucent."
+    },
+    {
+      "id": "steamed_fish_ginger",
+      "name_zh": "姜丝蒸鱼",
+      "name_en": "Steamed Fish with Ginger",
+      "icon": "🐟",
+      "ingredients": { "sheng_jiang": 1 },
+      "cook_minutes": 60,
+      "sell_price": 2080,
+      "xp": 87,
+      "unlock_level": 9,
+      "tip_zh": "嫩姜切细丝铺满鱼身，蒸八分钟淋热油——姜是这道菜的灵魂。",
+      "tip_en": "Julienned young ginger, eight minutes of steam, hot oil to finish."
+    },
+    {
+      "id": "corn_pine_nuts",
+      "name_zh": "松仁玉米",
+      "name_en": "Corn with Pine Nuts",
+      "icon": "🌽",
+      "ingredients": { "yu_mi": 2 },
+      "cook_minutes": 45,
+      "sell_price": 2140,
+      "xp": 84,
+      "unlock_level": 10,
+      "tip_zh": "甜玉米粒 + 松子 + 青豆，加一小勺糖，孩子的最爱。",
+      "tip_en": "Sweet kernels, pine nuts, peas, a spoonful of sugar — every kid's favourite."
+    }
+  ]
+}

@@ -78,6 +78,7 @@
       Farm.daily.load(),
       Farm.aiNeighbors.load(),
       Farm.tasks.load(),
+      Farm.kitchen.load(),
     ].map(function (p) { return (p && p.catch) ? p.catch(function (e) { console.warn('[boot] a data loader failed (continuing):', e); }) : p; }));
 
     // 1b. 邀请链接：进场就把 ?ref=<会员id> 存下（登录后 applyReferral 发奖）。
@@ -331,6 +332,7 @@
       { a: 'shop', icon: '🛒', zh: '种子店', en: 'Seeds' },
       { a: 'tasks', icon: '📋', zh: '任务', en: 'Tasks' },
       { a: 'orders', icon: '📦', zh: '东超订单', en: 'Orders' },
+      { a: 'kitchen', icon: '🍳', zh: '小东厨房', en: 'Kitchen' },
       { a: 'community', icon: '🏘', zh: '社区', en: 'Community' },
       { a: 'store', icon: '🛍️', zh: '农场商城', en: 'Mall' },
       { a: 'expand', icon: '🗺️', zh: '扩建农场', en: 'Expand' },
@@ -350,6 +352,7 @@
           case 'shop': Farm.shop.open(); break;
           case 'tasks': Farm.tasks.open(); break;
           case 'orders': if (Farm.orders) Farm.orders.open(); break;
+          case 'kitchen': if (Farm.kitchen) Farm.kitchen.open(); break;
           case 'community': if (Farm.neighbors) Farm.neighbors.open(); break;
           case 'store': if (Farm.epShop) Farm.epShop.open(); break;
           case 'expand': if (Farm.isoView && Farm.isoView._tryUnlockLand) Farm.isoView._tryUnlockLand(); else if (Farm.ui) Farm.ui.toast('扩建仅在农场视图可用'); break;

@@ -89,6 +89,7 @@ const PRECACHE = [
   '/src/js/social-steal.js', '/src/js/neighbors.js', '/src/js/home-report.js',
   '/src/js/daily.js', '/src/js/login-calendar.js', '/src/js/farm.js', '/src/js/tending.js',
   '/src/js/seasons.js', '/src/js/harvest-status.js', '/src/js/warehouse.js', '/src/js/orders.js',
+  '/src/js/kitchen.js',
   '/src/js/shop.js', '/src/js/tasks.js', '/src/js/events.js', '/src/js/storekeeper.js',
   '/src/js/rewards.js', '/src/js/achievements.js', '/src/js/tutorial.js', '/src/js/guide.js',
   '/src/js/spotlight.js', '/src/js/login-nudge.js', '/src/js/promo.js', '/src/js/share.js',
@@ -96,7 +97,7 @@ const PRECACHE = [
   '/src/js/worldcup.js',
   '/data/achievements.json', '/data/ai-neighbors.json', '/data/coupons.json', '/data/crops.json',
   '/data/ep-shop.json', '/data/events.json', '/data/i18n.json', '/data/news.json', '/data/tasks.json',
-  '/data/wc2026.json',
+  '/data/recipes.json', '/data/wc2026.json',
 ];
 
 self.addEventListener('install', (event) => {

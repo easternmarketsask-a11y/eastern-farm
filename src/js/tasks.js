@@ -148,8 +148,8 @@
           if (t.type === 'buy_seed') t.progress++;
           if (t.type === 'spend_coins' && payload && payload.cost > 0) t.progress += payload.cost;
         }
-        // 真实到账金币：仓库卖货(deliver) 与 小东订单(order) 都算
-        if ((eventType === 'deliver' || eventType === 'order')
+        // 真实到账金币：仓库卖货(deliver)、小东订单(order)、厨房出菜(cook) 都算
+        if ((eventType === 'deliver' || eventType === 'order' || eventType === 'cook')
             && t.type === 'earn_coins' && payload && payload.coins > 0) {
           t.progress += payload.coins;
         }
