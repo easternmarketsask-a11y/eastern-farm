@@ -103,7 +103,8 @@
       if (Farm.audio) Farm.audio.play('buy');
       // Refresh shop UI inline
       this.open();
-      if (Farm.tasks) Farm.tasks.onEvent('buy_seed', { cropId });
+      // cost 供周任务 spend_coins 计数（真实花费，含特价折扣）
+      if (Farm.tasks) Farm.tasks.onEvent('buy_seed', { cropId, cost: price });
     },
 
     // ============ Plant flow ============

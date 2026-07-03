@@ -77,6 +77,7 @@
       Farm.epShop.load(),
       Farm.daily.load(),
       Farm.aiNeighbors.load(),
+      Farm.tasks.load(),
     ].map(function (p) { return (p && p.catch) ? p.catch(function (e) { console.warn('[boot] a data loader failed (continuing):', e); }) : p; }));
 
     // 1b. 邀请链接：进场就把 ?ref=<会员id> 存下（登录后 applyReferral 发奖）。
