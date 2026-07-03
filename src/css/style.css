@@ -3743,6 +3743,16 @@ body.mapmode #warehouseBtn { display: none !important; }
   pointer-events: none;
   z-index: 6;
 }
+/* 种植选择器的时长分组标题（⚡马上好 / 🍚饭后好 / 🌙睡一觉好） */
+.seed-group-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--warm-text-soft);
+  padding: 10px 4px 4px;
+  letter-spacing: 0.3px;
+}
+.seed-group-title:first-child { padding-top: 2px; }
+
 /* 应季 +15% 徽章（仓库行 / 种植选择器）—— 2026-07-02 season 接线 */
 .season-tag {
   display: inline-block;

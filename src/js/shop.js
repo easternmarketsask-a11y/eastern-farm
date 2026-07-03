@@ -126,35 +126,56 @@
       // market purchase price (what Eastern Market will pay for the
       // harvested crop), reinforcing the brand connection too.
       const marketPriceLabel = lang === 'en' ? 'Market price' : '市场收购价';
+      const renderCard = (id) => {
+        const c = Farm.crops.get(id);
+        if (!c) return '';
+        const locked = c.unlock_level > playerLevel;
+        const owned = seeds[id] || 0;
+        // 应季作物：收购价 +15%（与仓库结算同源），加当季徽章
+        const inSeason = Farm.crops.isInSeason && Farm.crops.isInSeason(c);
+        const unit = Farm.crops.sellPriceOf ? Farm.crops.sellPriceOf(c) : c.sell_price;
+        const priceHtml = inSeason
+          ? `<span class="seed-value"><strong style="color:var(--barn-red);">${coin}${unit}</strong> <span class="season-tag">${Farm.crops.seasonEmoji()}${lang === 'en' ? 'In season' : '应季'}</span></span>`
+          : `<span class="seed-value">${coin}${unit}</span>`;
+        return `
+          <div class="seed-card ${locked ? 'locked' : ''}" data-crop-id="${id}" data-action="plant">
+            <span class="seed-icon">${cropFace(c)}</span>
+            <div>
+              <div class="seed-name">${c[nameKey]}</div>
+              <div class="seed-meta">
+                <span class="seed-sell"><span class="seed-label">${marketPriceLabel}</span>${priceHtml}</span>
+                <span class="seed-time">⏱${formatMinutes(c.grow_minutes)}</span>
+                <span class="seed-owned">× ${owned}</span>
+              </div>
+            </div>
+          </div>
+        `;
+      };
+      // 按生长时长分三组，把「早中晚回访节奏」直接教给玩家：
+      // 会话内连种 / 饭后回来收 / 睡前种睡醒收（离线档现在是最高币/h，见 crops.json 重调）
+      const GROUPS = [
+        { max: 40,       zh: '⚡ 马上好（40 分钟内）',   en: '⚡ Quick (under 40 min)' },
+        { max: 180,      zh: '🍚 饭后好（1–3 小时）',    en: '🍚 A meal away (1–3 h)' },
+        { max: Infinity, zh: '🌙 睡一觉好（3 小时以上）', en: '🌙 Overnight (3 h+)' },
+      ];
+      const sorted = ownedCropIds
+        .map(id => Farm.crops.get(id)).filter(Boolean)
+        .sort((a, b) => a.grow_minutes - b.grow_minutes);
+      let lastGroup = -1;
+      const listHtml = sorted.map(c => {
+        const gi = GROUPS.findIndex(g => c.grow_minutes <= g.max);
+        let header = '';
+        if (gi !== lastGroup) {
+          lastGroup = gi;
+          header = `<div class="seed-group-title">${lang === 'en' ? GROUPS[gi].en : GROUPS[gi].zh}</div>`;
+        }
+        return header + renderCard(c.id);
+      }).join('');
       const html = `
         <h2 class="modal-title">${Farm.i18n.t('btn_plant')}</h2>
         <p class="modal-subtitle">${lang === 'en' ? 'Choose a seed to plant' : '选择要种的种子'}</p>
         <div class="seed-list">
-          ${ownedCropIds.map(id => {
-            const c = Farm.crops.get(id);
-            if (!c) return '';
-            const locked = c.unlock_level > playerLevel;
-            const owned = seeds[id] || 0;
-            // 应季作物：收购价 +15%（与仓库结算同源），加当季徽章
-            const inSeason = Farm.crops.isInSeason && Farm.crops.isInSeason(c);
-            const unit = Farm.crops.sellPriceOf ? Farm.crops.sellPriceOf(c) : c.sell_price;
-            const priceHtml = inSeason
-              ? `<span class="seed-value"><strong style="color:var(--barn-red);">${coin}${unit}</strong> <span class="season-tag">${Farm.crops.seasonEmoji()}${lang === 'en' ? 'In season' : '应季'}</span></span>`
-              : `<span class="seed-value">${coin}${unit}</span>`;
-            return `
-              <div class="seed-card ${locked ? 'locked' : ''}" data-crop-id="${id}" data-action="plant">
-                <span class="seed-icon">${cropFace(c)}</span>
-                <div>
-                  <div class="seed-name">${c[nameKey]}</div>
-                  <div class="seed-meta">
-                    <span class="seed-sell"><span class="seed-label">${marketPriceLabel}</span>${priceHtml}</span>
-                    <span class="seed-time">⏱${formatMinutes(c.grow_minutes)}</span>
-                    <span class="seed-owned">× ${owned}</span>
-                  </div>
-                </div>
-              </div>
-            `;
-          }).join('')}
+          ${listHtml}
         </div>
         <div class="btn-row">
           <button class="btn secondary" onclick="Farm.ui.hideModal()">${Farm.i18n.t('btn_cancel')}</button>
@@ -199,12 +220,37 @@
             // 首次种植：店主提示"等它长大、熟了发光"（晚于首种奖励 toast）
             if (Farm.coach) Farm.coach.fire('first_plant', 3600);
           } else {
-            Farm.ui.toast('🌱 ' + def[Farm.state.data.language === 'en' ? 'name_en' : 'name_zh']);
+            Farm.ui.toast('🌱 ' + def[Farm.state.data.language === 'en' ? 'name_en' : 'name_zh']
+              + readyHint(def), 3200);
           }
         };
       });
     },
   };
+
+  // 回访锚点：种下后告诉玩家「几点回来收」，把作物计时器的早中晚节奏
+  // 显性化（妈妈+孩子客群不该自己心算 grow_minutes）。1 小时内说分钟，
+  // 更长换算成本地钟点 + 中文时段词。
+  function readyHint(def) {
+    try {
+      const lang = Farm.state.data.language;
+      const mins = Math.round(def.grow_minutes / (Farm.crops.growMultiplier() || 1));
+      if (mins <= 60) {
+        return lang === 'en' ? ` · ready in ~${mins} min` : ` · 约 ${mins} 分钟后成熟`;
+      }
+      const eta = new Date(Date.now() + mins * 60000);
+      const h = eta.getHours(), m = eta.getMinutes();
+      const mm = (m < 10 ? '0' : '') + m;
+      if (lang === 'en') {
+        const h12 = h % 12 === 0 ? 12 : h % 12;
+        return ` · ready ~${h12}:${mm} ${h < 12 ? 'AM' : 'PM'}${eta.getDate() !== new Date().getDate() ? ' tomorrow' : ''}`;
+      }
+      const period = h < 5 ? '凌晨' : h < 9 ? '早上' : h < 12 ? '上午' : h < 14 ? '中午' : h < 18 ? '下午' : '晚上';
+      const h12 = h % 12 === 0 ? 12 : h % 12;
+      const tomorrow = eta.getDate() !== new Date().getDate() ? '明天' : '';
+      return ` · 预计${tomorrow}${period} ${h12}:${mm} 成熟，到点来收～`;
+    } catch (_) { return ''; }
+  }
 
   function formatMinutes(min) {
     if (min < 60) return min + 'm';
