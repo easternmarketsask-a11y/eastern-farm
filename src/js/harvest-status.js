@@ -61,14 +61,44 @@
           setAction(() => this.harvestAll(), 'ready');
         }
       } else if (earliestRemaining !== null) {
-        textEl.textContent = Farm.i18n.t('harvest_status_growing', {
-          time: Farm.crops.formatTimeRemaining(earliestRemaining),
-        });
-        setAction(null);
+        if (this._signHintDue()) {
+          this._renderSignHint(textEl, setAction, lang);
+        } else {
+          textEl.textContent = Farm.i18n.t('harvest_status_growing', {
+            time: Farm.crops.formatTimeRemaining(earliestRemaining),
+          });
+          setAction(null);
+        }
       } else {
-        textEl.textContent = Farm.i18n.t('harvest_status_empty');
-        setAction(null);
+        if (this._signHintDue()) {
+          this._renderSignHint(textEl, setAction, lang);
+        } else {
+          textEl.textContent = Farm.i18n.t('harvest_status_empty');
+          setAction(null);
+        }
       }
+    },
+
+    // 未签到时，growing/empty 空闲态与原文案 20 秒轮播签到提示（签到自动弹窗
+    // 已禁用、入口深四层——借首屏常驻胶囊做二级入口，点击直达签到日历）。
+    // 有熟菜可收时绝不抢位：收获永远是第一优先动作。
+    _signHintDue() {
+      try {
+        const cal = Farm.state.data.loginCalendar || {};
+        if (cal.lastSignDate === Farm.state.getDateString()) return false;
+        if (!Farm.loginCalendar || !Farm.loginCalendar.open) return false;
+        return Math.floor(Date.now() / 20000) % 2 === 1;   // 20s 轮播相位
+      } catch (_) { return false; }
+    },
+
+    _renderSignHint(textEl, setAction, lang) {
+      textEl.textContent = (lang === 'en'
+        ? '📅 Daily check-in ready · tap me!'
+        : '📅 今日还没签到 · 点我领奖励');
+      setAction(() => {
+        if (Farm.audio) Farm.audio.play('tap');
+        Farm.loginCalendar.open();
+      }, 'ready');
     },
 
     // Harvest every mature plot by reusing farm.js's single-plot harvest

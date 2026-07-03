@@ -304,12 +304,16 @@
     };
   }
 
-  // Show how many daily items are still unclaimed today (news + lottery + neighbors + special seed = up to 4).
+  // Show how many daily items are still unclaimed today (sign-in + news + lottery + neighbors + special seed = up to 5).
   function refreshTodayBadge() {
     const badge = document.getElementById('todayBadge');
     if (!badge) return;
     const c = Farm.state.data.dailyClaims;
     let pending = 0;
+    // 签到是唯一带连续性损失厌恶的日钩子，但自动弹窗 2026-06-17 禁用后入口
+    // 深达四层且无任何未签指示——断签压力完全不可见。未签到计入红点（2026-07-02）。
+    const cal = Farm.state.data.loginCalendar || {};
+    if (cal.lastSignDate !== Farm.state.getDateString()) pending++;
     if (!c.newsRead) pending++;
     if (!c.lotterySpunFree) pending++;
     if ((c.neighborsVisited || []).length < 3) pending++;
