@@ -39,6 +39,33 @@
       return Object.values(this.catalog);
     },
 
+    // ===== 应季系统（2026-07-02 接线，此前 season 字段是死数据）=====
+    // 当季作物卖价 +15%（仓库卖货结算与所有展示价共用 sellPriceOf），
+    // 给「现在种什么」一个随真实季节轮换的答案。'all' 四季平价无加成。
+    // 月→季映射与 seasons.js 的皮肤判定保持一致（3-5春/6-8夏/9-11秋/12-2冬）。
+    SEASON_SELL_BONUS: 1.15,
+    currentSeason() {
+      let m;
+      try { m = parseInt(Farm.state.getDateString().slice(5, 7), 10); } catch (_) {}
+      if (!m) m = new Date().getMonth() + 1;
+      if (m >= 3 && m <= 5) return 'spring';
+      if (m >= 6 && m <= 8) return 'summer';
+      if (m >= 9 && m <= 11) return 'autumn';
+      return 'winter';
+    },
+    isInSeason(def) {
+      return !!(def && def.season && def.season !== 'all' && def.season === this.currentSeason());
+    },
+    seasonEmoji() {
+      return { spring: '🌸', summer: '☀️', autumn: '🍂', winter: '❄️' }[this.currentSeason()] || '🌿';
+    },
+    // 卖货实际单价：应季 +15%（四舍五入）。所有把作物换成金币的地方都应
+    // 走这里，而不是直接读 def.sell_price。
+    sellPriceOf(def) {
+      if (!def) return 0;
+      return this.isInSeason(def) ? Math.round(def.sell_price * this.SEASON_SELL_BONUS) : def.sell_price;
+    },
+
     // Available right now: unlocked by player level AND not festival-restricted
     available(playerLevel, activeFestivalId) {
       const list = this.all().filter(c => c.unlock_level <= playerLevel);

@@ -123,6 +123,52 @@
       const data = await fetchWeather();
       this.data = data;
       this._renderChip();
+      // 真实天气第一次影响玩法：萨斯卡通下雨 = 全场自动浇一次水（每天一次）。
+      // crops 是异步加载的，挂 onLoad 保证目录就绪后再结算。
+      if (window.Farm && Farm.crops && Farm.crops.onLoad) {
+        Farm.crops.onLoad(() => this._maybeRainWater());
+      }
+    },
+
+    // WMO 雨族代码（毛毛雨/雨/冻雨/阵雨/雷雨）。下雪不算浇水。
+    _isRainy() {
+      const c = this.data && this.data.weatherCode;
+      return c != null && ((c >= 51 && c <= 67) || (c >= 80 && c <= 82) || c >= 95);
+    },
+
+    // 下雨自动浇水：对所有「已种、未熟、本周期还没浇过」的地块套用与手动
+    // 浇水完全相同的数学（crops.speedUp -20% + watered 标记，见 tending.js），
+    // 每天最多触发一次（顶层 rainWateredDate 自带日期，不进 dailyClaims，
+    // 避开其三处整体重建）。
+    _maybeRainWater() {
+      try {
+        if (!this._isRainy()) return;
+        const st = Farm.state && Farm.state.data;
+        if (!st || !Farm.crops || !Farm.crops.loaded) return;
+        const today = Farm.state.getDateString();
+        if (st.rainWateredDate === today) return;
+        let n = 0;
+        (st.plots || []).forEach((plot) => {
+          if (!plot.unlocked || !plot.crop || plot.watered) return;
+          if (Farm.crops.isMature(plot)) return;
+          if (Farm.crops.speedUp(plot, 0.2) > 0) {
+            plot.watered = true;
+            n++;
+          }
+        });
+        st.rainWateredDate = today;
+        Farm.state.save();
+        if (n > 0) {
+          const lang = st.language || 'zh';
+          setTimeout(() => {
+            if (Farm.ui) Farm.ui.toast(lang === 'en'
+              ? '🌧 It\'s raining in Saskatoon — ' + n + ' plots watered for free!'
+              : '🌧 萨斯卡通下雨啦，' + n + ' 块地自动浇过水了！', 3500);
+          }, 1600);
+          if (Farm.farm && Farm.farm.renderGrid) Farm.farm.renderGrid();
+          if (Farm.harvestStatus) Farm.harvestStatus.render();
+        }
+      } catch (e) { console.warn('[weather] rain-water skipped', e); }
     },
 
     refresh() {

@@ -135,13 +135,19 @@
             if (!c) return '';
             const locked = c.unlock_level > playerLevel;
             const owned = seeds[id] || 0;
+            // 应季作物：收购价 +15%（与仓库结算同源），加当季徽章
+            const inSeason = Farm.crops.isInSeason && Farm.crops.isInSeason(c);
+            const unit = Farm.crops.sellPriceOf ? Farm.crops.sellPriceOf(c) : c.sell_price;
+            const priceHtml = inSeason
+              ? `<span class="seed-value"><strong style="color:var(--barn-red);">${coin}${unit}</strong> <span class="season-tag">${Farm.crops.seasonEmoji()}${lang === 'en' ? 'In season' : '应季'}</span></span>`
+              : `<span class="seed-value">${coin}${unit}</span>`;
             return `
               <div class="seed-card ${locked ? 'locked' : ''}" data-crop-id="${id}" data-action="plant">
                 <span class="seed-icon">${cropFace(c)}</span>
                 <div>
                   <div class="seed-name">${c[nameKey]}</div>
                   <div class="seed-meta">
-                    <span class="seed-sell"><span class="seed-label">${marketPriceLabel}</span><span class="seed-value">${coin}${c.sell_price}</span></span>
+                    <span class="seed-sell"><span class="seed-label">${marketPriceLabel}</span>${priceHtml}</span>
                     <span class="seed-time">⏱${formatMinutes(c.grow_minutes)}</span>
                     <span class="seed-owned">× ${owned}</span>
                   </div>

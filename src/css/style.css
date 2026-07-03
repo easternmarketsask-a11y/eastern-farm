@@ -3743,6 +3743,20 @@ body.mapmode #warehouseBtn { display: none !important; }
   pointer-events: none;
   z-index: 6;
 }
+/* 应季 +15% 徽章（仓库行 / 种植选择器）—— 2026-07-02 season 接线 */
+.season-tag {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  color: #7a5c14;
+  background: linear-gradient(135deg, #fdf3d0, #f9e6a8);
+  border: 1px solid rgba(196, 154, 38, 0.35);
+  border-radius: 8px;
+  padding: 1px 6px;
+  margin-left: 4px;
+  vertical-align: 1px;
+  white-space: nowrap;
+}
 .season-particle {
   position: absolute;
   top: -28px;

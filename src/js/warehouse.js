@@ -43,13 +43,19 @@
           const def = Farm.crops.get(cropId);
           if (!def) return '';
           const qty = summary[cropId];
-          const lineValue = def.sell_price * qty;
+          // 应季 +15%：展示价与 getWarehouseValue 的结算价同源（sellPriceOf）
+          const unit = Farm.crops.sellPriceOf ? Farm.crops.sellPriceOf(def) : def.sell_price;
+          const inSeason = Farm.crops.isInSeason && Farm.crops.isInSeason(def);
+          const seasonTag = inSeason
+            ? ` <span class="season-tag">${Farm.crops.seasonEmoji()}${lang === 'en' ? 'In season +15%' : '应季 +15%'}</span>`
+            : '';
+          const lineValue = unit * qty;
           return `
             <div class="wh-row">
               <span class="wh-icon">${def.icon}</span>
               <div class="wh-info">
-                <div class="wh-name">${def[nameKey]}</div>
-                <div class="wh-sub">${qty} × ${coin}${def.sell_price}</div>
+                <div class="wh-name">${def[nameKey]}${seasonTag}</div>
+                <div class="wh-sub">${qty} × ${coin}${unit}</div>
               </div>
               <div class="wh-line-value">${coin}${lineValue}</div>
             </div>

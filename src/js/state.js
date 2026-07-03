@@ -742,7 +742,8 @@
       let total = 0;
       wh.forEach(it => {
         const def = Farm.crops && Farm.crops.get(it.cropId);
-        if (def) total += def.sell_price;
+        // 应季作物 +15%（crops.sellPriceOf），与仓库面板展示价保持一致
+        if (def) total += (Farm.crops.sellPriceOf ? Farm.crops.sellPriceOf(def) : def.sell_price);
       });
       return total;
     },
