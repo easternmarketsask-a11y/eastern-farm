@@ -23,10 +23,22 @@
       const capacity = Farm.state.data.warehouseCapacity || 20;
       const count = wh.length;
       const summary = Farm.state.getWarehouseSummary();
-      const baseValue = Farm.state.getWarehouseValue();
+      // 「给小东留着」：订单板需要的数量不会被一键卖货卖掉（deliverWarehouse
+      // 同一逻辑）——面板展示的合计只算真正会卖出的部分，避免虚报。
+      const reserve = (Farm.orders && Farm.orders.reservedNeeds) ? Farm.orders.reservedNeeds() : {};
+      let reservedCount = 0;
+      let sellValue = 0;
+      Object.keys(summary).forEach(cropId => {
+        const def = Farm.crops.get(cropId);
+        if (!def) return;
+        const keepQty = Math.min(summary[cropId], reserve[cropId] || 0);
+        reservedCount += keepQty;
+        const unitP = Farm.crops.sellPriceOf ? Farm.crops.sellPriceOf(def) : def.sell_price;
+        sellValue += unitP * (summary[cropId] - keepQty);
+      });
       const firstOfDay = !Farm.state.data.dailyClaims.firstDeliveryDone;
-      const bonus = (count > 0 && firstOfDay) ? Math.round(baseValue * 0.2) : 0;
-      const total = baseValue + bonus;
+      const bonus = (count > 0 && firstOfDay) ? Math.round(sellValue * 0.2) : 0;
+      const total = sellValue + bonus;
       const coin = '<span class="coin-icon"></span>';
 
       const titleZh = '📦 我的仓库';
@@ -50,12 +62,16 @@
             ? ` <span class="season-tag">${Farm.crops.seasonEmoji()}${lang === 'en' ? 'In season +15%' : '应季 +15%'}</span>`
             : '';
           const lineValue = unit * qty;
+          const keepQty = Math.min(qty, reserve[cropId] || 0);
+          const keptNote = keepQty > 0
+            ? ` <span style="color:var(--leaf-dark);font-weight:700;">🛒${lang === 'en' ? 'keep ' : '留'}${keepQty}</span>`
+            : '';
           return `
             <div class="wh-row">
               <span class="wh-icon">${def.icon}</span>
               <div class="wh-info">
                 <div class="wh-name">${def[nameKey]}${seasonTag}</div>
-                <div class="wh-sub">${qty} × ${coin}${unit}</div>
+                <div class="wh-sub">${qty} × ${coin}${unit}${keptNote}</div>
               </div>
               <div class="wh-line-value">${coin}${lineValue}</div>
             </div>
@@ -75,9 +91,14 @@
             ${count >= capacity ? `<span style="color:var(--barn-red);font-weight:700;">${lang === 'en' ? 'FULL' : '已满'}</span>` : ''}
           </div>
           <div class="wh-list">${rows}</div>
+          ${reservedCount > 0
+            ? `<div style="font-size:12px;color:var(--warm-text-soft);padding:6px 4px 0;">🛒 ${lang === 'en'
+                ? `${reservedCount} item(s) reserved for 小东's orders — won't be sold`
+                : `已为小东订单留 ${reservedCount} 件，一键卖货不会卖掉`}</div>`
+            : ''}
           ${bonusLineHtml}
           <div class="wh-total">
-            <span class="wh-total-label">${lang === 'en' ? 'Total' : '合计'}</span>
+            <span class="wh-total-label">${lang === 'en' ? 'Sell now for' : '本次可卖'}</span>
             <span class="wh-total-value">${coin}${total}</span>
           </div>
         `;
@@ -182,7 +203,13 @@
       const lang = Farm.state.data.language;
       const result = Farm.state.deliverWarehouse();
       if (!result.ok) {
-        Farm.ui.toast(lang === 'en' ? 'Warehouse is empty' : '仓库是空的');
+        if (result.reason === 'all_reserved') {
+          Farm.ui.toast(lang === 'en'
+            ? '🛒 Everything in the silo is reserved for 小东\'s orders — deliver them instead!'
+            : '🛒 仓库里的菜都是给小东订单留的，去交订单更划算！', 3200);
+        } else {
+          Farm.ui.toast(lang === 'en' ? 'Warehouse is empty' : '仓库是空的');
+        }
         return;
       }
       Farm.ui.hideModal();

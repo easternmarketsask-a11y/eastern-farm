@@ -137,6 +137,16 @@
       return list.reduce((n, o) => n + (this._canFill(o) ? 1 : 0), 0);
     },
 
+    // 订单板当前需要的作物汇总 {cropId: qty}。仓库一键卖货（state.deliverWarehouse）
+    // 会按这份清单自动保留，玩家攒给小东的菜不会被按散卖价卖掉。
+    reservedNeeds() {
+      const need = {};
+      (Farm.state.data.orders || []).forEach(o => {
+        (o.items || []).forEach(it => { need[it.cropId] = (need[it.cropId] || 0) + it.qty; });
+      });
+      return need;
+    },
+
     // Total bulk-sell value of an order's crops (to show "多赚 +N").
     _bulkValue(order) {
       return order.items.reduce((s, it) => {

@@ -782,18 +782,37 @@
     deliverWarehouse() {
       const wh = this.data.warehouse || [];
       if (wh.length === 0) return { ok: false, reason: 'empty' };
-      const baseValue = this.getWarehouseValue();
+      // 「给小东留着」：订单板当前需要的数量自动保留，不随一键卖货流走——
+      // 否则玩家为 1.5× 订单攒的菜会被 1× 价卖掉，攒单和卖仓互相打架。
+      const reserve = (Farm.orders && Farm.orders.reservedNeeds) ? Farm.orders.reservedNeeds() : {};
+      const keep = [];
+      const sell = [];
+      const kept = Object.create(null);
+      wh.forEach(it => {
+        if ((kept[it.cropId] || 0) < (reserve[it.cropId] || 0)) {
+          kept[it.cropId] = (kept[it.cropId] || 0) + 1;
+          keep.push(it);
+        } else {
+          sell.push(it);
+        }
+      });
+      if (sell.length === 0) return { ok: false, reason: 'all_reserved', reservedCount: keep.length };
+      let baseValue = 0;
+      sell.forEach(it => {
+        const def = Farm.crops && Farm.crops.get(it.cropId);
+        if (def) baseValue += (Farm.crops.sellPriceOf ? Farm.crops.sellPriceOf(def) : def.sell_price);
+      });
       const isFirstOfDay = !this.data.dailyClaims.firstDeliveryDone;
       const bonus = isFirstOfDay ? Math.round(baseValue * 0.2) : 0;
       const total = baseValue + bonus;
-      const itemCount = wh.length;
       this.data.coins += total;
       this.data.sessionStats.coinsEarned += total;
-      this.data.warehouse = [];
+      this.data.warehouse = keep;
       this.data.totalDeliveries = (this.data.totalDeliveries || 0) + 1;
       if (isFirstOfDay) this.data.dailyClaims.firstDeliveryDone = true;
       this.save();
-      return { ok: true, totalCoins: total, bonusCoins: bonus, baseCoins: baseValue, itemCount, firstOfDay: isFirstOfDay };
+      return { ok: true, totalCoins: total, bonusCoins: bonus, baseCoins: baseValue,
+               itemCount: sell.length, reservedCount: keep.length, firstOfDay: isFirstOfDay };
     },
 
     // ============ Daily claim helpers ============
