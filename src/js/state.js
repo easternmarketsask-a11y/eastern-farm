@@ -200,13 +200,19 @@
   // which required ~25 bok choy harvests to reach Lv 2 (2+ hours of grind for
   // a single new crop unlock). New curve targets ~5 harvests per level for
   // Lv 1-5, then ramps up. Goal: player sees 5+ crops unlock in first 30 min.
-  const XP_TABLE_FIXED = [0, 10, 30, 80, 180, 350, 600, 1000, 1600, 2500, 4000];
+  // 2026-07-02 悬崖修复：旧公式 Lv11 累计 4,000 → Lv12 跳 13,025（单级 9,025
+  // = 前 11 级总和的 2.26 倍），而作物解锁止步 Lv9——活跃玩家 10-20 天撞墙。
+  // 固定表平滑延到 Lv16（单级 2,000→4,000 递增），配合新加的 Lv10/12/14 作物
+  // 和 Lv12 地块，把毕业点往后推一倍。已有玩家 XP 超过新阈值时 checkLevelUp
+  // 的 while 循环会一次性连升（正向惊喜，不动存档）。
+  const XP_TABLE_FIXED = [0, 10, 30, 80, 180, 350, 600, 1000, 1600, 2500, 4000,
+                          6000, 8500, 11500, 15000, 19000];
   function xpForLevel(level) {
     if (level <= 0) return 0;
     if (level <= XP_TABLE_FIXED.length) return XP_TABLE_FIXED[level - 1];
     const k = level - XP_TABLE_FIXED.length;
-    // Each level past 11 needs ~3,500 base, growing quadratically with `k`.
-    return Math.round(9000 + 3500 * k * (1 + k * 0.15));
+    // Each level past 16 needs ~4,500 base, growing gently with `k`.
+    return Math.round(19000 + 4500 * k * (1 + k * 0.1));
   }
 
   // Levels that grant a new plot. Through Lv 5 every level gives +2 (matches
@@ -214,9 +220,9 @@
   // stop, so there's always a long-term carrot.
   const PLOT_UNLOCK_AT = {
     2: 2, 3: 2, 4: 2, 5: 2,                          // 12 plots total by Lv 5 (unchanged)
-    7: 1, 10: 1, 15: 1, 20: 1,                       // → 16 plots by Lv 20
-    30: 1, 50: 1, 75: 1, 100: 1,                     // → 20 plots by Lv 100
-    150: 1, 200: 1, 300: 1, 500: 1,                  // → 24 plots by Lv 500
+    7: 1, 10: 1, 12: 1, 15: 1, 20: 1,                // → 17 plots by Lv 20（Lv12 插一块，填 10-15 空窗）
+    30: 1, 50: 1, 75: 1, 100: 1,                     // → 21 plots by Lv 100
+    150: 1, 200: 1, 300: 1, 500: 1,                  // → 25 plots by Lv 500
   };
 
   // Title tiers — purely cosmetic. Rewritten 2026-05-25: previous
