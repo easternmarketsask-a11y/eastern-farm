@@ -393,6 +393,18 @@
     updateReentry();
   }
 
+  // 观赛台内点「登录」必须先关掉 hub 再开登录弹窗：hub 是 z-index 7000 的
+  // 全屏层，而游戏共享 #modal 只有 z-100 —— 直接 openLoginModal() 弹窗会被
+  // 整个压在观赛台下面，用户看到的就是「点了没反应/页面卡死」
+  // （2026-07-02 Chris 手机清缓存后线上实测踩中）。
+  function loginFromHub() {
+    close();
+    setTimeout(function () {
+      if (Farm.fbAuth && Farm.fbAuth.openLoginModal) Farm.fbAuth.openLoginModal();
+      if (Farm.ui && Farm.ui.toast) Farm.ui.toast('登录后点 ⚽ 回到世界杯继续参与', 3400);
+    }, 300);   // 等 hub 240ms 关闭动画收尾
+  }
+
   function startTimers() {
     stopTimers();
     tickClock();
@@ -1011,7 +1023,7 @@
       el.innerHTML = lottoCard('会员竞猜有礼 · 人人有份',
         '<button class="wc-lotto-btn" data-act="login">登录参与 ›</button>', lottoPrizeLine());
       var b = el.querySelector('[data-act="login"]');
-      if (b) b.onclick = function () { if (Farm.fbAuth && Farm.fbAuth.openLoginModal) Farm.fbAuth.openLoginModal(); };
+      if (b) b.onclick = function () { loginFromHub(); };
       return;
     }
     // 会员专属:登录了但手机号不在会员库(memberDoc 为空)→ 不放行,引导用会员手机号登录。
@@ -1021,7 +1033,7 @@
         '<div class="wc-lotto-closed">🎁 竞猜有礼是东方超市会员专属福利<br>请用你在东方超市登记的会员手机号登录参与</div>' +
         '<button class="wc-lotto-btn" data-act="login">用会员手机号登录 ›</button>', lottoPrizeLine());
       var bm = el.querySelector('[data-act="login"]');
-      if (bm) bm.onclick = function () { if (Farm.fbAuth && Farm.fbAuth.openLoginModal) Farm.fbAuth.openLoginModal(); };
+      if (bm) bm.onclick = function () { loginFromHub(); };
       return;
     }
     el.innerHTML = '<div class="wc-lotto-card"><div class="wc-lotto-wait">载入中…</div></div>';
@@ -1162,7 +1174,7 @@
     if (!fbReady()) { if (Farm.ui && Farm.ui.toast) Farm.ui.toast('请在农场里打开观赛台查看奖品'); return; }
     var u = lottoUser();
     if (!u) {
-      if (Farm.fbAuth && Farm.fbAuth.openLoginModal) Farm.fbAuth.openLoginModal();
+      if (Farm.fbAuth && Farm.fbAuth.openLoginModal) loginFromHub();
       else if (Farm.ui && Farm.ui.toast) Farm.ui.toast('请先登录会员再查看奖品');
       return;
     }

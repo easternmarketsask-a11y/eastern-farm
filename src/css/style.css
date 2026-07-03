@@ -2574,7 +2574,11 @@ body.mapmode #warehouseBtn { display: none !important; }
   font-size: 13px;
   font-weight: 500;
   box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-  z-index: 200;
+  /* 必须压过世界杯观赛台(z 7000)：toast 是全游戏唯一的轻量反馈通道，
+     原 z 200 在观赛台内完全不可见——「报名已截止」等提示用户根本看不到，
+     加重了「点了没反应」的体感（2026-07-02 与登录弹窗被压同批修复）。
+     仍低于 PWA 安装横幅(9000)。toast 无 pointer-events 影响。 */
+  z-index: 7500;
   animation: toastIn 0.3s ease, toastOut 0.3s ease 2.7s forwards;
 }
 .toast.hidden { display: none; }
