@@ -158,10 +158,11 @@
           }
         } catch (_) {}
       }
-      // 把确定性 AI 邻居并入排行榜后按指标重排取前 10（与真会员混排，让榜单是活的）。
+      // 把今日出场的 AI 邻居并入排行榜后按指标重排取前 10（与真会员混排，让榜单
+      // 是活的）。只混入 todaysCast 小名单（≤maxFill 个），不再全员 12 人刷榜。
       if (Farm.aiNeighbors && Farm.aiNeighbors.loaded) {
         const now = Date.now();
-        const aiRows = Farm.aiNeighbors.ids().map(aiId => {
+        const aiRows = Farm.aiNeighbors.todaysCast().map(aiId => {
           const card = Farm.aiNeighbors.displayCard(aiId, now);
           const active = Farm.aiNeighbors.isActiveNow(aiId, now);
           return {

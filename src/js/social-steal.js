@@ -29,14 +29,28 @@
   };
 
   const steal = {
-    _grace: {},  // 讨回来宽限：{targetId: 额外可顺块数}（会话内，T5 的"去讨回来"授予）
+    // 讨回来宽限：{targetId: 额外可顺块数}（T5 小报的"去讨回来"授予）。
+    // 2026-07-02 起持久化进存档（当天有效，跨天自动清空）——旧实现只存内存，
+    // 玩家点完"去讨回来"一刷新宽限就没了，复仇闭环跨不过一次会话。
+    // 独立顶层字段而非 dailyClaims：dailyClaims 每日整体重建有三处（STARTER/
+    // init/云恢复），塞进去要三处同步改，这里用自带日期的懒重置更稳。
+    _graceStore() {
+      const d = Farm.state.data;
+      const today = Farm.state.getDateString();
+      if (!d.stealGrace || d.stealGrace.date !== today) {
+        d.stealGrace = { date: today, byTarget: {} };
+      }
+      return d.stealGrace.byTarget;
+    },
 
     grantGrace(targetId, n) {
-      this._grace[targetId] = (this._grace[targetId] || 0) + (n || 1);
+      const g = this._graceStore();
+      g[targetId] = (g[targetId] || 0) + (n || 1);
+      Farm.state.save();
     },
 
     perTargetCap(targetId) {
-      return socialConfig.STEAL_PER_TARGET + (this._grace[targetId] || 0);
+      return socialConfig.STEAL_PER_TARGET + (this._graceStore()[targetId] || 0);
     },
 
     // 今日是否还能从该对象顺一棵。
@@ -206,7 +220,9 @@
     _pickActors(role, n, now) {
       if (n <= 0 || !Farm.aiNeighbors) return [];
       const rel = Farm.state.data.aiRelationships || {};
-      const scored = Farm.aiNeighbors.ids().map(id => {
+      // 只从今日出场的 AI 小名单里选角：来偷你/帮你的就是你今天在邻居列表里
+      // 见得到的那几位（世界感一致），也天然限制了 AI 活动量。
+      const scored = Farm.aiNeighbors.todaysCast().map(id => {
         const pers = Farm.aiNeighbors.personality(id);
         const active = Farm.aiNeighbors.isActiveNow(id, now);
         const r = rel[id] || {};

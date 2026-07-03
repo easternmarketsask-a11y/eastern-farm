@@ -34,8 +34,13 @@
   const ai = {
     // 总开关：关闭后所有"假邻居"从今日/排行榜/顺菜/被偷小报中消失，
     // 社交面板只显示真会员（没有就显示邀请态）。数据/代码保留，可逆。
-    // 真会员多起来后想恢复 AI 补位，把这里改回 true 即可。
-    enabled: false,
+    // 2026-07-02 改「按需补位」重新点亮：不再全员上阵，maxFill 限定每天
+    // 最多出场几个 AI（今日邻居补位/排行榜混排/离线掠夺选角共用同一份
+    // todaysCast 小名单）——保证走访/偷菜/小报永远有内容，又不至于满村假人。
+    // 真会员徽章（✨）仍然只给真人，AI 与真人的区分不变。
+    enabled: true,
+    // 每天最多出场的 AI 数（真会员足够时自然一个都不上）
+    maxFill: 2,
     roster: [],
     byId: {},
     levelEpoch: '2026-04-01',
@@ -172,7 +177,10 @@
     },
 
     // 今日确定性挑 n 个 AI（按日期 hash 洗牌），用于真会员不足时补位。
+    // n 被 maxFill 封顶：即使真会员为零，也只补 maxFill 个，不满村假人。
     dailyPick(n, dateStr) {
+      n = Math.min(n, this.maxFill);
+      if (n <= 0) return [];
       const ids = this.ids().slice();   // enabled=false ⇒ [] ⇒ 不补位
       if (n >= ids.length) return ids;
       // 基于日期的确定性洗牌（Fisher–Yates，种子来自 dateStr）
@@ -183,6 +191,13 @@
         [ids[i], ids[j]] = [ids[j], ids[i]];
       }
       return ids.slice(0, n);
+    },
+
+    // 今日出场的 AI 小名单（今日邻居补位 / 排行榜混排 / 离线掠夺选角共用，
+    // 保证玩家看到的、来家里串门的是同一批"村里人"，世界感一致）。
+    todaysCast() {
+      const dateStr = (Farm.state && Farm.state.getDateString) ? Farm.state.getDateString() : '';
+      return this.dailyPick(this.maxFill, dateStr);
     },
 
     // 与某 AI 的本地关系记录（T5 用于"会回应你"）。
