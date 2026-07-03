@@ -79,25 +79,32 @@
         </div>
       `;
 
+      // ⚠️ 这份「如何赚积分」列表是玩家可见的规则承诺，涉及真实会员积分——
+      // 任何时候调整积分数值/概率（crops.js harvest、tasks.js、orders.js、
+      // ep-shop.json 转盘），必须同步更新这里，别让页面说一套代码发一套。
+      // （2026-07-02 对齐：签到已改纯农场币、金疙瘩 0.5%×20~100、首收 +5，
+      // 补上订单/大转盘两个真实存在但此前没写的来源。）
       const earnList = lang === 'en' ? [
-        { icon: '📅', text: '7-day sign-in: points on day 2/4/6, big bonus on day 7' },
-        { icon: '📋', text: 'Complete daily tasks +1 each (3/day)' },
-        { icon: '🌽', text: '3% random bonus on harvest +5' },
-        { icon: '🎰', text: '1% Golden Nugget chance +50~500' },
-        { icon: '🌅', text: 'First harvest of the day +10' },
-        { icon: '☄️', text: 'Saturday/Sunday Meteor Shower 2× all points' },
+        { icon: '📋', text: 'Daily tasks: some give +1~2 (3 tasks/day)' },
+        { icon: '📦', text: 'Deliver 小东\'s orders: occasional +1~2 (daily cap)' },
+        { icon: '🌽', text: '3% lucky bonus on harvest +5' },
+        { icon: '🎰', text: '0.5% Golden Nugget chance +20~100' },
+        { icon: '🌅', text: 'First harvest of the day +5' },
+        { icon: '☄️', text: 'Weekend (Sat/Sun) point rewards 2× (except Golden Nugget)' },
+        { icon: '🎡', text: 'Daily wheel spin can win +3~100' },
         { icon: '🏆', text: 'Achievement unlock +5~+30' },
-        { icon: '🎊', text: 'Festival tasks +5~+10' },
+        { icon: '🎊', text: 'Festival-crop harvest bonus +2~4' },
         { icon: '🔄', text: 'Convert farm coins 10:1' },
       ] : [
-        { icon: '📅', text: '七日签到：第 2/4/6 天给积分，第 7 天大奖' },
-        { icon: '📋', text: '完成每日任务 +1/个（每日 3 个）' },
-        { icon: '🌽', text: '收获时 3% 概率 +5' },
-        { icon: '🎰', text: '1% 金疙瘩大奖 +50~500' },
-        { icon: '🌅', text: '今日首次收获 +10' },
-        { icon: '☄️', text: '周末（六/日）流星雨 ×2 全部积分' },
+        { icon: '📋', text: '每日任务：部分带 +1~2（每日 3 个）' },
+        { icon: '📦', text: '给小东交订单：不定期 +1~2（每日有上限）' },
+        { icon: '🌽', text: '收获时 3% 幸运积分 +5' },
+        { icon: '🎰', text: '0.5% 金疙瘩大奖 +20~100' },
+        { icon: '🌅', text: '今日首次收获 +5' },
+        { icon: '☄️', text: '周末（六/日）积分奖励 ×2（金疙瘩除外）' },
+        { icon: '🎡', text: '每日大转盘有机会中 +3~100' },
         { icon: '🏆', text: '解锁成就 +5~+30' },
-        { icon: '🎊', text: '节日任务 +5~+10' },
+        { icon: '🎊', text: '节日限定作物收获额外 +2~4' },
         { icon: '🔄', text: '农场币 10:1 兑换' },
       ];
 
