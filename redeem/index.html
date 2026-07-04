@@ -130,24 +130,38 @@
   <div class="foot">© 东方超市 Eastern Market · 仅限店员使用</div>
 </div>
 
-<script defer src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
-<script defer src="https://www.gstatic.com/firebasejs/10.14.1/firebase-functions-compat.js"></script>
 <script>
 window.addEventListener('load', function () {
-  var firebaseConfig = {
-    apiKey: 'AIzaSyDDhVm_n_TyV2mtp517qUoLU4A9HB1k3No',
-    authDomain: 'eastern-market-members.firebaseapp.com',
-    projectId: 'eastern-market-members',
-    storageBucket: 'eastern-market-members.firebasestorage.app',
-    messagingSenderId: '515107029536',
-    appId: '1:515107029536:web:9f6caef22bae67aa5af245',
-  };
-  if (typeof firebase === 'undefined' || !firebase.initializeApp) {
-    document.getElementById('gateErr').textContent = '网络/SDK 加载失败,请刷新';
-    return;
+  // 2026-07-04 收银台实测「网络/SDK 加载失败」后重写：不再依赖 Firebase SDK。
+  // callable 函数本身就是普通 HTTPS 接口（POST {data:...} → {result|error}），
+  // 收银机老浏览器/店内网络对 gstatic 脚本不友好，SDK 是这页唯一的外部依赖，
+  // 砍掉后页面完全自包含，只需要能连上 cloudfunctions.net（与开奖同一域）。
+  var FN_URL = 'https://us-central1-eastern-market-members.cloudfunctions.net/wcLotteryRedeem';
+  function call(payload) {
+    return new Promise(function (resolve, reject) {
+      var x = new XMLHttpRequest();
+      x.open('POST', FN_URL, true);
+      x.setRequestHeader('Content-Type', 'application/json');
+      x.timeout = 20000;
+      x.onload = function () {
+        var j;
+        try { j = JSON.parse(x.responseText || '{}'); }
+        catch (err) { reject(new Error('服务器响应异常(' + x.status + '),请重试')); return; }
+        if (j && j.error) {
+          var e = new Error(j.error.message || '操作失败');
+          // 对齐 SDK 的错误码形态('PERMISSION_DENIED' → 'permission-denied')，
+          // 下面的口令判断沿用不变
+          e.code = String(j.error.status || '').toLowerCase().replace(/_/g, '-');
+          reject(e);
+          return;
+        }
+        resolve({ data: j ? j.result : null });
+      };
+      x.ontimeout = function () { reject(new Error('请求超时,请检查网络后重试')); };
+      x.onerror = function () { reject(new Error('网络请求失败,请检查收银机网络')); };
+      x.send(JSON.stringify({ data: payload }));
+    });
   }
-  if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-  var call = firebase.app().functions('us-central1').httpsCallable('wcLotteryRedeem');
 
   var $ = function (id) { return document.getElementById(id); };
   // 防 XSS:顾客姓名等字段进 innerHTML 前一律转义(会员名可含任意字符)
