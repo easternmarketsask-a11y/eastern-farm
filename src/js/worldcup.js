@@ -372,7 +372,7 @@
       b.onclick = function () { switchTab(b.getAttribute('data-tab')); };
     });
     var lb = hub.querySelector('#wcLottoBanner');
-    if (lb) lb.onclick = function () { var m = nearestLottoMatch(); if (m) openLottoMatch(m); };
+    if (lb) lb.onclick = function () { openLottoCenter(); };   // 2026-07-04: 直达全部场次的竞猜中心
     var mp = hub.querySelector('#wcMyPrizes');
     if (mp) mp.onclick = openMyPrizes;
   }
@@ -394,11 +394,54 @@
   function openLottoMatch(m) {
     switchTab('schedule');
     schedFilters.team = ''; schedFilters.stage = ''; schedFilters.quick = {};
+    _roundOpen[m.stage] = true;   // 目标场次所在轮次若被收起，先展开，否则找不到卡片
     renderSchedule();
     setTimeout(function () {
       var card = hub.querySelector('#wcSchedList [data-id="' + m.id + '"]');
       if (card) { openCard(card, m); if (card.scrollIntoView) card.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
     }, 70);
+  }
+
+  // ===== 竞猜中心（2026-07-04，Chris：参与太少，要直接引导进每场的大转盘）=====
+  // 原来横幅只跳「最近一场」，其余场次埋在赛程卡展开后的详情里，发现成本高。
+  // 现在横幅打开一个直达列表：所有「可报名」的淘汰赛场一场一行，点行直落
+  // 该场竞猜卡（自动展开+滚动定位）。不在比赛卡上加促销徽章——那是 Chris
+  // 定过的方向（显廉价，见 matchCardHtml 下方注释）。
+  function openLottoCenter() {
+    if (!hub) return;
+    var opens = (data.matches || []).filter(function (m) {
+      return isKO(m) && lottoOpen(m) && isTeam(m.home) && isTeam(m.away);
+    }).sort(function (a, b) { return new Date(a.kickoffUtc) - new Date(b.kickoffUtc); });
+
+    var ov = document.createElement('div');
+    ov.className = 'wc-mp-overlay';
+    var rows = opens.length ? opens.map(function (m) {
+      var p = skParts(m.kickoffUtc);
+      return '<button class="wc-lc-row" data-mid="' + esc(m.id) + '">' +
+        '<span class="wc-lc-teams">' + (flag(m.home) || '⚽') + ' ' + esc(cn(m.home)) +
+          ' <span class="vs">vs</span> ' + (flag(m.away) || '⚽') + ' ' + esc(cn(m.away)) + '</span>' +
+        '<span class="wc-lc-meta">' + esc(stageShort(m)) + ' · ' + p.dayLabel + ' ' + p.time + ' 萨省</span>' +
+        '<span class="wc-lc-go">🎁 去竞猜 ›</span>' +
+      '</button>';
+    }).join('') : '<div class="wc-mp-empty">这一轮的竞猜马上来——对阵一确定自动开放，稍后再来看看 ⚽</div>';
+
+    ov.innerHTML = '<div class="wc-mp-card"><button class="wc-mp-close" aria-label="关闭">✕</button>' +
+      '<div class="wc-mp-body">' +
+        '<div class="wc-lc-head">🎁 竞猜中心 · 人人有礼</div>' +
+        '<div class="wc-lc-sub">每场比赛转一次大转盘：参与保底 <b>1000 农场币</b>，猜对晋级翻倍，' +
+          '更有 🥠 沙琪玛 / 龙角散 / 气泡水 <b>实物好礼</b>到店领（每天 2 次机会）</div>' +
+        rows +
+      '</div></div>';
+    hub.appendChild(ov);
+    ov.querySelector('.wc-mp-close').onclick = function () { ov.remove(); };
+    ov.onclick = function (e) { if (e.target === ov) ov.remove(); };
+    Array.prototype.forEach.call(ov.querySelectorAll('.wc-lc-row'), function (btn) {
+      btn.onclick = function () {
+        var m = (data.matches || []).find(function (x) { return x.id === btn.getAttribute('data-mid'); });
+        ov.remove();
+        if (m) openLottoMatch(m);
+      };
+    });
   }
 
   function tabBtn(id, zh, enTxt) {
@@ -954,7 +997,7 @@
   }
 
   function lottoPrizeLine() {
-    return '<div class="wc-lotto-prizes">竞猜参与，人人有礼！</div>';
+    return '<div class="wc-lotto-prizes">竞猜参与，人人有礼！🥠 沙琪玛 · 龙角散 · 气泡水 实物好礼到店领</div>';
   }
   function lottoCard(title, bodyHtml, sub) {
     return '<div class="wc-lotto-card">' +

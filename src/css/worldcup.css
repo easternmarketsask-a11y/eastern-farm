@@ -465,6 +465,22 @@
 .wc-mp-st { font-size: 12.5px; color: var(--wc-soft); }
 .wc-mp-item.done .wc-mp-st { color: var(--wc-pitch); font-weight: 700; }
 .wc-mp-empty { text-align: center; color: var(--wc-soft); font-size: 14.5px; line-height: 1.7; padding: 26px 8px; }
+
+/* 竞猜中心（2026-07-04）：横幅直达的全场次竞猜列表 */
+.wc-lc-head { font-family: var(--font-display); font-size: 18px; color: var(--wc-pitch); text-align: center; margin: 2px 0 8px; }
+.wc-lc-sub { font-size: 12.5px; color: var(--wc-soft); line-height: 1.7; text-align: center; margin-bottom: 14px; }
+.wc-lc-sub b { color: var(--wc-pitch); }
+.wc-lc-row {
+  display: flex; flex-direction: column; gap: 3px; width: 100%; text-align: left;
+  background: linear-gradient(160deg, #fffdf6, #fdf6e4); border: 1px solid #ecd9a8;
+  border-radius: var(--radius-md); padding: 12px 14px; margin-bottom: 10px; cursor: pointer;
+  box-shadow: var(--wc-sh-sm);
+}
+.wc-lc-row:active { transform: scale(0.985); }
+.wc-lc-teams { font-family: var(--font-display); font-size: 15.5px; color: var(--wc-ink, #333); }
+.wc-lc-teams .vs { font-size: 11px; color: var(--wc-faint); margin: 0 2px; }
+.wc-lc-meta { font-size: 11.5px; color: var(--wc-faint); }
+.wc-lc-go { align-self: flex-end; font-family: var(--font-display); font-size: 13.5px; color: #b8860b; font-weight: 700; }
 .wc-mp-sub { font-family: var(--font-display); font-size: 13px; color: var(--wc-soft); text-align: left; margin: 14px 2px 8px; }
 .wc-mp-sub:first-of-type { margin-top: 4px; }
 .wc-mp-coincard { background: linear-gradient(160deg, #eaf6df, #dff0d3); border: 1px solid #bfe0a8; border-radius: var(--radius-md); padding: 14px; text-align: center; }
