@@ -148,6 +148,8 @@
       .then(function (j) {
         data = j;
         (data.teams || []).forEach(function (t) { T[t.code] = t; });
+        // JSON 里已有 officialFinal 赛果时（手工补档），不等 ESPN 就先推一轮晋级
+        applyKnockoutProgression();
         return data;
       });
   }
@@ -261,6 +263,7 @@
   function refreshLive() {
     return fetchLive().then(function (ok) {
       if (!hub) return;
+      if (ok) applyKnockoutProgression();  // 赛果一确定，晋级者自动回填后续轮次对阵（见下）
       updateLottoBanner();                 // keep banner + 我的奖品 button state fresh (also catches fb-ready-after-open)
       if (!ok) return;
       rendered.standings = false;          // standings depend on live too
@@ -269,6 +272,59 @@
       else if (activeTab === 'bracket') renderBracket();
     });
   }
+  // ===== 晋级自动回填（2026-07-03，Chris：对阵确定了就要自动 update）=====
+  // 对阵图早就会实时锁定晋级者，但赛程卡/竞猜/焦点卡读的是 data.matches 的
+  // home/away —— wc2026.json 里后续轮次是 'RD32'/'QFW1' 这类占位符，原来要等
+  // 手工改档才更新。这里按 FIFA 官方场次连线（与对阵图 BR_R32_ORDER 同源，
+  // 见其上方注释），把真实赛果推算出的晋级者直接回填进 data.matches（仅内存，
+  // JSON 占位符仍是兜底）——对阵一确定：赛程卡显示真实国旗对阵、竞猜的
+  // 「对阵未定」立即解锁、焦点卡/倒计时全部自动跟上。每 60 秒随赛果刷新推进。
+  var KO_FEEDERS = {   // matchId: [feederA, feederB]，home=前者晋级方
+    M089: ['M074', 'M077'], M090: ['M073', 'M075'], M091: ['M076', 'M078'], M092: ['M079', 'M080'],
+    M093: ['M083', 'M084'], M094: ['M081', 'M082'], M095: ['M086', 'M088'], M096: ['M085', 'M087'],
+    M097: ['M089', 'M090'], M098: ['M093', 'M094'], M099: ['M091', 'M092'], M100: ['M095', 'M096'],
+    M101: ['M097', 'M098'], M102: ['M099', 'M100'],
+    M103: ['M101', 'M102'],   // 季军赛 = 两场半决赛的【败者】（特殊处理见下）
+    M104: ['M101', 'M102'],
+  };
+  // 一场淘汰赛的真实胜者：先走 koWinner（ESPN winner 旗标，含加时/点球，
+  // 再回落 officialFinal）；后续轮次我们回填的主客顺序可能与 ESPN 相反，
+  // 双方都是真实球队时再用 liveResult 按无序配对兜底（与对阵图同一策略）。
+  function realWinnerOf(m) {
+    if (!m) return null;
+    var w = koWinner(m);
+    if (w) return w;
+    if (isTeam(m.home) && isTeam(m.away)) {
+      var lr = liveResult(m.home, m.away);
+      if (lr && lr.finished && lr.winner) return lr.winner;
+    }
+    return null;
+  }
+  function realLoserOf(m) {
+    var w = realWinnerOf(m);
+    if (!w || !m) return null;
+    return w === m.home ? m.away : (w === m.away ? m.home : null);
+  }
+  function applyKnockoutProgression() {
+    if (!data || !data.matches) return false;
+    var byId = {};
+    data.matches.forEach(function (m) { byId[m.id] = m; });
+    var changed = false;
+    // id 升序推进：feeder 的 id 永远更小，一趟即可级联（当天连出结果也跟得上）
+    Object.keys(KO_FEEDERS).sort().forEach(function (id) {
+      var m = byId[id];
+      if (!m) return;
+      var third = (m.stage === '3p');
+      var fa = byId[KO_FEEDERS[id][0]], fb = byId[KO_FEEDERS[id][1]];
+      var ta = third ? realLoserOf(fa) : realWinnerOf(fa);
+      var tb = third ? realLoserOf(fb) : realWinnerOf(fb);
+      // 只在该侧仍是占位符时回填；官方 JSON 已写真实球队则绝不覆盖
+      if (ta && !isTeam(m.home)) { m.home = ta; changed = true; }
+      if (tb && !isTeam(m.away)) { m.away = tb; changed = true; }
+    });
+    return changed;
+  }
+
   function liveStamp() {
     if (!live || !live.ok) return '';
     var sk = new Date(live.at + SK_OFFSET * 3600 * 1000);
@@ -445,6 +501,22 @@
      ============================================================ */
   var schedFilters = { team: '', stage: '', quick: { today: false, upcoming: false, done: false, prime: false, mine: false } };
 
+  // ===== 轮次分组（2026-07-03 淘汰赛阶段改版）=====
+  // 小组赛 72 场早已踢完还平铺在列表里，淘汰赛阶段按轮次呈现：
+  // 已全部结束的轮次（含整个小组赛，垫底）默认收起成一行汇总，点头部展开；
+  // 进行中/未开打的轮次默认展开。用户手动开合记在 _roundOpen（会话内，
+  // 60 秒自动刷新重画时不丢）。有任何筛选/搜索时回到按日平铺，互不打架。
+  var SCHED_PHASES = [
+    { key: 'r32', label: '32强', icon: '🏁' },
+    { key: 'r16', label: '16强', icon: '⚔️' },
+    { key: 'qf', label: '8强', icon: '🔥' },
+    { key: 'sf', label: '半决赛', icon: '🎯' },
+    { key: '3p', label: '季军赛', icon: '🥉' },
+    { key: 'final', label: '决赛', icon: '🏆' },
+    { key: 'group', label: '小组赛', icon: '📦' },
+  ];
+  var _roundOpen = {};   // {phaseKey: bool} 用户手动开合覆盖
+
   function renderSchedule() {
     var root = hub.querySelector('#wc-schedule');
     var scrollSaved = hub.querySelector('.wc-body') ? hub.querySelector('.wc-body').scrollTop : 0;
@@ -493,15 +565,9 @@
     drawList();
     if (hub.querySelector('.wc-body')) hub.querySelector('.wc-body').scrollTop = scrollSaved;
 
-    function drawList() {
-      var listEl = root.querySelector('#wcSchedList');
-      var rows = filterMatches().sort(function (a, b) {
-        return new Date(a.kickoffUtc) - new Date(b.kickoffUtc);
-      });
-      // my-team matches float to the top of their own day
-      if (!rows.length) { listEl.innerHTML = '<div class="wc-empty">没有符合条件的比赛 ⚽<br><span style="font-size:11px">试试取消几个筛选</span></div>'; return; }
-      var out = '', lastDay = '';
-      // group by day, within day sort mine-first
+    // 按日分组的一段列表 HTML（轮次内和平铺模式共用）
+    function dayGroupedHtml(rows) {
+      var out = '';
       var byDay = {};
       rows.forEach(function (m) { var k = skParts(m.kickoffUtc).dayKey; (byDay[k] = byDay[k] || []).push(m); });
       Object.keys(byDay).sort().forEach(function (dk) {
@@ -512,7 +578,51 @@
         out += '<div class="wc-day">' + labelForDayKey(dk) + '<span class="cnt">' + dayMatches.length + ' 场</span></div>';
         dayMatches.forEach(function (m) { out += matchCardHtml(m); });
       });
+      return out;
+    }
+
+    function drawList() {
+      var listEl = root.querySelector('#wcSchedList');
+      var rows = filterMatches().sort(function (a, b) {
+        return new Date(a.kickoffUtc) - new Date(b.kickoffUtc);
+      });
+      if (!rows.length) { listEl.innerHTML = '<div class="wc-empty">没有符合条件的比赛 ⚽<br><span style="font-size:11px">试试取消几个筛选</span></div>'; return; }
+
+      var Q = schedFilters.quick;
+      var anyFilter = schedFilters.team.trim() || schedFilters.stage ||
+        Q.today || Q.upcoming || Q.done || Q.prime || Q.mine;
+
+      var out = '';
+      if (anyFilter) {
+        // 有筛选/搜索 → 平铺（收起逻辑让位，结果一目了然）
+        out = dayGroupedHtml(rows);
+      } else {
+        SCHED_PHASES.forEach(function (ph) {
+          var ms = rows.filter(function (m) { return (m.stage || 'group') === ph.key; });
+          if (!ms.length) return;
+          var doneN = ms.filter(function (m) { return matchState(m) === 'done'; }).length;
+          var liveN = ms.filter(function (m) { return matchState(m) === 'live'; }).length;
+          var allDone = doneN === ms.length;
+          var open = (ph.key in _roundOpen) ? _roundOpen[ph.key] : !allDone;
+          var stateTxt = allDone
+            ? '已全部结束 · 点开回看'
+            : (liveN ? '🔴 ' + liveN + ' 场正在进行' : (doneN ? doneN + '/' + ms.length + ' 已赛' : '未开始'));
+          out += '<button class="wc-round-head' + (open ? ' open' : '') + (allDone ? ' done' : '') + '" data-round="' + ph.key + '">' +
+            '<span class="wc-round-title">' + ph.icon + ' ' + ph.label +
+              ' <span class="cnt">' + ms.length + ' 场</span></span>' +
+            '<span class="wc-round-state">' + stateTxt + ' <span class="chev">' + (open ? '▾' : '▸') + '</span></span>' +
+          '</button>';
+          if (open) out += '<div class="wc-round-body">' + dayGroupedHtml(ms) + '</div>';
+        });
+      }
+
       listEl.innerHTML = out;
+      Array.prototype.forEach.call(listEl.querySelectorAll('.wc-round-head'), function (h) {
+        h.onclick = function () {
+          _roundOpen[h.getAttribute('data-round')] = !h.classList.contains('open');
+          drawList();
+        };
+      });
       wireMatchCards(listEl);
       updateCountdowns();
     }
@@ -1626,6 +1736,8 @@
     _rankGroupPure: rankGroupPure,      // canonical (matches -> ranking), unit-tested
     _breakTieH2H: breakTieH2H,
     _detectUpset: detectUpset,
-    _setDataForTest: function (d) { data = d; T = {}; (d.teams || []).forEach(function (t) { T[t.code] = t; }); }
+    _setDataForTest: function (d) { data = d; T = {}; (d.teams || []).forEach(function (t) { T[t.code] = t; }); },
+    _applyProgressionForTest: function () { return applyKnockoutProgression(); },
+    _matchesForTest: function () { return data && data.matches; }
   };
 })();

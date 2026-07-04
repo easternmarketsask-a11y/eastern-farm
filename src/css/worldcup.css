@@ -211,6 +211,21 @@
 .wc-spoiler-toggle { margin-left: auto; }
 
 /* ===================== DAY GROUPS + MATCH ROWS ===================== */
+/* 轮次分组头（2026-07-03 淘汰赛阶段改版）：可点开合，已结束轮次收起成一行 */
+.wc-round-head {
+  display: flex; justify-content: space-between; align-items: center; width: 100%;
+  margin: 14px 0 6px; padding: 12px 14px; cursor: pointer; text-align: left;
+  background: var(--wc-card); border: 1px solid var(--wc-line); border-radius: var(--radius-md);
+  box-shadow: var(--wc-sh-sm); font-family: var(--font-display); font-size: 15px; color: var(--wc-pitch);
+}
+.wc-round-head:active { transform: scale(0.995); }
+.wc-round-head.done { opacity: 0.72; }
+.wc-round-head.done.open { opacity: 1; }
+.wc-round-head .cnt { font-family: var(--font-en); font-size: 11.5px; color: var(--wc-faint); font-weight: 700; }
+.wc-round-head .wc-round-state { font-size: 11.5px; color: var(--wc-faint); font-weight: 600; display: flex; align-items: center; gap: 5px; white-space: nowrap; }
+.wc-round-head .chev { font-size: 13px; }
+.wc-round-body { padding: 0 2px 4px; }
+
 .wc-day { font-family: var(--font-display); font-size: 14.5px; color: var(--wc-pitch); display: flex; align-items: center; gap: 8px; margin: 16px 2px 9px; }
 .wc-day::after { content: ""; flex: 1; height: 2px; border-radius: 2px; background: linear-gradient(90deg, var(--wc-line), transparent); }
 .wc-day .cnt { font-family: var(--font-en); font-size: 11.5px; color: var(--wc-faint); font-weight: 700; }
