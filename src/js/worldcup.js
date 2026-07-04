@@ -429,7 +429,7 @@
       '<div class="wc-mp-body">' +
         '<div class="wc-lc-head">🎁 竞猜中心 · 人人有礼</div>' +
         '<div class="wc-lc-sub">每场比赛转一次大转盘：参与保底 <b>1000 农场币</b>，猜对晋级翻倍，' +
-          '更有 🥠 沙琪玛 / 龙角散 / 气泡水 <b>实物好礼</b>到店领（每天 2 次机会）</div>' +
+          '更有 🥠 沙琪玛 <b>实物好礼</b>到店领（每天 2 次机会，<b>开赛了也能玩</b>）</div>' +
         rows +
       '</div></div>';
     hub.appendChild(ov);
@@ -982,7 +982,13 @@
   };
 
   function isKO(m) { return !!(m && m.stage && m.stage !== 'group'); }
-  function lottoOpen(m) { return matchState(m) === 'upcoming'; }   // entry until kickoff
+  // 2026-07-04：比赛进行中也能玩（Chris）。upcoming + live 都开放，
+  // 与服务端「开球后 2.5h 内可报名」对齐（live 窗口 130min 更紧一点，
+  // 避免边缘撞上服务端截止报错）。
+  function lottoOpen(m) {
+    var st = matchState(m);
+    return st === 'upcoming' || st === 'live';
+  }
   function fbReady() { return !!(window.Farm && Farm.fb && Farm.fb.available && Farm.fb.db); }
   function lottoUser() {
     if (!window.Farm || !Farm.fbAuth || !Farm.fbAuth.isLoggedIn || !Farm.fbAuth.isLoggedIn()) return null;
@@ -997,7 +1003,7 @@
   }
 
   function lottoPrizeLine() {
-    return '<div class="wc-lotto-prizes">竞猜参与，人人有礼！🥠 沙琪玛 · 龙角散 · 气泡水 实物好礼到店领</div>';
+    return '<div class="wc-lotto-prizes">竞猜参与，人人有礼！🥠 沙琪玛等实物好礼到店领 · 开赛了也能玩</div>';
   }
   function lottoCard(title, bodyHtml, sub) {
     return '<div class="wc-lotto-card">' +
