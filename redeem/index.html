@@ -70,6 +70,13 @@
   .rec-pz .code2{font-family:ui-monospace,monospace;letter-spacing:1px;color:var(--amber-d)}
   .rec-who{font-size:12.5px;color:var(--ink);margin-top:3px}
   .rec-sub{font-size:11.5px;color:var(--soft);margin-top:3px}
+  .rec-actions{display:flex;gap:8px;margin-top:10px}
+  .rbtn{flex:1;border:0;border-radius:9px;padding:9px 6px;font-size:12.5px;font-weight:800;
+    font-family:inherit;cursor:pointer;color:#fff;transition:transform .12s,opacity .15s}
+  .rbtn:active{transform:scale(.98)} .rbtn:disabled{opacity:.55;cursor:default}
+  .rbtn.go{background:linear-gradient(160deg,var(--amber),var(--amber-d))}
+  .rbtn.undo{background:#fff;color:var(--soft);border:1.5px solid var(--line)}
+  .rbtn.del{background:#fff;color:var(--red);border:1.5px solid #f1c4bf}
   .muted{color:var(--soft);font-size:12.5px;text-align:center;padding:16px}
   .foot{text-align:center;font-size:11px;color:#a99e90;margin-top:20px}
 </style>
@@ -99,7 +106,7 @@
     <div id="paneRedeem">
       <div class="card">
         <label for="code">输入顾客券码</label>
-        <input id="code" class="code" autocomplete="off" maxlength="8" placeholder="WC----">
+        <input id="code" class="code" autocomplete="off" maxlength="8" placeholder="AB12">
         <button class="btn" id="lookupBtn">查询</button>
         <div class="err" id="redeemErr"></div>
         <div class="res" id="res"></div>
@@ -296,17 +303,45 @@ window.addEventListener('load', function () {
         var sub = [];
         if (x.drawnAt) sub.push('抽中 ' + esc(x.drawnAt));
         if (x.redeemed && x.redeemedAt) sub.push('核销 ' + esc(x.redeemedAt));
+        var code = esc(x.code);
+        // 每条记录直接可操作:未核销→核销发奖 / 取消作废;已核销→撤销核销
+        var acts = x.redeemed
+          ? '<button class="rbtn undo" data-act="unredeem" data-code="' + code + '">↩︎ 撤销核销</button>'
+          : '<button class="rbtn go" data-act="redeem" data-code="' + code + '">✓ 核销发奖</button>' +
+            '<button class="rbtn del" data-act="void" data-code="' + code + '">✕ 取消作废</button>';
         return '<div class="rec ' + (x.redeemed ? 'done' : '') + '">' +
-          '<div class="rec-top"><span class="c">' + esc(x.code) + '</span>' +
+          '<div class="rec-top"><span class="c">' + code + '</span>' +
             '<span class="s ' + (x.redeemed ? 'y">✓ 已领' : 'n">待领') + '</span></div>' +
           '<div class="rec-pz">🎁 ' + esc(x.prizeCn) + '</div>' +
           (meta.length ? '<div class="rec-who">' + meta.join(' · ') + '</div>' : '') +
           (sub.length ? '<div class="rec-sub">' + sub.join(' · ') + '</div>' : '') +
+          '<div class="rec-actions">' + acts + '</div>' +
         '</div>';
       }).join('');
     } catch (e) { if (e && e.code === 'permission-denied') { lock(); } else $('listStat').textContent = '出错:' + (e.message || e); }
   }
   $('refreshBtn').onclick = loadList;
+  // 列表内按钮:事件委托(loadList 每次重建 innerHTML,委托到容器上一次绑定长期有效)
+  $('listBox').addEventListener('click', async function (ev) {
+    var btn = ev.target && ev.target.closest ? ev.target.closest('.rbtn') : null;
+    if (!btn) return;
+    var act = btn.getAttribute('data-act');
+    var code = btn.getAttribute('data-code');
+    if (!act || !code) return;
+    if (act === 'void' && !window.confirm('确定作废券码 ' + code + ' 吗?\n\n将删除这条中奖记录、退回库存,顾客手机上也不再显示此奖。\n用于取消测试抽奖或误发,已核销的券不能作废。')) return;
+    var sibs = btn.parentNode.querySelectorAll('.rbtn');
+    for (var i = 0; i < sibs.length; i++) sibs[i].disabled = true;
+    var old = btn.textContent; btn.textContent = '处理中…';
+    try {
+      await api({ action: act, code: code });
+      await loadList();
+    } catch (e) {
+      if (e && e.code === 'permission-denied') { lock(); return; }
+      for (var j = 0; j < sibs.length; j++) sibs[j].disabled = false;
+      btn.textContent = old;
+      $('listStat').textContent = '操作失败:' + (e.message || e);
+    }
+  });
 
   // ---- 全部中奖记录(含农场币,所有会员)----
   async function loadAll() {
