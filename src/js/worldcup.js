@@ -372,7 +372,20 @@
       b.onclick = function () { switchTab(b.getAttribute('data-tab')); };
     });
     var lb = hub.querySelector('#wcLottoBanner');
-    if (lb) lb.onclick = function () { openLottoCenter(); };   // 2026-07-04: 直达全部场次的竞猜中心
+    // 2026-07-04 Chris：登录后点横幅要直接进大转盘（最少步数）。
+    // 未登录 → 先走登录（关 hub 开登录弹窗，与竞猜卡登录入口同路）；
+    // 已登录 → 直落「最近一场还没玩过」的竞猜卡（自动展开+定位）；
+    // 可玩场次都玩过了/暂无对阵 → 才打开竞猜中心总览。
+    if (lb) lb.onclick = function () {
+      var u = lottoUser();
+      if (!u || !(Farm.fbAuth && Farm.fbAuth.memberDoc)) { loginFromHub(); return; }
+      lottoLoadMine().then(function (mine) {
+        var next = (data.matches || []).filter(function (m) {
+          return isKO(m) && lottoOpen(m) && isTeam(m.home) && isTeam(m.away) && !mine[m.id];
+        }).sort(function (a, b) { return new Date(a.kickoffUtc) - new Date(b.kickoffUtc); })[0];
+        if (next) openLottoMatch(next); else openLottoCenter();
+      }).catch(function () { openLottoCenter(); });
+    };
     var mp = hub.querySelector('#wcMyPrizes');
     if (mp) mp.onclick = openMyPrizes;
   }
