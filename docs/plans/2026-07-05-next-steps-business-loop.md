@@ -75,6 +75,37 @@
 
 A 便宜且解锁判断，B 是真正的引流引擎——建议这两个一起先开工。
 
+## 🔧 A+B 实施合约（2026-07-05 开工，跨仓库核实后定稿）
+
+**关键修正**：东方点已由 `_run_award` 批次 + `_award_orders_for_member` 按 `event_id=order:{oid}`
+**全自动发放**给会员到店订单。故 **B 只发农场币（零真实成本），不再发东方点**——否则同一单
+重复计负债。比原草案更省更安全。
+
+### B · 反向闭环端点（stockwise_final，会员鉴权）
+- `POST /api/members/me/farm-purchase-rewards`，`require_member`，新文件 `game_rewards_endpoints.py`
+  导出 `router`，在 app_server.py `create_app()` ~23774 后 `include_router`。
+- 复用 `_resolve_clover_customer_id`（clover_orders_endpoints）、`clover_orders_sync.COLLECTION`、
+  `db_members`。未关联 customer → `{unlinked:true, coins:0, newRewards:[]}`。
+- 读近 windowDays（默认 30）clover_orders；对**未发过农场币**且未退款、total>0 的单，
+  按档发农场币：`coins = clamp(round(total)*10, 100, 600)/单`（零成本可慷慨，单单封顶）。
+- 幂等账本：`db_members/farm_purchase_rewards/{memberId}` = `{claimedOrders:{oid:coins}, totalCoins, updatedAt}`，
+  事务内加新单 + 写入前 prune 掉早于 windowDays 的 oid（保证 doc 有界，且过窗单不会重发）。
+- 返回 `{ok, coins:<本次>, newRewards:[{orderId,total,coins,date}], totalCoinsAllTime}`。
+- 可选 `farm_rewards_config/config`（enabled/coinsPerDollar/minCoins/maxCoinsPerOrder/windowDays）
+  让 Chris 免部署调参；缺省内置。**不写 POS，不碰积分账本。**
+
+### A · 北极星度量端点（stockwise_final，admin 鉴权，只读）
+- `GET /api/game/business-metrics?days=30`，admin（X-Admin-Token/cookie 中间件已处理）。
+- 单扫 clover_orders 窗口 → 按 customer_id 聚合（笔数/金额）；再 customer_id→member→是否有
+  farm_players doc 分玩家/非玩家两群。**避免 per-member 查订单**（Cloud Run 60s）。
+- 输出两群：规模、有 customer_id 数、窗口内到店人数、总笔数/总额、人均、到店率 + 差值 headline。
+- StockWise 后台加一个紧凑只读卡片展示（改 HTML_PAGE 内嵌 JS 后 `node --check`）。
+
+### 游戏侧 B（eastern-farm）
+- 底部 dock 菜单里加「🧾 领取到店奖励」；调 B 端点；`coins>0` 时农场币客户端入账
+  （客户端权威，走现有加币+存档）+ 庆祝揭示（复用 flyCoins/跳字）；unlinked 给引导文案
+  「下次到店出示会员码关联」。deploy.sh 上线。
+
 ## 全局红线（所有阶段）
 - 不动 Firebase 初始化 / 云同步机制 / 登录中间件
 - 东方点=真负债：任何发放走服务端账本 + 幂等 + 封顶（成本铁律 #1）

@@ -343,6 +343,7 @@
       { a: 'shop', icon: '🛒', zh: '种子店', en: 'Seeds' },
       { a: 'tasks', icon: '📋', zh: '任务', en: 'Tasks' },
       { a: 'orders', icon: '📦', zh: '东超订单', en: 'Orders' },
+      { a: 'storeRewards', icon: '🧾', zh: '领取到店奖励', en: 'Store Rewards' },
       { a: 'kitchen', icon: '🍳', zh: '小东厨房', en: 'Kitchen' },
       { a: 'community', icon: '🏘', zh: '社区', en: 'Community' },
       { a: 'store', icon: '🛍️', zh: '农场商城', en: 'Mall' },
@@ -363,6 +364,7 @@
           case 'shop': Farm.shop.open(); break;
           case 'tasks': Farm.tasks.open(); break;
           case 'orders': if (Farm.orders) Farm.orders.open(); break;
+          case 'storeRewards': if (Farm.storeRewards) Farm.storeRewards.open(); break;
           case 'kitchen': if (Farm.kitchen) Farm.kitchen.open(); break;
           case 'community': if (Farm.neighbors) Farm.neighbors.open(); break;
           case 'store': if (Farm.epShop) Farm.epShop.open(); break;

@@ -190,6 +190,29 @@
     },
 
     /**
+     * 反向闭环 B：领取「到店消费 → 农场奖励」。
+     * 复用带 Firebase token 的 _callStockWise（别自己拼 token），加 timeout。
+     * 直接返回服务端原样分支对象（幂等在服务端）：
+     *   { ok, coins, newRewards:[{orderId,total,coins,date}], totalCoinsAllTime }  // 有单/无单
+     *   { unlinked:true, message, coins:0, newRewards:[] }                          // 未关联店内消费
+     *   { ok:true, disabled:true, coins:0, newRewards:[] }                          // 功能关闭
+     * 抛错：not_logged_in / timeout / HTTP xxx —— 由调用方 catch 后给重试入口。
+     * 注意：unlinked/disabled 是 HTTP 200（ok 分支），会正常返回不抛错。
+     */
+    async claimStorePurchaseRewards(opts) {
+      opts = opts || {};
+      const timeoutMs = opts.timeoutMs || 15000;
+      const call = _callStockWise('/api/members/me/farm-purchase-rewards', {});
+      const data = await Promise.race([
+        call,
+        new Promise((_, rej) => setTimeout(() => {
+          const e = new Error('timeout'); e.code = 'timeout'; rej(e);
+        }, timeoutMs)),
+      ]);
+      return data || {};
+    },
+
+    /**
      * On first successful login, credit any guest-mode-accumulated EP to
      * the member account (capped at BACKFILL_CAP to limit abuse).
      */
