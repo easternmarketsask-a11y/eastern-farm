@@ -266,28 +266,30 @@
     <span class="status-next-plot" id="nextPlotHint" title="下个地块解锁等级"></span>
   </div>
 
-  <!-- Bottom action bar -->
-  <nav id="bottombar">
-    <button class="action-btn" data-action="shop">
-      <span class="action-icon">🛒</span>
-      <span class="action-label" data-i18n="nav_shop">种子店</span>
-    </button>
+  <!-- Bottom dock（UX 第 4 批 2026-07-05）：任务 / 商店 / 谷仓 / 菜单。
+       曾是全宽 5 钮 bottombar，2026-06-19 layout v2 被 display:none 永久隐藏后
+       所有面板唯一入口只剩右上 36px 汉堡；现复活为居中胶囊 dock（fixed 悬浮，
+       不占布局行，三视图共用；build 模式仍由 _setChromeHidden 按 id 隐藏）。
+       社区/农场商城/图鉴等次级入口保留在汉堡菜单（openNavMenu）里。 -->
+  <nav id="bottombar" aria-label="快捷导航 Quick nav">
     <button class="action-btn" data-action="tasks">
       <span class="action-icon">📋</span>
-      <span class="action-label" data-i18n="nav_tasks">任务</span>
+      <span class="action-label" data-i18n="dock_tasks">任务</span>
       <span class="task-badge" id="taskBadge"></span>
     </button>
-    <button class="action-btn" data-action="community">
-      <span class="action-icon">🏘</span>
-      <span class="action-label" data-i18n="nav_community">社区</span>
+    <button class="action-btn" data-action="shop">
+      <span class="action-icon">🛒</span>
+      <span class="action-label" data-i18n="dock_shop">商店</span>
     </button>
-    <button class="action-btn" data-action="store">
-      <span class="action-icon">🛍️</span>
-      <span class="action-label" data-i18n="nav_store">农场商城</span>
+    <button class="action-btn" data-action="warehouse">
+      <span class="action-icon">🌾</span>
+      <span class="action-label" data-i18n="dock_barn">谷仓</span>
+      <span class="dock-dot" id="dockBarnDot"></span>
     </button>
-    <button class="action-btn" data-action="collection">
-      <span class="action-icon">📖</span>
-      <span class="action-label" data-i18n="nav_collection">图鉴</span>
+    <button class="action-btn" data-action="menu">
+      <span class="action-icon">☰</span>
+      <span class="action-label" data-i18n="dock_menu">菜单</span>
+      <span class="dock-dot" id="dockMenuDot"></span>
     </button>
   </nav>
 

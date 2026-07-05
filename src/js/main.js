@@ -155,6 +155,9 @@
       // 6d. Seed 小东's order board + show his fillable-order badge
       if (Farm.orders) { Farm.orders.ensure(); Farm.orders.refreshBadge(); }
 
+      // 6e. 底部 dock 红点首刷（谷仓将满/满 + 厨房出锅，UX 第 4 批）
+      if (Farm.ui.refreshDockDots) Farm.ui.refreshDockDots();
+
       // 7. Storekeeper
       Farm.storekeeper.refresh();
     } catch (e) {
@@ -216,6 +219,8 @@
 
     // 9. Ticks
     setInterval(() => Farm.farm.tick(), 1000);
+    // dock 红点轻量轮询：厨房倒计时走完/仓储变化 2 秒内点亮（纯 class 切换，无重排成本）
+    setInterval(() => { if (Farm.ui.refreshDockDots) Farm.ui.refreshDockDots(); }, 2000);
     setInterval(() => Farm.storekeeper.refresh(), 45000);  // rotate every 45s
     setInterval(() => Farm.events.check(), 60000 * 30);    // re-check every 30 min
     // 心跳：持续刷新"上次活跃"，让下次回来能正确算出离开多久（被偷结算用）。
@@ -373,6 +378,7 @@
   function wireNav() {
     const hb = document.getElementById('hamburgerButton');
     if (hb) hb.onclick = () => { if (Farm.audio) Farm.audio.play('tap'); openNavMenu(); };
+    // 底部 dock（UX 第 4 批 2026-07-05：任务/商店/谷仓/菜单）+ 任何遗留 .action-btn。
     document.querySelectorAll('.action-btn[data-action]').forEach(btn => {
       const action = btn.dataset.action;
       btn.onclick = () => {
@@ -380,6 +386,8 @@
         switch (action) {
           case 'shop': Farm.shop.open(); break;
           case 'tasks': Farm.tasks.open(); break;
+          case 'warehouse': if (Farm.warehouse) Farm.warehouse.open(); break;  // dock 谷仓
+          case 'menu': openNavMenu(); break;                           // dock 菜单 = 汉堡同一函数
           case 'store': if (Farm.epShop) Farm.epShop.open(); break;   // 农场商城
           case 'rewards': Farm.rewards.open(); break;                  // legacy (now via points card)
           case 'community': if (Farm.neighbors) Farm.neighbors.open(); break;

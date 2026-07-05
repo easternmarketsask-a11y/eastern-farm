@@ -259,6 +259,9 @@
 
     // Refresh the floating barn button's "14/20" badge after harvest/deliver.
     refreshBadge() {
+      // dock 谷仓钮的将满/满仓点同步刷新（收获/卖货后立即，不等 2s 轮询）。
+      // 放在 warehouseBtn 早退之前——iso 视图下经典农场的浮动谷仓钮可能不在 DOM。
+      if (Farm.ui && Farm.ui.refreshDockDots) Farm.ui.refreshDockDots();
       const btn = document.getElementById('warehouseBtn');
       if (!btn) return;
       const wh = Farm.state.data.warehouse || [];

@@ -15,6 +15,11 @@
     "nav_community": { "zh": "社区", "en": "Community" },
     "nav_settings": { "zh": "设置", "en": "Settings" },
 
+    "dock_tasks": { "zh": "任务", "en": "Tasks" },
+    "dock_shop": { "zh": "商店", "en": "Shop" },
+    "dock_barn": { "zh": "谷仓", "en": "Barn" },
+    "dock_menu": { "zh": "菜单", "en": "Menu" },
+
     "currency_coins": { "zh": "金币", "en": "Coins" },
     "currency_east_points": { "zh": "超市积分", "en": "Store Points" },
     "label_level": { "zh": "等级", "en": "Level" },

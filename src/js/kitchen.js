@@ -243,6 +243,8 @@
       const d = Farm.state.data;
       d.totalDishesCooked = (d.totalDishesCooked || 0) + 1;
       Farm.state.save();
+      // 上菜后 readyCount 变了 → 立即刷新 dock 菜单钮/汉堡红点（UX 第 4 批）
+      if (Farm.ui.refreshDockDots) Farm.ui.refreshDockDots();
 
       // juice：上菜 = 金币飞行 + toast
       Farm.ui.hideModal();

@@ -1952,102 +1952,67 @@ body.mapmode #warehouseBtn { display: none !important; }
 }
 
 /* =============== BOTTOM BAR =============== */
+/* =============== BOTTOM DOCK（UX 第 4 批 2026-07-05）===============
+   旧全宽 5 钮 bottombar（candy-chip 样式已清理）→ 4 钮居中奶油胶囊 dock：
+   任务 / 商店 / 谷仓 / 菜单。position:fixed 悬浮，不占布局行——#farm 依旧
+   吃满全部空间（2026-06-19 layout v2 的初衷不破坏）。
+   左右 inset 让出左下 storekeeper 头像（10+52px）和右下建造钮（~96px+14px），
+   360px 窄屏下三者矩形互不重叠；margin:0 auto + max-width 让内容居中。 */
 #bottombar {
+  position: fixed;
+  left: 70px;
+  right: 112px;
+  bottom: calc(8px + env(safe-area-inset-bottom));
+  margin: 0 auto;
+  max-width: 276px;
+  z-index: 9;
   display: flex;
-  background: linear-gradient(0deg, #fffaeb 0%, #faf0d8 100%);
-  border-top: 2px solid var(--border-soft);
-  box-shadow: 0 -3px 10px rgba(139, 90, 60, 0.08);
-  padding: 7px 6px;
-  gap: 4px;
-  padding-bottom: max(7px, env(safe-area-inset-bottom));
+  align-items: stretch;
+  gap: 2px;
+  background: rgba(253, 248, 238, 0.95);   /* cream #fdf8ee */
+  border: 1.5px solid var(--border-soft, #e9e1cd);
+  border-radius: 999px;
+  padding: 4px 7px;
+  box-shadow: 0 3px 10px rgba(139, 90, 60, 0.16);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
 }
-/* Entrance buttons as little candy chips: each icon sits in its own
-   pastel rounded tile with a solid bottom rim (mini-3D, same language
-   as the .btn candy buttons and soil tiles). Press = sink the rim. */
 .action-btn {
-  flex: 1;
+  flex: 1 1 0;
+  min-width: 0;                /* 窄屏允许平分收窄，触控高度由 min-height 保证 */
+  min-height: 52px;            /* 触控目标 ≥52px 高（锁定要求） */
   background: transparent;
   border: none;
-  padding: 4px 2px 5px;
+  padding: 5px 1px 4px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  justify-content: center;
+  gap: 2px;
   cursor: pointer;
-  border-radius: var(--radius-md);
+  border-radius: 999px;
   position: relative;
   -webkit-tap-highlight-color: transparent;
+  transition: transform 0.1s ease, background 0.15s ease;
 }
-.action-icon {
-  font-size: 22px;
-  line-height: 1;
-  width: 42px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 13px;
-  background: linear-gradient(180deg, #ffffff 0%, #f3ead4 100%);
-  border: 1.5px solid #e6d8b4;
-  box-shadow: 0 3px 0 #e2d3ac,
-              0 4px 8px rgba(139, 90, 60, 0.12),
-              inset 0 1px 0 rgba(255, 255, 255, 0.85);
-  transition: transform 0.1s ease, box-shadow 0.1s ease;
+.action-btn:active {
+  transform: scale(0.92);
+  background: rgba(58, 140, 80, 0.1);   /* 轻绿按压，贴品牌绿 #3a8c50 */
 }
-.action-btn:active .action-icon {
-  transform: translateY(3px);
-  box-shadow: 0 0 0 #e2d3ac,
-              0 1px 3px rgba(139, 90, 60, 0.12),
-              inset 0 1px 0 rgba(255, 255, 255, 0.6);
-}
-/* Per-entry pastel tiles (data-action set in index.html) */
-.action-btn[data-action="shop"] .action-icon {
-  background: linear-gradient(180deg, #f2fae9 0%, #d9efc2 100%);
-  border-color: #b8d98e; box-shadow: 0 3px 0 #a9cc7e, 0 4px 8px rgba(106, 166, 70, 0.16), inset 0 1px 0 rgba(255,255,255,0.85);
-}
-.action-btn[data-action="shop"]:active .action-icon {
-  box-shadow: 0 0 0 #a9cc7e, 0 1px 3px rgba(106, 166, 70, 0.16), inset 0 1px 0 rgba(255,255,255,0.6);
-}
-.action-btn[data-action="tasks"] .action-icon {
-  background: linear-gradient(180deg, #fff7e4 0%, #ffe5b0 100%);
-  border-color: #f0c674; box-shadow: 0 3px 0 #e3b35c, 0 4px 8px rgba(214, 158, 40, 0.16), inset 0 1px 0 rgba(255,255,255,0.85);
-}
-.action-btn[data-action="tasks"]:active .action-icon {
-  box-shadow: 0 0 0 #e3b35c, 0 1px 3px rgba(214, 158, 40, 0.16), inset 0 1px 0 rgba(255,255,255,0.6);
-}
-.action-btn[data-action="community"] .action-icon {
-  background: linear-gradient(180deg, #eef7fd 0%, #cfe8f7 100%);
-  border-color: #9fcbe8; box-shadow: 0 3px 0 #8fbcdb, 0 4px 8px rgba(80, 150, 200, 0.16), inset 0 1px 0 rgba(255,255,255,0.85);
-}
-.action-btn[data-action="community"]:active .action-icon {
-  box-shadow: 0 0 0 #8fbcdb, 0 1px 3px rgba(80, 150, 200, 0.16), inset 0 1px 0 rgba(255,255,255,0.6);
-}
-.action-btn[data-action="store"] .action-icon {
-  background: linear-gradient(180deg, #fdf0f2 0%, #fad6dc 100%);
-  border-color: #eba8b4; box-shadow: 0 3px 0 #dd96a3, 0 4px 8px rgba(200, 90, 110, 0.15), inset 0 1px 0 rgba(255,255,255,0.85);
-}
-.action-btn[data-action="store"]:active .action-icon {
-  box-shadow: 0 0 0 #dd96a3, 0 1px 3px rgba(200, 90, 110, 0.15), inset 0 1px 0 rgba(255,255,255,0.6);
-}
-.action-btn[data-action="collection"] .action-icon {
-  background: linear-gradient(180deg, #f5f0fc 0%, #e2d6f5 100%);
-  border-color: #c3aee4; box-shadow: 0 3px 0 #b29dd6, 0 4px 8px rgba(130, 100, 190, 0.15), inset 0 1px 0 rgba(255,255,255,0.85);
-}
-.action-btn[data-action="collection"]:active .action-icon {
-  box-shadow: 0 0 0 #b29dd6, 0 1px 3px rgba(130, 100, 190, 0.15), inset 0 1px 0 rgba(255,255,255,0.6);
-}
+.action-icon { font-size: 21px; line-height: 1; }
 .action-label {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
-  color: #6b5d52;
+  color: var(--deep-green, #2a5c34);
   letter-spacing: 0.2px;
+  white-space: nowrap;
   font-family: var(--font-display);   /* kawaii rounded nav labels */
 }
 
 .task-badge {
   position: absolute;
-  top: 0;
-  right: calc(50% - 27px);   /* rides the top-right corner of the 42px icon tile */
+  top: 1px;
+  right: calc(50% - 22px);   /* 骑在图标右上角 */
   background: var(--barn-red);
   color: white;
   font-size: 9px;
@@ -2060,6 +2025,34 @@ body.mapmode #warehouseBtn { display: none !important; }
   z-index: 1;
 }
 .task-badge:empty { display: none; }
+
+/* dock 状态小圆点：谷仓将满(黄 .warn)/已满(红)、菜单=厨房出锅(红)。
+   数据接线在 ui.js refreshDockDots()。 */
+.dock-dot {
+  position: absolute;
+  top: 3px;
+  right: calc(50% - 17px);
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--barn-red, #E8522A);
+  border: 1.5px solid #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  display: none;
+  z-index: 1;
+}
+.dock-dot.show { display: block; }
+.dock-dot.warn { background: #f6c945; }
+
+/* modal 打开时 dock 让位（跟 body.modal-open 隐藏 PWA 横幅同一惯例） */
+body.modal-open #bottombar { display: none; }
+
+/* 极窄屏兜底：dock 内边距与字号再收一点（触控 min-height 不缩） */
+@media (max-width: 375px) {
+  #bottombar { padding: 4px 4px; gap: 0; }
+  .action-label { font-size: 9.5px; letter-spacing: 0; }
+  .action-icon { font-size: 20px; }
+}
 
 /* =============== MODAL =============== */
 .modal {
@@ -4081,9 +4074,10 @@ body.modal-open .pwa-install-banner { display: none; }
    all popups become bottom sheets ≤ 1/3 height. Appended last so it overrides.
    ============================================================================ */
 
-/* — Bottom nav + Lv/XP strip removed from the layout → all that space is farm.
-     (#statusbar kept in DOM but hidden so refreshHUD's levelValue/xpFill still exist.) */
-#bottombar { display: none !important; }
+/* — Lv/XP strip removed from the layout → all that space is farm.
+     (#statusbar kept in DOM but hidden so refreshHUD's levelValue/xpFill still exist.)
+     #bottombar 不再在此隐藏：UX 第 4 批（2026-07-05）把它重生为 4 钮悬浮 dock
+     （样式见上方 BOTTOM DOCK 段，fixed 定位不占布局行，farm 仍吃满空间）。 */
 #statusbar { display: none !important; }
 
 /* — Top bar: compact Lv chip + currency chips + hamburger all in the logo row — */

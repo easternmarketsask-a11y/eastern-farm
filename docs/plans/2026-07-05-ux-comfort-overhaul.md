@@ -71,10 +71,16 @@
 - [ ] toast 时长 JS/CSS 对齐（淡出动画走完）（修 #10 一半）
 - [ ] 失败反馈统一：资源不够一律 toast，不可恢复/需决策才 modal（修 #10 另一半）
 
-### 第 4 批 · 布局重心下移（结构改动，最后做）
-- [ ] 底部 dock（4 钮 ≥52px）：任务 / 商店 / 谷仓 / 菜单，替代「一切都在汉堡里」；红点迁移到对应钮（修 #2）
-- [ ] 厨房出锅红点接入 dock 菜单钮（审计发现 readyCount 没接线）
-- [ ] 汉堡保留（次级功能），世界杯 ⚽ 浮钮不动
+### 第 4 批 · 布局重心下移（结构改动，最后做）✅ 代码完成（2026-07-05，待 commit/deploy）
+- [x] 底部 dock（4 钮 ≥52px）：任务 / 商店 / 谷仓 / 菜单，替代「一切都在汉堡里」；红点迁移到对应钮（修 #2）
+      —— 复活 #bottombar（style.css 原 :4086 的 display:none 移除，#statusbar 保持隐藏）；
+      奶油胶囊 fixed 定位（left:70/right:112 让出 storekeeper 头像与建造钮，360px 实测无重叠）；
+      wireNav 沿用，新增 warehouse/menu 两个 case；modal 打开时 dock 隐藏（body.modal-open 惯例）；
+      任务 badge 用原 #taskBadge；谷仓钮黄/红点与 iso 谷仓头顶点同口径（ui.refreshDockDots）
+- [x] 厨房出锅红点接入 dock 菜单钮（审计发现 readyCount 没接线）
+      —— 菜单钮红点 + 顶栏汉堡计数都改由 kitchen.readyCount() 驱动（2s 轮询 + 上菜/收获即时刷新）；
+      汉堡不再镜像任务数（任务已单独在 dock 上，避免重复计数）
+- [x] 汉堡保留（次级功能），世界杯 ⚽ 浮钮不动
 
 ## 红线
 

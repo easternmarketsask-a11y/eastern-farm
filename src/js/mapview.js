@@ -352,6 +352,10 @@
     },
     toggleBuild() {
       this._build = !this._build;
+      // 建造模式让位给底部建材托盘：隐藏 dock（与 iso 视图 _setChromeHidden 同惯例，
+      // UX 第 4 批 2026-07-05——托盘 z-index 20 本就盖住 dock，藏掉避免半露）。
+      const dockEl = document.getElementById('bottombar');
+      if (dockEl) dockEl.style.display = this._build ? 'none' : '';
       if (this._build && Farm.state.data && !Farm.state.data.mapBuildSeen) {
         Farm.state.data.mapBuildSeen = true; Farm.state.save();
         if (this._buildPulse) { this._buildPulse.cancel(); this._buildPulse = null; }

@@ -316,11 +316,34 @@
     },
 
     setTaskBadge(count) {
+      // UX 第 4 批（2026-07-05）：任务红点落在底部 dock 任务钮上（#taskBadge 就在
+      // 那颗钮里），不再镜像到顶栏汉堡——汉堡聚合红点只统计「菜单里才有的功能」
+      // （目前 = 厨房出锅，见 refreshDockDots），避免与 dock 重复计数。
       const badge = document.getElementById('taskBadge');
       if (badge) badge.textContent = count > 0 ? count : '';
-      // mirror onto the top-bar hamburger so unclaimed tasks are visible without the bottom nav
+    },
+
+    // ===== 底部 dock 红点接线（UX 第 4 批 2026-07-05）=====
+    // 谷仓钮：仓储 ≥80% 黄点、满仓红点——数据口径与 iso 谷仓头顶点完全一致
+    // （warehouse.length vs warehouseCapacity，mapview-iso.js ~1270，不另算）。
+    // 菜单钮 + 顶栏汉堡：厨房出锅数 kitchen.readyCount()>0 → 红点/计数
+    // （审计发现 readyCount 此前没接任何红点，这里接上；厨房入口在菜单里）。
+    refreshDockDots() {
+      if (!window.Farm || !Farm.state || !Farm.state.data) return;
+      const barnDot = document.getElementById('dockBarnDot');
+      if (barnDot) {
+        const n = (Farm.state.data.warehouse || []).length;
+        const cap = Farm.state.data.warehouseCapacity || 20;
+        const show = cap > 0 && n >= cap * 0.8;
+        barnDot.classList.toggle('show', show);
+        barnDot.classList.toggle('warn', show && n < cap);   // 将满=黄，满仓=红
+      }
+      let ready = 0;
+      try { if (Farm.kitchen && Farm.kitchen.readyCount) ready = Farm.kitchen.readyCount(); } catch (e) {}
+      const menuDot = document.getElementById('dockMenuDot');
+      if (menuDot) menuDot.classList.toggle('show', ready > 0);
       const nav = document.getElementById('navBadge');
-      if (nav) { nav.textContent = count > 0 ? count : ''; nav.classList.toggle('show', count > 0); }
+      if (nav) { nav.textContent = ready > 0 ? ready : ''; nav.classList.toggle('show', ready > 0); }
     },
 
     // Big celebratory modal shown when the player levels up. Shows the level
