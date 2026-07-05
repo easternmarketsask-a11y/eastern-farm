@@ -76,14 +76,30 @@
     // 会在 await 之前同步 TypeError，把 boot 炸死在 wireSplash 之前 → 开屏按钮
     // 全死、页面「完全不能动」。所以必须按名字取模块、逐个 try：缺哪个跳哪个
     // （所有消费方都有 Farm.xxx && 守卫，缺模块只是少个功能，绝不能是死机）。
+    // ⚠️ 关键加固（2026-07-05，Chris「这个页面总是卡着」根因之一）：每个 loader 内部是
+    // 裸 `await fetch()`，**没有客户端超时**。弱网 / Service Worker 未接管本次加载（首次
+    // 访问、部署换版刷新的时序窗口、SW 安装失败）时，fetch 可能「永挂」——既不 resolve
+    // 也不 reject。try/catch 接不住永挂，SW 的 6s 超时又不在这条路径上 → 这个 Promise.all
+    // 永不完成 → 下面的 wireSplash() 永不执行 → 「进入农场 / 登录」按钮永不绑 onclick →
+    // 开屏死键。而「世界杯」按钮由 worldcup.js 独立绑定仍能点 —— 正是 Chris 截图里那个
+    // 「世界杯能看/farm 进不去 + 顶部一直转圈」的不对称症状。所以给每个 loader 套一个
+    // 客户端硬超时：5 秒没回就放它过去（模块都有 Farm.xxx && 守卫会优雅降级，数据还有
+    // SW 缓存兜底）。绝不让「能不能进游戏」取决于某个 fetch 会不会挂。
+    const withTimeout = function (p, k) {
+      if (!p || typeof p.then !== 'function') return p;
+      return Promise.race([p, new Promise(function (res) {
+        setTimeout(function () { console.warn('[boot] loader timed out (continuing):', k); res(null); }, 5000);
+      })]);
+    };
     await Promise.all(['i18n', 'crops', 'rewards', 'achievements', 'epShop', 'daily',
       'aiNeighbors', 'tasks', 'kitchen'].map(function (k) {
       try {
         const m = Farm[k];
         const p = (m && typeof m.load === 'function') ? m.load() : null;
-        return (p && p.catch)
+        const guarded = (p && p.catch)
           ? p.catch(function (e) { console.warn('[boot] loader failed (continuing):', k, e); })
           : p;
+        return withTimeout(guarded, k);
       } catch (e) { console.warn('[boot] loader threw (continuing):', k, e); return null; }
     }));
 
@@ -765,18 +781,33 @@
   // （2026-07-03）：若 boot 仍在 wireSplash 之前致命失败，给开屏按钮接一个
   // 最小 dismiss —— 页面永远不允许「完全不能动」。
   function bootSafe() {
-    let p;
-    try { p = boot(); } catch (e) { p = Promise.reject(e); }
-    if (p && p.catch) p.catch(function (e) {
-      console.error('[boot] FATAL before splash wiring — installing emergency dismiss', e);
+    const installEmergency = function (why) {
       try {
         const splash = document.getElementById('splash');
         ['splashStart', 'splashLogin', 'splashWorldcup'].forEach(function (id) {
           const b = document.getElementById(id);
           if (b && !b.onclick) b.onclick = function () { if (splash && splash.parentNode) splash.remove(); };
         });
+        console.error('[boot] emergency dismiss installed (' + why + ')');
       } catch (_) {}
+    };
+    let p;
+    try { p = boot(); } catch (e) { p = Promise.reject(e); }
+    if (p && p.catch) p.catch(function (e) {
+      console.error('[boot] FATAL before splash wiring — installing emergency dismiss', e);
+      installEmergency('reject');
     });
+    // 永挂兜底（2026-07-05，Chris「总是卡着」）：hung fetch 让 boot 的 await 永不
+    // resolve/reject → 上面的 p.catch 永不触发 → 开屏死。加一道独立超时：10 秒后若
+    // 开屏还在、且「进入农场」按钮仍没绑 onclick（= wireSplash 没跑到），就装应急
+    // dismiss —— 页面永远不允许「完全不能动」。（正常 boot 早已 <2s 绑好，不会误触。）
+    setTimeout(function () {
+      try {
+        const s = document.getElementById('splash');
+        const start = document.getElementById('splashStart');
+        if (s && s.parentNode && start && !start.onclick) installEmergency('timeout-10s');
+      } catch (_) {}
+    }, 10000);
   }
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', bootSafe);

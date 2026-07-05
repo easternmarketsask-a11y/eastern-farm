@@ -280,7 +280,14 @@
     data: null,
 
     init() {
-      const saved = localStorage.getItem(SAVE_KEY);
+      // localStorage.getItem itself can THROW (iOS 存储已满 / 被 ITP 清 / 分区隔离 / 私密浏览),
+      // 不只是返回 null。此前这行没 try —— 一抛错 init 就中断在 this.data 赋值之前，
+      // this.data 永远是 null → 之后每个模块都在 null 上崩（reading 'language'/'map'…），
+      // 开屏消失后游戏是死的 = Chris 的「总是卡着」。所以必须 guard 这个「读」，
+      // 读失败就当作没存档 → 走全新内存态（本次可正常玩，只是不落地保存），绝不冻死。
+      let saved = null;
+      try { saved = localStorage.getItem(SAVE_KEY); }
+      catch (e) { console.warn('[state] localStorage read blocked — in-memory session', e); }
       if (saved) {
         try {
           const parsed = JSON.parse(saved);
@@ -360,7 +367,14 @@
         // Persist the fresh state immediately so SAVE_KEY always exists after a
         // load. The boot-time persistence probe (main.js) relies on this: if the
         // key is gone on a later reload, the browser isn't persisting storage.
-        this.save();
+        this.save();   // guarded internally; a blocked browser just warns, never throws here
+      }
+      // 兜底不变量：无论上面存储/迁移出了什么岔子，绝不能让游戏带着 null 状态往下走
+      // （null this.data 会让每个模块崩 → 开屏后死机）。任何漏网情形一律回落全新内存态。
+      if (!this.data || typeof this.data !== 'object') {
+        this.data = JSON.parse(JSON.stringify(STARTER_STATE));
+        this.data.sessionStats.date = getDateString();
+        this.data.dailyClaims.date = getDateString();
       }
     },
 
@@ -379,9 +393,12 @@
           this._saveWarned = true;
           const lang = (this.data && this.data.language) === 'en' ? 'en' : 'zh';
           if (window.Farm && Farm.ui && Farm.ui.toast) {
+            // 现在游戏本次仍可正常玩(内存态)，只是这次的进度可能存不下来。文案据实说明,
+            // 不再一口咬定「无痕模式」(Chris 常不在无痕却总看到，反感)；给真正有用的 iOS
+            // 建议:登录可云端同步 + 加到主屏幕从图标打开(绕开 Safari 7 天清储)。
             Farm.ui.toast(lang === 'en'
-              ? '⚠️ This browser can’t save your progress (Private Browsing or storage full). Turn it off / free up space, or your farm won’t be kept.'
-              : '⚠️ 这个浏览器存不了进度（可能是「无痕/隐私浏览」模式，或存储已满）。请关掉无痕模式或清理存储，否则农场不会被保存。', 8000);
+              ? '本次可正常游玩 · 但这台设备暂时存不下进度（存储已满或 iOS Safari 限制）。建议：登录后可云端同步；或点分享→「添加到主屏幕」，以后从图标打开更稳。'
+              : '本次可正常游玩 · 但这台设备暂时存不下进度（存储已满或 iOS Safari 限制）。建议：登录后可云端同步；或点分享→「添加到主屏幕」，以后从图标打开更稳。', 8000);
           }
         }
       }
