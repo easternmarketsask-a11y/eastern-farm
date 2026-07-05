@@ -24,7 +24,11 @@
 
 ## 分阶段方案（按 Chris 目标价值排序）
 
-### 🅰 阶段 A · 北极星度量先行（最便宜，解锁全部判断）
+### 🅰 阶段 A · 北极星度量先行（最便宜，解锁全部判断）✅ 上线 2026-07-05
+> `GET /api/game/business-metrics`（`game_metrics_endpoints.py`，owner+staff 只读）+ 后台 game-mgmt Tab
+> 只读对照卡片。单扫 clover_orders 窗口聚合 → join farm_players/members 分玩家 vs 非玩家，
+> 输出到店率/人均差值 + joinCoverage。**下面是原始设计存档：**
+
 **为什么先做**：不度量，后面所有引流改动都无法判断有没有用。数据现成，纯后端只读，零游戏改动、零成本、零风险。
 
 - StockWise 加只读报表端点（admin 鉴权）：把 `farm_players`（≡ members）经 `members.clover_customer_id` join `clover_orders`，算：
@@ -35,7 +39,12 @@
 - 交付：StockWise 后台一个卡片 / 一封周报邮件（路由见 `project_workflow_email_routing`）。
 - **红线**：只读，不碰积分账本；join 依赖 `clover_customer_id` 已回填——先报「可 join 覆盖率」，低了先补链。
 
-### 🅱 阶段 B · 反向闭环：到店消费 → 农场奖励（引流核心，业务价值最高）
+### 🅱 阶段 B · 反向闭环：到店消费 → 农场奖励（引流核心，业务价值最高）✅ 上线 2026-07-05
+> 后端 `POST /api/members/me/farm-purchase-rewards`（`game_rewards_endpoints.py`，会员鉴权，
+> 只读 clover_orders + 只写 farm_purchase_rewards，事务幂等，**只发农场币不发东方点**）。
+> 游戏侧 `store-rewards.js` 菜单入口「🧾 领取到店奖励」，四分支 + 庆祝揭示 + 农场币入账。
+> 可选 `farm_rewards_config/config` 免部署调参。**下面是原始设计存档：**
+
 **为什么最值**：这是「把线上玩家拉回实体店」最直接的机制，且完全缺失。买菜 = 农场有奖 → 玩家更愿意来店。
 
 - 登录会员在游戏里点「🧾 领取到店奖励」→ 游戏调 `/api/members/me/purchases` 取近期订单 → 对**未认领**的订单发农场奖励。
