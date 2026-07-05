@@ -134,7 +134,7 @@
     _on: false, _cv: null, _ctx: null, _dpr: 1,
     _camX: 0, _camY: 0, _zoom: 1, _ox: 0, _oy: 0,
     _w: 0, _h: 0, _img: {}, _cropImg: {},
-    _pointers: {}, _drag: null, _pinch: null,
+    _pointers: {}, _drag: null, _pinch: null, _pressCell: null,
     _tick: null, _raf: null, _lastFrame: 0,
     _cellToPlotN: -1,
     _build: false, _editMode: 'build', _brush: 'path', _painting: false,
@@ -281,9 +281,14 @@
       const span = (maxx - minx) + (maxy - miny);   // iso screen diagonal (du === dv === Δgx+Δgy)
       const screenW = (span * TW / 2 + TW) * FARM_SCALE;            // +1 tile side padding (× farm scale)
       const screenH = (span * TH / 2 + TH * 4.5) * FARM_SCALE;      // generous headroom for tall building roofs
-      // Cap initial zoom at 0.85 (tap-friendly tiles); floor at ZMIN. Fit so the whole
-      // farm is visible with a little margin.
-      this._zoom = Math.min(0.85, Math.max(ZMIN, Math.min(this._cssW() / (screenW * 1.1), this._cssH() / (screenH * 1.05))));
+      // 开局镜头 fit-to-farm（2026-07-05 UX 第 1 批）：旧逻辑 cap 0.85 → 农田只占屏
+      // ~15%、地块命中区 ~33px。改为「包围盒宽约占视口宽 65%」与「单块地块屏宽
+      // ≥53px（可点性底线 44px + 余量）」取较大者；再用高度护栏（农场高 ≤90% 视口）
+      // 防横屏小窗溢出，最后 clamp 到 ZMIN/ZMAX。相机无持久化，每次进图都 fit。
+      const fitW = (this._cssW() * 0.65) / screenW;                 // 包围盒宽 ≈ 65% 视口宽
+      const minTap = 53 / (TW * FARM_SCALE);                        // 地块屏宽 ≥53px
+      const fitH = (this._cssH() * 0.90) / screenH;                 // 高度护栏
+      this._zoom = Math.max(ZMIN, Math.min(ZMAX, Math.min(Math.max(fitW, minTap), fitH)));
       const ccx = (minx + maxx) / 2, ccy = (miny + maxy) / 2, u = ccx - ccy, v = ccx + ccy;
       this._camX = u * this._tw() / 2;
       this._camY = this._oy + v * this._th() / 2 - this._cssH() / 2 - this._cssH() * 0.14;   // farm centred, slightly low on the meadow
@@ -376,7 +381,7 @@
     _down(e) {
       const p = this._local(e); this._pointers[e.pointerId] = p;
       const ids = Object.keys(this._pointers);
-      if (ids.length === 2) { const [a, b] = ids.map(k => this._pointers[k]); this._pinch = { dist: Math.hypot(a.x - b.x, a.y - b.y) || 1, zoom: this._zoom }; this._drag = null; this._moving = null; this._painting = false; return; }
+      if (ids.length === 2) { const [a, b] = ids.map(k => this._pointers[k]); this._pinch = { dist: Math.hypot(a.x - b.x, a.y - b.y) || 1, zoom: this._zoom }; this._drag = null; this._moving = null; this._painting = false; this._pressCell = null; return; }
       if (this._build && this._editMode === 'terrain') { const c = this._screenToCell(p.x, p.y); this._painting = true; this._paintCell(c.gx, c.gy); return; }
       if (this._build) {
         if (this._sel >= 0) { const ch = this._delChip((Farm.state.data.map)[this._sel]); if (Math.hypot(p.x - ch.x, p.y - ch.y) <= ch.r) { const o = Farm.state.data.map[this._sel], b = BUILDINGS[o.type], refund = b ? Math.round((b.cost || 0) / 2) : 0; Farm.state.data.map.splice(this._sel, 1); this._sel = -1; if (refund > 0) { Farm.state.addCoins(refund); if (Farm.ui && Farm.ui.refreshHUD) Farm.ui.refreshHUD(); if (Farm.ui && Farm.ui.toast) Farm.ui.toast(this._lang() === 'en' ? ('Removed — refunded ' + refund + ' coins') : ('已移除 — 退回 ' + refund + ' 农场币')); } this._refreshPaletteAfford(); Farm.state.save(); this.render(); return; } }
@@ -386,6 +391,15 @@
         if (bidx >= 0) { const o = Farm.state.data.map[bidx]; this._sel = bidx; this._moving = { kind: 'building', idx: bidx, gx: o.gx, gy: o.gy, valid: true, sx: p.x, sy: p.y, moved: false }; this.render(); return; }
         const didx = this._decoAtPoint(p.x, p.y);
         if (didx >= 0) { const d = Farm.state.data.decorations[didx]; this._sel = -1; this._moving = { kind: 'deco', idx: didx, gx: d.gx, gy: d.gy, valid: true, sx: p.x, sy: p.y, moved: false }; this.render(); return; }
+      }
+      // 按压高亮（2026-07-05 UX 第 1 批 #5）：非建造模式下按下即命中测试地块，
+      // 命中的 cell 存 _pressCell，render() 里盖一层半透明白菱形做即时反馈。
+      // 直接调 render()（不等 30fps rAF 节流）保证按下当帧可见；up/cancel/
+      // 判定为拖拽/进入捏合时清除。只存 {gx,gy} 小对象，无每帧分配。
+      this._pressCell = null;
+      if (!this._build) {
+        const hit = this._plotAtPoint(p.x, p.y);
+        if (hit) { this._pressCell = { gx: hit.gx, gy: hit.gy }; this.render(); }
       }
       this._drag = { x: p.x, y: p.y, camX: this._camX, camY: this._camY, moved: false };
     },
@@ -409,12 +423,14 @@
       }
       if (this._drag) {
         const dx = p.x - this._drag.x, dy = p.y - this._drag.y;
-        if (Math.abs(dx) + Math.abs(dy) > 6) this._drag.moved = true;
+        // tap→drag 判定 6→12px（2026-07-05 UX 第 1 批 #4：手抖即判 pan →「点了没反应」）
+        if (Math.abs(dx) + Math.abs(dy) > 12) { this._drag.moved = true; this._pressCell = null; }
         this._camX = this._drag.camX - dx; this._camY = this._drag.camY - dy; this._clampCam(); this.render();
       }
     },
     _up(e) {
       const p = this._pointers[e.pointerId]; delete this._pointers[e.pointerId];
+      if (this._pressCell) { this._pressCell = null; this.render(); }   // 按压高亮松手即清
       if (Object.keys(this._pointers).length < 2) this._pinch = null;
       if (this._painting) { this._painting = false; Farm.state.save(); this._drag = null; this.render(); return; }
       if (this._moving) {
@@ -470,8 +486,10 @@
           // overlap) → tapping a plot to plant selects exactly that plot, not a neighbour
           // (Chris 2026-06-18: planting taps were landing on the wrong plot). cy shifted
           // down slightly to match the painted bed's visual centre.
+          // 0.88 缩边（was 1.0 满菱形）：相邻格边缘留缓冲，防斜向误触隔壁地
+          // （2026-07-05 UX 第 1 批 #3）。已种作物的高盒命中不受影响。
           const d = Math.abs(px - c.x) / (tw / 2) + Math.abs(py - (c.y + th * 0.12)) / (th / 2);
-          if (d <= 1.0) return o;
+          if (d <= 0.88) return o;
         }
       }
       return null;
@@ -725,7 +743,8 @@
       // (in addition to pinch / wheel). Big tap targets.
       const zwrap = document.createElement('div'); zwrap.id = 'isoZoom';
       zwrap.style.cssText = 'position:fixed;z-index:20;display:flex;flex-direction:column;gap:10px;';
-      const mkZ = (label, f) => { const z = document.createElement('button'); z.textContent = label; z.style.cssText = 'width:32px;height:32px;border:none;border-radius:50%;background:rgba(255,255,255,.88);color:#3a8c50;font:600 17px/1 system-ui,sans-serif;box-shadow:0 1px 5px rgba(0,0,0,.18);cursor:pointer;touch-action:manipulation;'; z.onclick = (e) => { e.preventDefault(); this._zoomBy(f); }; return z; };
+      // 44×44 触控热区（was 32，低于可用性底线；2026-07-05 UX 第 1 批 #8）
+      const mkZ = (label, f) => { const z = document.createElement('button'); z.textContent = label; z.style.cssText = 'width:44px;height:44px;border:none;border-radius:50%;background:rgba(255,255,255,.88);color:#3a8c50;font:600 19px/1 system-ui,sans-serif;box-shadow:0 1px 5px rgba(0,0,0,.18);cursor:pointer;touch-action:manipulation;'; z.onclick = (e) => { e.preventDefault(); this._zoomBy(f); }; return z; };
       zwrap.appendChild(mkZ('＋', 1.3)); zwrap.appendChild(mkZ('－', 0.77));
       document.body.appendChild(zwrap); this._zoomUI = zwrap;
 
@@ -754,7 +773,7 @@
         // visible even in fullscreen build mode) so it never overlaps the coins.
         const tb = document.getElementById('topbar');
         const tbBottom = tb ? tb.getBoundingClientRect().bottom : 0;
-        this._zoomUI.style.left = (r.left + r.width - 42) + 'px';
+        this._zoomUI.style.left = (r.left + r.width - 54) + 'px';   // 44px 钮 + 10px 右边距
         this._zoomUI.style.top = Math.max(r.top + 10, tbBottom + 8) + 'px';
       }
       if (this._palette) { this._palette.style.display = this._build ? 'flex' : 'none'; this._palette.style.left = r.left + 'px'; this._palette.style.right = Math.max(0, window.innerWidth - (r.left + r.width)) + 'px'; this._palette.style.bottom = fromBottom + 'px'; }
@@ -1116,6 +1135,14 @@
         }
       });
       draws.sort((a, c) => a.d - c.d); draws.forEach(x => x.fn());
+
+      // 按压反馈：被按住的地块盖半透明白菱形（_down 设 _pressCell，up/cancel/拖拽清）。
+      // cy 偏移 th*0.12 与空地命中测试的视觉床中心一致。
+      if (this._pressCell) {
+        const pc = this._cell(this._pressCell.gx, this._pressCell.gy);
+        this._diamond(pc.x, pc.y + th * 0.12, tw, th);
+        ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.fill();
+      }
 
       this._drawLockedLand();
       this._drawParticles(tw); this._drawFestival();

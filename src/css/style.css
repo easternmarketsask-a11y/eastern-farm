@@ -2117,6 +2117,9 @@ body.mapmode #warehouseBtn { display: none !important; }
   transition: background 0.15s ease, transform 0.15s ease;
   padding: 0;
 }
+/* 触控热区扩到 44×44（视觉保持 34px 圆，不压弹窗标题）：伪元素外扩 5px
+   （2026-07-05 UX 第 1 批 #8）。 */
+.modal-close-x::after { content: ''; position: absolute; inset: -5px; border-radius: 50%; }
 .modal-close-x:hover {
   background: rgba(0, 0, 0, 0.12);
   color: var(--warm-text);
@@ -4066,6 +4069,9 @@ body.modal-open .pwa-install-banner { display: none; }
   font-size: 19px; line-height: 1; color: var(--deep-green, #2a5c34);
   cursor: pointer; display: inline-flex; align-items: center; justify-content: center;
 }
+/* 触控热区扩到 44×44（视觉保持 36 不挤顶栏）：伪元素外扩 4px 接住点击
+   （2026-07-05 UX 第 1 批 #8）。 */
+.hamburger-button::after { content: ''; position: absolute; inset: -4px; }
 .hamburger-button:active { transform: scale(0.94); }
 .nav-badge {
   position: absolute; top: -4px; right: -4px; min-width: 16px; height: 16px;
@@ -4086,7 +4092,10 @@ body.modal-open .pwa-install-banner { display: none; }
   padding: 3px 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.12);
   max-width: 80%; pointer-events: none;
 }
-.harvest-status-bar .harvest-status-center { display: flex; align-items: center; gap: 8px; }
+/* 外层 bar 是 pointer-events:none 的穿透浮层；onclick 绑在 center 胶囊上
+   (harvest-status.js render() 的 setAction)，必须恢复 auto 否则一键全收/
+   仓满入口/签到提示整个点不动（2026-07-05 UX 第 1 批 #1 修复）。 */
+.harvest-status-bar .harvest-status-center { display: flex; align-items: center; gap: 8px; pointer-events: auto; }
 .harvest-status-bar .harvest-status-btn { pointer-events: auto; }
 .harvest-status-bar:empty, .harvest-status-bar .harvest-status-center:empty { display: none; }
 

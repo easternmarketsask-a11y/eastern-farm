@@ -417,6 +417,17 @@
     // Tick — update growth timers visually (called every second)
     tick() {
       if (Farm.harvestStatus) Farm.harvestStatus.render();
+      // iso 画布视图激活时短路 DOM 部分（2026-07-05 UX 第 1 批 #12）：DOM 地块
+      // 藏在 display:none 的 #farmGrid 里，每秒 querySelector + 改写隐藏 DOM 纯
+      // 空转（iso 自己每秒 render 画布）。胶囊刷新在上面保留；原挂在 DOM 分支
+      // 里的「首次有菜熟」coach 提示改为数据层边沿检测，行为不丢。
+      if (Farm.isoView && Farm.isoView._on && Farm.isoView.active && Farm.isoView.active()) {
+        const anyMature = (Farm.state.data.plots || []).some(
+          (p) => p.unlocked && p.crop && Farm.crops.isMature(p));
+        if (anyMature && !this._isoHadMature && Farm.coach) Farm.coach.fire('first_mature', 400);
+        this._isoHadMature = anyMature;
+        return;
+      }
       Farm.state.data.plots.forEach((plot, idx) => {
         if (!plot.unlocked || !plot.crop) return;
         const el = document.querySelector('.plot[data-plot-id="' + idx + '"]');
