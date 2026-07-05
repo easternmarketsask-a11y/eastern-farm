@@ -17,7 +17,11 @@
   // ranges dodge ESPN's ~100-event-per-response cap (group stage + knockout).
   var LIVE_SB_URL = 'https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=';
   var LIVE_RANGES = ['20260611-20260627', '20260628-20260720'];
-  var live = null;   // { at, byPair:{ "HOME|AWAY": {...} }, standings:{ group: rows[] }, ok:true }
+  var live = null;   // { at, byPair:{ "HOME|AWAY": {...} }, byTime:{ minuteKey: {...} }, standings:{ group: rows[] }, ok:true }
+  // 淘汰赛「按开球时间映射到 ESPN 真实场次」适用的 stage（R32 仍用 byPair 固定对阵）。
+  // 见 fetchLive() 的 byTime 索引 + liveKO()：这些轮次的 home/away 在我们 JSON 里
+  // 是 'RD16 W1'/'QFW1' 占位符，靠 kickoffUtc 命中 ESPN 场次拿真实对阵与结果。
+  var KO_TIME_STAGES = { r16: 1, qf: 1, sf: 1, '3p': 1, final: 1 };
 
   // Approximate strength order (1 = strongest) for upset detection only.
   // Flavor, not official — used to flag "冷门" when a much lower side wins.
@@ -83,6 +87,13 @@
     if ((m = /^L-?SF(\d+)$/.exec(code))) return '半决赛' + m[1] + ' 负者';
     if ((m = /^W(\d+)$/.exec(code))) return 'M' + m[1] + ' 胜者';
     if ((m = /^L(\d+)$/.exec(code))) return 'M' + m[1] + ' 负者';
+    // wc2026.json 里淘汰赛未定槽位的占位符（ESPN 尚未解析对阵时显示）→ 中性「待定」，
+    // 不再露出原始 'RD32'/'RD16 W1'/'QFW1'/'SFW1'/'SF L1' 这类内部码。
+    if (/^RD32\b/i.test(code)) return '待定';                        // 32强胜者待定
+    if (/^RD16\s*W/i.test(code)) return '待定';                      // 16强胜者待定
+    if (/^Q[FW]?\s*W?\d/i.test(code)) return '待定';                 // QFW1 / QW4：8强胜者待定
+    if (/^SF\s*W/i.test(code)) return '半决赛胜者待定';
+    if (/^SF\s*L/i.test(code)) return '半决赛负者待定';
     return code;
   }
 
@@ -190,7 +201,7 @@
       parts.forEach(function (p) { if (p && p.events) p.events.forEach(function (e) { evById[e.id] = e; }); });
       var events = Object.keys(evById).map(function (k) { return evById[k]; });
       if (!events.length) return false;
-      var byPair = {}, groupGames = {};
+      var byPair = {}, byTime = {}, groupGames = {};
       events.forEach(function (ev) {
         // Process BOTH group and knockout events. KO records power the bracket auto-advance;
         // only group games feed the standings table (gated below).
@@ -226,6 +237,12 @@
           scorers: espnScorers(c, idToCode)
         };
         byPair[hc + '|' + ac] = rec;
+        // 按 ESPN 场次开球时刻（下取整到分钟）建索引 —— 淘汰赛槽位据此按 kickoffUtc
+        // 直接命中真实场次（对阵+比分+胜者），弃用会漂移的 KO_FEEDERS 推算。
+        // rec 已带真实 home/away（ESPN 主客顺序）。已解析的淘汰赛是真实队码 → 正常入表；
+        // 未解析的（RD16 Wx 抽象码）上面 !T[hc]||!T[ac] 已跳过 → 该分钟无记录，槽位保持占位。
+        var mk = Math.floor(Date.parse(ev.date) / 60000);
+        if (!isNaN(mk)) byTime[mk] = rec;
         if (isGroup) (groupGames[grp] = groupGames[grp] || []).push(rec);   // KO stays out of the group table
       });
       if (!Object.keys(byPair).length) return false;
@@ -243,7 +260,7 @@
         });
         standings[g] = ranked;
       });
-      live = { at: Date.now(), byPair: byPair, standings: standings, ok: true };
+      live = { at: Date.now(), byPair: byPair, byTime: byTime, standings: standings, ok: true };
       return true;
     }).catch(function (e) { console.warn('[wc] ESPN live fetch failed — using static data', e); return false; });
   }
@@ -253,7 +270,21 @@
   // in our data, so they're matched by liveResult() (order-independent) instead.
   function liveFor(m) {
     if (!live || !live.ok || !m) return null;
+    // 淘汰赛（R16 起）优先按开球时间取 ESPN 真实场次 —— 免受占位/主客顺序困扰，
+    // 直接拿到真实对阵+比分。未命中（ESPN 尚未解析）再回退 byPair。
+    if (m.stage && KO_TIME_STAGES[m.stage]) {
+      var k = liveKO(m);
+      if (k) return k;
+    }
     return live.byPair[m.home + '|' + m.away] || null;
+  }
+  // 淘汰赛槽位 → ESPN 场次映射：仅 R16/QF/SF/3p/Final 生效，按 kickoffUtc 下取整到分钟命中。
+  function liveKO(m) {
+    if (!live || !live.ok || !live.byTime || !m || !m.kickoffUtc) return null;
+    if (!KO_TIME_STAGES[m.stage]) return null;
+    var t = Date.parse(m.kickoffUtc);
+    if (isNaN(t)) return null;
+    return live.byTime[Math.floor(t / 60000)] || null;
   }
   // Real result between two known teams, regardless of which side ESPN listed as home.
   function liveResult(a, b) {
@@ -272,55 +303,24 @@
       else if (activeTab === 'bracket') renderBracket();
     });
   }
-  // ===== 晋级自动回填（2026-07-03，Chris：对阵确定了就要自动 update）=====
-  // 对阵图早就会实时锁定晋级者，但赛程卡/竞猜/焦点卡读的是 data.matches 的
-  // home/away —— wc2026.json 里后续轮次是 'RD32'/'QFW1' 这类占位符，原来要等
-  // 手工改档才更新。这里按 FIFA 官方场次连线（与对阵图 BR_R32_ORDER 同源，
-  // 见其上方注释），把真实赛果推算出的晋级者直接回填进 data.matches（仅内存，
-  // JSON 占位符仍是兜底）——对阵一确定：赛程卡显示真实国旗对阵、竞猜的
-  // 「对阵未定」立即解锁、焦点卡/倒计时全部自动跟上。每 60 秒随赛果刷新推进。
-  var KO_FEEDERS = {   // matchId: [feederA, feederB]，home=前者晋级方
-    M089: ['M074', 'M077'], M090: ['M073', 'M075'], M091: ['M076', 'M078'], M092: ['M079', 'M080'],
-    M093: ['M083', 'M084'], M094: ['M081', 'M082'], M095: ['M086', 'M088'], M096: ['M085', 'M087'],
-    M097: ['M089', 'M090'], M098: ['M093', 'M094'], M099: ['M091', 'M092'], M100: ['M095', 'M096'],
-    M101: ['M097', 'M098'], M102: ['M099', 'M100'],
-    M103: ['M101', 'M102'],   // 季军赛 = 两场半决赛的【败者】（特殊处理见下）
-    M104: ['M101', 'M102'],
-  };
-  // 一场淘汰赛的真实胜者：先走 koWinner（ESPN winner 旗标，含加时/点球，
-  // 再回落 officialFinal）；后续轮次我们回填的主客顺序可能与 ESPN 相反，
-  // 双方都是真实球队时再用 liveResult 按无序配对兜底（与对阵图同一策略）。
-  function realWinnerOf(m) {
-    if (!m) return null;
-    var w = koWinner(m);
-    if (w) return w;
-    if (isTeam(m.home) && isTeam(m.away)) {
-      var lr = liveResult(m.home, m.away);
-      if (lr && lr.finished && lr.winner) return lr.winner;
-    }
-    return null;
-  }
-  function realLoserOf(m) {
-    var w = realWinnerOf(m);
-    if (!w || !m) return null;
-    return w === m.home ? m.away : (w === m.away ? m.home : null);
-  }
+  // ===== 淘汰赛对阵回填（2026-07-05 重构：按开球时间取 ESPN 真实场次）=====
+  // 旧版（2026-07-03）用手工 KO_FEEDERS 表 + realWinnerOf/realLoserOf 推算晋级连线，
+  // 已整段删除 —— 表里 4 条连线错了 → 推出现实中不存在的虚构对阵（如 M090 CAN v PAR，
+  // 真实是 PAR v FRA），永远匹配不到 ESPN → 无比分/错对阵且级联污染 QF/SF/决赛。
+  // 根因见 docs/plans/2026-07-05-worldcup-bracket-rootcause.md。
+  // 现改为：每个淘汰赛槽位的 kickoffUtc 与 ESPN 对应场次开球时刻逐分钟 1:1 对齐，
+  // 直接用 liveKO(m) 命中的 ESPN 真实 home/away 回填。未命中（ESPN 尚未解析该场）→
+  // 保持占位符，让 UI 显示「胜者待定」，绝不再用推算填错误球队。
   function applyKnockoutProgression() {
     if (!data || !data.matches) return false;
-    var byId = {};
-    data.matches.forEach(function (m) { byId[m.id] = m; });
     var changed = false;
-    // id 升序推进：feeder 的 id 永远更小，一趟即可级联（当天连出结果也跟得上）
-    Object.keys(KO_FEEDERS).sort().forEach(function (id) {
-      var m = byId[id];
-      if (!m) return;
-      var third = (m.stage === '3p');
-      var fa = byId[KO_FEEDERS[id][0]], fb = byId[KO_FEEDERS[id][1]];
-      var ta = third ? realLoserOf(fa) : realWinnerOf(fa);
-      var tb = third ? realLoserOf(fb) : realWinnerOf(fb);
-      // 只在该侧仍是占位符时回填；官方 JSON 已写真实球队则绝不覆盖
-      if (ta && !isTeam(m.home)) { m.home = ta; changed = true; }
-      if (tb && !isTeam(m.away)) { m.away = tb; changed = true; }
+    data.matches.forEach(function (m) {
+      if (!KO_TIME_STAGES[m.stage]) return;   // 只处理 R16/QF/SF/3p/Final（R32 用固定对阵）
+      var rec = liveKO(m);
+      if (!rec || !isTeam(rec.home) || !isTeam(rec.away)) return;   // 未解析 → 留占位
+      // ESPN 按开球时间给出的真实对阵为权威，覆盖占位符或此前任何错误值。
+      if (m.home !== rec.home) { m.home = rec.home; changed = true; }
+      if (m.away !== rec.away) { m.away = rec.away; changed = true; }
     });
     return changed;
   }
@@ -1534,17 +1534,17 @@
 
   // Real R32 fixtures from ESPN (the OFFICIAL bracket draw), in BRACKET-TREE order.
   // The bracket renders by adjacency — every round pairs slots (2i, 2i+1) — so the 16
-  // R32 fixtures must be listed top→bottom in true bracket-tree leaf order, NOT kickoff
-  // order. Kickoff order was the old bug: it put M073(RSA/CAN) and M074(BRA/JPN) adjacent,
-  // wrongly pairing them in the Round of 16. Officially they sit in the same QUARTER and
-  // can meet no earlier than the quarter-final.
-  // Leaf order derived from the official FIFA 2026 match-number linkage (matches 73-88):
-  //   R16: 89=(74,77) 90=(73,75) 91=(76,78) 92=(79,80) 93=(83,84) 94=(81,82) 95=(86,88) 96=(85,87)
+  // R32 fixtures must be listed top→bottom in true bracket-tree leaf order, NOT kickoff order.
+  // 2026-07-05 FIX：旧 leaf order 用了错误的 R32→R16 连线（如把 M073/M075 winner 配成
+  //   一场 R16 → 推出 CAN v PAR 这种现实中不存在的对阵）。真实连线按 ESPN 场次核对更正如下
+  //   （已用观赛台按开球时间映射到 ESPN 的真实对阵逐场验证：M089 CAN v MAR、M090 PAR v FRA、
+  //    M091 BRA v NOR、M095 ARG v EGY、M096 SUI v COL 全部吻合）。
+  //   R16: 89=(73,76) 90=(75,78) 91=(74,77) 92=(79,80) 93=(83,84) 94=(81,82) 95=(86,87) 96=(85,88)
   //   QF:  97=(89,90) 98=(93,94) 99=(91,92) 100=(95,96)   SF: 101=(97,98) 102=(99,100)   F: 104=(101,102)
-  // (source: en.wikipedia.org/wiki/2026_FIFA_World_Cup_knockout_stage, corroborated by FIFA.com & ESPN)
+  //   leaf 顺序按 QF 连线排（89,90,93,94,91,92,95,96），故每两片喂一场 QF。
   // Slots not yet decided by the group stage carry placeholders like "1L"/"3RD".
-  var BR_R32_ORDER = ['M074', 'M077', 'M073', 'M075', 'M083', 'M084', 'M081', 'M082',
-                      'M076', 'M078', 'M079', 'M080', 'M086', 'M088', 'M085', 'M087'];
+  var BR_R32_ORDER = ['M073', 'M076', 'M075', 'M078', 'M083', 'M084', 'M081', 'M082',
+                      'M074', 'M077', 'M079', 'M080', 'M086', 'M087', 'M085', 'M088'];
   function r32Matches() {
     var ms = (data.matches || []).filter(function (m) { return m.stage === 'r32'; });
     return ms.sort(function (a, b) {
@@ -1800,6 +1800,8 @@
     _detectUpset: detectUpset,
     _setDataForTest: function (d) { data = d; T = {}; (d.teams || []).forEach(function (t) { T[t.code] = t; }); },
     _applyProgressionForTest: function () { return applyKnockoutProgression(); },
-    _matchesForTest: function () { return data && data.matches; }
+    _matchesForTest: function () { return data && data.matches; },
+    _scoreForTest: function (m) { return score(m); },          // read-only：验证淘汰赛比分来自 ESPN
+    _refreshLiveForTest: function () { return refreshLive(); }  // read-only：探针里真拉 ESPN 后回填
   };
 })();
