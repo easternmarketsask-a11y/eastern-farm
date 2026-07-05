@@ -309,15 +309,22 @@
           </button>
         </div>
       `;
-      Farm.ui.showModal(html);
-      const btn = document.getElementById('signupGiftOk');
-      if (btn) btn.onclick = () => {
-        Farm.ui.hideModal();
-        if (Farm.audio) Farm.audio.play('coin');
-      };
-      if (Farm.ui && Farm.ui.showConfetti) Farm.ui.showConfetti(40, 2800);
-      if (Farm.audio) Farm.audio.play('achievement');
-      if (navigator.vibrate) { try { navigator.vibrate([20, 50, 20]); } catch (_) {} }
+      // queue:true——开张礼由登录后 400ms 延时自动触发，若玩家正读着别的
+      // 弹窗（登录成功页/教程等）先排队，不顶掉（UX 第 3 批 #7）。
+      Farm.ui.showModal(html, {
+        queue: true,
+        queueKey: 'signup_gift',
+        onShow: () => {
+          const btn = document.getElementById('signupGiftOk');
+          if (btn) btn.onclick = () => {
+            Farm.ui.hideModal();
+            if (Farm.audio) Farm.audio.play('coin');
+          };
+          if (Farm.ui && Farm.ui.showConfetti) Farm.ui.showConfetti(40, 2800);
+          if (Farm.audio) Farm.audio.play('achievement');
+          if (navigator.vibrate) { try { navigator.vibrate([20, 50, 20]); } catch (_) {} }
+        },
+      });
     },
   };
 

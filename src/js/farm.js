@@ -264,9 +264,16 @@
         // by a normal click flow).
         if (result.reason === 'warehouse_full') {
           if (Farm.audio) Farm.audio.play('error');
-          if (Farm.warehouse && Farm.warehouse.openFullDialog) {
-            Farm.warehouse.openFullDialog();
-          }
+          // 失败反馈统一（UX 第 3 批 #10）：收获时仓满是高频阻断，降级为
+          // 轻量 toast + 谷仓红点（iso 谷仓 ≥80% 自动亮点、满仓变红，第 2 批
+          // 已加），不再弹 modal 打断连续收获。需要决策的「卖货/扩建」modal
+          // （warehouse.openFullDialog）保留在状态胶囊「去卖货」入口。
+          const lang = Farm.state.data.language;
+          Farm.ui.toast(lang === 'en'
+            ? '📦 Silo full — tap the barn to sell & free up space'
+            : '📦 仓库满了，点谷仓卖货腾空间', 3000);
+          if (Farm.harvestStatus) Farm.harvestStatus.render();   // 胶囊切到「去卖货」态
+          if (Farm.warehouse && Farm.warehouse.refreshBadge) Farm.warehouse.refreshBadge();
         }
         return;
       }

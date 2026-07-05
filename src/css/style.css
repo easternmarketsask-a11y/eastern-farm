@@ -2582,7 +2582,10 @@ body.mapmode #warehouseBtn { display: none !important; }
      加重了「点了没反应」的体感（2026-07-02 与登录弹窗被压同批修复）。
      仍低于 PWA 安装横幅(9000)。toast 无 pointer-events 影响。 */
   z-index: 7500;
-  animation: toastIn 0.3s ease, toastOut 0.3s ease 2.7s forwards;
+  /* 淡出起点由 JS 按每条 toast 的实际时长写入 --toast-out-delay
+     （ui.js toast()），保证不同 duration 的 toast 都能完整播完 300ms
+     淡出后才被 display:none，而不是固定 2.7s 起淡（UX 第 3 批 #10）。 */
+  animation: toastIn 0.3s ease, toastOut 0.3s ease var(--toast-out-delay, 2.5s) forwards;
 }
 .toast.hidden { display: none; }
 @keyframes toastIn {

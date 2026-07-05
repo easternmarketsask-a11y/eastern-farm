@@ -60,19 +60,9 @@
       return true;
     },
 
-    _modalOpen() {
-      const m = document.getElementById('modal');
-      return m && !m.classList.contains('hidden');
-    },
-
-    _celebrate(tries) {
-      tries = tries || 0;
-      // Don't stomp another modal (e.g. the level-up modal that triggered us) —
-      // wait for it to close, then show the reward. Bounded retry.
-      if (this._modalOpen() && tries < 12) {
-        setTimeout(() => this._celebrate(tries + 1), 800);
-        return;
-      }
+    _celebrate() {
+      // 撞窗保护改由 showModal 的 queue:true 承担（UX 第 3 批 #7）：
+      // 升级弹窗开着时本红包自动排队，关掉后依次弹出——不再自旋重试。
       const lang = (Farm.state.data && Farm.state.data.language) || 'zh';
       const html = `
         <div style="text-align:center;padding:8px 4px;">
@@ -91,15 +81,22 @@
           </p>
           <button class="btn" style="width:100%;margin-top:14px;" onclick="Farm.ui.hideModal()">${lang === 'en' ? 'Awesome!' : '太好了！'}</button>
         </div>`;
-      if (Farm.ui && Farm.ui.showModal) Farm.ui.showModal(html);
-      // Dynamic payoff: golden coin rain + the number counting up + coin chimes.
-      if (Farm.ui && Farm.ui.coinBurst) Farm.ui.coinBurst(3);
-      else if (Farm.ui && Farm.ui.showConfetti) Farm.ui.showConfetti(40, 3000);
-      if (Farm.audio) {
-        Farm.audio.play('achievement');
-        for (let c = 0; c < 4; c++) setTimeout(() => Farm.audio.play('coin'), 220 + c * 160);
+      if (Farm.ui && Farm.ui.showModal) {
+        Farm.ui.showModal(html, {
+          queue: true,
+          queueKey: 'promo_lv3',
+          onShow: () => {
+            // Dynamic payoff: golden coin rain + the number counting up + coin chimes.
+            if (Farm.ui.coinBurst) Farm.ui.coinBurst(3);
+            else if (Farm.ui.showConfetti) Farm.ui.showConfetti(40, 3000);
+            if (Farm.audio) {
+              Farm.audio.play('achievement');
+              for (let c = 0; c < 4; c++) setTimeout(() => Farm.audio.play('coin'), 220 + c * 160);
+            }
+            this._countUp('promoCoinCount', PROMO.rewardCoins, 1100);
+          },
+        });
       }
-      this._countUp('promoCoinCount', PROMO.rewardCoins, 1100);
       if (Farm.ui && Farm.ui.refreshHUD) Farm.ui.refreshHUD();
     },
 

@@ -99,11 +99,34 @@
       }
     },
 
-    showModal(html) {
+    // ===== Modal queue（UX 第 3 批 #7，2026-07-05）=====
+    // 延时自动触发的祝贺类弹窗（升级/开张礼/活动红包）传 opts.queue=true：
+    // 玩家正读着别的弹窗时不顶掉，先入队，hideModal 后依次弹出。
+    // - 队列上限 3，超出丢最旧（离开几天回来不连环轰炸）
+    // - 同 queueKey（缺省从 modal-title 推导）去重
+    // - opts.onShow 在弹窗真正渲染后才调用——事件绑定/彩带/音效都放这里，
+    //   入队瞬间不产生任何副作用（含 shop.stickyEnd 退出钩子）
+    _modalQueue: [],
+
+    _modalKeyFromHtml(html) {
+      const m = /<h2 class="modal-title"[^>]*>([\s\S]*?)<\/h2>/.exec(html || '');
+      return m ? m[1].trim() : String(html || '');
+    },
+
+    showModal(html, opts) {
+      opts = opts || {};
       const modal = document.getElementById('modal');
       if (!modal) return;
+      if (opts.queue && !modal.classList.contains('hidden')) {
+        const key = opts.queueKey || this._modalKeyFromHtml(html);
+        if (this._modalQueue.some(q => q.key === key)) return;   // 同 title 去重
+        this._modalQueue.push({ html: html, opts: opts, key: key });
+        if (this._modalQueue.length > 3) this._modalQueue.shift();  // 丢最旧
+        return;
+      }
       // 打开任何面板 → 退出粘性连续种植（UX 第 2 批 #2 的退出条件之一）。
       // 单一挂钩点：所有 modal 都走这里，不必在每个面板入口各写一次。
+      // 注意：必须在 queue 分支之后——入队不算「打开」，真显示时才触发。
       if (window.Farm && Farm.shop && Farm.shop.stickyEnd) Farm.shop.stickyEnd();
       // Defensive: rebuild #modalContent (and the backdrop) if it ever went missing,
       // so a popup can never crash with "Cannot set innerHTML of null".
@@ -132,6 +155,11 @@
         if (e.key === 'Escape') this.hideModal();
       };
       document.addEventListener('keydown', this._escHandler);
+      // 弹窗已真正渲染 → 现在才执行调用方的绑定/庆祝副作用（队列场景下
+      // 这可能发生在入队之后很久）。
+      if (typeof opts.onShow === 'function') {
+        try { opts.onShow(); } catch (e) { console.warn('[ui] modal onShow failed:', e); }
+      }
     },
 
     hideModal() {
@@ -144,15 +172,29 @@
         document.removeEventListener('keydown', this._escHandler);
         this._escHandler = null;
       }
+      // 出队：关窗后稍候片刻再弹下一个排队的祝贺弹窗（给关窗动作留缓冲）。
+      // 若 250ms 内玩家又主动打开了别的面板，queue:true 的重放会自动再入队。
+      if (this._modalQueue.length > 0) {
+        const next = this._modalQueue.shift();
+        clearTimeout(this._modalDequeueTimer);
+        this._modalDequeueTimer = setTimeout(() => {
+          this.showModal(next.html, next.opts);
+        }, 250);
+      }
     },
 
     toast(text, duration) {
-      duration = duration || 2500;
+      // 2800ms 默认：CSS 淡出动画 300ms，起点由 --toast-out-delay 驱动
+      //（UX 第 3 批 #10：原 JS 2500ms 硬切早于 CSS 固定 2.7s 的淡出起点，
+      // toast 是「闪没」不是淡出；自定义时长的 toast 同样对齐）。
+      duration = duration || 2800;
       const el = document.getElementById('toast');
       // Support inline HTML (for the styled coin-icon span). Callers pass
       // author-controlled strings only — no XSS risk in this code base.
       el.innerHTML = text;
       el.classList.remove('hidden');
+      // 淡出起点 = 总时长 - 300ms 淡出动画；display:none 在动画播完后再落。
+      el.style.setProperty('--toast-out-delay', Math.max(0, duration - 300) + 'ms');
       // Restart animation
       el.style.animation = 'none';
       el.offsetHeight;
@@ -160,7 +202,7 @@
       clearTimeout(this._toastTimer);
       this._toastTimer = setTimeout(() => {
         el.classList.add('hidden');
-      }, duration);
+      }, duration + 100);
     },
 
     floatText(text, x, y, color) {
@@ -383,15 +425,24 @@
           </div>
         </div>
       `;
-      this.showModal(html);
-      document.getElementById('lvupOkBtn').onclick = () => this.hideModal();
-      if (Farm.audio) Farm.audio.play('levelUp');
-      // Big confetti shower over the whole screen
-      this.showConfetti(36, 2600);
-      // Count-up animation on the new level number
-      this._animateLevelCount(oldLevel, newLevel);
-      // Optional haptic feedback on mobile
-      if (navigator.vibrate) { try { navigator.vibrate([20, 40, 20]); } catch (_) {} }
+      // queue:true——升级弹窗常由收获后 500ms 延时触发，玩家可能正读着
+      // 任务奖励/选种器等弹窗，不顶掉，排队等当前弹窗关闭后再弹（#7）。
+      // 绑定与庆祝副作用全部放 onShow：入队瞬间不放彩带不响音效。
+      this.showModal(html, {
+        queue: true,
+        queueKey: 'levelup',
+        onShow: () => {
+          const okBtn = document.getElementById('lvupOkBtn');
+          if (okBtn) okBtn.onclick = () => this.hideModal();
+          if (Farm.audio) Farm.audio.play('levelUp');
+          // Big confetti shower over the whole screen
+          this.showConfetti(36, 2600);
+          // Count-up animation on the new level number
+          this._animateLevelCount(oldLevel, newLevel);
+          // Optional haptic feedback on mobile
+          if (navigator.vibrate) { try { navigator.vibrate([20, 40, 20]); } catch (_) {} }
+        },
+      });
     },
 
     // Spawn N falling confetti pieces across the screen for `duration` ms.

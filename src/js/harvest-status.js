@@ -103,8 +103,8 @@
 
     // Harvest every mature plot by reusing farm.js's single-plot harvest
     // entry point (Farm.farm.harvestPlot). Stops as soon as the warehouse
-    // is full — harvestPlot() itself surfaces the "warehouse full" dialog
-    // via Farm.crops.harvest()'s warehouse_full result, so nothing is lost.
+    // is full — a light "silo full" toast is shown below (the sell/expand
+    // decision modal stays behind the status pill's「去卖货」action).
     harvestAll() {
       const plots = Farm.state.data.plots;
       let picked = 0;
@@ -122,13 +122,19 @@
       }
 
       // If the silo blocked us (already full, or filled mid-sweep with crops
-      // still standing), surface the sell/expand dialog instead of doing
-      // nothing. Defer slightly so any picked-crop celebration shows first.
+      // still standing), tell the player with a light toast instead of a
+      // modal（UX 第 3 批 #10：收获路径的仓满是高频阻断，不打断）。谷仓
+      // 头顶红点（第 2 批）+ 本胶囊随即切到「仓库满了·去卖货」态，点它才
+      // 打开需要决策的卖货/扩建 modal。Defer slightly so any picked-crop
+      // celebration shows first.
       if (blockedByFull) {
         if (Farm.audio) Farm.audio.play('error');
-        if (Farm.warehouse && Farm.warehouse.openFullDialog) {
-          setTimeout(() => Farm.warehouse.openFullDialog(), picked >= 1 ? 600 : 0);
-        }
+        const langFull = Farm.state.data.language;
+        setTimeout(() => {
+          Farm.ui.toast(langFull === 'en'
+            ? '📦 Silo full — tap the barn to sell & free up space'
+            : '📦 仓库满了，点谷仓卖货腾空间', 3000);
+        }, picked >= 1 ? 600 : 0);
       }
       // Bumper-harvest celebration: summary float + golden coin rain + sound,
       // scaled by how many plots were picked so a big sweep feels like a big
