@@ -448,7 +448,7 @@
       const c = this._screenToCell(p.x, p.y);
       if (this._build) { this._sel = this._buildingAt(c.gx, c.gy); this.render(); return; }
       const ps = this._petAt(p.x, p.y);   // tap a roaming pet → ❤️ + sound + hop
-      if (ps != null) { this._pettedReact(ps, p.x, p.y); return; }
+      if (ps != null) { this._stickyEnd(); this._pettedReact(ps, p.x, p.y); return; }
       // Depth-aware plot pick: crops are ~3 tiles TALL, so players tap the visible
       // plant (high up), not its base cell — a plain cell hit-test would land on the
       // cell BEHIND the plant. Test each plot's on-screen sprite box front-to-back
@@ -457,7 +457,7 @@
       const hit = this._plotAtPoint(p.x, p.y);
       if (hit) { this._tapCell(hit.gx, hit.gy); return; }
       const bidx = this._buildingAtPoint(p.x, p.y);
-      if (bidx >= 0) { const o = Farm.state.data.map[bidx], b = BUILDINGS[o.type]; if (o.type === 'coop') { this._collectCoop(o, p); } else if (b.tap === 'warehouse' && Farm.warehouse && Farm.warehouse.open) Farm.warehouse.open(); else if (b.tap === 'shop' && Farm.shop && Farm.shop.open) Farm.shop.open(); else if (Farm.ui && Farm.ui.toast) Farm.ui.toast(this._lang() === 'en' ? b.en : b.zh); return; }
+      if (bidx >= 0) { this._stickyEnd(); const o = Farm.state.data.map[bidx], b = BUILDINGS[o.type]; if (o.type === 'coop') { this._collectCoop(o, p); } else if (b.tap === 'warehouse' && Farm.warehouse && Farm.warehouse.open) Farm.warehouse.open(); else if (b.tap === 'shop' && Farm.shop && Farm.shop.open) Farm.shop.open(); else if (Farm.ui && Farm.ui.toast) Farm.ui.toast(this._lang() === 'en' ? b.en : b.zh); return; }
       this._tapCell(c.gx, c.gy);
     },
     // Frontmost plot whose on-screen sprite box contains (px,py). Planted plots get
@@ -495,15 +495,24 @@
       return null;
     },
     _wheel(e) { e.preventDefault(); const p = this._local(e); this._zoomAt(p.x, p.y, this._zoom * (e.deltaY < 0 ? 1.12 : 0.89)); },
+    // 粘性连续种植的退出点（UX 第 2 批 #2）：tap 到任何「非空地」目标都静默退出
+    _stickyEnd() { if (Farm.shop && Farm.shop.stickyEnd) Farm.shop.stickyEnd(); },
     _tapCell(gx, gy) {
-      const idx = this._cellToPlot[gx + ',' + gy]; if (idx == null) return;
+      const idx = this._cellToPlot[gx + ',' + gy]; if (idx == null) { this._stickyEnd(); return; }
       const plot = Farm.state.data.plots[idx];
       if (!plot || !plot.unlocked) {
+        this._stickyEnd();
         const lvl = REQUIRED_LV[idx] || 2;
         if (Farm.ui && Farm.ui.toast) Farm.ui.toast(Farm.i18n ? Farm.i18n.t('plot_locked_hint_template', { n: lvl }) : ('Lv ' + lvl + ' 解锁'));
         return;
       }
-      if (!plot.crop) { Farm.shop.openSeedPickerForPlot(idx); return; }
+      if (!plot.crop) {
+        // 粘性种子激活时直接种同款（不弹选种器）；未激活走原选种器流程
+        if (Farm.shop.stickyPlant && Farm.shop.stickyPlant(idx)) { this.render(); return; }
+        Farm.shop.openSeedPickerForPlot(idx);
+        return;
+      }
+      this._stickyEnd();
       if (Farm.crops.isMature(plot)) { Farm.farm.harvestPlot(idx, this._fakeEvt(gx, gy)); setTimeout(() => this.render(), 50); return; }
       Farm.farm.openPlotCare(idx, plot, Farm.crops.get(plot.crop));
     },
@@ -792,6 +801,7 @@
     setEditMode(m) { this._editMode = m; this._sel = -1; this._moving = null; this._refreshModeUI(); this.render(); },
     setBrush(b) { this._brush = b; this._refreshModeUI(); },
     toggleBuild() {
+      this._stickyEnd();   // 进出建造模式都算「打开面板」→ 退出粘性连续种植
       this._build = !this._build;
       if (this._build && Farm.state.data && !Farm.state.data.mapBuildSeen) { Farm.state.data.mapBuildSeen = true; Farm.state.save(); if (this._buildPulse) { this._buildPulse.cancel(); this._buildPulse = null; } }
       if (this._build) {
@@ -1254,6 +1264,18 @@
       // coop roof (was a big white orb floating high above → looked like a stray ball,
       // Chris 2026-06-18). Smaller + closer + gentle bob so it clearly belongs to the coop.
       if (o.type === 'coop' && !this._build) { const real = Farm.state.data.map[idx]; if (real && this._coopReady(real)) { const t = Date.now() / 1000, bob = Math.sin(t * 2.5) * th * 0.05, r = th * 0.3, byy = by - b.sc * th * 1.05 * BLD + bob; ctx.beginPath(); ctx.arc(cc.x, byy, r, 0, Math.PI * 2); ctx.fillStyle = 'rgba(255,255,255,0.96)'; ctx.fill(); ctx.strokeStyle = 'rgba(230,160,32,0.95)'; ctx.lineWidth = Math.max(1.2, th * 0.05); ctx.stroke(); ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = (r * 1.3) + 'px sans-serif'; ctx.fillText('🥚', cc.x, byy + r * 0.05); ctx.textBaseline = 'alphabetic'; } }
+      // 谷仓将满提示点（UX 第 2 批 #5）：仓储 ≥80% 时谷仓头顶一个黄色小圆点
+      // （细白边），满仓变红。手法与鸡舍蛋泡一致（roof 上方锚点），数据直读
+      // warehouse/warehouseCapacity（与 state.isWarehouseFull 同一口径，不另算）。
+      if (o.type === 'barn' && !this._build) {
+        const whN = (Farm.state.data.warehouse || []).length, cap = Farm.state.data.warehouseCapacity || 20;
+        if (cap > 0 && whN >= cap * 0.8) {
+          const r = Math.max(5, th * 0.22), byy = by - b.sc * th * 1.08 * BLD;
+          ctx.beginPath(); ctx.arc(cc.x, byy, r, 0, Math.PI * 2);
+          ctx.fillStyle = whN >= cap ? '#e8522a' : '#f6c945'; ctx.fill();
+          ctx.strokeStyle = 'rgba(255,255,255,0.95)'; ctx.lineWidth = Math.max(1.2, th * 0.05); ctx.stroke();
+        }
+      }
       if (this._build && this._sel === idx && idx != null && !moving) {   // delete chip
         const ch = this._delChip(o);
         ctx.beginPath(); ctx.arc(ch.x, ch.y, ch.r, 0, Math.PI * 2); ctx.fillStyle = '#e8522a'; ctx.fill();

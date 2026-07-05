@@ -162,6 +162,10 @@
     // engaged moment (first sale). See login-nudge.js. 2026-06-14.
     guestLoginPromptShown: false,
 
+    // 上次种下的种子 id（选种器把它置顶 + 「上次」标，UX 第 2 批 2026-07-05）。
+    // 顶层新字段：init() 的 Object.assign(STARTER 深拷贝, saved) 会自动给旧存档补 null。
+    lastSeedId: null,
+
     // ============ Promotions (2026-06) ============
     // Claimed limited-time promos, keyed by promo id (e.g. lv3_week_202606).
     // Mirrored into gameStats.promoClaims so a local reset can't re-claim.

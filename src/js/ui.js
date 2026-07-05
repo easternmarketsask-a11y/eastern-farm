@@ -102,6 +102,9 @@
     showModal(html) {
       const modal = document.getElementById('modal');
       if (!modal) return;
+      // 打开任何面板 → 退出粘性连续种植（UX 第 2 批 #2 的退出条件之一）。
+      // 单一挂钩点：所有 modal 都走这里，不必在每个面板入口各写一次。
+      if (window.Farm && Farm.shop && Farm.shop.stickyEnd) Farm.shop.stickyEnd();
       // Defensive: rebuild #modalContent (and the backdrop) if it ever went missing,
       // so a popup can never crash with "Cannot set innerHTML of null".
       let content = document.getElementById('modalContent');
@@ -134,6 +137,9 @@
     hideModal() {
       document.getElementById('modal').classList.add('hidden');
       document.body.classList.remove('modal-open');
+      // 商店关闭且未购买 → 清掉「买完种子回填原地块」的挂起状态（UX 第 2 批 #4）。
+      // 买种成功的路径在 hideModal 之前就把 pending 消费掉了，这里只兜「放弃购买」。
+      if (window.Farm && Farm.shop) Farm.shop._pendingPlotIdx = null;
       if (this._escHandler) {
         document.removeEventListener('keydown', this._escHandler);
         this._escHandler = null;

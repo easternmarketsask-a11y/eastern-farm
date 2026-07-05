@@ -3760,6 +3760,42 @@ body.mapmode #warehouseBtn { display: none !important; }
 }
 .seed-group-title:first-child { padding-top: 2px; }
 
+/* 「种满所有空地」批量种植按钮（UX 第 2 批 #1）。seed-card 的直接子元素，
+   grid-column 跨满两列（图标列太窄，放 meta 行里会被 overflow:hidden 裁字），
+   独占卡片底部一整行 → 文字完整 + 更大触控目标。 */
+.seed-card .seed-fill-btn {
+  grid-column: 1 / -1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  font-size: 11px;
+  font-weight: 700;
+  font-family: inherit;
+  padding: 6px 9px;
+  margin-top: 2px;
+  border-radius: 8px;
+  border: 1.5px solid rgba(106, 176, 76, 0.55);
+  background: linear-gradient(135deg, #e9f7dd, #d8efc6);
+  color: #2e6b1d;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.seed-card .seed-fill-btn:active { transform: scale(0.94); }
+
+/* 「上次」种子小标（lastSeedId 置顶卡片，UX 第 2 批 #3） */
+.seed-last-tag {
+  display: inline-block;
+  font-size: 9px;
+  font-weight: 700;
+  color: #fff;
+  background: var(--leaf-dark, #4a7c2e);
+  border-radius: 6px;
+  padding: 1.5px 6px;
+  margin-left: 6px;
+  vertical-align: 1.5px;
+}
+
 /* 应季 +15% 徽章（仓库行 / 种植选择器）—— 2026-07-02 season 接线 */
 .season-tag {
   display: inline-block;

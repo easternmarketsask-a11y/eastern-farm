@@ -95,7 +95,11 @@
         const isFirstEmpty = Farm.state.data.plots
           .slice(0, idx).every(p => !p.unlocked || p.crop);
         if (noHarvestsYet && isFirstEmpty) el.classList.add('tutorial-hint');
-        el.onclick = () => Farm.shop.openSeedPickerForPlot(idx);
+        // 粘性连续种植（UX 第 2 批 #2）：粘性种子激活时直接连种，否则弹选种器
+        el.onclick = () => {
+          if (Farm.shop.stickyPlant && Farm.shop.stickyPlant(idx)) return;
+          Farm.shop.openSeedPickerForPlot(idx);
+        };
         return el;
       }
 
@@ -307,7 +311,12 @@
       if (evt && evt.target) {
         const rect = evt.target.getBoundingClientRect();
         const lang = Farm.state.data.language;
-        Farm.ui.floatText('📦 ' + (result.bumper ? '+2 ' : '+1 ') + (lang === 'en' ? 'silo' : '入库'),
+        // 飘字带上「谷仓 N/M」（UX 第 2 批 #5）：让玩家边收边看到仓储在涨、
+        // 快满时有预期（数据与 state.isWarehouseFull 同口径）
+        const whN = (Farm.state.data.warehouse || []).length;
+        const whCap = Farm.state.data.warehouseCapacity || 20;
+        Farm.ui.floatText('📦 ' + (result.bumper ? '+2 ' : '+1 ') + (lang === 'en' ? 'silo ' : '入库 ')
+          + whN + '/' + whCap,
           rect.left + rect.width/2 - 20, rect.top);
         if (result.bumper) {
           Farm.ui.floatText('🌟 ' + (lang === 'en' ? 'Double!' : '双倍收获'),

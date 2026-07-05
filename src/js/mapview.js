@@ -685,7 +685,13 @@
         }
         return;
       }
-      if (!plot.crop) { Farm.shop.openSeedPickerForPlot(idx); return; }
+      if (!plot.crop) {
+        // 粘性连续种植（UX 第 2 批 #2）：激活时直接连种同款，不弹选种器
+        if (Farm.shop.stickyPlant && Farm.shop.stickyPlant(idx)) { this.render(); return; }
+        Farm.shop.openSeedPickerForPlot(idx);
+        return;
+      }
+      if (Farm.shop.stickyEnd) Farm.shop.stickyEnd();   // tap 非空地 → 退出粘性
       if (Farm.crops.isMature(plot)) {
         Farm.farm.harvestPlot(idx, this._fakeEvtForCell(gx, gy));   // gives harvest juice the plot's on-screen position
         setTimeout(() => this.render(), 50);
