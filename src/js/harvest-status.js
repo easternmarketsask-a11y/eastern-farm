@@ -117,7 +117,16 @@
         // (Previously this just `break`-ed silently, so tapping "全收" with a
         // full silo looked like a no-op / bug.)
         if (Farm.state.isWarehouseFull()) { blockedByFull = true; break; }
-        Farm.farm.harvestPlot(idx);
+        // iso 视图下给 harvestPlot 传该地块的屏幕矩形（audit B2 P2：一键全收的
+        // 采摘粒子全部错位在 (0,0)——批量路径没有 evt，farm.js 只能拿隐藏 DOM
+        // 地块的 0×0 rect 兜底）。plotScreenRect 已含相机/缩放；DOM 视图下返回
+        // null，走原路径不受影响。
+        let evt;
+        if (Farm.isoView && Farm.isoView.plotScreenRect) {
+          const rc = Farm.isoView.plotScreenRect(idx);
+          if (rc) evt = { target: { getBoundingClientRect: () => rc } };
+        }
+        Farm.farm.harvestPlot(idx, evt);
         picked++;
       }
 

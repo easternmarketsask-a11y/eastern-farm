@@ -134,7 +134,7 @@
     _on: false, _cv: null, _ctx: null, _dpr: 1,
     _camX: 0, _camY: 0, _zoom: 1, _ox: 0, _oy: 0,
     _w: 0, _h: 0, _img: {}, _cropImg: {},
-    _pointers: {}, _drag: null, _pinch: null, _pressCell: null,
+    _pointers: {}, _drag: null, _pinch: null, _pressCell: null, _pressBuilding: -1, _glideRaf: null, _justHarvested: null,
     _tick: null, _raf: null, _lastFrame: 0,
     _cellToPlotN: -1,
     _build: false, _editMode: 'build', _brush: 'path', _painting: false,
@@ -285,13 +285,21 @@
       // ~15%、地块命中区 ~33px。改为「包围盒宽约占视口宽 65%」与「单块地块屏宽
       // ≥53px（可点性底线 44px + 余量）」取较大者；再用高度护栏（农场高 ≤90% 视口）
       // 防横屏小窗溢出，最后 clamp 到 ZMIN/ZMAX。相机无持久化，每次进图都 fit。
-      const fitW = (this._cssW() * 0.65) / screenW;                 // 包围盒宽 ≈ 65% 视口宽
+      // 竖屏开局构图（2026-07-07 audit B2 P1）：旧「宽 65%」在竖屏把农场压成
+      // ~16% 屏高的细条、上方近半屏纯天空（CDP 实测 fracH 0.16 / topSky 0.48）。
+      // 竖屏改为包围盒吃满视口宽并允许 ~10% 出血（Hay Day 同款「农场略大于
+      // 一屏、可平移」构图）；世界锁定的背景随 zoom 同步放大 → 可见窗口滑向
+      // 草地带，天空占比大幅回落。横屏/桌面保持原 65% 构图不变。
+      const portrait = this._cssH() > this._cssW();
+      const fitW = (this._cssW() * (portrait ? 1.15 : 0.65)) / screenW;   // 包围盒宽 ≈ 115%/65% 视口宽
       const minTap = 53 / (TW * FARM_SCALE);                        // 地块屏宽 ≥53px
       const fitH = (this._cssH() * 0.90) / screenH;                 // 高度护栏
       this._zoom = Math.max(ZMIN, Math.min(ZMAX, Math.min(Math.max(fitW, minTap), fitH)));
       const ccx = (minx + maxx) / 2, ccy = (miny + maxy) / 2, u = ccx - ccy, v = ccx + ccy;
       this._camX = u * this._tw() / 2;
-      this._camY = this._oy + v * this._th() / 2 - this._cssH() / 2 - this._cssH() * 0.14;   // farm centred, slightly low on the meadow
+      // 竖屏农场（格心）放在屏高 60% 处：比旧 64% 略抬，让背景窗口滑向草地带
+      // （上方从「半屏天空」变为树线+近山），下方仍留一段前景草地。
+      this._camY = this._oy + v * this._th() / 2 - this._cssH() * (portrait ? 0.60 : 0.64);
       this._clampCam();
     },
 
@@ -379,9 +387,12 @@
     // ---- input ----
     _local(e) { const r = this._cv.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; },
     _down(e) {
+      // 鼠标拖拽移出画布不再失控冻结（audit B2 P2：触摸有隐式捕获，鼠标没有）
+      try { this._cv.setPointerCapture(e.pointerId); } catch (err) {}
+      this._glideStop();   // 手指按下即接住惯性滑行（Hay Day 手感）
       const p = this._local(e); this._pointers[e.pointerId] = p;
       const ids = Object.keys(this._pointers);
-      if (ids.length === 2) { const [a, b] = ids.map(k => this._pointers[k]); this._pinch = { dist: Math.hypot(a.x - b.x, a.y - b.y) || 1, zoom: this._zoom }; this._drag = null; this._moving = null; this._painting = false; this._pressCell = null; return; }
+      if (ids.length === 2) { const [a, b] = ids.map(k => this._pointers[k]); this._pinch = { dist: Math.hypot(a.x - b.x, a.y - b.y) || 1, zoom: this._zoom }; this._drag = null; this._moving = null; this._painting = false; this._pressCell = null; this._pressBuilding = -1; return; }
       if (this._build && this._editMode === 'terrain') { const c = this._screenToCell(p.x, p.y); this._painting = true; this._paintCell(c.gx, c.gy); return; }
       if (this._build) {
         if (this._sel >= 0) { const ch = this._delChip((Farm.state.data.map)[this._sel]); if (Math.hypot(p.x - ch.x, p.y - ch.y) <= ch.r) { const o = Farm.state.data.map[this._sel], b = BUILDINGS[o.type], refund = b ? Math.round((b.cost || 0) / 2) : 0; Farm.state.data.map.splice(this._sel, 1); this._sel = -1; if (refund > 0) { Farm.state.addCoins(refund); if (Farm.ui && Farm.ui.refreshHUD) Farm.ui.refreshHUD(); if (Farm.ui && Farm.ui.toast) Farm.ui.toast(this._lang() === 'en' ? ('Removed — refunded ' + refund + ' coins') : ('已移除 — 退回 ' + refund + ' 农场币')); } this._refreshPaletteAfford(); Farm.state.save(); this.render(); return; } }
@@ -396,12 +407,18 @@
       // 命中的 cell 存 _pressCell，render() 里盖一层半透明白菱形做即时反馈。
       // 直接调 render()（不等 30fps rAF 节流）保证按下当帧可见；up/cancel/
       // 判定为拖拽/进入捏合时清除。只存 {gx,gy} 小对象，无每帧分配。
-      this._pressCell = null;
+      this._pressCell = null; this._pressBuilding = -1;
       if (!this._build) {
         const hit = this._plotAtPoint(p.x, p.y);
         if (hit) { this._pressCell = { gx: hit.gx, gy: hit.gy }; this.render(); }
+        else {
+          // 建筑按压反馈（audit B2 P2）：按下命中建筑 → 记录索引，_drawBuilding
+          // 对该建筑画 94% squash（同地块按压高亮的生命周期：up/cancel/拖拽/捏合清）。
+          const pb = this._buildingAtPoint(p.x, p.y);
+          if (pb >= 0) { this._pressBuilding = pb; this.render(); }
+        }
       }
-      this._drag = { x: p.x, y: p.y, camX: this._camX, camY: this._camY, moved: false };
+      this._drag = { x: p.x, y: p.y, camX: this._camX, camY: this._camY, moved: false, vx: 0, vy: 0, lastX: p.x, lastY: p.y, lastT: performance.now() };
     },
     _move(e) {
       if (!(e.pointerId in this._pointers)) return;
@@ -424,14 +441,64 @@
       if (this._drag) {
         const dx = p.x - this._drag.x, dy = p.y - this._drag.y;
         // tap→drag 判定 6→12px（2026-07-05 UX 第 1 批 #4：手抖即判 pan →「点了没反应」）
-        if (Math.abs(dx) + Math.abs(dy) > 12) { this._drag.moved = true; this._pressCell = null; }
+        if (Math.abs(dx) + Math.abs(dy) > 12) { this._drag.moved = true; this._pressCell = null; this._pressBuilding = -1; }
+        // 惯性采样（audit B2 P1）：EMA 平滑手指速度（px/ms），供 _up 时 glide 用
+        const nowT = performance.now(), dt = nowT - this._drag.lastT;
+        if (dt > 0) {
+          const a = Math.min(1, dt / 40);
+          this._drag.vx = this._drag.vx * (1 - a) + ((p.x - this._drag.lastX) / dt) * a;
+          this._drag.vy = this._drag.vy * (1 - a) + ((p.y - this._drag.lastY) / dt) * a;
+        }
+        this._drag.lastX = p.x; this._drag.lastY = p.y; this._drag.lastT = nowT;
         this._camX = this._drag.camX - dx; this._camY = this._drag.camY - dy; this._clampCam(); this.render();
       }
     },
+    // ===== 拖拽惯性滑行（2026-07-07 audit B2 P1：松手即停 → Hay Day 式 glide）=====
+    // _move 里 EMA 采样手指速度；松手速度超阈值则按 ~0.94/16.7ms 指数衰减继续
+    // 滑动，每帧过 _clampCam，撞边缘即停该轴；任何新 pointerdown 立刻接住停下。
+    _glideStop() { if (this._glideRaf) { cancelAnimationFrame(this._glideRaf); this._glideRaf = null; } },
+    _glideStart(drag) {
+      if (!drag || !drag.moved) return;
+      if (performance.now() - drag.lastT > 90) return;   // 松手前手指已停住 → 不滑
+      let vx = -drag.vx, vy = -drag.vy;                  // cam 与手指位移反向
+      const sp = Math.hypot(vx, vy);
+      if (sp < 0.25) return;                             // 阈值：轻推不滑（防轻点误滑）
+      const MAXV = 3.2;
+      if (sp > MAXV) { vx *= MAXV / sp; vy *= MAXV / sp; }
+      this._glideStop();
+      let last = performance.now();
+      const step = (now) => {
+        this._glideRaf = null;
+        if (!this._on) return;
+        const dt = Math.min(50, now - last); last = now;
+        const px = this._camX + vx * dt, py = this._camY + vy * dt;
+        this._camX = px; this._camY = py; this._clampCam();
+        if (Math.abs(this._camX - px) > 0.01) vx = 0;    // 撞水平边缘 → 停该轴
+        if (Math.abs(this._camY - py) > 0.01) vy = 0;
+        this.render();
+        const decay = Math.pow(0.92, dt / 16.7);   // ~0.7s 内滑停（0.94 拖到 1.1s+，太飘）
+        vx *= decay; vy *= decay;
+        if (Math.hypot(vx, vy) > 0.03) this._glideRaf = requestAnimationFrame(step);
+      };
+      this._glideRaf = requestAnimationFrame(step);
+    },
     _up(e) {
       const p = this._pointers[e.pointerId]; delete this._pointers[e.pointerId];
-      if (this._pressCell) { this._pressCell = null; this.render(); }   // 按压高亮松手即清
-      if (Object.keys(this._pointers).length < 2) this._pinch = null;
+      if (this._pressCell || this._pressBuilding >= 0) { this._pressCell = null; this._pressBuilding = -1; this.render(); }   // 按压高亮松手即清
+      const remIds = Object.keys(this._pointers);
+      if (remIds.length < 2) {
+        // 捏合结束还剩 1 指 → 用它当前位置重建 _drag 无缝续拖（audit B2 P2：
+        // 旧逻辑只清 _pinch 不重建 _drag，剩余手指变「死指」必须全抬重按）。
+        // moved 预置 true：这根手指抬起时不会被误判成 tap。直接 return——
+        // 本次 up 属于旧捏合手势，后面的 tap/glide 判定都不该跑。
+        if (this._pinch && remIds.length === 1) {
+          const q = this._pointers[remIds[0]];
+          this._pinch = null;
+          this._drag = { x: q.x, y: q.y, camX: this._camX, camY: this._camY, moved: true, vx: 0, vy: 0, lastX: q.x, lastY: q.y, lastT: performance.now() };
+          return;
+        }
+        this._pinch = null;
+      }
       if (this._painting) { this._painting = false; Farm.state.save(); this._drag = null; this.render(); return; }
       if (this._moving) {
         const m = this._moving; this._moving = null;
@@ -441,8 +508,9 @@
         }
         this.render(); this._drag = null; return;
       }
-      const wasTap = this._drag && !this._drag.moved && !this._pinch; this._drag = null;
-      if (!wasTap || !p) return;
+      const dragEnd = this._drag, wasTap = dragEnd && !dragEnd.moved && !this._pinch; this._drag = null;
+      if (!wasTap) { if (dragEnd && !this._pinch) this._glideStart(dragEnd); return; }
+      if (!p) return;
       // tap the land-unlock badge → expand the farm
       if (this._landBadge && Math.hypot(p.x - this._landBadge.x, p.y - this._landBadge.y) <= this._landBadge.r) { this._tryUnlockLand(); return; }
       const c = this._screenToCell(p.x, p.y);
@@ -470,27 +538,26 @@
       const list = [];
       for (let i = 0; i < plots.length; i++) list.push({ i, gx: this._plotGX(i), gy: this._plotGY(i) });
       list.sort((a, b) => (b.gx + b.gy) - (a.gx + a.gy));   // frontmost first
+      // 两段式命中（2026-07-07 audit B2 P1：成熟作物高盒吞邻格——点空地收了
+      // 邻居的菜、夹在熟菜中间的空地无法点种）。
+      // 第一遍：对所有地块（空/锁/已种一视同仁）做精确菱形基底测试——菱形
+      // 互不重叠，点在哪块床上就是哪块，成熟邻居抢不走（0.88 缩边沿用
+      // 2026-07-05 UX 第 1 批 #3；cy 下移 0.12 对齐画出的床心）。
+      for (const o of list) {
+        const c = this._cell(o.gx, o.gy);
+        const d = Math.abs(px - c.x) / (tw / 2) + Math.abs(py - (c.y + th * 0.12)) / (th / 2);
+        if (d <= 0.88) return o;
+      }
+      // 第二遍：无基底命中时才用高盒接住「点在植株上半身」的 tap（植株高出
+      // 基底 ~3 格）。盒宽收窄到苗床宽（±BED_W/2，was ±0.5 满格），盒底裁到
+      // 自身菱形下缘（c.y+th*0.56，was 0.65）——不再向下/向旁侵占邻格基底。
       for (const o of list) {
         const c = this._cell(o.gx, o.gy), pl = plots[o.i];
-        const planted = pl && pl.unlocked && pl.crop;
-        if (planted) {
-          // Planted: the plant rises ~3 tiles ABOVE the cell, so use a tall box to catch
-          // a tap on the visible plant (height tracks growth stage so a seedling's box is
-          // short and doesn't swallow neighbours).
-          const p = Farm.crops.getProgress ? Farm.crops.getProgress(pl) : 1;
-          const fr = p >= 1 ? 3 : p >= 0.6 ? 2 : p >= 0.25 ? 1 : 0;
-          const top = c.y - th * (0.7 + fr * 0.6), halfW = tw * 0.5, bot = c.y + th * 0.65;
-          if (px >= c.x - halfW && px <= c.x + halfW && py >= top && py <= bot) return o;
-        } else {
-          // Empty / locked: PRECISE diamond hit-test on the bed (cells tessellate with no
-          // overlap) → tapping a plot to plant selects exactly that plot, not a neighbour
-          // (Chris 2026-06-18: planting taps were landing on the wrong plot). cy shifted
-          // down slightly to match the painted bed's visual centre.
-          // 0.88 缩边（was 1.0 满菱形）：相邻格边缘留缓冲，防斜向误触隔壁地
-          // （2026-07-05 UX 第 1 批 #3）。已种作物的高盒命中不受影响。
-          const d = Math.abs(px - c.x) / (tw / 2) + Math.abs(py - (c.y + th * 0.12)) / (th / 2);
-          if (d <= 0.88) return o;
-        }
+        if (!(pl && pl.unlocked && pl.crop)) continue;
+        const p = Farm.crops.getProgress ? Farm.crops.getProgress(pl) : 1;
+        const fr = p >= 1 ? 3 : p >= 0.6 ? 2 : p >= 0.25 ? 1 : 0;
+        const top = c.y - th * (0.7 + fr * 0.6), halfW = tw * (BED_W / 2), bot = c.y + th * 0.56;
+        if (px >= c.x - halfW && px <= c.x + halfW && py >= top && py <= bot) return o;
       }
       return null;
     },
@@ -509,11 +576,15 @@
       if (!plot.crop) {
         // 粘性种子激活时直接种同款（不弹选种器）；未激活走原选种器流程
         if (Farm.shop.stickyPlant && Farm.shop.stickyPlant(idx)) { this.render(); return; }
+        // 收获后 400ms 内快速连点同一格 → 忽略，不立弹选种器打断连续扫收
+        // （audit B2 P2；粘性连种在上面已提前返回，不受影响）
+        const jh = this._justHarvested;
+        if (jh && jh.idx === idx && Date.now() - jh.t < 400) return;
         Farm.shop.openSeedPickerForPlot(idx);
         return;
       }
       this._stickyEnd();
-      if (Farm.crops.isMature(plot)) { Farm.farm.harvestPlot(idx, this._fakeEvt(gx, gy)); setTimeout(() => this.render(), 50); return; }
+      if (Farm.crops.isMature(plot)) { this._justHarvested = { idx, t: Date.now() }; Farm.farm.harvestPlot(idx, this._fakeEvt(gx, gy)); setTimeout(() => this.render(), 50); return; }
       Farm.farm.openPlotCare(idx, plot, Farm.crops.get(plot.crop));
     },
     _fakeEvt(gx, gy) {
@@ -532,6 +603,9 @@
       const c = this._cell(this._plotGX(idx), this._plotGY(idx));
       const r = this._cv.getBoundingClientRect();
       const tw = this._tw(), th = this._th();
+      // 空地用贴床矮盒（audit B2 P2：旧统一高盒让聚光灯洞 60% 罩在空草地上，
+      // 「点这块发光的地」指向含糊）；有作物才用罩住整棵植株的高盒。
+      if (!p.crop) return { left: r.left + c.x - tw / 2, top: r.top + c.y - th * 0.5, width: tw, height: th * 1.4 };
       return { left: r.left + c.x - tw / 2, top: r.top + c.y - th * 1.6, width: tw, height: th * 2.2 };
     },
     barnScreenRect() {
@@ -1120,6 +1194,11 @@
       const draws = [];
       const plots = Farm.state.data.plots || [];
       if (this._cellToPlotN !== plots.length) { this._buildLayout(); this._cellToPlotN = plots.length; }
+      // 锁定地块徽章 LOD（audit B2 P1：9 枚 🔒+Lv 互相压盖成噪点）：算出「下一档
+      // 可解锁」的最低等级，只有该档地块画完整徽章，其余锁定格淡化为小锁点。
+      let nextLv = Infinity;
+      for (let i = 0; i < plots.length; i++) { if (plots[i] && !plots[i].unlocked) { const rv = REQUIRED_LV[i] || 2; if (rv < nextLv) nextLv = rv; } }
+      this._nextLockLv = nextLv;
       for (let i = 0; i < plots.length; i++) {
         const gx = this._plotGX(i), gy = this._plotGY(i);
         draws.push({ d: gx + gy, fn: () => this._drawPlot(plots[i], gx, gy, i) });
@@ -1200,9 +1279,20 @@
         if (im) { const w = tw * BED_W, sc = w / im.width, dh = im.height * sc; ctx.save(); ctx.globalAlpha = 0.5; ctx.drawImage(im, c.x - w / 2, c.y - dh * 0.42, w, dh); ctx.restore(); }
         else { this._diamond(c.x, c.y, tw * 0.88, th * 0.88); ctx.fillStyle = 'rgba(120,90,60,0.5)'; ctx.fill(); }
         this._diamond(c.x, c.y, tw * 0.96, th * 0.96); ctx.fillStyle = 'rgba(55,65,50,0.3)'; ctx.fill();
-        ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.font = (th * 0.5) + 'px sans-serif'; ctx.fillText('🔒', c.x, c.y - th * 0.08);
-        ctx.font = 'bold ' + (th * 0.4) + 'px "Fredoka",sans-serif'; ctx.fillText('Lv' + (REQUIRED_LV[idx] || 2), c.x, c.y + th * 0.4);
+        // 徽章 LOD（audit B2 P1）：只有「下一档可解锁」等级的地块画完整 🔒+Lv
+        // 徽章（同档 ≤2 块，互不相邻遮挡）；更远档的锁定格只画一枚半透明小锁点，
+        // 视觉上退为「远处还有地」的暗示，不再 9 枚徽章叠成一团。
+        const reqLv = REQUIRED_LV[idx] || 2;
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        if (reqLv === this._nextLockLv) {
+          ctx.fillStyle = '#fff';
+          ctx.font = (th * 0.5) + 'px sans-serif'; ctx.fillText('🔒', c.x, c.y - th * 0.08);
+          ctx.font = 'bold ' + (th * 0.4) + 'px "Fredoka",sans-serif'; ctx.fillText('Lv' + reqLv, c.x, c.y + th * 0.4);
+        } else {
+          ctx.save(); ctx.globalAlpha = 0.45;
+          ctx.font = (th * 0.3) + 'px sans-serif'; ctx.fillText('🔒', c.x, c.y + th * 0.1);
+          ctx.restore();
+        }
         return;
       }
       // ground already drew the clean tilled bed for this cell; add a small, soft
@@ -1257,7 +1347,10 @@
       const by = front.y + th / 2 + th * 0.18;
       if (!moving) this._shadow(cc.x, by - th * 0.35, b.w * tw * 0.7, 0.18);   // contact shadow grounds the building
       ctx.globalAlpha = moving ? 0.82 : 1;
-      if (!this._blit(this._img[b.img], cc.x, by, b.w * tw * 0.92 * BLD, b.sc * th * 2.2 * BLD)) { ctx.fillStyle = '#c0392b'; ctx.fillRect(cc.x - tw * 0.4, by - th, tw * 0.8, th); }
+      // 按压反馈（audit B2 P2）：被按住的建筑以底边为锚缩到 94%（Hay Day 式
+      // squash），与地块按压高亮同一套 _down/_up 生命周期。
+      const pk = (!this._build && idx != null && idx === this._pressBuilding) ? 0.94 : 1;
+      if (!this._blit(this._img[b.img], cc.x, by, b.w * tw * 0.92 * BLD * pk, b.sc * th * 2.2 * BLD * pk)) { ctx.fillStyle = '#c0392b'; ctx.fillRect(cc.x - tw * 0.4, by - th, tw * 0.8, th); }
       ctx.globalAlpha = 1;
       // coop ready-to-collect egg bubble (read the real map entry for eggAt)
       // coop ready-to-collect indicator: a SMALL egg bubble nestled just above the
@@ -1444,8 +1537,9 @@
     // winter). Subtle and natural — adds life without being annoying.
     _drawParticles(tw) {
       const ctx = this._ctx, W = this._cssW(), H = this._cssH(), t = Date.now() / 1000, th = this._th();
-      // drifting clouds (sky)
-      for (let i = 0; i < 3; i++) { const cw = W * (0.26 + 0.07 * i), x = ((t * (5 + i * 3) + i * W * 0.55) % (W + cw * 1.4)) - cw * 0.7, y = H * (0.06 + 0.06 * i); this._cloud(x, y, cw, 0.5 - i * 0.1); }
+      // drifting clouds (sky) — 透明度收敛（audit B2 P2：白色椭圆云团边缘生硬、
+      // 像渲染瑕疵）：0.5 → 0.22 起步，融进手绘背景当薄雾，只留 2 朵。
+      for (let i = 0; i < 2; i++) { const cw = W * (0.26 + 0.07 * i), x = ((t * (5 + i * 3) + i * W * 0.55) % (W + cw * 1.4)) - cw * 0.7, y = H * (0.05 + 0.05 * i); this._cloud(x, y, cw, 0.22 - i * 0.07); }
       const season = (Farm.seasons && Farm.seasons.current) || monthSeason();
       if (season === 'autumn' || season === 'winter') {
         const glyph = season === 'winter' ? '❄️' : '🍂', n = season === 'winter' ? 9 : 6;
@@ -1453,13 +1547,15 @@
         for (let i = 0; i < n; i++) { const sp = 9 + (i % 4) * 4, x = (i * 97.3) % W, sway = Math.sin(t * 0.5 + i) * 20, y = ((t * sp + i * 70) % (H + 40)) - 20; ctx.font = (th * 0.46) + 'px sans-serif'; ctx.fillText(glyph, x + sway, y); }
         ctx.restore();
       } else {
-        // spring/summer: 3 butterflies fluttering on gentle wandering paths near the farm
+        // spring/summer butterflies — 收敛（audit B2 P2：平面 emoji 蝴蝶悬浮在
+        // 天空/锁徽章上与手绘背景风格冲突）：3→2 只、尺寸 0.5→0.34、透明度
+        // 0.92→0.6，活动带下压到草地带（H*0.58~0.74），不再飘进天空。
         ctx.save(); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        for (let i = 0; i < 3; i++) {
-          const x = W * (0.22 + 0.27 * i) + Math.sin(t * 0.45 + i * 2) * W * 0.16 + Math.sin(t * 1.6 + i) * 16;
-          const y = H * 0.5 + Math.cos(t * 0.62 + i * 2) * H * 0.14 + Math.sin(t * 3.0 + i) * 7;
+        for (let i = 0; i < 2; i++) {
+          const x = W * (0.28 + 0.4 * i) + Math.sin(t * 0.45 + i * 2) * W * 0.14 + Math.sin(t * 1.6 + i) * 12;
+          const y = H * 0.66 + Math.cos(t * 0.62 + i * 2) * H * 0.08 + Math.sin(t * 3.0 + i) * 6;
           const flutter = 0.78 + Math.abs(Math.sin(t * 6 + i)) * 0.32;
-          ctx.globalAlpha = 0.92; ctx.font = (th * 0.5 * flutter) + 'px sans-serif'; ctx.fillText('🦋', x, y);
+          ctx.globalAlpha = 0.6; ctx.font = (th * 0.34 * flutter) + 'px sans-serif'; ctx.fillText('🦋', x, y);
         }
         ctx.restore();
       }
