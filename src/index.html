@@ -374,6 +374,10 @@
     navigator.serviceWorker.addEventListener('controllerchange', function () {
       if (!__hadController || window.__wcReloaded) return;   // 首次安装不刷;只刷一次
       window.__wcReloaded = true;
+      // 自动刷新前先同步 flush 一次存档（audit P0 (c) 2026-07-07）：这次 reload
+      // 不是用户导航，可能打断在途进度；localStorage.setItem 是同步的，flush 后
+      // 才 reload 保证最新状态已落盘（save 内部自带会话/读失败安全闸）。
+      try { if (window.Farm && window.Farm.state && window.Farm.state.data) window.Farm.state.save(); } catch (e) {}
       window.location.reload();
     });
     window.addEventListener('load', function () {

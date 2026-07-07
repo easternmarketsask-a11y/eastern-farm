@@ -6,8 +6,14 @@
  */
 (function() {
   const SAVE_KEY = 'eastern_farm_save_v1';
+  // 会话接管 token（audit P0 2026-07-07 多标签页覆盖）：每个标签页 boot 时写一个
+  // 随机 token；save() 前校验 token 仍是自己——不是则说明另一个标签页已接管，
+  // 本页永久停止落盘（否则旧标签页 60s 心跳会把过期状态反写覆盖新标签页进度）。
+  const SESSION_KEY = 'ef_session_token';
   const STARTER_STATE = {
-    version: 1,
+    // 存档格式版本。breaking 结构改动时 +1 并在 migrateSave() 加分支（见下）。
+    // v2 (2026-07-07)：引入版本迁移钩子 + 顶层标量类型消毒；结构与 v1 相同。
+    version: 2,
     coins: 100,
     eastPoints: 0,
     level: 1,
@@ -276,8 +282,25 @@
     return null;
   }
 
+  // ============ 存档格式迁移链（audit P2 2026-07-07）============
+  // save.version 现在真的被读取了：v1 / 缺失 → 视为 1。breaking 结构改动的做法：
+  //   1) STARTER_STATE.version += 1
+  //   2) 在这里加 `if (from < N) { ...就地改 parsed... }` 分支（必须幂等）
+  // 只能就地修改 parsed（在 Object.assign 合并 STARTER 之前调用）。
+  // v1 → v2：无结构变化（v2 只引入本钩子 + 标量消毒），无需动作。
+  // 注：bumperCharges→fertilizerCharges、crop alias 等「补字段级」迁移仍留在
+  // init() 内的幂等补丁块，不必搬进来。
+  function migrateSave(parsed, from) {
+    // if (from < 3) { ... 未来的 v2→v3 迁移写这里 ... }
+    return parsed;
+  }
+
   const state = {
     data: null,
+    // ---- 会话/落盘安全旗标（audit P0 2026-07-07）----
+    _sessionToken: null,   // 本标签页的会话 token（boot 时写入 SESSION_KEY）
+    _takenOver: false,     // 另一个标签页已接管 → 本页永久禁止落盘
+    _saveBlocked: false,   // 本会话 localStorage 读取曾抛错 → 禁止一切落盘（防覆盖真存档）
 
     init() {
       // localStorage.getItem itself can THROW (iOS 存储已满 / 被 ITP 清 / 分区隔离 / 私密浏览),
@@ -287,7 +310,13 @@
       // 读失败就当作没存档 → 走全新内存态（本次可正常玩，只是不落地保存），绝不冻死。
       let saved = null;
       try { saved = localStorage.getItem(SAVE_KEY); }
-      catch (e) { console.warn('[state] localStorage read blocked — in-memory session', e); }
+      catch (e) {
+        // ⚠️ 存档神圣（audit P0 (b)）：「读不到」≠「不存在」。读取一旦抛错，本会话
+        // 永久禁止一切 save()（含心跳/mutator/flush）——否则下面的「无存档」分支会
+        // 用初始状态覆盖真存档，正是「20 分钟进度静默清零」的根因之一。
+        this._saveBlocked = true;
+        console.warn('[state] localStorage read blocked — in-memory session, saving DISABLED', e);
+      }
       if (saved) {
         try {
           const parsed = JSON.parse(saved);
@@ -295,16 +324,43 @@
           // or non-object (corrupted save). Without this check, Object.assign
           // would silently produce a state object missing nested defaults.
           if (!parsed || typeof parsed !== 'object') throw new Error('save not an object');
+          // ---- 存档版本钩子（audit P2）----
+          const parsedVer = (typeof parsed.version === 'number' && isFinite(parsed.version)) ? parsed.version : 1;
+          if (parsedVer > STARTER_STATE.version) {
+            // 旧代码读到未来版本存档（PWA 缓存回退时真会发生）：先备份原始串，
+            // 再 best-effort 加载——未来字段被丢弃回写时至少有备份可救。
+            try { localStorage.setItem(SAVE_KEY + '_backup', saved); } catch (e2) {}
+            console.warn('[state] save version ' + parsedVer + ' > code version ' + STARTER_STATE.version + ' — raw save backed up');
+          }
+          migrateSave(parsed, parsedVer);
           // Object.assign auto-fills any new STARTER fields missing from old saves.
           // DEEP-CLONE the defaults first: otherwise a field present in STARTER but
           // absent from an old save (e.g. orders/warehouse/festivalHarvests/orderEp)
           // is copied BY REFERENCE — mutating this.data.orders would then mutate the
           // module's STARTER_STATE.orders and leak across resets/reloads.
           this.data = Object.assign(JSON.parse(JSON.stringify(STARTER_STATE)), parsed);
+          this.data.version = STARTER_STATE.version;   // 迁移完成 → 落到当前版本号
+          // ---- 顶层标量类型消毒（audit P2）----
+          // corrupted-but-parseable 存档里 coins:"abc" 会被直接接受：HUD 显示 abc、
+          // addCoins 变字符串拼接 "abc10" 并回写持久化；level:"x" 让升级永久 NaN。
+          // 按 STARTER 的类型校验：数字键 Number()+isFinite，坏值回落默认；
+          // 字符串键非 string 回落默认。嵌套对象/数组由下面的既有守卫负责。
+          for (const k of Object.keys(STARTER_STATE)) {
+            const defVal = STARTER_STATE[k];
+            const v = this.data[k];
+            if (typeof defVal === 'number') {
+              const n = Number(v);
+              this.data[k] = isFinite(n) ? n : defVal;
+            } else if (typeof defVal === 'string' && typeof v !== 'string') {
+              this.data[k] = defVal;
+            }
+          }
           // Harden core collections against a corrupted-but-parseable save: a null /
           // non-array `plots` or null / non-object `seeds` would otherwise crash
           // migrateCrops() during boot and wedge the player on the splash screen.
-          if (!Array.isArray(this.data.plots)) this.data.plots = JSON.parse(JSON.stringify(STARTER_STATE.plots));
+          // 空数组同样兜底（audit P2）：plots:[] 会漏过 isArray 守卫 → 零地块进场，
+          // 游戏不崩但完全不可玩且会被 save() 持久化成死局。
+          if (!Array.isArray(this.data.plots) || this.data.plots.length === 0) this.data.plots = JSON.parse(JSON.stringify(STARTER_STATE.plots));
           if (!this.data.seeds || typeof this.data.seeds !== 'object') this.data.seeds = JSON.parse(JSON.stringify(STARTER_STATE.seeds));
           // Deep-fill nested objects added in later versions
           this.data.dailyClaims = Object.assign({}, STARTER_STATE.dailyClaims, this.data.dailyClaims || {});
@@ -354,6 +410,8 @@
           }
         } catch (e) {
           console.error('Save corrupted, starting fresh', e);
+          // 存档神圣：确认损坏、要放弃之前，先把原始串备份一份（能救就救）。
+          try { localStorage.setItem(SAVE_KEY + '_backup', saved); } catch (e2) {}
           this.data = JSON.parse(JSON.stringify(STARTER_STATE));
           this.data.sessionStats.date = getDateString();
           this.data.epEarnedDate = getDateString();
@@ -367,7 +425,19 @@
         // Persist the fresh state immediately so SAVE_KEY always exists after a
         // load. The boot-time persistence probe (main.js) relies on this: if the
         // key is gone on a later reload, the browser isn't persisting storage.
-        this.save();   // guarded internally; a blocked browser just warns, never throws here
+        //
+        // ⚠️ 写 starter 前的最后防线（audit P0 (b)）：二次 getItem 确认 key 确实
+        // 不存在、且本会话读取从未抛错。「无存档」的判定必须证明存档真不存在，
+        // 而不是「刚才没读到」——瞬时读失败时把真存档当无存档覆盖写，就是
+        // 「进度静默清零」。确认不了就整会话内存态运行，绝不落盘。
+        let confirmNull = null, confirmThrew = false;
+        try { confirmNull = localStorage.getItem(SAVE_KEY); } catch (e) { confirmThrew = true; }
+        if (this._saveBlocked || confirmThrew || confirmNull !== null) {
+          this._saveBlocked = true;
+          console.warn('[state] save key unreadable or reappeared — in-memory session, will NOT write starter over it');
+        } else {
+          this.save();   // guarded internally; a blocked browser just warns, never throws here
+        }
       }
       // 兜底不变量：无论上面存储/迁移出了什么岔子，绝不能让游戏带着 null 状态往下走
       // （null this.data 会让每个模块崩 → 开屏后死机）。任何漏网情形一律回落全新内存态。
@@ -376,9 +446,94 @@
         this.data.sessionStats.date = getDateString();
         this.data.dailyClaims.date = getDateString();
       }
+      // 会话接管：声明本标签页为当前唯一写入者（audit P0 (a)）。
+      this._claimSession();
+    },
+
+    // ============ 会话接管制（多标签页防互相覆盖，audit P0 2026-07-07）============
+    // 复现过的事故：两个标签页同时开游戏 → 旧标签页 60s 心跳 save() 把过期状态
+    // 整体反写 localStorage，新标签页刚攒的进度静默清零。机制：后开的标签页写入
+    // 新 token 接管；先开的标签页经 storage 事件（即时）或 save() 前校验（兜底）
+    // 发现被接管 → 永久停止落盘 + 全屏提示「点此刷新接管」。
+    _claimSession() {
+      try {
+        this._sessionToken = 'tab_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 10);
+        localStorage.setItem(SESSION_KEY, this._sessionToken);
+      } catch (e) {
+        // 存储不可写：本会话本就落不了盘（save() 自身会警告），接管机制无意义。
+        this._sessionToken = null;
+      }
+      if (!this._sessionWatcher) {
+        this._sessionWatcher = (e) => {
+          if (e && e.key === SESSION_KEY && e.newValue && this._sessionToken && e.newValue !== this._sessionToken) {
+            this._markTakenOver();
+          }
+        };
+        try { window.addEventListener('storage', this._sessionWatcher); } catch (e) {}
+      }
+    },
+
+    _markTakenOver() {
+      if (this._takenOver) return;
+      this._takenOver = true;
+      console.warn('[state] session taken over by another tab/window — saving disabled here');
+      this._showTakeoverOverlay();
+    },
+
+    _showTakeoverOverlay() {
+      try {
+        if (document.getElementById('efTakeover')) return;
+        const en = (this.data && this.data.language) === 'en';
+        const el = document.createElement('div');
+        el.id = 'efTakeover';
+        el.style.cssText = 'position:fixed;inset:0;z-index:100000;background:rgba(30,22,12,0.78);' +
+          'display:flex;align-items:center;justify-content:center;padding:24px;';
+        el.innerHTML =
+          '<div style="max-width:320px;background:#fffdf7;border-radius:20px;padding:26px 22px;text-align:center;' +
+            'font-family:inherit;box-shadow:0 12px 40px rgba(0,0,0,0.35);">' +
+            '<div style="font-size:44px;line-height:1;">🪟</div>' +
+            '<div style="font-size:16px;font-weight:700;margin-top:10px;color:#4a3f2e;">' +
+              (en ? 'Game opened in another window' : '游戏已在其他窗口打开') + '</div>' +
+            '<div style="font-size:13px;color:#9a8f7d;margin-top:8px;line-height:1.6;">' +
+              (en ? 'To protect your save, this window stopped saving progress.'
+                  : '为保护你的存档，这个窗口已停止保存进度。') + '</div>' +
+            '<button id="efTakeoverReload" style="margin-top:16px;width:100%;padding:13px;border:none;cursor:pointer;' +
+              'border-radius:14px;background:linear-gradient(180deg,#4aa563,#3a8c50);color:#fff;font-size:14.5px;' +
+              'font-weight:700;font-family:inherit;box-shadow:0 3px 0 #2a6038;">' +
+              (en ? 'Reload & keep playing here' : '点此刷新，在这里继续玩') + '</button>' +
+          '</div>';
+        document.body.appendChild(el);
+        const btn = document.getElementById('efTakeoverReload');
+        if (btn) btn.onclick = () => location.reload();
+      } catch (e) { /* DOM 不可用（极早期）——save() 的早退保护仍然生效 */ }
+    },
+
+    // 「这台设备存不下进度」一次性提示（读取抛错 / setItem 抛错共用）。
+    _warnStorageOnce() {
+      if (this._saveWarned) return;
+      this._saveWarned = true;
+      if (window.Farm && Farm.ui && Farm.ui.toast) {
+        // 现在游戏本次仍可正常玩(内存态)，只是这次的进度可能存不下来。文案据实说明,
+        // 不再一口咬定「无痕模式」(Chris 常不在无痕却总看到，反感)；给真正有用的 iOS
+        // 建议:登录可云端同步 + 加到主屏幕从图标打开(绕开 Safari 7 天清储)。
+        Farm.ui.toast('本次可正常游玩 · 但这台设备暂时存不下进度（存储已满或 iOS Safari 限制）。建议：登录后可云端同步；或点分享→「添加到主屏幕」，以后从图标打开更稳。', 8000);
+      }
     },
 
     save() {
+      // ---- 落盘安全闸（audit P0 2026-07-07）----
+      // 1) 会话已被其他标签页接管 → 本页任何落盘都是用过期状态覆盖新进度，拒绝。
+      if (this._takenOver) return;
+      // 2) 本会话读取存档曾抛错（内存态会话）→ 禁止一切落盘，防覆盖真存档。
+      if (this._saveBlocked) { this._warnStorageOnce(); return; }
+      // 3) 落盘前校验会话 token（storage 事件可能没送达：页面被冻结后恢复等），
+      //    token 被别的标签页换掉 = 已被接管。token 读不到（抛错/为空）不视为
+      //    接管——那是存储不可用，由下面 setItem 的 catch 诚实处理。
+      if (this._sessionToken) {
+        let cur = null, readOk = true;
+        try { cur = localStorage.getItem(SESSION_KEY); } catch (e) { readOk = false; }
+        if (readOk && cur && cur !== this._sessionToken) { this._markTakenOver(); return; }
+      }
       // Warn ONLY when setItem genuinely throws (iOS Private Browsing quota=0,
       // storage blocked/full). A read-back mismatch is NOT used as a trigger —
       // a concurrent save (heartbeat/toast re-entry) can momentarily differ and
@@ -389,18 +544,7 @@
         localStorage.setItem(SAVE_KEY, JSON.stringify(this.data));
       } catch (e) {
         console.error('Save failed', e);
-        if (!this._saveWarned) {
-          this._saveWarned = true;
-          const lang = (this.data && this.data.language) === 'en' ? 'en' : 'zh';
-          if (window.Farm && Farm.ui && Farm.ui.toast) {
-            // 现在游戏本次仍可正常玩(内存态)，只是这次的进度可能存不下来。文案据实说明,
-            // 不再一口咬定「无痕模式」(Chris 常不在无痕却总看到，反感)；给真正有用的 iOS
-            // 建议:登录可云端同步 + 加到主屏幕从图标打开(绕开 Safari 7 天清储)。
-            Farm.ui.toast(lang === 'en'
-              ? '本次可正常游玩 · 但这台设备暂时存不下进度（存储已满或 iOS Safari 限制）。建议：登录后可云端同步；或点分享→「添加到主屏幕」，以后从图标打开更稳。'
-              : '本次可正常游玩 · 但这台设备暂时存不下进度（存储已满或 iOS Safari 限制）。建议：登录后可云端同步；或点分享→「添加到主屏幕」，以后从图标打开更稳。', 8000);
-          }
-        }
+        this._warnStorageOnce();
       }
       // Phase-1 neighbor sync: piggyback on save() so any stat change
       // eventually reaches Firestore. Debounced to 60s in fbGameSync.
@@ -457,6 +601,8 @@
       merged.loginCalendar.autoShownDate =
         [(localCal.autoShownDate || ''), (cloudCal.autoShownDate || '')].sort().pop();
       merged.aiRelationships = Object.assign({}, STARTER_STATE.aiRelationships, cloudState.aiRelationships || {});
+      // 坏/空 plots 的云端 blob 与 init() 同一守卫（audit P2）：否则零地块死局被本地持久化。
+      if (!Array.isArray(merged.plots) || merged.plots.length === 0) merged.plots = JSON.parse(JSON.stringify(STARTER_STATE.plots));
       if (keepEastPoints != null) merged.eastPoints = keepEastPoints;   // server owns this
       if (keepUnsyncedEp != null) merged.unsyncedEp = keepUnsyncedEp;
       // Map layout: use the cloud copy if it has one; otherwise keep the local
@@ -811,7 +957,14 @@
       if (wh.length === 0) return { ok: false, reason: 'empty' };
       // 「给小东留着」：订单板当前需要的数量自动保留，不随一键卖货流走——
       // 否则玩家为 1.5× 订单攒的菜会被 1× 价卖掉，攒单和卖仓互相打架。
-      const reserve = (Farm.orders && Farm.orders.reservedNeeds) ? Farm.orders.reservedNeeds() : {};
+      //
+      // ⚠️ 教程期不预留（audit P0 引导死锁 2026-07-07）：全新玩家唯一一棵收成
+      // 会被开局自动生成的订单板全额保留（「本次可卖 C0」），spotlight 第三步
+      // 「卖给东方超市」永远完不成，聚光灯卡死在谷仓。欢迎窗未确认或聚光灯
+      // 进行中 → 跳过预留，保证首次卖菜必然成功。
+      const inTutorial = !this.data.tutorialV1Done ||
+        !!(window.Farm && Farm.spotlight && Farm.spotlight._active);
+      const reserve = (!inTutorial && Farm.orders && Farm.orders.reservedNeeds) ? Farm.orders.reservedNeeds() : {};
       const keep = [];
       const sell = [];
       const kept = Object.create(null);
