@@ -68,20 +68,28 @@
         </div>
       `;
       Farm.ui.showModal(html);
+      // 统一收尾：主按钮 / ✕ / 点背板关闭都走同一条路（audit P2 tutorial.js:73
+      // 2026-07-07）。以前只有主按钮置 tutorialV1Done + 起 spotlight——点 ✕ 的
+      // 玩家下次又弹同一欢迎窗、本会话 spotlight 丢失、期间种过菜还会被静默标记
+      // 「引导已完成」。关闭 ≠ 没看过：任何关闭方式都视为确认。
+      const finishTutorial = () => {
+        Farm.state.data.tutorialV1Done = true;
+        Farm.state.save();
+        Farm.ui.hideModal();
+        if (Farm.audio) Farm.audio.play('plant');
+        // Hand off to the spotlight: walk them through the first
+        // plant → harvest → sell once the welcome panel is gone.
+        if (Farm.spotlight && Farm.spotlight.maybeStart) {
+          setTimeout(() => Farm.spotlight.maybeStart(), 500);
+        }
+      };
       const btn = document.getElementById('tutorialStartBtn');
-      if (btn) {
-        btn.onclick = () => {
-          Farm.state.data.tutorialV1Done = true;
-          Farm.state.save();
-          Farm.ui.hideModal();
-          if (Farm.audio) Farm.audio.play('plant');
-          // Hand off to the spotlight: walk them through the first
-          // plant → harvest → sell once the welcome panel is gone.
-          if (Farm.spotlight && Farm.spotlight.maybeStart) {
-            setTimeout(() => Farm.spotlight.maybeStart(), 500);
-          }
-        };
-      }
+      if (btn) btn.onclick = finishTutorial;
+      const modal = document.getElementById('modal');
+      const xBtn = modal && modal.querySelector('.modal-close-x');
+      if (xBtn) xBtn.onclick = finishTutorial;
+      const backdrop = modal && modal.querySelector('.modal-backdrop');
+      if (backdrop) backdrop.onclick = finishTutorial;
     },
   };
 

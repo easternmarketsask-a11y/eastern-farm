@@ -228,6 +228,15 @@
       if (Farm.homeReport && Farm.homeReport.maybeShow) {
         setTimeout(() => Farm.homeReport.maybeShow(), 1100);
       }
+      // 引导中断恢复（audit P1 spotlight.js:70 2026-07-07）：欢迎窗已确认但
+      // spotlight 未完成（刷新/关页打断）→ 自动续接对应步骤。此前 maybeStart
+      // 全仓唯一调用点在欢迎窗按钮里，中断一次引导就永远丢了。全新玩家仍走
+      // tutorial 按钮的原路径（tutorialV1Done 未置时这里不触发，不会抢在欢迎
+      // 窗前面）。maybeStart 内部自带「已变现则毕业」守卫，不会骚扰老玩家。
+      if (Farm.spotlight && Farm.spotlight.maybeStart &&
+          Farm.state.data.tutorialV1Done && !Farm.state.data.spotlightDone) {
+        setTimeout(() => Farm.spotlight.maybeStart(), 1500);
+      }
     });
 
     // Refresh the today badge whenever the modal closes
@@ -358,7 +367,7 @@
     const items = [
       { a: 'shop', icon: '🛒', zh: '种子店', en: 'Seeds' },
       { a: 'tasks', icon: '📋', zh: '任务', en: 'Tasks' },
-      { a: 'orders', icon: '📦', zh: '东超订单', en: 'Orders' },
+      { a: 'orders', icon: '📦', zh: '小东订单', en: 'Orders' },
       { a: 'storeRewards', icon: '🧾', zh: '领取到店奖励', en: 'Store Rewards' },
       { a: 'kitchen', icon: '🍳', zh: '小东厨房', en: 'Kitchen' },
       { a: 'community', icon: '🏘', zh: '社区', en: 'Community' },

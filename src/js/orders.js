@@ -210,7 +210,7 @@
             : '从仓库交付东超要的菜——比直接卖更划算。'}</p>`;
 
       const html = `
-        <h2 class="modal-title">📋 ${lang === 'en' ? 'Eastern Market Orders' : '东超订单'}</h2>
+        <h2 class="modal-title">📋 ${lang === 'en' ? 'Eastern Market Orders' : '小东订单'}</h2>
         ${subtitle}
         <div class="order-list">${cards}</div>
         <div class="btn-row" style="margin-top:14px;">

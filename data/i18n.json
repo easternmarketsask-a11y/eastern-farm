@@ -119,7 +119,7 @@
     "tutorial_step1_title": { "zh": "1. 点土地种菜", "en": "1. Tap soil to plant" },
     "tutorial_step1_body": { "zh": "棕色地块就是你的菜地。已经给你 3 种种子，点一下就能种。", "en": "Brown squares are your plots. You start with 3 seed types — tap to plant." },
     "tutorial_step2_title": { "zh": "2. 等一会儿", "en": "2. Wait a bit" },
-    "tutorial_step2_body": { "zh": "种子会自己长大（小白菜约 30 秒）。出门买菜、做饭、回来收都行。", "en": "Crops grow on their own (bok choy ~30 sec). Come back anytime to pick." },
+    "tutorial_step2_body": { "zh": "种子会自己长大（最快约 5 分钟）。等的时候先逛逛任务和商店，回来正好收。", "en": "Crops grow on their own (fastest ~5 min). Browse the tasks & shop while you wait." },
     "tutorial_step3_title": { "zh": "3. 卖给东方超市", "en": "3. Sell to Eastern Market" },
     "tutorial_step3_body": { "zh": "收的菜先进仓库，攒一批后送到东方超市，换农场币和超市积分。", "en": "Harvested crops go to the silo. Deliver to Eastern Market for coins + Store Points." },
     "tutorial_btn_start": { "zh": "开始种菜 →", "en": "Start farming →" },

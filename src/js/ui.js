@@ -58,8 +58,12 @@
       this._tickCounter(document.getElementById('pointsValue'), this._shownPoints, s.eastPoints);
       this._shownCoins = s.coins;
       this._shownPoints = s.eastPoints;
-      // 首次攒到 ≥100 农场币：提示可点金币卡兑换超市积分
-      if (s.coins >= 100 && Farm.coach && !Farm.coach.seen('first_coins_exchange')) {
+      // 金币→积分兑换提示（audit P1 首条提示喧宾夺主 2026-07-07）：开局余额
+      // 就是 100 币，旧阈值 ≥100 让它成为新手看到的第一条店主提示——高级功能
+      // 抢占核心循环（种→收→卖）的教学位。阈值提到开局余额之上，且至少完成
+      // 过一次卖货（学会核心循环）后才教兑换。
+      if (s.coins >= 300 && (s.totalDeliveries || 0) > 0 &&
+          Farm.coach && !Farm.coach.seen('first_coins_exchange')) {
         Farm.coach.fire('first_coins_exchange', 1200);
       }
       document.getElementById('levelValue').textContent = s.level;

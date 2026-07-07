@@ -54,6 +54,7 @@
     _targetIdx: -1,
     _baseHarvests: 0,
     _baseDeliveries: 0,
+    _baseOrders: 0,
     _tick: null,
     _el: null,
     _scrolled2: false,
@@ -66,21 +67,43 @@
       // （它不是默认视图，留给 guide 弹窗兜底）。
       if (Farm.mapView && Farm.mapView._on) return;
       if (Farm.isoView && Farm.isoView._on && !Farm.isoView.plotScreenRect) return;
-      // Only for genuine newcomers — never grown anything yet.
-      if ((d.cropsEverGrown || []).length > 0) { d.spotlightDone = true; Farm.state.save(); return; }
+      // 「毕业」判定放宽（audit P1 引导中断不恢复 2026-07-07）：旧守卫用
+      // cropsEverGrown>0 会把「种过但半途刷新」的玩家静默标记完成——引导
+      // 后半段（收/卖）永远缺课。改为「已有变现记录」才算走完闭环；种过
+      // 没卖过的半途玩家由 start() 的断点续接接回对应步骤。
+      if ((d.totalDeliveries || 0) > 0 || (d.totalOrdersFilled || 0) > 0) {
+        d.spotlightDone = true; Farm.state.save(); return;
+      }
       if (this._active) return;
-      // Need at least one empty plot to plant into.
-      if (firstEmptyPlotIdx() < 0) return;
+      // 第 0 步需要一块空地可种；续接场景（地里已有菜 / 仓库已有货）不需要。
+      const hasCrop = (d.plots || []).some(p => p && p.crop);
+      const hasStock = (d.warehouse || []).length > 0;
+      if (!hasCrop && !hasStock && firstEmptyPlotIdx() < 0) return;
       this.start();
     },
 
     start() {
+      const d = Farm.state.data;
       this._active = true;
-      this._step = 0;
       this._scrolled2 = false;
-      this._targetIdx = firstEmptyPlotIdx();
-      this._baseHarvests = Farm.state.data.totalHarvests || 0;
-      this._baseDeliveries = Farm.state.data.totalDeliveries || 0;
+      this._baseHarvests = d.totalHarvests || 0;
+      this._baseDeliveries = d.totalDeliveries || 0;
+      this._baseOrders = d.totalOrdersFilled || 0;
+      // 断点续接（audit P1 2026-07-07）：刷新/关页打断后按实际进度落到对应
+      // 步骤，而不是永远从第 0 步重来。仓库有货 → 直接教卖（step 2）；地里
+      // 有菜 → 教收（step 1，与首棵一致魔法速熟，别让续接的人干等）。
+      const grownIdx = (d.plots || []).findIndex(p => p && p.unlocked && p.crop);
+      if ((d.warehouse || []).length > 0) {
+        this._step = 2;
+        this._targetIdx = grownIdx;   // step 2 的目标是谷仓，此值不参与定位
+      } else if (grownIdx >= 0) {
+        this._step = 1;
+        this._targetIdx = grownIdx;
+        forceMature(grownIdx);
+      } else {
+        this._step = 0;
+        this._targetIdx = firstEmptyPlotIdx();
+      }
       this._build();
       // Tick drives positioning + advancement. 200ms feels responsive without
       // thrashing layout.
@@ -163,9 +186,13 @@
         if ((d.totalHarvests || 0) > this._baseHarvests) {
           this._step = 2;
           this._baseDeliveries = d.totalDeliveries || 0;
+          this._baseOrders = d.totalOrdersFilled || 0;
         }
       } else if (this._step === 2) {
-        if ((d.totalDeliveries || 0) > this._baseDeliveries) {
+        // 完成条件同时接受「一键卖货」与「交小东订单」（audit P0 引导死锁）：
+        // 玩家照 all_reserved toast 的建议去交订单也算学会了变现，不再卡死。
+        if ((d.totalDeliveries || 0) > this._baseDeliveries ||
+            (d.totalOrdersFilled || 0) > this._baseOrders) {
           this.finish();
           return;
         }
