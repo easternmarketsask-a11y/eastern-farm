@@ -1229,16 +1229,22 @@ body.mapmode #warehouseBtn { display: none !important; }
   animation: splashSlideUp 0.6s ease 0.78s both;
 }
 .splash-perks li { line-height: 1.3; }
-/* Guest trial demoted to a quiet ghost link below the login button. */
+/* Guest trial demoted to a quiet ghost link below the login button.
+   半透明奶油底胶囊（audit P2 2026-07-07）：原无底色 ghost 文字直接压在房屋
+   插画上近乎不可读，而这是不想登录的新客进游戏的唯一入口。奶油底提对比、
+   保持安静不抢登录主 CTA。 */
 .splash-start.splash-start--ghost {
   margin-top: 12px;
-  background: none;
-  border: none;
-  color: var(--warm-text-soft);
-  padding: 6px 14px;
+  background: rgba(255, 253, 246, 0.85);
+  border: 1.5px solid rgba(120, 110, 95, 0.25);
+  border-radius: 20px;
+  color: var(--warm-text);
+  padding: 8px 18px;
   font-size: 13px;
   font-weight: 600;
-  box-shadow: none;
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.07);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
   animation: splashSlideUp 0.6s ease 0.95s both;
   display: inline-flex;
   gap: 7px;
@@ -2610,8 +2616,13 @@ body.modal-open #bottombar { display: none; }
   inset: 0;
   z-index: 1000;
   display: flex;
-  align-items: center;
-  justify-content: center;
+  /* 安全居中 + 可滚动（audit P0 2026-07-07）：原 align-items:center 在内容高于
+     视口时把顶底裁掉且无任何滚动路径——360×640 游客入口不可见、844×390 横屏
+     登录/游客按钮全部不可达（无法进入游戏）。改为 .splash-content{margin:auto}
+     居中：空间足够时效果与 center 相同，溢出时自动顶对齐 + 本层内滚。
+     （html/body 是 overflow:hidden 锁滚，本层自带 overflow-y:auto 不受影响。） */
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   background:
     radial-gradient(circle at 50% 30%, #ffffff 0%, #fef5e0 30%, #f5ecd5 100%);
   padding: 24px;
@@ -2658,6 +2669,9 @@ body.modal-open #bottombar { display: none; }
   text-align: center;
   max-width: 360px;
   width: 100%;
+  /* 安全居中：flex 容器里 margin:auto 双轴居中，内容溢出时自动顶对齐可滚
+     （替代父层 align-items:center 的裁切式居中，见 .splash 注释）。 */
+  margin: auto;
 }
 .splash-logo {
   width: 78%;
@@ -2930,7 +2944,7 @@ body.modal-open #bottombar { display: none; }
   color: var(--warm-text, #4a3f2e);
 }
 .sl-skip {
-  margin-top: 8px;
+  margin-top: 2px;
   background: none;
   border: none;
   color: var(--warm-text-soft, #9a8f7d);
@@ -2938,7 +2952,11 @@ body.modal-open #bottombar { display: none; }
   font-family: inherit;
   cursor: pointer;
   text-decoration: underline;
-  padding: 2px 6px;
+  /* 命中区 ≥44px 高（audit P2 2026-07-07）：原 padding 2px 6px 实测命中区仅
+     60×21px，被卡住的玩家唯一逃生口连点不中。视觉仍是小字链接，只撑热区。 */
+  padding: 14px 18px;
+  min-height: 44px;
+  min-width: 44px;
 }
 
 /* =============== GUIDE BUTTON (header ❓ 玩法) =============== */
