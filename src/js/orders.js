@@ -60,20 +60,26 @@
       const pool = this._candidatePool();
       if (pool.length === 0) return null;
 
-      // line count: mostly 1–2 crops, occasionally 3 (capped by pool size)
+      // line count: mostly 1–2 crops, occasionally 3; +1 tier at Lv10+ (B5:
+      // 订单规模随等级放宽一档，给中后期「攒一仓库交大单」的目标感)。
+      const level = Farm.state.data.level || 1;
+      const lineMax = Math.min(4, 3 + Math.floor(level / 10));   // Lv1-9:3, Lv10+:4
       const r = Math.random();
-      let lineCount = r < 0.45 ? 1 : (r < 0.85 ? 2 : 3);
-      lineCount = Math.min(lineCount, pool.length);
+      let lineCount = r < 0.4 ? 1 : (r < 0.74 ? 2 : (r < 0.92 ? 3 : 4));
+      lineCount = Math.min(lineCount, lineMax, pool.length);
 
       // pick distinct crops
       const picks = pool.slice();
       for (let i = picks.length - 1; i > 0; i--) { const j = this._rand(i + 1); const t = picks[i]; picks[i] = picks[j]; picks[j] = t; }
       const chosen = picks.slice(0, lineCount);
 
+      // qty ceiling grows with level (+1 per 6 levels, capped +3) so bigger
+      // orders pull on the warehouse/plots instead of staying 1-3 forever.
+      const qtyBonus = Math.min(3, Math.floor(level / 6));
       const items = chosen.map(def => {
         // higher-value crops are requested in smaller quantities so a single
         // order never demands an unreasonable pile of an expensive crop
-        const maxQty = (def.sell_price || 5) >= 18 ? 3 : 4;
+        const maxQty = ((def.sell_price || 5) >= 18 ? 3 : 4) + qtyBonus;
         const qty = 1 + this._rand(maxQty);   // 1..maxQty
         return { cropId: def.id, qty };
       });

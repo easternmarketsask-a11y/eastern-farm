@@ -40,10 +40,26 @@
       const specialId = Farm.daily ? Farm.daily.getSpecialSeedId() : null;
       const coin = '<span class="coin-icon"></span>';
       const seedPriceLabel = lang === 'en' ? 'Seed price' : '种子价格';
+      // 高级种子袋（B5 小额金币水槽）：500 币随机 3 颗你已解锁的 Lv10+ 种子。
+      // 只在够格（已解锁至少一种 Lv10+ 作物）时出现，避免袋子空转。
+      const PREMIUM_BAG_COST = 500;
+      const bagEligible = allCrops.some(c => (c.unlock_level || 1) >= 10 && (c.unlock_level || 1) <= playerLevel);
+      const bagCard = bagEligible ? `
+        <div class="seed-card" data-action="premium-bag" style="border:1.5px dashed var(--sun-gold,#e8b93c);background:linear-gradient(180deg,#fffdf3,#fff8e3);">
+          <span class="seed-icon">🎁</span>
+          <div>
+            <div class="seed-name">${lang === 'en' ? 'Premium Seed Bag' : '高级种子袋'}</div>
+            <div class="seed-meta">
+              <span class="seed-cost"><span class="seed-label">${seedPriceLabel}</span><span class="seed-value">${coin}${PREMIUM_BAG_COST}</span></span>
+              <span class="seed-time">${lang === 'en' ? '🎲 3 random Lv10+ seeds' : '🎲 随机 3 颗 Lv10+ 种子'}</span>
+            </div>
+          </div>
+        </div>` : '';
       const html = `
         <h2 class="modal-title">🛒 ${Farm.i18n.t('shop_title')}</h2>
         <p class="modal-subtitle">${Farm.i18n.t('shop_subtitle')}</p>
         <div class="seed-list">
+          ${bagCard}
           ${cropsToShow.map(c => {
             const locked = c.unlock_level > playerLevel;
             const owned = Farm.state.data.seeds[c.id] || 0;
@@ -91,6 +107,43 @@
           this.buySeed(cropId);
         };
       });
+      // 高级种子袋
+      const bagEl = document.querySelector('.seed-card[data-action="premium-bag"]');
+      if (bagEl) bagEl.onclick = () => this.buyPremiumBag();
+    },
+
+    // 高级种子袋：500 币随机 3 颗「已解锁的 Lv10+」作物种子（B5 小额可重复金币水槽）。
+    // 全农场币，不碰 EP。限已解锁作物 → 拿到即可种，不给用不上的锁定种子。
+    buyPremiumBag() {
+      const lang = Farm.state.data.language;
+      const COST = 500;
+      const level = Farm.state.data.level || 1;
+      const pool = Farm.crops.all().filter(c => (c.unlock_level || 1) >= 10 && (c.unlock_level || 1) <= level);
+      if (pool.length === 0) {
+        Farm.ui.toast(lang === 'en' ? 'Unlock a Lv10+ crop first' : '先解锁一种 Lv10+ 作物吧～');
+        if (Farm.audio) Farm.audio.play('error');
+        return;
+      }
+      if (!Farm.state.spendCoins(COST)) {
+        Farm.ui.toast(Farm.i18n.t('toast_not_enough_coins'));
+        if (Farm.audio) Farm.audio.play('error');
+        return;
+      }
+      const nameKey = lang === 'en' ? 'name_en' : 'name_zh';
+      const granted = {};
+      for (let i = 0; i < 3; i++) {
+        const c = pool[Math.floor(Math.random() * pool.length)];
+        Farm.state.addSeed(c.id, 1);
+        granted[c.id] = (granted[c.id] || 0) + 1;
+      }
+      Farm.ui.refreshHUD();
+      if (Farm.audio) Farm.audio.play('achievement');
+      const parts = Object.keys(granted).map(id => {
+        const c = Farm.crops.get(id);
+        return (c ? (c.icon + ' ' + c[nameKey]) : id) + '×' + granted[id];
+      }).join('  ');
+      Farm.ui.toast('🎁 ' + parts, 3200);
+      this.open();
     },
 
     buySeed(cropId) {

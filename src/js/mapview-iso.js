@@ -729,17 +729,25 @@
       if (this._buildingAt(gx, gy) >= 0) return false;                       // under a building
       return true;
     },
+    _plotCost() {   // 单一定价源（与商城 extra_plot_coins 同价，B5 地块统一）
+      return (Farm.state.extraPlotCoinCost) ? Farm.state.extraPlotCoinCost() : this._PLOT_COST;
+    },
     _addPlot() {   // buy a new garden plot (菜地) on owned land → farmable anywhere you've expanded
-      const en = this._lang() === 'en', cost = this._PLOT_COST;
+      const en = this._lang() === 'en';
+      // 统一上限：与商城 extra_plot 同一计数器 extraPlots + 同一帽 EXTRA_PLOT_CAP。
+      if (Farm.state.extraPlotCapReached && Farm.state.extraPlotCapReached()) {
+        if (Farm.ui && Farm.ui.toast) Farm.ui.toast(en ? 'Plot limit reached for now — level up to unlock more land' : '扩地已达上限 — 升级会解锁更多土地');
+        return;
+      }
+      const cost = this._plotCost();
       if (Farm.state.data.coins < cost) { if (Farm.ui && Farm.ui.toast) Farm.ui.toast(en ? ('Need ' + (cost - Farm.state.data.coins) + ' more coins') : ('还差 ' + (cost - Farm.state.data.coins) + ' 农场币')); return; }
       const ob = this._ownedBounds(), ctr = this._screenToCell(this._cssW() / 2, this._cssH() / 2);
       const tries = [[ctr.gx, ctr.gy]];
       for (let gy = ob.y1; gy <= ob.y2; gy++) for (let gx = ob.x1; gx <= ob.x2; gx++) tries.push([gx, gy]);
       for (const [gx, gy] of tries) if (this._cellFreeForPlot(gx, gy)) {
         if (!Farm.state.spendCoins(cost)) return;
-        const plots = (Farm.state.data.plots = Farm.state.data.plots || []);
-        const id = plots.reduce((m, p) => Math.max(m, p.id || 0), -1) + 1;
-        plots.push({ id, crop: null, plantedAt: 0, harvestsLeft: 0, unlocked: true, gx, gy });
+        // 走同一计数器：extraPlots +1（同帽同价），plot 带上选好的 gx,gy。
+        if (!Farm.state.addExtraPlot({ gx, gy })) { Farm.state.addCoins(cost); return; }   // 上限竞态兜底退款
         this._buildLayout(); this._pcs = null;   // refresh cell→plot map + plotCellSet cache
         Farm.state.save(); this.render();
         if (Farm.ui && Farm.ui.refreshHUD) Farm.ui.refreshHUD();
@@ -770,9 +778,24 @@
     _refreshPaletteAfford() {
       if (!this._palBuild) return;
       const coins = (Farm.state.data && Farm.state.data.coins) || 0;
+      const en = this._lang() === 'en';
       this._palBuild.querySelectorAll('button[data-type]').forEach((btn) => {
-        const b = BUILDINGS[btn.dataset.type], cost = b ? (b.cost || 0) : (btn.dataset.type === '__plot' ? this._PLOT_COST : 0);
-        if (!b && btn.dataset.type !== '__plot') return;
+        const isPlot = btn.dataset.type === '__plot';
+        const b = BUILDINGS[btn.dataset.type], cost = b ? (b.cost || 0) : (isPlot ? this._plotCost() : 0);
+        if (!b && !isPlot) return;
+        // 菜地：随 extraPlots 递增价 + 达上限显示「已满」并置灰（与商城同步）。
+        if (isPlot) {
+          const capped = Farm.state.extraPlotCapReached && Farm.state.extraPlotCapReached();
+          const cs = btn.querySelector('.palCost');
+          if (cs) {
+            cs.innerHTML = capped
+              ? (en ? '✓ MAX' : '✓ 已满')
+              : '<span class="coin-icon"></span> ' + cost;
+            cs.style.color = capped ? '#9a8f7d' : (coins >= cost ? '#3a8c50' : '#e8522a');
+          }
+          btn.style.opacity = capped ? '0.5' : (coins >= cost ? '1' : '0.55');
+          return;
+        }
         const afford = coins >= cost;
         btn.style.opacity = afford ? '1' : '0.55';
         const cs = btn.querySelector('.palCost'); if (cs) cs.style.color = afford ? '#3a8c50' : '#e8522a';
@@ -810,7 +833,7 @@
       // 菜地 (new farmable plot) — first item so it's front-and-centre
       const pit = document.createElement('button'); pit.dataset.type = '__plot';
       pit.style.cssText = 'border:1px solid #cdebc9;border-radius:14px;background:#f3fbef;padding:8px 10px 6px;min-width:64px;flex:0 0 auto;cursor:pointer;font:500 12px/1.3 "Fredoka",system-ui,sans-serif;color:#444;';
-      pit.innerHTML = '<div style="font-size:11px;color:#3a8c50;margin-top:4px;font-weight:600">🌱 ' + (en ? 'Plot' : '菜地') + '</div><div class="palCost" style="font-size:12px;font-weight:600;color:#3a8c50;margin-top:1px"><span class="coin-icon"></span> ' + this._PLOT_COST + '</div>';
+      pit.innerHTML = '<div style="font-size:11px;color:#3a8c50;margin-top:4px;font-weight:600">🌱 ' + (en ? 'Plot' : '菜地') + '</div><div class="palCost" style="font-size:12px;font-weight:600;color:#3a8c50;margin-top:1px"><span class="coin-icon"></span> ' + this._plotCost() + '</div>';
       const pic = document.createElement('div'); pic.style.cssText = 'width:44px;height:38px;margin:0 auto;background-size:contain;background-repeat:no-repeat;background-position:center;'; pic.style.backgroundImage = "url('" + ASSET_DIR + "hd_soil.webp')"; pit.insertBefore(pic, pit.firstChild);
       pit.onclick = () => this._addPlot(); pb.appendChild(pit);
       PALETTE.forEach((type) => { const b = BUILDINGS[type]; const item = document.createElement('button'); item.dataset.type = type; item.style.cssText = 'border:1px solid #e0e0e0;border-radius:14px;background:#fff;padding:8px 10px 6px;min-width:64px;flex:0 0 auto;cursor:pointer;font:500 12px/1.3 "Fredoka",system-ui,sans-serif;color:#444;'; item.innerHTML = '<div style="font-size:11px;color:#888;margin-top:4px">' + (en ? b.en : b.zh) + '</div><div class="palCost" style="font-size:12px;font-weight:600;color:#3a8c50;margin-top:1px"><span class="coin-icon"></span> ' + (b.cost || 0) + '</div>'; const ic = document.createElement('div'); ic.style.cssText = 'width:44px;height:38px;margin:0 auto;background-size:contain;background-repeat:no-repeat;background-position:center;'; ic.style.backgroundImage = "url('" + ASSET_DIR + ASSET_SRC[b.img] + "')"; item.insertBefore(ic, item.firstChild); item.onclick = () => this._addBuilding(type); pb.appendChild(item); });

@@ -14,7 +14,11 @@
  * 出锅收益走 addCoins + addXp；tasks 收 'cook' 事件（earn_coins 计入真实到账）。
  */
 (function () {
-  const EXTRA_SLOT_COST = 2000;   // 第二口灶（农场币，毕业玩家的金币出口之一）
+  const EXTRA_SLOT_COST = 2000;    // 第二口灶（农场币，毕业玩家的金币出口之一）
+  const THIRD_SLOT_COST = 15000;   // 第三口灶（B5 大额金币水槽）
+  const COOK_SPEED_COSTS = [8000, 20000, 45000];   // 出菜提速 3 级：8k/20k/45k
+  const COOK_SPEED_STEP = 0.08;                    // 每级 -8% 烹饪时长
+  const COOK_SPEED_MAX = COOK_SPEED_COSTS.length;  // 封顶 3 级 = -24%
 
   const kitchen = {
     recipes: [],
@@ -37,17 +41,24 @@
 
     _k() {
       const d = Farm.state.data;
-      if (!d.kitchen) d.kitchen = { slots: [null, null], extraSlotBought: false };
-      if (!Array.isArray(d.kitchen.slots)) d.kitchen.slots = [null, null];
+      if (!d.kitchen) d.kitchen = { slots: [null, null, null], extraSlotBought: false, thirdSlotBought: false, cookSpeedLevel: 0 };
+      if (!Array.isArray(d.kitchen.slots)) d.kitchen.slots = [null, null, null];
+      while (d.kitchen.slots.length < 3) d.kitchen.slots.push(null);   // 旧存档 2 槽 → 补到 3（不丢在锅的菜）
+      if (typeof d.kitchen.cookSpeedLevel !== 'number') d.kitchen.cookSpeedLevel = 0;
       return d.kitchen;
     },
 
-    slotCount() { return this._k().extraSlotBought ? 2 : 1; },
+    slotCount() { const k = this._k(); return 1 + (k.extraSlotBought ? 1 : 0) + (k.thirdSlotBought ? 1 : 0); },
+
+    // 出菜提速（全灶通用）：每级 -8% 烹饪时长，封顶 3 级。
+    cookSpeedLevel() { return Math.max(0, Math.min(COOK_SPEED_MAX, this._k().cookSpeedLevel || 0)); },
+    _cookMult() { return 1 - COOK_SPEED_STEP * this.cookSpeedLevel(); },
+    _cookMs(r) { return r.cook_minutes * 60000 * this._cookMult(); },
 
     _remainMs(slot) {
       const r = this.get(slot.recipeId);
       if (!r) return 0;
-      return Math.max(0, slot.startedAt + r.cook_minutes * 60000 - Date.now());
+      return Math.max(0, slot.startedAt + this._cookMs(r) - Date.now());
     },
 
     // 出锅就绪的菜品数（导航红点等外部查询用）
@@ -68,16 +79,9 @@
       const level = Farm.state.data.level || 1;
 
       // ---- 灶台行 ----
+      const stoves = this.slotCount();
       const slotsHtml = [];
-      for (let i = 0; i < 2; i++) {
-        if (i >= this.slotCount()) {
-          slotsHtml.push(`
-            <button class="btn secondary" id="ktUnlockSlot" style="flex:1;min-height:74px;border-style:dashed;">
-              🔒 ${lang === 'en' ? 'Second stove' : '第二口灶'}<br>
-              <span style="font-size:12px;">${coin}${EXTRA_SLOT_COST}</span>
-            </button>`);
-          continue;
-        }
+      for (let i = 0; i < stoves; i++) {
         const s = k.slots[i];
         if (!s) {
           slotsHtml.push(`
@@ -96,7 +100,7 @@
               <span style="font-size:13px;">✨ ${lang === 'en' ? 'Ready! Serve it' : '出锅啦！点我上菜'}</span>
             </button>`);
         } else {
-          const pct = 100 - Math.round(remain / (r.cook_minutes * 60000) * 100);
+          const pct = 100 - Math.round(remain / this._cookMs(r) * 100);
           slotsHtml.push(`
             <div style="flex:1;min-height:74px;border:2px solid var(--border-soft);border-radius:12px;padding:8px;text-align:center;">
               <div style="font-size:14px;">${r.icon} ${lang === 'en' ? r.name_en : r.name_zh}</div>
@@ -107,6 +111,33 @@
             </div>`);
         }
       }
+      // 下一口灶解锁按钮（只显示当前可买的那一口）
+      if (stoves < 3) {
+        const nextCost = stoves === 1 ? EXTRA_SLOT_COST : THIRD_SLOT_COST;
+        const nextLabel = stoves === 1 ? (lang === 'en' ? 'Second stove' : '第二口灶') : (lang === 'en' ? 'Third stove' : '第三口灶');
+        slotsHtml.push(`
+          <button class="btn secondary" id="ktUnlockSlot" style="flex:1;min-height:74px;border-style:dashed;">
+            🔒 ${nextLabel}<br>
+            <span style="font-size:12px;">${coin}${nextCost}</span>
+          </button>`);
+      }
+
+      // ---- 出菜提速升级链（B5 大额金币水槽）----
+      const csLevel = this.cookSpeedLevel();
+      const csPct = Math.round(COOK_SPEED_STEP * csLevel * 100);
+      const csMaxed = csLevel >= COOK_SPEED_MAX;
+      const csNextCost = csMaxed ? 0 : COOK_SPEED_COSTS[csLevel];
+      const speedRow = `
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;padding:8px 10px;border:1px solid var(--border-soft);border-radius:12px;">
+          <div style="font-size:22px;">🔥</div>
+          <div style="flex:1;line-height:1.4;">
+            <div style="font-size:13px;font-weight:600;">${lang === 'en' ? 'Cooking speed' : '出菜速度'} · Lv ${csLevel}/${COOK_SPEED_MAX}${csPct > 0 ? ` (−${csPct}%)` : ''}</div>
+            <div style="font-size:11px;color:var(--warm-text-soft);">${lang === 'en' ? 'All stoves cook faster — permanent.' : '所有灶台永久出菜更快'}</div>
+          </div>
+          ${csMaxed
+            ? `<span style="font-size:12px;color:var(--leaf-dark,#3a8c50);font-weight:600;">${lang === 'en' ? '✓ MAX' : '✓ 已满级'}</span>`
+            : `<button class="btn secondary" id="ktUpgradeSpeed" style="white-space:nowrap;">−8% · ${coin}${csNextCost}</button>`}
+        </div>`;
 
       // ---- 菜谱列表 ----
       const nameKey = lang === 'en' ? 'name_en' : 'name_zh';
@@ -133,7 +164,7 @@
             <div style="font-size:26px;">${r.icon}</div>
             <div class="task-info">
               <div class="task-title">${lang === 'en' ? r.name_en : r.name_zh}
-                <span style="font-size:11px;color:var(--warm-text-soft);">⏱${Farm.crops.formatTimeRemaining(r.cook_minutes * 60000)}</span>
+                <span style="font-size:11px;color:var(--warm-text-soft);">⏱${Farm.crops.formatTimeRemaining(this._cookMs(r))}</span>
               </div>
               <div style="font-size:12px;line-height:1.5;">${ing}</div>
               <div style="font-size:11px;color:var(--warm-text-soft);margin-top:2px;">${lang === 'en' ? (r.tip_en || '') : (r.tip_zh || '')}</div>
@@ -150,6 +181,7 @@
           ? 'Turn warehouse crops into real Chinese dishes — Eastern Market pays extra for cooked food!'
           : '用仓库里的菜做真·中餐，卖给东方超市比散卖赚更多！'}</p>
         <div style="display:flex;gap:8px;margin-bottom:12px;">${slotsHtml.join('')}</div>
+        ${speedRow}
         ${this.recipes.length === 0
           ? `<p style="text-align:center;color:var(--warm-text-soft);padding:18px;">${lang === 'en' ? 'Kitchen is closed today (recipes failed to load).' : '今天不开火（菜谱没加载出来）。'}</p>`
           : `<div class="task-list">${cards}</div>`}
@@ -169,6 +201,8 @@
       });
       const unlockBtn = document.getElementById('ktUnlockSlot');
       if (unlockBtn) unlockBtn.onclick = () => this._buySlot();
+      const speedBtn = document.getElementById('ktUpgradeSpeed');
+      if (speedBtn) speedBtn.onclick = () => this._buyCookSpeed();
 
       // 倒计时活刷新：modal 打开期间每秒更新剩余时间；kitchen 内容不在 DOM
       // 里了（modal 被关/换内容）就自动停表。
@@ -189,7 +223,7 @@
           const bar = document.querySelector(`[data-kt-bar="${i}"]`);
           if (bar) {
             const r = this.get(s.recipeId);
-            if (r) bar.style.width = (100 - Math.round(remain / (r.cook_minutes * 60000) * 100)) + '%';
+            if (r) bar.style.width = (100 - Math.round(remain / this._cookMs(r) * 100)) + '%';
           }
         }
         if (needRerender) this.open();   // 有菜出锅 → 整体重画成「出锅啦」按钮
@@ -220,7 +254,7 @@
       k.slots[slotIdx] = { recipeId: r.id, startedAt: Date.now() };
       Farm.state.save();
       if (Farm.audio) Farm.audio.play('buy');
-      const mins = r.cook_minutes;
+      const mins = Math.max(1, Math.round(r.cook_minutes * this._cookMult()));
       Farm.ui.toast('🍳 ' + (lang === 'en' ? r.name_en : r.name_zh) + (lang === 'en'
         ? ` is cooking — ready in ${mins} min`
         : ` 下锅了 · ${mins} 分钟后出锅`), 2800);
@@ -282,19 +316,46 @@
       }
     },
 
+    // 买下一口灶：先第二（2000），再第三（15000）。
     _buySlot() {
       const lang = Farm.state.data.language;
       const k = this._k();
-      if (k.extraSlotBought) return;
-      if (!Farm.state.spendCoins(EXTRA_SLOT_COST)) {
+      const buyingThird = k.extraSlotBought && !k.thirdSlotBought;
+      if (k.extraSlotBought && k.thirdSlotBought) return;   // 已满 3 口
+      const cost = buyingThird ? THIRD_SLOT_COST : EXTRA_SLOT_COST;
+      if (!Farm.state.spendCoins(cost)) {
         Farm.ui.toast(Farm.i18n.t('toast_not_enough_coins'));
         if (Farm.audio) Farm.audio.play('error');
         return;
       }
-      k.extraSlotBought = true;
+      if (buyingThird) k.thirdSlotBought = true; else k.extraSlotBought = true;
       Farm.state.save();
       if (Farm.audio) Farm.audio.play('achievement');
-      Farm.ui.toast(lang === 'en' ? '🔥 Second stove unlocked!' : '🔥 第二口灶开火了！', 2600);
+      Farm.ui.toast(buyingThird
+        ? (lang === 'en' ? '🔥 Third stove unlocked!' : '🔥 第三口灶开火了！')
+        : (lang === 'en' ? '🔥 Second stove unlocked!' : '🔥 第二口灶开火了！'), 2600);
+      this.open();
+    },
+
+    // 出菜提速升级（-8%/级，全灶通用，B5 大额金币水槽）。
+    _buyCookSpeed() {
+      const lang = Farm.state.data.language;
+      const k = this._k();
+      const lvl = this.cookSpeedLevel();
+      if (lvl >= COOK_SPEED_MAX) return;
+      const cost = COOK_SPEED_COSTS[lvl];
+      if (!Farm.state.spendCoins(cost)) {
+        Farm.ui.toast(Farm.i18n.t('toast_not_enough_coins'));
+        if (Farm.audio) Farm.audio.play('error');
+        return;
+      }
+      k.cookSpeedLevel = lvl + 1;
+      Farm.state.save();
+      if (Farm.audio) Farm.audio.play('achievement');
+      const pct = Math.round(COOK_SPEED_STEP * k.cookSpeedLevel * 100);
+      Farm.ui.toast(lang === 'en'
+        ? ('🔥 Cooking speed Lv ' + k.cookSpeedLevel + ' — dishes cook ' + pct + '% faster!')
+        : ('🔥 出菜速度升到 Lv ' + k.cookSpeedLevel + ' — 快 ' + pct + '%！'), 2600);
       this.open();
     },
   };

@@ -19,24 +19,26 @@
       "name_zh": "催熟剂",
       "name_en": "Quick-Grow",
       "icon": "💨",
-      "cost_coins": 60,
+      "cost_coins": 150,
+      "daily_buy_cap": 5,
       "category": "consumable",
       "kind": "stack_consumable",
       "stock_key": "accelerationCharges",
-      "desc_zh": "立即催熟一块地的作物，用农场币买，用完即消。",
-      "desc_en": "Instantly mature one crop. Bought with farm coins, one-shot."
+      "desc_zh": "立即催熟一块地的作物，用农场币买。每天限购 5 个。",
+      "desc_en": "Instantly mature one crop. Bought with farm coins. Max 5 per day."
     },
     {
       "id": "fertilizer_pro",
       "name_zh": "化肥",
       "name_en": "Fertilizer",
       "icon": "🌟",
-      "cost_coins": 120,
+      "cost_coins": 150,
+      "daily_buy_cap": 5,
       "category": "consumable",
       "kind": "stack_consumable",
       "stock_key": "fertilizerCharges",
-      "desc_zh": "选一块地施肥，那块地成熟收获时产量翻倍（×2）。一袋管一块地。",
-      "desc_en": "Fertilize one plot — that crop yields double (×2) when harvested. One bag per plot."
+      "desc_zh": "选一块地施肥，那块地成熟收获时产量翻倍（×2）。每天限购 5 袋。",
+      "desc_en": "Fertilize one plot — that crop yields double (×2) when harvested. Max 5 per day."
     },
     {
       "id": "lottery_ticket",

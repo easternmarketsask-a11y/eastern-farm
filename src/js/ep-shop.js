@@ -33,8 +33,26 @@
     // Items priced with `cost_coins` are bought with 农场币; otherwise `cost_ep`
     // (超市积分). Returns { amount, currency: 'coins' | 'ep' }.
     priceOf(item) {
+      // 扩地（农场币入口）走单一递增定价源，与 iso 建造面板同价（B5 地块统一）。
+      if (item.kind === 'extra_plot' && item.cost_coins != null && Farm.state.extraPlotCoinCost) {
+        return { amount: Farm.state.extraPlotCoinCost(), currency: 'coins' };
+      }
       if (item.cost_coins != null) return { amount: item.cost_coins, currency: 'coins' };
       return { amount: item.cost_ep || 0, currency: 'ep' };
+    },
+
+    // 今日购买计数（自复位、懒创建，不进 STARTER/dailyClaims 三处重建面——与
+    // orderEp/kitchen/stealGrace 同模式）。仅对带 daily_buy_cap 的消耗品生效。
+    _dailyBuys() {
+      const d = Farm.state.data;
+      const today = Farm.state.getDateString();
+      if (!d.shopDailyBuys || d.shopDailyBuys.date !== today) d.shopDailyBuys = { date: today, counts: {} };
+      return d.shopDailyBuys;
+    },
+    boughtToday(itemId) { return this._dailyBuys().counts[itemId] || 0; },
+    dailyCapLeft(item) {
+      if (!item || item.daily_buy_cap == null) return Infinity;
+      return Math.max(0, item.daily_buy_cap - this.boughtToday(item.id));
     },
 
     canBuy(item) {
@@ -44,8 +62,13 @@
       if (balance < price.amount) {
         return { ok: false, reason: price.currency === 'coins' ? 'insufficient_coins' : 'insufficient_ep' };
       }
-      if (item.kind === 'extra_plot' && data.extraPlots >= (item.max_owned || 4)) {
+      const cap = (Farm.state.EXTRA_PLOT_CAP != null) ? Farm.state.EXTRA_PLOT_CAP : (item.max_owned || 4);
+      if (item.kind === 'extra_plot' && data.extraPlots >= cap) {
         return { ok: false, reason: 'max_owned' };
+      }
+      // 每日限购（催熟剂/化肥）：封住「无限购 = 印钞」循环，保留新手期爽感。
+      if (item.daily_buy_cap != null && this.dailyCapLeft(item) <= 0) {
+        return { ok: false, reason: 'daily_cap' };
       }
       return { ok: true };
     },
@@ -69,6 +92,12 @@
           });
       if (!spent) return { ok: false, reason: price.currency === 'coins' ? 'insufficient_coins' : 'insufficient_ep' };
       const effect = this._apply(item, opts);
+      // 记一笔今日购买（仅限带 daily_buy_cap 的品）。
+      if (item.daily_buy_cap != null) {
+        const db = this._dailyBuys();
+        db.counts[item.id] = (db.counts[item.id] || 0) + 1;
+        Farm.state.save();
+      }
       Farm.ui.refreshHUD();
       if (Farm.audio) Farm.audio.play('coin');
       return { ok: true, effect, item };
@@ -105,7 +134,8 @@
         case 'extra_plot':
           Farm.state.addExtraPlot();
           if (Farm.farm) Farm.farm.renderGrid();
-          return { kind: 'plot_added', total: 12 + Farm.state.data.extraPlots };
+          if (Farm.isoView && Farm.isoView._on) Farm.isoView.render();
+          return { kind: 'plot_added', total: (Farm.state.data.plots || []).length };
 
         case 'instant_spin':
           return this.spinLottery({ source: 'ticket' });
@@ -201,15 +231,23 @@
       const buttonLabel = affordable
         ? `${price.amount} <span class="${curIcon}"></span>`
         : (can.reason === 'max_owned' ? (lang === 'en' ? '✓ MAX' : '✓ 已满')
+          : can.reason === 'daily_cap' ? (lang === 'en' ? 'Daily max' : '今日已满')
                                        : `${price.amount} <span class="${curIcon}"></span>`);
       const dis = affordable ? '' : 'disabled';
       const cat = it.category || 'consumable';
+      // 每日限购品：显示今日剩余次数，让玩家一眼知道额度（而非买到才发现被拦）。
+      const capNote = (it.daily_buy_cap != null)
+        ? `<div class="ep-shop-cap-note" style="font-size:11px;color:var(--warm-text-soft,#9a8f7d);margin-top:2px;">${lang === 'en'
+            ? ('Today: ' + this.dailyCapLeft(it) + '/' + it.daily_buy_cap + ' left')
+            : ('今日剩 ' + this.dailyCapLeft(it) + '/' + it.daily_buy_cap)}</div>`
+        : '';
       return `
         <div class="ep-shop-card cat-${cat} ${affordable ? '' : 'disabled'}" data-id="${it.id}">
           ${tagBadge}${ownedBadge}
           <div class="ep-shop-icon cat-${cat}">${it.icon}</div>
           <div class="ep-shop-name">${it[nameKey]}</div>
           <div class="ep-shop-desc">${it[descKey]}</div>
+          ${capNote}
           <button class="${btnCls}" data-buy="${it.id}" ${dis}>${buttonLabel}</button>
         </div>`;
     },
@@ -273,6 +311,8 @@
           if (!r.ok) {
             Farm.ui.toast(r.reason === 'insufficient_coins' || r.reason === 'insufficient_ep'
               ? (EN ? 'Not enough — keep farming!' : '余额不够，多卖点菜再来～')
+              : r.reason === 'daily_cap'
+                ? (EN ? 'Daily limit reached — back tomorrow!' : '今天买够啦，明天再来～')
               : (EN ? 'Cannot buy' : '无法购买'), 2400);
             if (Farm.audio) Farm.audio.play('error');
             return;

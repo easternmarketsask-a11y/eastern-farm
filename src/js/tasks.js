@@ -154,11 +154,16 @@
           t.progress += payload.coins;
         }
         if (eventType === 'order' && t.type === 'order') t.progress++;
+        if (eventType === 'cook' && t.type === 'cook') t.progress++;
 
         if (t.progress >= t.target && !t.claimed) {
           // Auto-claim
           t.claimed = true;
-          Farm.state.addCoins(t.reward_coins);
+          // 农场币奖励随等级轻量缩放（B5：低等级任务奖励对高等级不再是噪音）。
+          // 只缩放农场币；reward_points 是真实积分（负债），一分不缩放。封顶 3×。
+          const coinScale = Math.min(3, 1 + 0.15 * ((Farm.state.data.level || 1) - 1));
+          const coinAward = Math.round((t.reward_coins || 0) * coinScale);
+          Farm.state.addCoins(coinAward);
           if (t.reward_points > 0) {
             Farm.state.addEastPoints(t.reward_points, {
               source: 'task_completion',
@@ -171,7 +176,7 @@
           setTimeout(() => {
             const lang = Farm.state.data.language;
             const title = lang === 'en' ? t.title_en : t.title_zh;
-            Farm.ui.toast((isWeekly ? '🗓✅ ' : '✅ ') + title + ' +' + t.reward_coins + '<span class="coin-icon"></span>' +
+            Farm.ui.toast((isWeekly ? '🗓✅ ' : '✅ ') + title + ' +' + coinAward + '<span class="coin-icon"></span>' +
               (t.reward_points ? ' +' + t.reward_points + '<span class="points-icon"></span>' : ''), isWeekly ? 3600 : 3000);
             Farm.ui.refreshHUD();
             this.updateBadge();
