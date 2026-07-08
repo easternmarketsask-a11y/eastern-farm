@@ -3,7 +3,11 @@
    Cozy, warm, mobile-first
    ============================================================ */
 
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Plus+Jakarta+Sans:wght@400;500;700&family=ZCOOL+KuaiLe&display=swap');
+/* Font families are loaded via a single parallel <link> in index.html
+   (Fredoka + Noto Sans SC + Plus Jakarta Sans + ZCOOL KuaiLe). The former
+   @import here forced a serial request chain — the browser had to download
+   style.css first, THEN discover and fetch this second stylesheet, delaying
+   first paint ~2.3s on slow networks (B4 perf audit). Do NOT re-add @import. */
 
 :root {
   --cream-bg:       #fdf8ee;

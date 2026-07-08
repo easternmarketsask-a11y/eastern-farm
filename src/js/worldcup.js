@@ -341,7 +341,7 @@
     hub.innerHTML =
       '<div class="wc-topbar">' +
         '<a class="wc-em-logo" href="https://easternmarket.ca/" target="_blank" rel="noopener" title="东方超市 Eastern Market" aria-label="东方超市 Eastern Market">' +
-          '<img src="assets/images/logo-horizontal.png" alt="东方超市 Eastern Market"></a>' +
+          '<img src="assets/images/logo-horizontal-560.webp" alt="东方超市 Eastern Market"></a>' +
         '<div class="wc-title"><span class="wc-title-zh">世界杯观赛台</span></div>' +
         '<div class="wc-topbar-right">' +
           '<div class="wc-clock" id="wcClock"><span class="t">--:--:--</span><span class="z">萨省</span></div>' +
@@ -1078,12 +1078,12 @@
   // 6 格,顺序须与 worldcup.css 里 conic-gradient 一致(从 0° 顺时针):
   // 0 绿=龙角散 / 1 金=1000币 / 2 琥珀=沙琪玛 / 3 红=气泡饮原味 / 4 金=2000币 / 5 浅绿=气泡饮青提
   var WHEEL_SEGS = [
-    { key: 'ryukakusan',    label: '龙角散',       img: 'ryukakusan.png',    emoji: '🫙', dark: true },
+    { key: 'ryukakusan',    label: '龙角散',       img: 'ryukakusan.webp',    emoji: '🫙', dark: true },
     { key: 'coins1000',     label: '农场币<br><b class="amt">1000</b>', coin: true, dark: false },
-    { key: 'shaqima',       label: '沙琪玛',       img: 'shaqima.png',       emoji: '🍪', dark: true },
-    { key: 'yogurt_orig',   label: '气泡饮·原味',  img: 'yogurt_orig.png',   emoji: '🥤', dark: true },
+    { key: 'shaqima',       label: '沙琪玛',       img: 'shaqima.webp',       emoji: '🍪', dark: true },
+    { key: 'yogurt_orig',   label: '气泡饮·原味',  img: 'yogurt_orig.webp',   emoji: '🥤', dark: true },
     { key: 'coins2000',     label: '农场币<br><b class="amt">2000</b>', coin: true, dark: false },
-    { key: 'yogurt_muscat', label: '气泡饮·青提',  img: 'yogurt_muscat.png', emoji: '🍇', dark: true }
+    { key: 'yogurt_muscat', label: '气泡饮·青提',  img: 'yogurt_muscat.webp', emoji: '🍇', dark: true }
   ];
   function wheelTargetIndex(win) {
     var p = win.prize;

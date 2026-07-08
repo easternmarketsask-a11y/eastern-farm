@@ -77,7 +77,7 @@
       // game name lives on a wooden sign over the illustration's clean sky;
       // the player's own crops show right in the illustration's garden.
       const [logo, poster] = await Promise.all([
-        loadImage('assets/images/logo-horizontal.png'),
+        loadImage('assets/images/logo-horizontal-560.webp'),
         loadImage('assets/images/farm-poster.jpg'),
       ]);
 

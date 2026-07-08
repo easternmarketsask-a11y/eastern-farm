@@ -292,7 +292,7 @@
       // 真插画谷仓（Gemini「快乐仓库」按轮廓抠图，透明底）——直接坐在
       // 草地上像一座真建筑，配 CSS 地面椭圆影自然融入农场。
       btn.innerHTML = `
-        <img class="warehouse-img" src="assets/images/warehouse-barn.png" alt="">
+        <img class="warehouse-img" src="assets/images/warehouse-barn.webp" alt="" loading="lazy">
         <span class="warehouse-label">仓库 / Warehouse</span>
         <span class="warehouse-badge">0/20</span>
       `;

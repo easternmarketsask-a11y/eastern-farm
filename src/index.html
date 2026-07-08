@@ -46,7 +46,12 @@
      buttons get the cute look. display=swap → graceful fallback if offline. -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=ZCOOL+KuaiLe&display=swap">
+<!-- ALL web fonts in ONE parallel request (was split across this link + a
+     serial @import in style.css → ~2.3s first-paint stall on slow nets, B4).
+     Loaded async via media="print"→onload so it never blocks render; display=swap
+     already gives a system-font fallback until the webfont arrives. -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Noto+Sans+SC:wght@400;500;700&family=Plus+Jakarta+Sans:wght@400;500;700&family=ZCOOL+KuaiLe&display=swap" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Noto+Sans+SC:wght@400;500;700&family=Plus+Jakarta+Sans:wght@400;500;700&family=ZCOOL+KuaiLe&display=swap"></noscript>
 <link rel="stylesheet" href="css/style.css">
 <!-- WC2026 START — World Cup viewing hub (removable end of July) -->
 <link rel="stylesheet" href="css/worldcup.css">
@@ -65,7 +70,7 @@
     <img class="splash-scene-img" src="assets/images/farm-backdrop.jpg" alt="">
   </div>
   <div class="splash-content">
-    <img class="splash-logo" src="assets/images/logo-horizontal.png" alt="东方超市 · Eastern Market">
+    <img class="splash-logo" src="assets/images/logo-horizontal-560.webp" alt="东方超市 · Eastern Market">
     <div class="splash-title-zh">快乐农场</div>
     <div class="splash-title-en">Happy Farm</div>
     <div class="splash-tagline">
@@ -75,7 +80,7 @@
     <!-- WC2026 START — World Cup entry (removable end of July) -->
     <button class="splash-wc" id="splashWorldcup" aria-label="进入 2026 世界杯观赛台 / Open World Cup 2026 hub">
       <span class="splash-wc-pill">LIVE</span>
-      <img class="splash-wc-emblem" src="assets/images/wc2026-logo.png" alt="FIFA World Cup 2026" loading="lazy">
+      <img class="splash-wc-emblem" src="assets/images/wc2026-logo-160.webp" alt="FIFA World Cup 2026" loading="lazy">
       <span class="splash-wc-txt">
         <span class="splash-wc-zh">2026 世界杯 · 萨省观赛台</span>
         <span class="splash-wc-en">FIFA World Cup 26 · Live Hub</span>
@@ -120,7 +125,7 @@
   <header id="topbar">
     <div id="brandbar" class="brand-cluster">
       <a class="brandbar-logo-link" href="https://easternmarket.ca/" title="访问东方超市官网 · Visit Eastern Market">
-        <img class="brandbar-logo" src="assets/images/logo-horizontal.png" alt="东方超市 Eastern Market">
+        <img class="brandbar-logo" src="assets/images/logo-horizontal-560.webp" alt="东方超市 Eastern Market">
       </a>
       <span class="topbar-level" id="topbarLevel">Lv 1</span>
       <!-- weatherChip injected here by weather.js -->
@@ -359,7 +364,56 @@
 <script defer src="js/mapview.js"></script>
 <script defer src="js/mapview-iso.js"></script>
 <!-- WC2026 START — World Cup viewing hub (removable end of July) -->
-<script defer src="js/worldcup.js"></script>
+<!-- worldcup.js (97KB raw) is lazy-loaded OFF the cold-start path (B4 perf): it no
+     longer competes with the game shell for bandwidth. Loaded on the first idle
+     after boot (so the in-game ⚽ re-entry button still appears), or immediately if
+     the player taps the splash World Cup entry first. worldcup.html standalone mode
+     still loads worldcup.js directly and is unaffected. worldcup.js stays in the SW
+     PRECACHE list so it is cached like every other module. -->
+<script>
+(function () {
+  var loaded = false, loading = null;
+  function inject() {
+    if (loaded) return Promise.resolve();
+    if (loading) return loading;
+    loading = new Promise(function (resolve, reject) {
+      var s = document.createElement('script');
+      s.src = 'js/worldcup.js';
+      s.onload = function () { loaded = true; resolve(); };
+      s.onerror = function () { loading = null; reject(new Error('worldcup.js load failed')); };
+      document.head.appendChild(s);
+    });
+    return loading;
+  }
+  window.__loadWorldcup = inject;
+  // Bind the splash entry now so a tap works even before the idle-load finishes.
+  // We do NOT set btn._wcWired, so worldcup.js's own wireSplashEntry() will later
+  // replace this onclick with a direct open() (no double-open).
+  function wireSplash() {
+    var btn = document.getElementById('splashWorldcup');
+    if (!btn || btn._wcStub || btn._wcWired) return;
+    btn._wcStub = true;
+    btn.onclick = function () {
+      inject().then(function () {
+        if (window.Farm && Farm.worldcup) Farm.worldcup.open();
+      }).catch(function () {
+        if (window.Farm && Farm.ui && Farm.ui.toast) Farm.ui.toast('世界杯加载失败，请重试 / Load failed, tap again');
+      });
+    };
+  }
+  var tries = 0, poll = setInterval(function () {
+    wireSplash();
+    var b = document.getElementById('splashWorldcup');
+    if (++tries > 12 || (b && (b._wcWired || b._wcStub))) clearInterval(poll);
+  }, 300);
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wireSplash);
+  else wireSplash();
+  // Idle-load the full hub so the floating ⚽ re-entry button materializes shortly
+  // after boot without blocking first paint. Failure is silent (splash tap retries).
+  var idle = window.requestIdleCallback || function (fn) { return setTimeout(fn, 3000); };
+  idle(function () { inject().catch(function () {}); });
+})();
+</script>
 <!-- WC2026 END -->
 <script defer src="js/main.js"></script>
 <script defer src="js/pwa-install.js"></script>
@@ -381,9 +435,18 @@
       window.location.reload();
     });
     window.addEventListener('load', function () {
-      navigator.serviceWorker.register('/service-worker.js', { scope: '/' })
-        .then(function (reg) { if (reg && reg.update) { try { reg.update(); } catch (e) {} } })
-        .catch(function (e) { console.warn('[pwa] SW registration failed:', e); });
+      // Defer registration off the first-visit download peak (B4 perf): SW install
+      // precaches 61 shell files, which otherwise competes with the ~3.2MB map
+      // download the moment the player enters the farm. requestIdleCallback (8s
+      // timeout fallback) lets the entry settle first. The controllerchange
+      // auto-refresh logic above is unchanged.
+      var doRegister = function () {
+        navigator.serviceWorker.register('/service-worker.js', { scope: '/' })
+          .then(function (reg) { if (reg && reg.update) { try { reg.update(); } catch (e) {} } })
+          .catch(function (e) { console.warn('[pwa] SW registration failed:', e); });
+      };
+      if (window.requestIdleCallback) window.requestIdleCallback(doRegister, { timeout: 8000 });
+      else setTimeout(doRegister, 8000);
     });
   }
 </script>

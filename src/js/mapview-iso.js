@@ -36,15 +36,18 @@
   const GRASS_A = '#8bbf5a', GRASS_B = '#83b653', GRASS_EDGE = 'rgba(60,90,40,0.18)';
   const SOIL_TOP = '#9c6b3f', SOIL_FURROW = 'rgba(80,50,26,0.5)';
   const ASSET_DIR = 'assets/images/map/';
+  // All map art is served as WebP (B4 perf: 6.6MB PNG → 0.84MB WebP, -87%).
+  // The original .png files are kept on disk as a rollback safety net; code
+  // references .webp only. WebP is supported by every browser this game targets.
   const ASSET_SRC = {
-    barn: 'p_barn.png', house: 'p_house.png', greenhouse: 'p_greenhouse.png', coop: 'p_coop.png', well: 'p_well.png', stall: 'p_stall.png', tree: 'p_tree.png',
-    deco_bush: 'deco_bush.png', deco_lantern: 'deco_lantern.png', deco_fence: 'deco_fence.png', deco_wheel: 'deco_wheel.png', deco_bridge: 'deco_bridge.png',
-    crop0: 'crop_qingcai_0.png', crop1: 'crop_qingcai_1.png', crop2: 'crop_qingcai_2.png', crop3: 'crop_qingcai_3.png',
-    tile_grass: 'p_grass.png', tile_grass_b: 'p_grass_b.png', tile_grass_c: 'p_grass_c.png',
-    tile_soil: 'p_soil.png', tile_path: 'p_path.png', tile_water: 'p_water.png',
-    plot_bed: 'plot_bed.png',
-    hd_soil: 'hd_soil.png',   // painted tilled-soil bed (grass no longer tiled — the bg image is the ground)
-    hd_bg: 'hd_bg.png',   // painted landscape backdrop (hills + forest + grass)
+    barn: 'p_barn.webp', house: 'p_house.webp', greenhouse: 'p_greenhouse.webp', coop: 'p_coop.webp', well: 'p_well.webp', stall: 'p_stall.webp', tree: 'p_tree.webp',
+    deco_bush: 'deco_bush.webp', deco_lantern: 'deco_lantern.webp', deco_fence: 'deco_fence.webp', deco_wheel: 'deco_wheel.webp', deco_bridge: 'deco_bridge.webp',
+    crop0: 'crop_qingcai_0.webp', crop1: 'crop_qingcai_1.webp', crop2: 'crop_qingcai_2.webp', crop3: 'crop_qingcai_3.webp',
+    tile_grass: 'p_grass.webp', tile_grass_b: 'p_grass_b.webp', tile_grass_c: 'p_grass_c.webp',
+    tile_soil: 'p_soil.webp', tile_path: 'p_path.webp', tile_water: 'p_water.webp',
+    plot_bed: 'plot_bed.webp',
+    hd_soil: 'hd_soil.webp',   // painted tilled-soil bed (grass no longer tiled — the bg image is the ground)
+    hd_bg: 'hd_bg.webp',   // painted landscape backdrop (hills + forest + grass)
   };
   // Painted iso ground cube tiles. `cy` = fraction of the image height where the
   // diamond-top CENTER sits (so it lands on the cell center; tuned by screenshot).
@@ -808,7 +811,7 @@
       const pit = document.createElement('button'); pit.dataset.type = '__plot';
       pit.style.cssText = 'border:1px solid #cdebc9;border-radius:14px;background:#f3fbef;padding:8px 10px 6px;min-width:64px;flex:0 0 auto;cursor:pointer;font:500 12px/1.3 "Fredoka",system-ui,sans-serif;color:#444;';
       pit.innerHTML = '<div style="font-size:11px;color:#3a8c50;margin-top:4px;font-weight:600">🌱 ' + (en ? 'Plot' : '菜地') + '</div><div class="palCost" style="font-size:12px;font-weight:600;color:#3a8c50;margin-top:1px"><span class="coin-icon"></span> ' + this._PLOT_COST + '</div>';
-      const pic = document.createElement('div'); pic.style.cssText = 'width:44px;height:38px;margin:0 auto;background-size:contain;background-repeat:no-repeat;background-position:center;'; pic.style.backgroundImage = "url('" + ASSET_DIR + "hd_soil.png')"; pit.insertBefore(pic, pit.firstChild);
+      const pic = document.createElement('div'); pic.style.cssText = 'width:44px;height:38px;margin:0 auto;background-size:contain;background-repeat:no-repeat;background-position:center;'; pic.style.backgroundImage = "url('" + ASSET_DIR + "hd_soil.webp')"; pit.insertBefore(pic, pit.firstChild);
       pit.onclick = () => this._addPlot(); pb.appendChild(pit);
       PALETTE.forEach((type) => { const b = BUILDINGS[type]; const item = document.createElement('button'); item.dataset.type = type; item.style.cssText = 'border:1px solid #e0e0e0;border-radius:14px;background:#fff;padding:8px 10px 6px;min-width:64px;flex:0 0 auto;cursor:pointer;font:500 12px/1.3 "Fredoka",system-ui,sans-serif;color:#444;'; item.innerHTML = '<div style="font-size:11px;color:#888;margin-top:4px">' + (en ? b.en : b.zh) + '</div><div class="palCost" style="font-size:12px;font-weight:600;color:#3a8c50;margin-top:1px"><span class="coin-icon"></span> ' + (b.cost || 0) + '</div>'; const ic = document.createElement('div'); ic.style.cssText = 'width:44px;height:38px;margin:0 auto;background-size:contain;background-repeat:no-repeat;background-position:center;'; ic.style.backgroundImage = "url('" + ASSET_DIR + ASSET_SRC[b.img] + "')"; item.insertBefore(ic, item.firstChild); item.onclick = () => this._addBuilding(type); pb.appendChild(item); });
       this._palBuild = pb; tray.appendChild(pb);
@@ -929,7 +932,15 @@
       if (c instanceof Image) return c;
       if (c === 'loading' || c === 'failed') return null;   // 'failed' is sticky → no per-frame retry storm on a 404
       this._img[k] = 'loading';
-      const im = new Image(); im.onload = () => { this._img[k] = im; if (this._on) this.render(); }; im.onerror = () => { this._img[k] = 'failed'; }; im.src = ASSET_DIR + name + '.png';
+      // WebP first (B4 perf). If a stem somehow lacks a .webp, fall back to the
+      // retained .png once (not sticky-fail) so no crop/animal sprite vanishes.
+      const im = new Image();
+      im.onload = () => { this._img[k] = im; if (this._on) this.render(); };
+      im.onerror = () => {
+        if (!im._triedPng) { im._triedPng = true; im.src = ASSET_DIR + name + '.png'; return; }
+        this._img[k] = 'failed';
+      };
+      im.src = ASSET_DIR + name + '.webp';
       return null;
     },
     _diamond(x, y, tw, th) { const c = this._ctx; c.beginPath(); c.moveTo(x, y - th / 2); c.lineTo(x + tw / 2, y); c.lineTo(x, y + th / 2); c.lineTo(x - tw / 2, y); c.closePath(); },
