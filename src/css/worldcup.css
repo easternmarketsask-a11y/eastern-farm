@@ -595,12 +595,28 @@
 .splash-wc:active { transform: scale(0.98); }
 .splash-wc::after { content: ""; position: absolute; right: -20px; top: -28px; width: 110px; height: 110px; background: radial-gradient(circle, rgba(244,167,44,0.5), transparent 70%); pointer-events: none; }
 .splash-wc .splash-wc-emblem { height: 54px; width: auto; flex: none; object-fit: contain; position: relative; background: #fffdf6; border-radius: 12px; padding: 5px 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.18); }
-.splash-wc-txt { position: relative; line-height: 1.2; flex: 1; min-width: 0; }
-.splash-wc-zh { font-family: var(--font-display); font-size: 17px; }
-.splash-wc-en { font-family: var(--font-en); font-size: 10px; letter-spacing: 1.4px; font-weight: 700; color: #ffe9bf; text-transform: uppercase; margin-top: 3px; }
-.splash-wc-sub { font-size: 12px; color: #d9eccf; margin-top: 4px; }
+/* Each text row is its own block so they never reflow into one run on narrow
+   screens; padding-right on the first cluster keeps the title clear of the
+   absolute LIVE pill (audit B3 P1). */
+.splash-wc-txt { position: relative; line-height: 1.2; flex: 1; min-width: 0; padding-right: 42px; }
+.splash-wc-zh { display: block; font-family: var(--font-display); font-size: 17px; }
+.splash-wc-en { display: block; font-family: var(--font-en); font-size: 10px; letter-spacing: 1.4px; font-weight: 700; color: #ffe9bf; text-transform: uppercase; margin-top: 3px; }
+.splash-wc-sub { display: block; font-size: 12px; color: #d9eccf; margin-top: 4px; }
 .splash-wc-go { position: relative; flex: none; font-size: 22px; color: #ffe9bf; }
 .splash-wc-pill { position: absolute; top: 8px; right: 12px; font-family: var(--font-en); font-size: 9px; font-weight: 700; letter-spacing: 0.5px; background: var(--wc-live); color: #fff; padding: 3px 8px; border-radius: var(--radius-pill); }
+
+/* ≤380px: tighten the whole banner and drop the meta line so the title +
+   subtitle stay legible instead of mashing together (audit B3 P1). */
+@media (max-width: 380px) {
+  .splash-wc { padding: 10px 12px; gap: 9px; }
+  .splash-wc-emblem { height: 44px; }
+  .splash-wc-txt { padding-right: 34px; }
+  .splash-wc-zh { font-size: 14.5px; }
+  .splash-wc-en { font-size: 9px; letter-spacing: 1px; margin-top: 2px; }
+  .splash-wc-sub { display: none; }
+  .splash-wc-pill { top: 6px; right: 8px; font-size: 8px; padding: 2px 6px; }
+  .splash-wc-go { font-size: 19px; }
+}
 
 /* persistent re-entry button on the farm (after splash dismissed) */
 #wcReentry {

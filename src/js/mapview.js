@@ -231,7 +231,8 @@
       const btn = document.createElement('button');
       btn.id = 'mapBuildBtn';
       btn.style.cssText = 'position:fixed;right:14px;z-index:20;border:none;border-radius:24px;' +
-        'padding:11px 16px;font:600 15px/1 "Fredoka",system-ui,sans-serif;color:#fff;' +
+        'padding:11px 16px;min-height:44px;box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;' +
+        'font:600 15px/1 "Fredoka",system-ui,sans-serif;color:#fff;' +
         'background:#4CAF50;box-shadow:0 3px 10px rgba(0,0,0,.22);cursor:pointer;';
       btn.onclick = () => this.toggleBuild();
       document.body.appendChild(btn);

@@ -722,6 +722,11 @@
       if (Farm.isoView && Farm.isoView.relang) Farm.isoView.relang();
       Farm.events.check();
       Farm.storekeeper.refresh();
+      // Weather chip renders its city label per-language but only refreshed on
+      // page load before — re-render it now so it flips zh/en immediately
+      // (audit B3 P1). Same for the harvest-status pill's dynamic innerHTML.
+      if (Farm.weather && Farm.weather.refresh) Farm.weather.refresh();
+      if (Farm.harvestStatus && Farm.harvestStatus.render) Farm.harvestStatus.render();
       openSettings();
     };
     document.getElementById('langZh').onclick = () => applyLanguage('zh');

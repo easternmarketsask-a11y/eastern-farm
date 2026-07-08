@@ -52,6 +52,10 @@
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
+/* Warm-tint form controls: default browser accent is a cold system blue that
+   clashes with the cream + leaf-green palette (audit B3 P2). */
+input[type=checkbox], input[type=radio] { accent-color: var(--leaf-green); }
+
 html, body {
   height: 100%;
   font-family: var(--font-zh), var(--font-en);
@@ -136,9 +140,12 @@ body {
   white-space: nowrap;
   letter-spacing: 0.2px;
 }
-/* Very narrow phones: hide weather only if it would crowd the logo+member row.
-   The topbar is roomy now (currencies moved to the band below), so keep it. */
-@media (max-width: 339px) {
+/* Narrow phones: the chip must be all-or-nothing — never a horizontally
+   clipped emoji fragment squeezed next to the logo (audit B3 P1). Below the
+   brand-cluster's comfortable budget, hide the whole chip rather than let
+   flex crush it into a sliver. ~430px keeps it on tablets/large phones only. */
+.brandbar-weather { min-width: 0; flex-shrink: 0; }
+@media (max-width: 430px) {
   .brandbar-weather { display: none !important; }
 }
 .brandbar-title {
@@ -218,6 +225,7 @@ body {
   flex-direction: column;
   align-items: center;
   gap: 1px;
+  position: relative;
   background: var(--cream-card);
   padding: 5px 12px 5px;
   border-radius: 17px;             /* kawaii: rounder candy pill */
@@ -260,6 +268,15 @@ body {
   -webkit-tap-highlight-color: transparent;
   box-shadow: 0 2px 0 var(--border-soft);
   transition: transform 0.1s ease, box-shadow 0.1s ease, border-color 0.12s ease;
+}
+/* Invisible hit-area extension: the pill stays visually ~23px tall but the
+   tappable zone reaches ≥44px vertically (audit B3 P1). Only vertical (inset
+   0 sides) so adjacent pills don't overlap; clicks bubble to the card. */
+.currency-tappable::after {
+  content: '';
+  position: absolute;
+  inset: -11px 0;
+  z-index: 0;
 }
 .currency-tappable:active {
   transform: translateY(2px);
@@ -648,7 +665,9 @@ body {
 .harvest-status-bar .currency { flex-shrink: 0; }
 .harvest-status-center {
   flex: 1 1 auto;
-  min-width: 0;                 /* allow the text to shrink/wrap, not overflow */
+  min-width: 0;                 /* allow the text to shrink, not overflow */
+  min-height: 44px;             /* audit B3 P1: ≥44px touch target when tappable */
+  box-sizing: border-box;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -658,7 +677,16 @@ body {
   border-radius: 999px;
   box-shadow: 0 1px 3px rgba(139, 90, 60, 0.12);
 }
-.harvest-status-text { line-height: 1.25; text-align: center; }
+/* One line always — no two-line wrap / broken-word chevron drop on 360-390px
+   (audit B3 P1). Text is kept short in JS + i18n; ellipsis is the safety net. */
+.harvest-status-text {
+  line-height: 1.25;
+  text-align: center;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 
 /* Crops ready → the whole pill is a friendly, textured "tap to harvest" button
    (replaces the old oversized 全收 button). Soft green gradient + inset
@@ -3073,7 +3101,10 @@ body.modal-open #bottombar { display: none; }
   color: var(--warm-text-soft);
 }
 .ep-overview-value {
-  font-family: var(--font-display);
+  /* Numbers use the Latin display/number stack — the CJK display font
+     (ZCOOL KuaiLe) has no Latin digit glyphs, so a plain "0" rendered as a
+     .notdef tofu box here (audit B3 P2). */
+  font-family: var(--font-en), var(--font-zh), sans-serif;
   font-size: 32px;
   color: var(--purple-points);
   margin: 2px 0;

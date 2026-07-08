@@ -791,7 +791,7 @@
       const en = this._lang() === 'en';
       const btn = document.createElement('button');
       btn.id = 'isoBuildBtn';
-      btn.style.cssText = 'position:fixed;right:14px;z-index:20;border:none;border-radius:24px;padding:11px 16px;font:600 15px/1 "Fredoka",system-ui,sans-serif;color:#fff;background:#4CAF50;box-shadow:0 3px 10px rgba(0,0,0,.22);cursor:pointer;';
+      btn.style.cssText = 'position:fixed;right:14px;z-index:20;border:none;border-radius:24px;padding:11px 16px;min-height:44px;box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;font:600 15px/1 "Fredoka",system-ui,sans-serif;color:#fff;background:#4CAF50;box-shadow:0 3px 10px rgba(0,0,0,.22);cursor:pointer;';
       btn.onclick = () => this.toggleBuild();
       document.body.appendChild(btn); this._buildBtn = btn;
       if (!(Farm.state.data && Farm.state.data.mapBuildSeen) && btn.animate) this._buildPulse = btn.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.09)' }, { transform: 'scale(1)' }], { duration: 1300, iterations: Infinity, easing: 'ease-in-out' });

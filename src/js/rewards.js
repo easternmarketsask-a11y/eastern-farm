@@ -45,8 +45,8 @@
             </div>
             <div class="ep-overview-sync-note">
               ${lang === 'en'
-                ? '⏱ Shown instantly; synced to your account once daily.'
-                : '⏱ 实时显示，每日凌晨同步至会员账户'}
+                ? '⏱️ Shown instantly; synced to your account once daily.'
+                : '⏱️ 实时显示，每日凌晨同步至会员账户'}
             </div>
           </div>
           <div class="ep-cap-row">
@@ -56,7 +56,7 @@
       `;
 
       const exchangeHTML = `
-        <h3 class="rewards-section">${lang === 'en' ? '🔄 Exchange (10 ⇄ 1)' : '🔄 兑换 (10 ⇄ 1)'}</h3>
+        <h3 class="rewards-section">${lang === 'en' ? '🔄 Exchange (10 : 1)' : '🔄 兑换 (10 : 1)'}</h3>
         <div class="exchange-row">
           <div class="exchange-side">
             <label><span class="coin-icon"></span> ${lang === 'en' ? 'Coins → Points' : '农场币 → 超市积分'}</label>

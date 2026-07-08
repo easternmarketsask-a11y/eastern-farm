@@ -92,9 +92,11 @@
     },
 
     _renderSignHint(textEl, setAction, lang) {
+      // Kept short so the pill stays one line on 360px (audit B3 P1); the
+      // tappable pill already draws a › chevron, so no trailing arrow here.
       textEl.textContent = (lang === 'en'
-        ? '📅 Daily check-in ready · tap me!'
-        : '📅 今日还没签到 · 点我领奖励');
+        ? '📅 Check-in gift'
+        : '📅 签到领奖励');
       setAction(() => {
         if (Farm.audio) Farm.audio.play('tap');
         Farm.loginCalendar.open();
