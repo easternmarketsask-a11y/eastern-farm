@@ -172,7 +172,7 @@
 
       evts.sort((a, b) => (a.at || 0) - (b.at || 0));
       for (const e of evts) {
-        const name = e.thiefName || '邻居';
+        const name = e.thiefName || (Farm.state.data.language === 'en' ? 'Neighbor' : '邻居');
         if (e.kind === 'caught') {
           // 狗替你抓住了贼：收下赔礼。e.coins 来自别人写入的跨用户 stealEvent
           // （不可信），夹到合法罚金上限，防伪造 caught 事件刷币。

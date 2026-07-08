@@ -316,7 +316,7 @@
           const file = new File([this._lastBlob], 'eastern-farm.png', { type: 'image/png' });
           await navigator.share({
             files: [file],
-            title: '东方超市·快乐农场',
+            title: lang === 'en' ? 'Eastern Market · Happy Farm' : '东方超市·快乐农场',
             text: lang === 'en' ? 'Come farm with me at Eastern Market!' : '来东方超市快乐农场一起种菜！',
             url: GAME_URL,
           });

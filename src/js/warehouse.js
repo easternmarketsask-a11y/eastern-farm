@@ -93,7 +93,7 @@
           <div class="wh-list">${rows}</div>
           ${reservedCount > 0
             ? `<div style="font-size:12px;color:var(--warm-text-soft);padding:6px 4px 0;">🛒 ${lang === 'en'
-                ? `${reservedCount} item(s) reserved for 小东's orders — won't be sold`
+                ? `${reservedCount} item(s) reserved for Little East's orders — won't be sold`
                 : `已为小东订单留 ${reservedCount} 件，一键卖货不会卖掉`}</div>`
             : ''}
           ${bonusLineHtml}
@@ -207,7 +207,7 @@
           // 路标（audit P1）：光说「去交订单」玩家找不到入口——订单板入口是
           // 左下角无文字标签的小东头像，必须在 toast 里点明位置。
           Farm.ui.toast(lang === 'en'
-            ? '🛒 Everything in the silo is reserved for 小东\'s orders — tap 小东 (bottom-left avatar) to deliver them for more coins!'
+            ? '🛒 Everything in the silo is reserved for Little East\'s orders — tap Little East (bottom-left avatar) to deliver them for more coins!'
             : '🛒 仓库里的菜都是给小东订单留的——点左下角小东头像交订单，更划算！', 4000);
         } else {
           Farm.ui.toast(lang === 'en' ? 'Warehouse is empty' : '仓库是空的');

@@ -86,7 +86,7 @@
       // 补上订单/大转盘两个真实存在但此前没写的来源。）
       const earnList = lang === 'en' ? [
         { icon: '📋', text: 'Daily tasks: some give +1~2 (3 tasks/day)' },
-        { icon: '📦', text: 'Deliver 小东\'s orders: occasional +1~2 (daily cap)' },
+        { icon: '📦', text: 'Deliver Little East\'s orders: occasional +1~2 (daily cap)' },
         { icon: '🌽', text: '3% lucky bonus on harvest +5' },
         { icon: '🎰', text: '0.5% Golden Nugget chance +20~100' },
         { icon: '🌅', text: 'First harvest of the day +5' },

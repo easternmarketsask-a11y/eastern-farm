@@ -221,10 +221,11 @@
         if (perks) perks.style.display = 'none';
         const startBtn = document.getElementById('splashStart');
         if (startBtn) {
+          const isEn = lang === 'en';
           const zh = startBtn.querySelector('.splash-start-zh');
           const en = startBtn.querySelector('.splash-start-en');
-          if (zh) zh.textContent = '进入农场';
-          if (en) en.textContent = 'Enter ›';
+          if (zh) zh.textContent = isEn ? 'Enter farm' : '进入农场';
+          if (en) en.textContent = isEn ? '' : 'Enter ›';
         }
       } else {
         loginBtn.classList.remove('splash-login--logged-in');

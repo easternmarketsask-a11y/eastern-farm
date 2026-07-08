@@ -10,6 +10,7 @@
     language: 'zh',
     loaded: false,
     onload_callbacks: [],
+    change_callbacks: [],
 
     async load() {
       try {
@@ -41,6 +42,17 @@
         }
       } catch (e) {}
       this.applyAll();
+      // Notify registered re-render hooks so dynamic-innerHTML surfaces (HUD,
+      // the harvest-status pill, the weather chip) flip language immediately
+      // instead of waiting for their next independent render tick. applyAll()
+      // above only touches static [data-i18n] textContent.
+      this.change_callbacks.forEach(cb => { try { cb(this.language); } catch (e) {} });
+    },
+
+    // Register a callback fired on every setLanguage(). Used to re-render the
+    // always-on-screen dynamic widgets that carry no [data-i18n] attribute.
+    onChange(cb) {
+      if (typeof cb === 'function') this.change_callbacks.push(cb);
     },
 
     t(key, vars) {

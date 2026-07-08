@@ -62,7 +62,16 @@
       const md = (Farm.fbAuth && Farm.fbAuth.memberDoc) || {};
       const realName = md.name || md.firstName || '';
       const fc = (realName + '').trim().charAt(0);
-      return fc ? fc + '邻居' : '萨城邻居';
+      return this._fallbackName(fc);
+    },
+
+    // Language-aware fallback display name for members with no set nickname.
+    // Keeps EN neighbor lists from leaking Chinese「邻居」when the viewer is
+    // playing in English. Display/derive layer only — never a save field.
+    _fallbackName(firstChar) {
+      const en = (Farm.state && Farm.state.data && Farm.state.data.language) === 'en';
+      if (firstChar) return en ? 'Neighbor ' + firstChar : firstChar + '邻居';
+      return en ? 'Saskatoon farmer' : '萨城邻居';
     },
 
     // Compute the gameStats payload from local state. Pure function.
@@ -261,7 +270,7 @@
 
     // Compute the public display name for a member doc.
     displayName(doc) {
-      if (!doc) return '匿名邻居';
+      if (!doc) return this._fallbackName('');
       const stats = doc.gameStats || {};
       // Prefer the safe precomputed name (farm_players docs carry no real name).
       if (stats.displayName) return stats.displayName;
@@ -269,7 +278,7 @@
       // Legacy fallback (member docs): derive from real name first character.
       const realName = doc.name || doc.firstName || '';
       const firstChar = (realName + '').trim().charAt(0);
-      return firstChar ? firstChar + '邻居' : '萨城邻居';
+      return this._fallbackName(firstChar);
     },
 
     // Query a pool of visible members. We pick 3 of these deterministically
@@ -857,7 +866,7 @@
         ? 'I\'m farming at Eastern Market Happy Farm — join me and we both get ' + this.INVITE_BONUS + ' coins!'
         : '我在东方超市·快乐农场种菜，点链接进来我们做邻居，你我各得 ' + this.INVITE_BONUS + ' 农场币！';
       if (navigator.share) {
-        try { await navigator.share({ title: '东方超市·快乐农场', text: text, url: link }); } catch (_) {}
+        try { await navigator.share({ title: lang === 'en' ? 'Eastern Market · Happy Farm' : '东方超市·快乐农场', text: text, url: link }); } catch (_) {}
         return;
       }
       try {

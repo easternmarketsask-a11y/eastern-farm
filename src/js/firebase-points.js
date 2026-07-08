@@ -229,7 +229,7 @@
       const result = await this.syncEpEarn(
         amount,
         'first_login_backfill',
-        '首次登录：旧本地积分回填',
+        '首次登录旧积分回填 / Legacy points backfill',
         'backfill_' + user.uid
       );
       if (result.synced) {

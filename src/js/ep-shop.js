@@ -88,7 +88,7 @@
         ? Farm.state.spendCoins(price.amount)
         : Farm.state.spendEastPoints(price.amount, {
             source: 'ep_shop:' + item.id,
-            description: '商城: ' + (item.name_zh || item.id),
+            description: '农场商城兑换 / Farm shop: ' + (item.name_zh || item.id) + (item.name_en ? ' / ' + item.name_en : ''),
           });
       if (!spent) return { ok: false, reason: price.currency === 'coins' ? 'insufficient_coins' : 'insufficient_ep' };
       const effect = this._apply(item, opts);
@@ -164,7 +164,7 @@
         case 'ep':
           Farm.state.addEastPoints(picked.amount, {
             source: 'lottery_wheel_prize',
-            description: 'Lottery wheel EP prize: ' + picked.id,
+            description: '大转盘积分奖 / Lottery wheel prize: ' + picked.id,
           });
           break;
         case 'seed_pack':

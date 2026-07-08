@@ -259,7 +259,7 @@
         if (epAwarded > 0) {
           Farm.state.addEastPoints(epAwarded, {
             source: 'order_fill',
-            description: 'Filled 小东 order ' + order.id,
+            description: '完成小东订单 / Filled Little East order ' + order.id,
           });
           this._epState().earned += epAwarded;
         }
@@ -301,7 +301,7 @@
         const coinAward = 50 * (li.newLevel - li.oldLevel);
         setTimeout(() => {
           Farm.state.addCoins(coinAward);
-          Farm.state.addEastPoints(epAward, { source: 'level_up', description: 'Level ' + li.oldLevel + ' → ' + li.newLevel });
+          Farm.state.addEastPoints(epAward, { source: 'level_up', description: '升级奖励 / Level up ' + li.oldLevel + ' → ' + li.newLevel });
           Farm.ui.refreshHUD();
           if (Farm.farm && Farm.farm.renderGrid) Farm.farm.renderGrid();
           if (Farm.ui.showLevelUpModal) Farm.ui.showLevelUpModal(li.oldLevel, li.newLevel, { epAwarded: epAward });

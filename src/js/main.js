@@ -132,6 +132,17 @@
       if (Farm.fbQueue) Farm.fbQueue.install();
 
       // 3. Language
+      // Register the language-change re-render hooks BEFORE the first
+      // setLanguage so any switch (settings toggle or otherwise) instantly
+      // reflows the always-on-screen dynamic widgets that carry no
+      // [data-i18n] attribute (HUD currencies, harvest-status pill, weather
+      // chip). The settings path also calls these explicitly — double render
+      // is harmless; this guarantees coverage for every setLanguage caller.
+      Farm.i18n.onChange(function () {
+        try { if (Farm.ui && Farm.ui.refreshHUD) Farm.ui.refreshHUD(); } catch (e) {}
+        try { if (Farm.harvestStatus && Farm.harvestStatus.render) Farm.harvestStatus.render(); } catch (e) {}
+        try { if (Farm.weather && Farm.weather.refresh) Farm.weather.refresh(); } catch (e) {}
+      });
       Farm.i18n.setLanguage(Farm.state.data.language || 'zh');
 
       // 3b. Live Saskatoon weather chip in the brandbar (cached 30 min)
@@ -393,7 +404,7 @@
           case 'kitchen': if (Farm.kitchen) Farm.kitchen.open(); break;
           case 'community': if (Farm.neighbors) Farm.neighbors.open(); break;
           case 'store': if (Farm.epShop) Farm.epShop.open(); break;
-          case 'expand': if (Farm.isoView && Farm.isoView._tryUnlockLand) Farm.isoView._tryUnlockLand(); else if (Farm.ui) Farm.ui.toast('扩建仅在农场视图可用'); break;
+          case 'expand': if (Farm.isoView && Farm.isoView._tryUnlockLand) Farm.isoView._tryUnlockLand(); else if (Farm.ui) Farm.ui.toast(lang === 'en' ? 'Expand is only available in farm view' : '扩建仅在农场视图可用'); break;
           case 'collection': openCollection(); break;
           case 'guide': if (Farm.guide) Farm.guide.open(); break;
           case 'settings': openSettings(); break;

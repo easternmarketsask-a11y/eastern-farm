@@ -371,7 +371,7 @@
               <div class="leaderboard-row ${m.isSelf ? 'is-self' : 'is-visitable'}" ${m.isSelf ? '' : 'data-lb-uid="' + m.uid + '"'}>
                 <span class="lb-rank">${medal}</span>
                 <span class="lb-avatar">${m.emoji}${onlineDot}</span>
-                <span class="lb-name">${m.champion ? '👑 ' : ''}${esc(m.name)}${m.isSelf ? ' <span class="lb-you">(你)</span>' : ''}</span>
+                <span class="lb-name">${m.champion ? '👑 ' : ''}${esc(m.name)}${m.isSelf ? ' <span class="lb-you">' + (lang === 'en' ? '(you)' : '(你)') + '</span>' : ''}</span>
                 <span class="lb-level">${m.value}</span>
                 ${m.isSelf ? '' : '<span class="lb-visit">🏘</span>'}
               </div>

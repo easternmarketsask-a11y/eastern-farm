@@ -69,7 +69,7 @@
             uniq.push(v);
           });
           uniq.slice(0, 4).forEach(v => {
-            events.helped.push({ kind: 'visit', name: v.visitorName || '邻居', realUid: v.visitorUid });
+            events.helped.push({ kind: 'visit', name: v.visitorName || (Farm.state.data.language === 'en' ? 'Neighbor' : '邻居'), realUid: v.visitorUid });
           });
           if (uniq.length > 4) {
             events.helped.push({ kind: 'visit_more', n: uniq.length - 4 });
@@ -111,7 +111,7 @@
         : String(s == null ? '' : s).replace(/[<>&"']/g, '');
       // 事件可能来自 AI（带 aiId，查名册）或真会员（自带 name/realUid）。
       // 名字一律转义后再进 innerHTML（跨玩家字符串，防存储型 XSS）。
-      const nameOf = (e) => esc(e.name || (AN && e.aiId ? AN.name(e.aiId) : (e.aiId || '邻居')));
+      const nameOf = (e) => esc(e.name || (AN && e.aiId ? AN.name(e.aiId) : (e.aiId || (lang === 'en' ? 'Neighbor' : '邻居'))));
       const avaOf = (e) => {
         if (e.realUid && Farm.neighbors && Farm.neighbors.avatarFor) return Farm.neighbors.avatarFor(e.realUid);
         return (AN && e.aiId) ? AN.avatar(e.aiId) : '🧑';

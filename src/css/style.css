@@ -1261,6 +1261,32 @@ body.mapmode #warehouseBtn { display: none !important; }
   animation: splashSlideUp 0.6s ease 0.78s both;
 }
 .splash-perks li { line-height: 1.3; }
+/* English subline per perk — always visible (splash uses stacked zh+en, not a
+   toggle) so the English-first kid can read the pitch too. */
+.splash-perk-en {
+  display: block;
+  font-family: var(--font-en);
+  font-size: 10.5px;
+  color: var(--warm-text-soft);
+  opacity: 0.72;
+  line-height: 1.25;
+  margin-top: 1px;
+}
+/* Login CTA: stack the zh label + a small English subline. */
+.splash-login-txt {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1.15;
+}
+.splash-login-en {
+  font-family: var(--font-en);
+  font-size: 10.5px;
+  font-weight: 600;
+  opacity: 0.78;
+  letter-spacing: 0.2px;
+  margin-top: 1px;
+}
 /* Guest trial demoted to a quiet ghost link below the login button.
    半透明奶油底胶囊（audit P2 2026-07-07）：原无底色 ghost 文字直接压在房屋
    插画上近乎不可读，而这是不想登录的新客进游戏的唯一入口。奶油底提对比、
