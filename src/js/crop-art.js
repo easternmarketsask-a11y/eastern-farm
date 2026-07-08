@@ -2448,6 +2448,231 @@
         <ellipse cx="50" cy="88" rx="14" ry="1.4" fill="#000" opacity="0.25"/>
       `;
     },
+
+    // ============ Content-cliff crops (Lv15-20, 2026-07-07) ============
+    // No raster sprite yet → these render via SVG. Style matches the existing
+    // hand-authored crops (per-crop scoped <defs> ids, drop shadow, gradient,
+    // top-left gleam + spec hot spot, soft base shadow).
+
+    // long_yan (Longan) — tan-brown berry cluster on the branch (桂圆 fresh).
+    long_yan(c) {
+      return `
+        <defs>
+          <filter id="ds_long_yan" x="-15%" y="-15%" width="130%" height="130%">
+            <feGaussianBlur in="SourceAlpha" stdDeviation="1.2"/>
+            <feOffset dy="1.6" result="off"/>
+            <feComponentTransfer><feFuncA type="linear" slope="0.38"/></feComponentTransfer>
+            <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <radialGradient id="berry_long_yan" cx="35%" cy="30%" r="80%">
+            <stop offset="0%" stop-color="#e5c9a3"/>
+            <stop offset="55%" stop-color="#b58a5c"/>
+            <stop offset="100%" stop-color="#7a5230"/>
+          </radialGradient>
+        </defs>
+        <ellipse cx="50" cy="92" rx="22" ry="3" fill="#000" opacity="0.25"/>
+        <g filter="url(#ds_long_yan)">
+          <path d="M 50 16 L 50 30" stroke="#6d4528" stroke-width="2" stroke-linecap="round"/>
+          <ellipse cx="42" cy="18" rx="7" ry="3.5" fill="#558b2f" stroke="#2e5613" stroke-width="0.5" transform="rotate(-30 42 18)"/>
+          <ellipse cx="58" cy="18" rx="7" ry="3.5" fill="#558b2f" stroke="#2e5613" stroke-width="0.5" transform="rotate(30 58 18)"/>
+          <g stroke="#5f3f22" stroke-width="0.5">
+            <circle cx="42" cy="38" r="8" fill="url(#berry_long_yan)"/>
+            <circle cx="58" cy="38" r="8" fill="url(#berry_long_yan)"/>
+            <circle cx="34" cy="52" r="8" fill="url(#berry_long_yan)"/>
+            <circle cx="50" cy="50" r="8.5" fill="url(#berry_long_yan)"/>
+            <circle cx="66" cy="52" r="8" fill="url(#berry_long_yan)"/>
+            <circle cx="42" cy="66" r="8" fill="url(#berry_long_yan)"/>
+            <circle cx="58" cy="66" r="8" fill="url(#berry_long_yan)"/>
+            <circle cx="50" cy="79" r="7.5" fill="url(#berry_long_yan)"/>
+          </g>
+        </g>
+        <g fill="#fff" opacity="0.65">
+          <circle cx="40" cy="35" r="1.7"/><circle cx="56" cy="35" r="1.7"/>
+          <circle cx="32" cy="49" r="1.7"/><circle cx="48" cy="47" r="1.8"/><circle cx="64" cy="49" r="1.7"/>
+          <circle cx="40" cy="63" r="1.6"/><circle cx="56" cy="63" r="1.6"/>
+        </g>
+        <ellipse cx="50" cy="88" rx="15" ry="1.4" fill="#000" opacity="0.22"/>
+      `;
+    },
+
+    // xian_cai (Red Amaranth) — green rosette with a red-purple heart and
+    // red lower stems (红苋菜 bleeds magenta when cooked).
+    xian_cai(c) {
+      return `
+        <defs>
+          <filter id="ds_xian_cai" x="-15%" y="-15%" width="130%" height="130%">
+            <feGaussianBlur in="SourceAlpha" stdDeviation="1.1"/>
+            <feOffset dy="1.5" result="off"/>
+            <feComponentTransfer><feFuncA type="linear" slope="0.34"/></feComponentTransfer>
+            <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <radialGradient id="leaf_xian_cai" cx="50%" cy="35%" r="80%">
+            <stop offset="0%" stop-color="#8bc34a"/>
+            <stop offset="55%" stop-color="#5a8b2f"/>
+            <stop offset="100%" stop-color="#8a1f2a"/>
+          </radialGradient>
+          <radialGradient id="leafmid_xian_cai" cx="50%" cy="45%" r="70%">
+            <stop offset="0%" stop-color="#c0563f"/>
+            <stop offset="60%" stop-color="#9c3245"/>
+            <stop offset="100%" stop-color="#5a1220"/>
+          </radialGradient>
+          <linearGradient id="stem_xian_cai" x1="0%" y1="100%" x2="0%" y2="0%">
+            <stop offset="0%" stop-color="#7a1f2a"/>
+            <stop offset="100%" stop-color="#b0483f"/>
+          </linearGradient>
+        </defs>
+        <ellipse cx="50" cy="92" rx="18" ry="3" fill="#000" opacity="0.2"/>
+        <g filter="url(#ds_xian_cai)">
+          <path d="M 47 88 Q 46 74 47 62" stroke="url(#stem_xian_cai)" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+          <path d="M 53 88 Q 54 74 53 62" stroke="url(#stem_xian_cai)" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+          <path d="M 50 70 Q 26 60 22 36 Q 30 20 40 26 Q 46 46 50 70 Z" fill="url(#leaf_xian_cai)" stroke="#3a1018" stroke-width="0.5"/>
+          <path d="M 50 70 Q 74 60 78 36 Q 70 20 60 26 Q 54 46 50 70 Z" fill="url(#leaf_xian_cai)" stroke="#3a1018" stroke-width="0.5"/>
+          <path d="M 50 72 Q 42 44 46 16 Q 50 8 54 16 Q 58 44 50 72 Z" fill="url(#leafmid_xian_cai)" stroke="#3a1018" stroke-width="0.5"/>
+          <path d="M 50 74 Q 36 66 32 48 Q 36 36 44 40 Q 48 56 50 74 Z" fill="url(#leaf_xian_cai)" stroke="#3a1018" stroke-width="0.5"/>
+          <path d="M 50 74 Q 64 66 68 48 Q 64 36 56 40 Q 52 56 50 74 Z" fill="url(#leaf_xian_cai)" stroke="#3a1018" stroke-width="0.5"/>
+          <path d="M 50 72 Q 49 44 50 16" stroke="#7a1f2a" stroke-width="0.7" fill="none" opacity="0.7"/>
+          <path d="M 50 70 Q 40 52 34 38" stroke="#7a1f2a" stroke-width="0.5" fill="none" opacity="0.5"/>
+          <path d="M 50 70 Q 60 52 66 38" stroke="#7a1f2a" stroke-width="0.5" fill="none" opacity="0.5"/>
+        </g>
+        <ellipse cx="46" cy="26" rx="2" ry="6" fill="#fff" opacity="0.35" transform="rotate(-8 46 26)"/>
+        <ellipse cx="48" cy="20" rx="1.4" ry="2.2" fill="#fff" opacity="0.6"/>
+        <ellipse cx="50" cy="88" rx="10" ry="1.3" fill="#000" opacity="0.22"/>
+      `;
+    },
+
+    // fo_shou_gua (Chayote) — pale-green pear gourd, vertical furrows +
+    // puckered blossom end at the bottom.
+    fo_shou_gua(c) {
+      return `
+        <defs>
+          <filter id="ds_fo_shou_gua" x="-15%" y="-15%" width="130%" height="130%">
+            <feGaussianBlur in="SourceAlpha" stdDeviation="1.4"/>
+            <feOffset dy="1.8" result="off"/>
+            <feComponentTransfer><feFuncA type="linear" slope="0.4"/></feComponentTransfer>
+            <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <radialGradient id="body_fo_shou_gua" cx="38%" cy="28%" r="80%">
+            <stop offset="0%" stop-color="#e2f0c2"/>
+            <stop offset="50%" stop-color="#a9cf7a"/>
+            <stop offset="100%" stop-color="#5f8b3a"/>
+          </radialGradient>
+        </defs>
+        <ellipse cx="50" cy="93" rx="22" ry="3" fill="#000" opacity="0.25"/>
+        <g filter="url(#ds_fo_shou_gua)">
+          <path d="M 50 22
+                   Q 42 24 40 36
+                   Q 34 48 32 62
+                   Q 32 84 50 86
+                   Q 68 84 68 62
+                   Q 66 48 60 36
+                   Q 58 24 50 22 Z"
+                fill="url(#body_fo_shou_gua)" stroke="#3f6321" stroke-width="0.8"/>
+          <path d="M 50 24 Q 49 54 50 84" stroke="#5f8b3a" stroke-width="0.7" fill="none" opacity="0.6"/>
+          <path d="M 40 34 Q 37 58 40 82" stroke="#5f8b3a" stroke-width="0.6" fill="none" opacity="0.5"/>
+          <path d="M 60 34 Q 63 58 60 82" stroke="#5f8b3a" stroke-width="0.6" fill="none" opacity="0.5"/>
+          <path d="M 44 84 Q 50 80 56 84" stroke="#3f6321" stroke-width="0.9" fill="none" opacity="0.7"/>
+          <path d="M 47 85 L 50 80 L 53 85" stroke="#3f6321" stroke-width="0.7" fill="none" opacity="0.6"/>
+          <path d="M 50 24 L 50 16" stroke="#6d4528" stroke-width="2" stroke-linecap="round"/>
+        </g>
+        <ellipse cx="42" cy="42" rx="7" ry="11" fill="#fff" opacity="0.4" transform="rotate(-8 42 42)"/>
+        <ellipse cx="40" cy="36" rx="2.6" ry="3.4" fill="#fff" opacity="0.75"/>
+        <ellipse cx="50" cy="89" rx="15" ry="1.4" fill="#000" opacity="0.25"/>
+      `;
+    },
+
+    // jiu_huang (Yellow Chives) — pale-gold flat blade bundle, tied at base
+    // (blanched-in-the-dark chives). Same blade geometry as jiucai, yellow.
+    jiu_huang(c) {
+      return `
+        <defs>
+          <filter id="ds_jiu_huang" x="-15%" y="-15%" width="130%" height="130%">
+            <feGaussianBlur in="SourceAlpha" stdDeviation="1.2"/>
+            <feOffset dy="1.6" result="off"/>
+            <feComponentTransfer><feFuncA type="linear" slope="0.36"/></feComponentTransfer>
+            <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <linearGradient id="bladeA_jiu_huang" x1="0%" y1="100%" x2="0%" y2="0%">
+            <stop offset="0%" stop-color="#c9a83f"/>
+            <stop offset="50%" stop-color="#e6cf6a"/>
+            <stop offset="100%" stop-color="#f7ecae"/>
+          </linearGradient>
+          <linearGradient id="bladeB_jiu_huang" x1="0%" y1="100%" x2="0%" y2="0%">
+            <stop offset="0%" stop-color="#d4b74a"/>
+            <stop offset="50%" stop-color="#efe08a"/>
+            <stop offset="100%" stop-color="#fdf6cf"/>
+          </linearGradient>
+        </defs>
+        <ellipse cx="50" cy="92" rx="18" ry="2.5" fill="#000" opacity="0.2"/>
+        <g filter="url(#ds_jiu_huang)">
+          <path d="M 46 86 Q 36 60 28 18 L 32 16 Q 38 56 50 86 Z" fill="url(#bladeA_jiu_huang)" stroke="#a9852e" stroke-width="0.4"/>
+          <path d="M 54 86 Q 64 60 72 18 L 68 16 Q 62 56 50 86 Z" fill="url(#bladeA_jiu_huang)" stroke="#a9852e" stroke-width="0.4"/>
+          <path d="M 47 86 Q 42 55 38 12 L 42 10 Q 44 55 50 86 Z" fill="url(#bladeB_jiu_huang)" stroke="#a9852e" stroke-width="0.4"/>
+          <path d="M 53 86 Q 58 55 62 12 L 58 10 Q 56 55 50 86 Z" fill="url(#bladeB_jiu_huang)" stroke="#a9852e" stroke-width="0.4"/>
+          <path d="M 48 86 Q 46 52 44 8 L 47 6 Q 49 52 50 86 Z" fill="url(#bladeA_jiu_huang)" stroke="#a9852e" stroke-width="0.4"/>
+          <path d="M 52 86 Q 54 52 56 8 L 53 6 Q 51 52 50 86 Z" fill="url(#bladeA_jiu_huang)" stroke="#a9852e" stroke-width="0.4"/>
+          <path d="M 49 86 Q 49 50 49 4 L 51 4 Q 51 50 51 86 Z" fill="url(#bladeB_jiu_huang)" stroke="#a9852e" stroke-width="0.4"/>
+          <path d="M 50 86 Q 49 50 49 8" stroke="#fdf6cf" stroke-width="0.4" fill="none" opacity="0.6"/>
+        </g>
+        <ellipse cx="44" cy="40" rx="0.7" ry="20" fill="#fff" opacity="0.4" transform="rotate(-3 44 40)"/>
+        <ellipse cx="50" cy="30" rx="0.7" ry="22" fill="#fff" opacity="0.4"/>
+        <path d="M 42 78 Q 50 74 58 78 L 58 82 Q 50 78 42 82 Z" fill="#d9c27a" stroke="#a9852e" stroke-width="0.4" opacity="0.85"/>
+        <ellipse cx="50" cy="87" rx="9" ry="1.4" fill="#000" opacity="0.25"/>
+      `;
+    },
+
+    // liu_lian (Durian) — khaki spiky husk, ring of outer spikes + tiled
+    // surface spikes + seam lines (榴莲 king of fruits).
+    liu_lian(c) {
+      return `
+        <defs>
+          <filter id="ds_liu_lian" x="-15%" y="-15%" width="130%" height="130%">
+            <feGaussianBlur in="SourceAlpha" stdDeviation="1.4"/>
+            <feOffset dy="1.8" result="off"/>
+            <feComponentTransfer><feFuncA type="linear" slope="0.4"/></feComponentTransfer>
+            <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <radialGradient id="body_liu_lian" cx="38%" cy="30%" r="80%">
+            <stop offset="0%" stop-color="#d7c874"/>
+            <stop offset="55%" stop-color="#a89341"/>
+            <stop offset="100%" stop-color="#6b5a22"/>
+          </radialGradient>
+          <linearGradient id="spike_liu_lian" x1="0%" y1="100%" x2="0%" y2="0%">
+            <stop offset="0%" stop-color="#8a7530"/>
+            <stop offset="60%" stop-color="#bfa74d"/>
+            <stop offset="100%" stop-color="#e2d488"/>
+          </linearGradient>
+        </defs>
+        <ellipse cx="50" cy="93" rx="24" ry="3" fill="#000" opacity="0.25"/>
+        <g filter="url(#ds_liu_lian)">
+          <g fill="url(#spike_liu_lian)" stroke="#5f5020" stroke-width="0.4">
+            <path d="M 50 14 L 46 30 L 54 30 Z"/>
+            <path d="M 30 22 L 34 36 L 40 30 Z"/>
+            <path d="M 70 22 L 66 36 L 60 30 Z"/>
+            <path d="M 18 42 L 32 44 L 30 52 Z"/>
+            <path d="M 82 42 L 68 44 L 70 52 Z"/>
+            <path d="M 16 64 L 30 60 L 32 68 Z"/>
+            <path d="M 84 64 L 70 60 L 68 68 Z"/>
+            <path d="M 30 84 L 36 72 L 42 78 Z"/>
+            <path d="M 70 84 L 64 72 L 58 78 Z"/>
+            <path d="M 50 90 L 46 76 L 54 76 Z"/>
+          </g>
+          <ellipse cx="50" cy="56" rx="24" ry="28" fill="url(#body_liu_lian)" stroke="#5f5020" stroke-width="0.8"/>
+          <g fill="url(#spike_liu_lian)" stroke="#7a672c" stroke-width="0.3" opacity="0.95">
+            <path d="M 44 40 l -4 6 l 8 0 Z"/><path d="M 56 40 l -4 6 l 8 0 Z"/>
+            <path d="M 38 52 l -4 6 l 8 0 Z"/><path d="M 50 50 l -4 6 l 8 0 Z"/><path d="M 62 52 l -4 6 l 8 0 Z"/>
+            <path d="M 44 64 l -4 6 l 8 0 Z"/><path d="M 56 64 l -4 6 l 8 0 Z"/>
+            <path d="M 50 74 l -4 6 l 8 0 Z"/>
+          </g>
+          <path d="M 50 30 Q 49 56 50 82" stroke="#6b5a22" stroke-width="0.6" fill="none" opacity="0.5"/>
+          <path d="M 34 44 Q 32 58 36 74" stroke="#6b5a22" stroke-width="0.5" fill="none" opacity="0.4"/>
+          <path d="M 66 44 Q 68 58 64 74" stroke="#6b5a22" stroke-width="0.5" fill="none" opacity="0.4"/>
+          <path d="M 50 30 L 50 20" stroke="#5a4522" stroke-width="2.6" stroke-linecap="round"/>
+        </g>
+        <ellipse cx="40" cy="44" rx="5" ry="9" fill="#fff" opacity="0.3"/>
+        <ellipse cx="38" cy="40" rx="2" ry="3" fill="#fff" opacity="0.55"/>
+        <ellipse cx="50" cy="88" rx="17" ry="1.4" fill="#000" opacity="0.25"/>
+      `;
+    },
   };
 
   // Gemini illustration sprites (sliced from Chris's sheets, 2026-06-11).

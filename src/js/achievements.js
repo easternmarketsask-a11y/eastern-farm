@@ -98,6 +98,8 @@
               description: 'Achievement unlock: ' + (ach.name_zh || ach.name_en || ach.id),
             });
           }
+          // 农场币奖励（B5 中后期长线成就用它，避免加真实积分负债）。
+          if (ach.reward_coins) Farm.state.addCoins(ach.reward_coins);
           newlyUnlocked.push(ach);
         }
       });
@@ -112,8 +114,11 @@
       const lang = Farm.state.data.language;
       list.forEach((ach, i) => {
         const name = lang === 'en' ? ach.name_en : ach.name_zh;
+        const rewardHtml = ach.reward_coins
+          ? '+' + ach.reward_coins + '<span class="coin-icon"></span>'
+          : '+' + (ach.reward_points || 0) + '<span class="points-icon"></span>';
         setTimeout(() => {
-          Farm.ui.toast('🏆 ' + name + '  +' + (ach.reward_points || 0) + '<span class="points-icon"></span>', 3200);
+          Farm.ui.toast('🏆 ' + name + '  ' + rewardHtml, 3200);
           if (Farm.audio) Farm.audio.play('achievement');
           // Completion high-light: a light confetti burst makes unlocking an
           // achievement feel like a milestone, not just another toast.
@@ -153,7 +158,7 @@
               <div class="ach-desc">${desc}</div>
               ${progRow}
             </div>
-            <div class="ach-reward">+${ach.reward_points || 0}<span class="points-icon"></span></div>
+            <div class="ach-reward">${ach.reward_coins ? ('+' + ach.reward_coins + '<span class="coin-icon"></span>') : ('+' + (ach.reward_points || 0) + '<span class="points-icon"></span>')}</div>
           </div>
         `;
       }).join('') + '</div>';

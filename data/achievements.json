@@ -124,6 +124,157 @@
       "desc_en": "Claim 10 daily tasks in total.",
       "reward_points": 5,
       "check": { "type": "stat", "key": "totalTasksClaimed", "min": 10 }
+    },
+
+    {
+      "id": "level_14",
+      "name_zh": "荔枝园主",
+      "name_en": "Lychee Grower",
+      "icon": "🍒",
+      "desc_zh": "等级达到 14 级，解锁荔枝。",
+      "desc_en": "Reach level 14 and unlock lychee.",
+      "reward_coins": 500,
+      "check": { "type": "level", "min": 14 }
+    },
+    {
+      "id": "level_17",
+      "name_zh": "田园行家",
+      "name_en": "Seasoned Grower",
+      "icon": "🌾",
+      "desc_zh": "等级达到 17 级。",
+      "desc_en": "Reach level 17.",
+      "reward_coins": 800,
+      "check": { "type": "level", "min": 17 }
+    },
+    {
+      "id": "level_20",
+      "name_zh": "榴莲庄园主",
+      "name_en": "Durian Estate",
+      "icon": "🌰",
+      "desc_zh": "等级达到 20 级，解锁榴莲。",
+      "desc_en": "Reach level 20 and unlock durian.",
+      "reward_coins": 1200,
+      "check": { "type": "level", "min": 20 }
+    },
+    {
+      "id": "harvest_500",
+      "name_zh": "五百丰收",
+      "name_en": "Five Hundred Harvests",
+      "icon": "🌾",
+      "desc_zh": "累计收获 500 次。",
+      "desc_en": "Harvest 500 crops in total.",
+      "reward_coins": 1000,
+      "check": { "type": "stat", "key": "totalHarvests", "min": 500 }
+    },
+    {
+      "id": "harvest_1000",
+      "name_zh": "千手农神",
+      "name_en": "Thousand Harvests",
+      "icon": "🌟",
+      "desc_zh": "累计收获 1000 次。",
+      "desc_en": "Harvest 1000 crops in total.",
+      "reward_coins": 2500,
+      "check": { "type": "stat", "key": "totalHarvests", "min": 1000 }
+    },
+    {
+      "id": "deliveries_50",
+      "name_zh": "常客供货",
+      "name_en": "Regular Supplier",
+      "icon": "🚚",
+      "desc_zh": "累计给东方超市送货 50 次。",
+      "desc_en": "Deliver to Eastern Market 50 times.",
+      "reward_coins": 300,
+      "check": { "type": "stat", "key": "totalDeliveries", "min": 50 }
+    },
+    {
+      "id": "deliveries_200",
+      "name_zh": "金牌货源",
+      "name_en": "Gold Supplier",
+      "icon": "📦",
+      "desc_zh": "累计送货 200 次。",
+      "desc_en": "Deliver to Eastern Market 200 times.",
+      "reward_coins": 800,
+      "check": { "type": "stat", "key": "totalDeliveries", "min": 200 }
+    },
+    {
+      "id": "deliveries_500",
+      "name_zh": "东方基地",
+      "name_en": "Eastern Farm Base",
+      "icon": "🏬",
+      "desc_zh": "累计送货 500 次。",
+      "desc_en": "Deliver to Eastern Market 500 times.",
+      "reward_coins": 2000,
+      "check": { "type": "stat", "key": "totalDeliveries", "min": 500 }
+    },
+    {
+      "id": "orders_50",
+      "name_zh": "接单能手",
+      "name_en": "Order Taker",
+      "icon": "📋",
+      "desc_zh": "累计完成小东订单 50 张。",
+      "desc_en": "Fill 50 of Little East's orders.",
+      "reward_coins": 400,
+      "check": { "type": "stat", "key": "totalOrdersFilled", "min": 50 }
+    },
+    {
+      "id": "orders_150",
+      "name_zh": "订单大户",
+      "name_en": "Order Champion",
+      "icon": "🧾",
+      "desc_zh": "累计完成小东订单 150 张。",
+      "desc_en": "Fill 150 of Little East's orders.",
+      "reward_coins": 1000,
+      "check": { "type": "stat", "key": "totalOrdersFilled", "min": 150 }
+    },
+    {
+      "id": "orders_400",
+      "name_zh": "供货传奇",
+      "name_en": "Supply Legend",
+      "icon": "🏆",
+      "desc_zh": "累计完成小东订单 400 张。",
+      "desc_en": "Fill 400 of Little East's orders.",
+      "reward_coins": 2500,
+      "check": { "type": "stat", "key": "totalOrdersFilled", "min": 400 }
+    },
+    {
+      "id": "dishes_20",
+      "name_zh": "小灶开张",
+      "name_en": "Kitchen Open",
+      "icon": "🍳",
+      "desc_zh": "累计做出 20 道菜。",
+      "desc_en": "Cook 20 dishes in total.",
+      "reward_coins": 300,
+      "check": { "type": "stat", "key": "totalDishesCooked", "min": 20 }
+    },
+    {
+      "id": "dishes_80",
+      "name_zh": "拿手好菜",
+      "name_en": "Signature Chef",
+      "icon": "🍲",
+      "desc_zh": "累计做出 80 道菜。",
+      "desc_en": "Cook 80 dishes in total.",
+      "reward_coins": 800,
+      "check": { "type": "stat", "key": "totalDishesCooked", "min": 80 }
+    },
+    {
+      "id": "dishes_200",
+      "name_zh": "东方名厨",
+      "name_en": "Eastern Master Chef",
+      "icon": "👨‍🍳",
+      "desc_zh": "累计做出 200 道菜。",
+      "desc_en": "Cook 200 dishes in total.",
+      "reward_coins": 2000,
+      "check": { "type": "stat", "key": "totalDishesCooked", "min": 200 }
+    },
+    {
+      "id": "streak_100",
+      "name_zh": "百日不辍",
+      "name_en": "Hundred-Day Devotee",
+      "icon": "🗓️",
+      "desc_zh": "连续登录 100 天。",
+      "desc_en": "Log in 100 days in a row.",
+      "reward_coins": 3000,
+      "check": { "type": "stat", "key": "maxStreak", "min": 100 }
     }
   ]
 }

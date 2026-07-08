@@ -106,6 +106,84 @@
       "unlock_level": 10,
       "tip_zh": "甜玉米粒 + 松子 + 青豆，加一小勺糖，孩子的最爱。",
       "tip_en": "Sweet kernels, pine nuts, peas, a spoonful of sugar — every kid's favourite."
+    },
+    {
+      "id": "braised_bamboo",
+      "name_zh": "油焖春笋",
+      "name_en": "Oil-braised Spring Bamboo",
+      "icon": "🎋",
+      "ingredients": { "chun_sun": 2 },
+      "cook_minutes": 50,
+      "sell_price": 4320,
+      "xp": 180,
+      "unlock_level": 12,
+      "tip_zh": "春笋切滚刀块，热油加糖红烧到收汁，脆嫩回甜，一年就等这一口。",
+      "tip_en": "Roll-cut bamboo braised in hot oil and sugar until glazed — crunchy, sweet, worth the year-long wait."
+    },
+    {
+      "id": "lychee_soda",
+      "name_zh": "荔枝冰饮",
+      "name_en": "Iced Lychee Soda",
+      "icon": "🧋",
+      "ingredients": { "li_zhi": 2 },
+      "cook_minutes": 45,
+      "sell_price": 4550,
+      "xp": 186,
+      "unlock_level": 14,
+      "tip_zh": "荔枝去核冰镇，加气泡水和薄荷，夏天最解暑的一杯。",
+      "tip_en": "Pitted chilled lychees dropped into sparkling water with mint — summer's most refreshing glass."
+    },
+    {
+      "id": "longan_date_tea",
+      "name_zh": "桂圆红枣茶",
+      "name_en": "Longan Red-Date Tea",
+      "icon": "🍵",
+      "ingredients": { "long_yan": 2 },
+      "cook_minutes": 55,
+      "sell_price": 5180,
+      "xp": 210,
+      "unlock_level": 15,
+      "tip_zh": "龙眼肉 + 红枣 + 枸杞煮水，温补养气，妈妈们的下午茶首选。",
+      "tip_en": "Longan flesh, red dates and goji simmered into a warming tonic — moms' favourite afternoon tea."
+    },
+    {
+      "id": "cold_chayote",
+      "name_zh": "凉拌佛手瓜",
+      "name_en": "Cold Chayote Salad",
+      "icon": "🥗",
+      "ingredients": { "fo_shou_gua": 2 },
+      "cook_minutes": 40,
+      "sell_price": 4000,
+      "xp": 156,
+      "unlock_level": 17,
+      "tip_zh": "佛手瓜去皮切细丝，盐腌挤水，蒜末香醋香油一拌，爽脆开胃。",
+      "tip_en": "Peel and julienne chayote, salt and squeeze, toss with garlic, vinegar and sesame oil — crisp and bright."
+    },
+    {
+      "id": "yellow_chive_eggs",
+      "name_zh": "韭黄炒蛋",
+      "name_en": "Yellow Chives & Egg",
+      "icon": "🍳",
+      "ingredients": { "jiu_huang": 3 },
+      "cook_minutes": 30,
+      "sell_price": 2850,
+      "xp": 113,
+      "unlock_level": 18,
+      "tip_zh": "韭黄切寸段，蛋液半熟时下锅，10 秒出锅——鲜嫩清香不能老。",
+      "tip_en": "Cut yellow chives into pieces, fold into half-set eggs, 10 seconds out — tender and fragrant, never overcooked."
+    },
+    {
+      "id": "durian_pancake",
+      "name_zh": "榴莲班戟",
+      "name_en": "Durian Pancake",
+      "icon": "🥞",
+      "ingredients": { "liu_lian": 1 },
+      "cook_minutes": 90,
+      "sell_price": 3600,
+      "xp": 142,
+      "unlock_level": 20,
+      "tip_zh": "薄饼皮裹榴莲肉 + 淡奶油，冷藏后一口爆浆，甜品店招牌同款。",
+      "tip_en": "Thin crepe wrapping durian flesh and light cream, chilled — the dessert-shop signature."
     }
   ]
 }

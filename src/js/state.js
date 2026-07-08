@@ -221,8 +221,12 @@
     if (level <= 0) return 0;
     if (level <= XP_TABLE_FIXED.length) return XP_TABLE_FIXED[level - 1];
     const k = level - XP_TABLE_FIXED.length;
-    // Each level past 16 needs ~4,500 base, growing gently with `k`.
-    return Math.round(19000 + 4500 * k * (1 + k * 0.1));
+    // Each level past 16 needs ~4,000 base, growing gently with `k`.
+    // 2026-07-07 (B5 内容悬崖)：二次项 0.1k → 0.05k，软化 Lv17+ 超线性外推，
+    // 配合新加的 Lv15-20 作物/菜谱/地块，让休闲盘 Lv15→20 每级空窗 ≤4 天
+    // （scripts/verify/sim-level-pace.mjs 验收）。只降不升——checkLevelUp 只增
+    // 不减，老玩家至多在下次 checkAll 一次性连升几级（正向惊喜，不动存档结构）。
+    return Math.round(19000 + 4000 * k * (1 + k * 0.05));
   }
 
   // Levels that grant a new plot. Through Lv 5 every level gives +2 (matches
@@ -230,10 +234,20 @@
   // stop, so there's always a long-term carrot.
   const PLOT_UNLOCK_AT = {
     2: 2, 3: 2, 4: 2, 5: 2,                          // 12 plots total by Lv 5 (unchanged)
-    7: 1, 10: 1, 12: 1, 15: 1, 20: 1,                // → 17 plots by Lv 20（Lv12 插一块，填 10-15 空窗）
-    30: 1, 50: 1, 75: 1, 100: 1,                     // → 21 plots by Lv 100
-    150: 1, 200: 1, 300: 1, 500: 1,                  // → 25 plots by Lv 500
+    7: 1, 10: 1, 12: 1, 15: 1, 17: 1, 20: 1,         // → 18 plots by Lv 20（Lv17 插一块，填 15-20 空窗，B5 内容悬崖）
+    30: 1, 50: 1, 75: 1, 100: 1,                     // → 22 plots by Lv 100
+    150: 1, 200: 1, 300: 1, 500: 1,                  // → 26 plots by Lv 500
   };
+
+  // ============ 扩地（购买地块）单一定价源（B5 三套地块定价统一）============
+  // 历史遗留：iso 建造菜地 200 币无上限、ep-shop 3000 币限 4 块——两套矛盾。
+  // 现在两个「农场币」购买入口（iso 建造面板 + 商城 extra_plot_coins）都读同一
+  // 递增价格 extraPlotCoinCost() + 同一计数器 extraPlots + 同一上限 EXTRA_PLOT_CAP。
+  // 「等级解锁数 + 4」= 靠等级解锁的基础地块（随 PLOT_UNLOCK_AT 增长）再 + 4 块可买。
+  // EP 版 extra_plot（100 EP）沿用同计数器同帽，但价格是 EP 侧红线不动。
+  // 存档字段 extraPlots/plots[] 已存在，无需迁移。
+  const EXTRA_PLOT_CAP = 4;
+  const EXTRA_PLOT_COSTS = [200, 600, 1500, 3000];   // 第 1..4 块递增（首块仍便宜，第 4 块对齐旧 3000）
 
   // Title tiers — purely cosmetic. Rewritten 2026-05-25: previous
   // titles (新手/小工/学徒/农夫) sounded like a hierarchy of menial
@@ -840,12 +854,28 @@
       this.data.decorations.push({ itemId, placedAt: Date.now() });
       this.save();
     },
-    addExtraPlot() {
-      if (this.data.extraPlots >= 4) return false;
+    // Shared extra-plot economy (B5). Both coin purchase entries call these.
+    EXTRA_PLOT_CAP,
+    extraPlotCoinCost() {
+      const n = (this.data && this.data.extraPlots) || 0;
+      return EXTRA_PLOT_COSTS[Math.min(n, EXTRA_PLOT_COSTS.length - 1)];
+    },
+    extraPlotCapReached() {
+      return ((this.data && this.data.extraPlots) || 0) >= EXTRA_PLOT_CAP;
+    },
+    // Append one bought plot. `opts.gx/gy` place it on a specific owned cell
+    // (iso build menu); omitted → iso auto-places via _buildLayout. Does NOT
+    // charge coins/EP — the caller spends first, then calls this.
+    addExtraPlot(opts) {
+      opts = opts || {};
+      if (this.data.extraPlots >= EXTRA_PLOT_CAP) return false;
       this.data.extraPlots += 1;
-      // Append a new unlocked plot to the plots array
-      const newId = 12 + this.data.extraPlots - 1;
-      this.data.plots.push({ id: newId, crop: null, plantedAt: 0, harvestsLeft: 0, unlocked: true });
+      // Unique id = max existing id + 1 (plots[] can already exceed 12 from
+      // level unlocks, so the old `12 + extraPlots - 1` could collide).
+      const newId = this.data.plots.reduce((m, p) => Math.max(m, p.id || 0), -1) + 1;
+      const plot = { id: newId, crop: null, plantedAt: 0, harvestsLeft: 0, unlocked: true };
+      if (Number.isInteger(opts.gx) && Number.isInteger(opts.gy)) { plot.gx = opts.gx; plot.gy = opts.gy; }
+      this.data.plots.push(plot);
       this.save();
       return true;
     },
