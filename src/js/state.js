@@ -530,12 +530,19 @@
     _warnStorageOnce() {
       if (this._saveWarned) return;
       this._saveWarned = true;
-      if (window.Farm && Farm.ui && Farm.ui.toast) {
-        // 现在游戏本次仍可正常玩(内存态)，只是这次的进度可能存不下来。文案据实说明,
-        // 不再一口咬定「无痕模式」(Chris 常不在无痕却总看到，反感)；给真正有用的 iOS
-        // 建议:登录可云端同步 + 加到主屏幕从图标打开(绕开 Safari 7 天清储)。
-        Farm.ui.toast('本次可正常游玩 · 但这台设备暂时存不下进度（存储已满或 iOS Safari 限制）。建议：登录后可云端同步；或点分享→「添加到主屏幕」，以后从图标打开更稳。', 8000);
-      }
+      // 延后一拍再弹：让 Firebase 登录先解析出 memberDoc，好决定给哪版文案。
+      // 已登录会员的进度实时同步在云端（members.gameStats，换设备也不丢）→ 本地存不下
+      // 不等于丢进度，给「安心版」，别把会员吓着（Chris 手机 iOS Safari 存储受限，
+      // 但他是登录会员，Lv7 存在云端）。游客只有本地存档 → 保留「提醒版」。
+      setTimeout(function () {
+        if (!(window.Farm && Farm.ui && Farm.ui.toast)) return;
+        var isMember = !!(window.Farm && Farm.fbAuth && Farm.fbAuth.memberDoc);
+        if (isMember) {
+          Farm.ui.toast('你已登录，进度已同步到云端，换设备也不会丢 ✓。这台设备的浏览器暂时存不下本地缓存（存储已满或 iOS Safari 限制），不影响你玩。想更顺畅可点分享→「添加到主屏幕」，以后从图标打开。', 8000);
+        } else {
+          Farm.ui.toast('本次可正常游玩 · 但这台设备暂时存不下进度（存储已满或 iOS Safari 限制）。建议：登录后进度可云端同步（换设备不丢）；或点分享→「添加到主屏幕」，以后从图标打开更稳。', 8000);
+        }
+      }, 3500);
     },
 
     save() {
