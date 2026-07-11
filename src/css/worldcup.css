@@ -681,3 +681,18 @@
   .wc-pulse::after { animation: none !important; }
   #wc-hub *, #wc-hub *::before, #wc-hub *::after { scroll-behavior: auto !important; }
 }
+
+/* ===== 收官 / 退场（2026-07-11）===== */
+/* 开屏横幅「LIVE」→「回顾」：从赛事红降为安静的灰绿 */
+.splash-wc-pill.done { background: #8a9b8e; }
+/* 农场 ⚽ 重入按钮收官降级：去红点、降饱和，读作「回顾」而非「正在直播」 */
+#wcReentry.wcre-quiet { opacity: 0.82; filter: saturate(0.75); }
+#wcReentry.wcre-quiet .wcre-dot { display: none; }
+/* 收官卡：个人战绩行 + 待领实物置顶提醒 */
+.wc-wrap-stats { margin-top: 8px; }
+.wc-wrap-line { display: block; font-size: 12.5px; color: #5d6b57; line-height: 1.6; }
+.wc-wrap-pending {
+  margin: 4px auto 8px; padding: 8px 12px; max-width: 320px;
+  background: #fff8e1; border: 1.5px solid #f2c14e; border-radius: 10px;
+  font-size: 13px; font-weight: 700; color: #8a6d1a; line-height: 1.5;
+}

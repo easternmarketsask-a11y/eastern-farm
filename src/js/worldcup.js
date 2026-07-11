@@ -200,7 +200,7 @@
       var evById = {};
       parts.forEach(function (p) { if (p && p.events) p.events.forEach(function (e) { evById[e.id] = e; }); });
       var events = Object.keys(evById).map(function (k) { return evById[k]; });
-      if (!events.length) return false;
+      if (!events.length) return hydrateLiveSnapshot();
       var byPair = {}, byTime = {}, groupGames = {};
       events.forEach(function (ev) {
         // Process BOTH group and knockout events. KO records power the bracket auto-advance;
@@ -245,7 +245,7 @@
         if (!isNaN(mk)) byTime[mk] = rec;
         if (isGroup) (groupGames[grp] = groupGames[grp] || []).push(rec);   // KO stays out of the group table
       });
-      if (!Object.keys(byPair).length) return false;
+      if (!Object.keys(byPair).length) return hydrateLiveSnapshot();
       // Recompute standings per group from the COMPLETE set of live group games.
       var standings = {};
       Object.keys(data.groups).forEach(function (g) {
@@ -261,8 +261,29 @@
         standings[g] = ranked;
       });
       live = { at: Date.now(), byPair: byPair, byTime: byTime, standings: standings, ok: true };
+      // 赛果快照（2026-07-11 收官加固）：只存已完赛记录进 localStorage。ESPN 接口
+      // 失效 / 离线 / 赛后清历史数据时，回顾模式（含收官卡冠军、对阵图）从快照回填，
+      // 不再 100% 悬在第三方接口上（audit P1）。
+      try {
+        var snapPairs = {}, snapTime = {};
+        Object.keys(byPair).forEach(function (k) { if (byPair[k].finished) snapPairs[k] = byPair[k]; });
+        Object.keys(byTime).forEach(function (k) { if (byTime[k].finished) snapTime[k] = byTime[k]; });
+        localStorage.setItem(SNAP_KEY, JSON.stringify({ at: live.at, byPair: snapPairs, byTime: snapTime, standings: standings }));
+      } catch (e2) {}
       return true;
-    }).catch(function (e) { console.warn('[wc] ESPN live fetch failed — using static data', e); return false; });
+    }).catch(function (e) { console.warn('[wc] ESPN live fetch failed — using static/snapshot data', e); return hydrateLiveSnapshot(); });
+  }
+  var SNAP_KEY = 'ef_wc_live_snap_v1';
+  // ESPN 拉不到时用本地快照当 live（只含已完赛记录，绝不伪造进行中状态）。
+  // 返回 true = 有数据可渲染（与 fetchLive 成功同语义）。
+  function hydrateLiveSnapshot() {
+    if (live && live.ok) return true;   // 内存里已有上次成功的 live，继续用
+    try {
+      var s = JSON.parse(localStorage.getItem(SNAP_KEY) || 'null');
+      if (!s || !s.byPair || !Object.keys(s.byPair).length) return false;
+      live = { at: s.at || 0, byPair: s.byPair, byTime: s.byTime || {}, standings: s.standings || {}, ok: true, snapshot: true };
+      return true;
+    } catch (e) { return false; }
   }
 
   // Live record for one of OUR matches, keyed by exact home|away. Works for group AND for
@@ -465,6 +486,7 @@
       hub.classList.remove('wc-closing');
       hub.style.display = 'flex';
       heroReset();               // 重开 → 大转盘回到就绪态(不残留上次结果)
+      applyEntryPhase();         // 收官阶段：入口降级/隐藏（数据已就绪，此处最准）
       switchTab('schedule');
       startTimers();
       checkStreak();
@@ -506,6 +528,9 @@
     stopTimers();
     tickClock();
     clockTimer = setInterval(tickClock, 1000);
+    // 收官后没有进行中的比赛，60s ESPN 轮询没有意义（audit P1「轮询永续」）——
+    // open() 时那一次 refreshLive() 仍会跑，用来锁定决赛结果 + 写快照。
+    if (wcPhase() !== 'tournament') return;
     refreshTimer = setInterval(function () {
       refreshLive();                                                   // re-pull live + re-render on success
       if ((!live || !live.ok) && activeTab === 'schedule') renderSchedule();  // keep static states fresh too
@@ -1208,6 +1233,7 @@
     var el = heroEl();
     if (!el) return;
     if (heroState.busy) return;                 // 转盘进行中 / 结果展示中：绝不打断
+    if (wcPhase() !== 'tournament') { renderHeroWrapup(); return; }   // 收官：转盘换收官卡
 
     if (!fbReady()) {                           // standalone 无 Firebase → 引导进农场
       if (heroState.sig === 'nofb') return;
@@ -1885,6 +1911,95 @@
   }
 
   /* ============================================================
+     收官 / 退场（2026-07-11，audit P1「7/19 决赛后无退场机制」）
+     三阶段全部从 wc2026.json 决赛场次 kickoffUtc 推导，不写死第二份日期：
+       tournament — 决赛未出结果：现状不变
+       wrapup     — 决赛结束 → 决赛开球+14 天（兑奖窗口）：hub 顶部收官卡、
+                    入口降级为安静「回顾」样式、停 60s ESPN 轮询
+       over       — 窗口过后：开屏入口 + 农场 ⚽ 按钮隐藏，worldcup.html 直链保留可回看
+     ============================================================ */
+  var FINAL_RUN_MS = 3.5 * 3600 * 1000;      // 决赛时长余量：加时+点球+颁奖
+  var SUNSET_DAYS = 14;                       // 兑奖窗口（决赛后 14 天入口退场）
+  var NOW_OVERRIDE = null;                    // 测试钩子：mock 当前时间
+  function wcNow() { return NOW_OVERRIDE || Date.now(); }
+  function finalMatch() {
+    if (!data || !data.matches) return null;
+    for (var i = data.matches.length - 1; i >= 0; i--) { if (data.matches[i].stage === 'final') return data.matches[i]; }
+    return null;
+  }
+  function wcPhase() {
+    var f = finalMatch();
+    if (!f || !f.kickoffUtc) return 'tournament';
+    var ko = Date.parse(f.kickoffUtc);
+    if (isNaN(ko)) return 'tournament';
+    var now = wcNow();
+    // 决赛结束 = 有确定胜者（ESPN/官方/快照），或时间上早已踢完（数据源失效兜底）
+    var finalOver = !!koWinner(f) || now > ko + FINAL_RUN_MS;
+    if (!finalOver) return 'tournament';
+    return now > ko + SUNSET_DAYS * 86400000 ? 'over' : 'wrapup';
+  }
+  // 按阶段改造两个常驻入口（开屏横幅 + 农场 ⚽ 重入按钮）。幂等，可反复调。
+  function applyEntryPhase() {
+    var ph = wcPhase();
+    var btn = document.getElementById('splashWorldcup');
+    if (btn) {
+      if (ph === 'over') btn.style.display = 'none';
+      else if (ph === 'wrapup') {
+        btn.style.display = '';
+        var pill = btn.querySelector('.splash-wc-pill');
+        if (pill && !pill.classList.contains('done')) { pill.textContent = '回顾'; pill.classList.add('done'); }
+        var sub = btn.querySelector('.splash-wc-sub');
+        if (sub) sub.textContent = '冠军已产生 · 看回顾 · 领你的奖品';
+      }
+    }
+    if (reentryBtn) {
+      if (ph === 'over') { reentryBtn._wcGone = true; reentryBtn.style.display = 'none'; }
+      else if (ph === 'wrapup' && !reentryBtn.classList.contains('wcre-quiet')) {
+        reentryBtn.classList.add('wcre-quiet');
+        reentryBtn.setAttribute('aria-label', '世界杯回顾 World Cup recap');
+      }
+    }
+  }
+  // 收官卡：🏆冠军 + 个人竞猜战绩（参与/猜中/农场币/待领实物置顶）。渲染进 #wcHero。
+  function renderHeroWrapup() {
+    var f = finalMatch(), w = koWinner(f);
+    var champ = (w && T[w]) ? (T[w].flag + ' ' + T[w].cn + ' ' + T[w].name) : null;
+    var sig = 'wrapup:' + (w || '?');
+    if (heroState.sig === sig) return;
+    var sub = champ ? ('🏆 ' + champ + ' 捧起大力神杯！感谢一路观赛') : '决赛已结束，感谢一路观赛';
+    var el = heroShell('2026 世界杯 · 完美收官', sub,
+      '<div class="wc-wrap-stats" id="wcWrapStats"></div>' +
+      '<button class="wc-hero-btn ghost" data-act="prizes">🎁 我的奖品 · 兑奖码 ›</button>', sig);
+    if (!el) return;
+    var bp = el.querySelector('[data-act="prizes"]');
+    if (bp) bp.onclick = (fbReady() && lottoUser()) ? openMyPrizes : loginFromHub;
+    // 个人战绩异步补进卡片（未登录/非会员则显示引导文案）
+    var stats = el.querySelector('#wcWrapStats');
+    if (!stats) return;
+    if (!fbReady() || !lottoUser() || !(Farm.fbAuth && Farm.fbAuth.memberDoc)) {
+      stats.innerHTML = '<span class="wc-wrap-line">参与过竞猜？登录会员手机号查看你的奖品</span>';
+      return;
+    }
+    lottoLoadMine().then(function (mine) {
+      var el2 = heroEl(); if (!el2 || heroState.sig !== sig) return;
+      var s2 = el2.querySelector('#wcWrapStats'); if (!s2) return;
+      var ids = Object.keys(mine || {});
+      if (!ids.length) { s2.innerHTML = '<span class="wc-wrap-line">这届没赶上竞猜？农场里见 🌱</span>'; return; }
+      var plays = ids.length, hit = 0, coins = 0, pending = 0;
+      ids.forEach(function (k) {
+        var r = mine[k] || {};
+        if (r.correct) hit++;
+        coins += (r.coins || 0);
+        if (r.prize && r.prize !== 'coins' && !r.redeemed) pending++;
+      });
+      var h = '';
+      if (pending > 0) h += '<div class="wc-wrap-pending">🎁 你还有 ' + pending + ' 件实物奖品待领取 — 到店收银台出示兑奖码</div>';
+      h += '<span class="wc-wrap-line">你的战绩：参与 ' + plays + ' 场 · 猜中 ' + hit + ' 场 · 赢得农场币 ' + coins + '</span>';
+      s2.innerHTML = h;
+    });
+  }
+
+  /* ============================================================
      SPLASH ENTRY + RE-ENTRY BUTTON
      ============================================================ */
   function wireSplashEntry() {
@@ -1903,6 +2018,7 @@
   }
   function updateReentry() {
     if (!reentryBtn) return;
+    if (reentryBtn._wcGone) { reentryBtn.style.display = 'none'; return; }   // 收官退场后不再复活
     var splashUp = !!document.getElementById('splash');
     var hubUp = hub && hub.style.display !== 'none' && !hub.classList.contains('wc-closing');
     reentryBtn.style.display = (splashUp || hubUp) ? 'none' : 'flex';
@@ -1921,6 +2037,9 @@
     if (WC_STANDALONE) { open(); return; }
     wireSplashEntry();
     ensureReentry();
+    // 收官阶段判定需要赛程数据（决赛日期）。worldcup.js 本就是 idle 时才加载，
+    // wc2026.json 在 SW 预缓存里，这次 idle fetch 不影响冷启动关键路径。
+    ensureData().then(applyEntryPhase).catch(function () {});
     // splash may render slightly after us; re-check entry + reentry visibility briefly
     reentryPoll = setInterval(function () {
       wireSplashEntry();
@@ -1964,6 +2083,9 @@
     _applyProgressionForTest: function () { return applyKnockoutProgression(); },
     _matchesForTest: function () { return data && data.matches; },
     _scoreForTest: function (m) { return score(m); },          // read-only：验证淘汰赛比分来自 ESPN
-    _refreshLiveForTest: function () { return refreshLive(); }  // read-only：探针里真拉 ESPN 后回填
+    _refreshLiveForTest: function () { return refreshLive(); },  // read-only：探针里真拉 ESPN 后回填
+    _setNowForTest: function (ms) { NOW_OVERRIDE = ms || null; },   // mock 当前时间验证收官三阶段
+    _phaseForTest: function () { return wcPhase(); },
+    _applyEntryPhaseForTest: function () { return applyEntryPhase(); }
   };
 })();
