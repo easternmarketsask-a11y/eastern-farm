@@ -64,7 +64,7 @@ self.addEventListener('notificationclick', (event) => {
 
 // CACHE_VERSION 由 deploy.sh 在每次部署时自动注入时间戳（ef-YYMMDDHHMM），
 // 不再手动 +1 —— 忘 bump 会让全体 PWA 用户静默停在旧版（iOS 要删 App 才能救）。
-const CACHE_VERSION = 'ef-2607111051';
+const CACHE_VERSION = 'ef-2607111409';
 const CACHE = 'eastern-farm-' + CACHE_VERSION;
 // Precache the FULL app shell — HTML + CSS + every JS module + data JSON — so a SW
 // update (which clears the old cache) followed by a flaky mobile network can never leave
@@ -161,14 +161,17 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Static sub-resources (css/js/icons) → stale-while-revalidate: serve the cached copy
-  // INSTANTLY (the 944KB of JS never blocks on the network), refresh in background. These are
-  // precached on install and immutable per release (CACHE_VERSION bump purges them on deploy),
-  // so serving cache-first is safe and is the main open/refresh speed win.
+  // Static sub-resources (css/js/icons) → NETWORK-FIRST with a short timeout, cache fallback.
+  // 改动理由（2026-07-11，Chris「根源解决，别让任何客人卡在旧版」）：原来是
+  // stale-while-revalidate（先给旧缓存 JS、后台再更新），新代码非得等新 SW 激活才生效
+  // → iOS 冻结标签页 / 更新链失败时，客人被永久困在几周前的旧代码里（Chris 亲历）。
+  // 改成在线优先：只要网络正常就永远拿最新代码（与 network-first 的 HTML 版本一致，
+  // 杜绝 HTML 新 / JS 旧的错配）；网络慢(>4s)或离线才回退缓存 → 离线照常能玩、
+  // 「任何状态下都打得开」。速度代价靠浏览器 HTTP 缓存(max-age=600)兜住，可接受。
+  const fromCacheStatic = () => caches.match(req).then((c) => c || Response.error());
+  const netStatic = fetchAndCache();
+  const timeoutStatic = new Promise((resolve) => setTimeout(() => resolve(null), 4000));
   event.respondWith(
-    caches.match(req).then((cached) => {
-      const net = fetchAndCache();
-      return cached || net.then((res) => res || Response.error());
-    })
+    Promise.race([netStatic, timeoutStatic]).then((res) => res || fromCacheStatic()).catch(fromCacheStatic)
   );
 });

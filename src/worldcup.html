@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="ef-build" content="ef-2607111051">
+<meta name="ef-build" content="ef-2607111409">
 <meta name="theme-color" content="#3a7d2c">
 
 <!-- ==================== PWA (add to home screen) ==================== -->
@@ -55,7 +55,7 @@
       var now = Date.now();
       if (now - __lastFresh < 20000) return;
       __lastFresh = now;
-      try { navigator.serviceWorker.getRegistration().then(function (r) { if (r && r.update) { try { r.update(); } catch (e) {} } }); } catch (e) {}
+      try { navigator.serviceWorker.getRegistration().then(function (r) { if (r && r.update) r.update().catch(function () {}); }).catch(function () {}); } catch (e) {}
       if (!__pageBuild || __pageBuild === 'ef-dev') return;
       fetch('/service-worker.js?v=' + now, { cache: 'no-store' })
         .then(function (r) { return r.ok ? r.text() : ''; })
@@ -71,7 +71,7 @@
     }
     window.addEventListener('load', function () {
       navigator.serviceWorker.register('/service-worker.js', { scope: '/' })
-        .then(function (reg) { if (reg && reg.update) { try { reg.update(); } catch (e) {} } })
+        .then(function (reg) { if (reg && reg.update) reg.update().catch(function () {}); })
         .catch(function () {});
       __checkFresh();
     });
