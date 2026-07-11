@@ -371,7 +371,7 @@
         : this._renderEmailTab(lang);
 
       const html = `
-        <h2 class="modal-title">👤 ${lang === 'en' ? 'Member Sign In' : '会员登录'}</h2>
+        <h2 class="modal-title">${lang === 'en' ? 'Member Sign In' : '会员登录'}</h2>
         ${tabBar}
         <div id="authError" class="auth-error"></div>
         ${body}
@@ -801,7 +801,7 @@
       const titleStr = titleObj ? (lang === 'en' ? titleObj.en : titleObj.zh) : '';
       const safeName = String(name).replace(/[<>"&]/g, '');
       const html = `
-        <h2 class="modal-title">👤 ${safeName}</h2>
+        <h2 class="modal-title">${safeName}</h2>
         <div style="text-align:center;margin:12px 0;">
           <div style="font-size:14px;color:var(--leaf-dark);font-weight:600;">🌱 ${lang === 'en' ? 'Lv ' : 'Lv '}${gameLv}${titleStr ? ' · ' + titleStr : ''}</div>
           <div style="font-size:24px;font-weight:700;color:var(--purple-points);margin-top:6px;"><span class="points-icon"></span> ${totalPoints.toLocaleString()}</div>
@@ -840,7 +840,7 @@
     openGuestMenu() {
       const lang = Farm.state.data.language;
       const html = `
-        <h2 class="modal-title">👤 ${lang === 'en' ? 'Account' : '账户'}</h2>
+        <h2 class="modal-title">${lang === 'en' ? 'Account' : '账户'}</h2>
         <p class="modal-subtitle">${lang === 'en'
           ? 'Sign in with your Eastern Market membership to save progress & earn points.'
           : '用东方超市会员登录，存档同步、还能赚超市积分。'}</p>

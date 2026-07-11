@@ -794,7 +794,7 @@
     _openAddFriendModal() {
       const lang = Farm.state.data.language;
       const html = `
-        <h2 class="modal-title">➕ ${lang === 'en' ? 'Add friend' : '加好友'}</h2>
+        <h2 class="modal-title">${lang === 'en' ? 'Add friend' : '加好友'}</h2>
         <p class="modal-subtitle">${lang === 'en'
           ? "Enter their Eastern Market phone number"
           : '输入对方在东方超市留的手机号'}</p>
@@ -872,7 +872,7 @@
       const lang = Farm.state.data.language;
       const safeName = String(toName).replace(/[<>"&]/g, '');
       const html = `
-        <h2 class="modal-title">🎁 ${lang === 'en' ? 'Send gift to ' : '送礼物给 '}${safeName}</h2>
+        <h2 class="modal-title">${lang === 'en' ? 'Send gift to ' : '送礼物给 '}${safeName}</h2>
         <p class="modal-subtitle">${lang === 'en'
           ? 'Pick one (1 free gift per day):'
           : '挑一个（每天 1 份免费）：'}</p>

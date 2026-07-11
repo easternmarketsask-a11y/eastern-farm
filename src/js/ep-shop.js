@@ -283,7 +283,7 @@
         : `<div class="muted" style="text-align:center;padding:26px;">${EN ? 'Nothing here yet' : '这个分类暂时空着～'}</div>`;
 
       const html = `
-        <h2 class="modal-title">🛍️ ${EN ? 'Farm Shop' : '农场商城'}</h2>
+        <h2 class="modal-title">${EN ? 'Farm Shop' : '农场商城'}</h2>
         <div class="ep-shop-balance">
           <span class="ep-shop-bal-chip coins"><span class="coin-icon"></span> ${coins}</span>
           <span class="ep-shop-bal-chip points"><span class="points-icon"></span> ${balance}</span>

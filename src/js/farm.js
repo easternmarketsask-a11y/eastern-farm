@@ -203,7 +203,7 @@
         : '';
 
       const html = `
-        <h2 class="modal-title">🌱 ${def[nameKey]}</h2>
+        <h2 class="modal-title">${def[nameKey]}</h2>
         <p style="text-align:center;margin:10px 0 4px;color:var(--warm-text-soft);font-size:13px;">
           ${lang === 'en' ? remaining + ' left' : '还剩 ' + remaining}
         </p>

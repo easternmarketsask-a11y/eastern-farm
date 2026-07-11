@@ -224,7 +224,7 @@
            <div class="task-list">${tasksList.map(t => card(t, false)).join('')}</div>`;
 
       const html = `
-        <h2 class="modal-title">📋 ${Farm.i18n.t('tasks_title')}</h2>
+        <h2 class="modal-title">${Farm.i18n.t('tasks_title')}</h2>
         ${weeklyHtml}
         ${dailyHtml}
         <div class="btn-row">

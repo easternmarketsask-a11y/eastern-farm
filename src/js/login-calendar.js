@@ -172,7 +172,7 @@
       }
 
       const html = `
-        <h2 class="modal-title">📅 ${lang === 'en' ? '7-Day Sign-in' : '七日签到'}</h2>
+        <h2 class="modal-title">${lang === 'en' ? '7-Day Sign-in' : '七日签到'}</h2>
         <div class="lc-grid">${cells}</div>
         <div class="lc-status">${statusText}</div>
         <div class="btn-row">

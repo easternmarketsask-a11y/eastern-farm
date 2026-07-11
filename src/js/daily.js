@@ -160,7 +160,7 @@
         </div>`;
 
       const html = `
-        <h2 class="modal-title">🌅 ${lang === 'en' ? 'Today' : '今日'}</h2>
+        <h2 class="modal-title">${lang === 'en' ? 'Today' : '今日'}</h2>
         <div class="daily-list">
           ${(Farm.promo && Farm.promo.bannerHtml) ? Farm.promo.bannerHtml() : ''}
           <div class="daily-card daily-guide">
@@ -242,7 +242,7 @@
       const free = !Farm.state.data.dailyClaims.lotterySpunFree;
       const cost = free ? 0 : 20;
       const html = `
-        <h2 class="modal-title">🎰 ${lang === 'en' ? 'Daily Wheel' : '每日大转盘'}</h2>
+        <h2 class="modal-title">${lang === 'en' ? 'Daily Wheel' : '每日大转盘'}</h2>
         <div class="lottery-wheel-container">
           <div class="lottery-wheel" id="lotteryWheel">
             ${this.renderWheelSegments()}

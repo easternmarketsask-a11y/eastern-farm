@@ -274,7 +274,7 @@
       const lang = Farm.state.data.language || 'zh';
       // Loading modal while we render.
       Farm.ui.showModal(`
-        <h2 class="modal-title">📸 ${lang === 'en' ? 'Share my farm' : '晒我的农场'}</h2>
+        <h2 class="modal-title">${lang === 'en' ? 'Share my farm' : '晒我的农场'}</h2>
         <div style="text-align:center;padding:30px 16px;color:var(--warm-text-soft);">⏳ ${lang === 'en' ? 'Making your card…' : '生成卡片中…'}</div>
       `);
 
@@ -290,7 +290,7 @@
         navigator.canShare({ files: [new File([this._lastBlob], 'farm.png', { type: 'image/png' })] }));
 
       const html = `
-        <h2 class="modal-title">📸 ${lang === 'en' ? 'Share my farm' : '晒我的农场'}</h2>
+        <h2 class="modal-title">${lang === 'en' ? 'Share my farm' : '晒我的农场'}</h2>
         <p style="text-align:center;font-size:13px;color:var(--warm-text-soft);margin:2px 0 10px;line-height:1.5;">
           ${lang === 'en'
             ? 'Long-press the image → send to a chat / save.'

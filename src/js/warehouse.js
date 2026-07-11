@@ -41,8 +41,8 @@
       const total = sellValue + bonus;
       const coin = '<span class="coin-icon"></span>';
 
-      const titleZh = '📦 我的仓库';
-      const titleEn = '📦 My Warehouse';
+      const titleZh = '我的仓库';
+      const titleEn = 'My Warehouse';
       const emptyZh = '仓库空空如也<br><span style="font-size:12px;color:var(--warm-text-soft);">先去地里种点东西收获吧</span>';
       const emptyEn = 'Your warehouse is empty<br><span style="font-size:12px;color:var(--warm-text-soft);">Plant + harvest some crops first</span>';
 
@@ -159,7 +159,7 @@
           </button>`;
 
       const html = `
-        <h2 class="modal-title">📦 ${lang === 'en' ? 'Silo is full!' : '仓库满了！'}</h2>
+        <h2 class="modal-title">${lang === 'en' ? 'Silo is full!' : '仓库满了！'}</h2>
         <p class="modal-subtitle">${lang === 'en'
           ? 'Pick one to keep harvesting:'
           : '挑一个继续收割:'}</p>

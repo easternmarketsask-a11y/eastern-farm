@@ -146,7 +146,7 @@
         ? `<div class="report-section-title">${Farm.i18n.t('report_good_header')}</div>${helpedHtml}` : '';
 
       const html = `
-        <h2 class="modal-title">🏡 ${Farm.i18n.t('report_title')}</h2>
+        <h2 class="modal-title">${Farm.i18n.t('report_title')}</h2>
         <div class="report-list">
           ${goodSection}
           ${badSection}

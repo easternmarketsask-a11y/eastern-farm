@@ -56,7 +56,7 @@
           </div>
         </div>` : '';
       const html = `
-        <h2 class="modal-title">🛒 ${Farm.i18n.t('shop_title')}</h2>
+        <h2 class="modal-title">${Farm.i18n.t('shop_title')}</h2>
         <p class="modal-subtitle">${Farm.i18n.t('shop_subtitle')}</p>
         <div class="seed-list">
           ${bagCard}

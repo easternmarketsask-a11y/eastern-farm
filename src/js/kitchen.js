@@ -176,7 +176,7 @@
       }).join('');
 
       const html = `
-        <h2 class="modal-title">🍳 ${lang === 'en' ? "Little East's Kitchen" : '小东厨房'}</h2>
+        <h2 class="modal-title">${lang === 'en' ? "Little East's Kitchen" : '小东厨房'}</h2>
         <p class="modal-subtitle">${lang === 'en'
           ? 'Turn warehouse crops into real Chinese dishes — Eastern Market pays extra for cooked food!'
           : '用仓库里的菜做真·中餐，卖给东方超市比散卖赚更多！'}</p>

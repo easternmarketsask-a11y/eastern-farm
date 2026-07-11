@@ -79,7 +79,7 @@
 
       const html = `
         <div class="guide-modal">
-          <h2 class="modal-title">📖 ${EN ? 'How to Play' : '怎么玩'}</h2>
+          <h2 class="modal-title">${EN ? 'How to Play' : '怎么玩'}</h2>
           <p class="modal-subtitle" style="margin-top:0;">${EN
             ? 'Everything you can do on the farm — at a glance.'
             : '在农场里能做的事，一页看明白。'}</p>

@@ -505,7 +505,7 @@
                    : renderJourney(lang);
 
     const html = `
-      <h2 class="modal-title">📖 ${Farm.i18n.t('collection_title')}</h2>
+      <h2 class="modal-title">${Farm.i18n.t('collection_title')}</h2>
       ${tabsHTML}
       <p class="modal-subtitle" style="margin-top:10px;">${subtitle}</p>
       <div id="collectionBody">${bodyHTML}</div>
@@ -664,7 +664,7 @@
     const tier = (Farm.audio && Farm.audio.currentTier) ? Farm.audio.currentTier() : 'normal';
     const ambientOn = !(Farm.audio && Farm.audio.ambientEnabled) ? true : Farm.audio.ambientEnabled();
     const html = `
-      <h2 class="modal-title">⚙️ ${Farm.i18n.t('settings_title')}</h2>
+      <h2 class="modal-title">${Farm.i18n.t('settings_title')}</h2>
 
       <div style="margin:16px 0;padding:12px;background:var(--cream-bg);border-radius:var(--radius-md);">
         <div style="font-weight:600;margin-bottom:8px;">${Farm.i18n.t('settings_language')}</div>

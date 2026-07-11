@@ -226,7 +226,7 @@
       const hl = (d.highC != null && d.lowC != null)
         ? `↑ ${d.highC}°  ↓ ${d.lowC}°` : null;
       const html = `
-        <h2 class="modal-title">🌤 ${lang === 'en' ? 'Saskatoon Weather' : '萨斯卡通天气'}</h2>
+        <h2 class="modal-title">${lang === 'en' ? 'Saskatoon Weather' : '萨斯卡通天气'}</h2>
         <div style="text-align:center;margin:6px 0 14px;">
           <div style="font-size:60px;line-height:1;">${code.emoji}</div>
           <div style="font-size:46px;font-weight:800;color:var(--leaf-dark);margin-top:6px;">${d.temperatureC}°<span style="font-size:24px;">C</span></div>

@@ -1306,6 +1306,30 @@
       if (y) y.onclick = () => { Farm.ui.hideModal(); go(); };
       if (n) n.onclick = () => Farm.ui.hideModal();
     },
+    // 贴纸风矢量锁（视觉第2批）：替换 canvas fillText('🔒') —— emoji 在不同平台
+    // 渲染彩色/黑白不一，矢量锁与 ui-icon sprite 同一套可可描边+金色语言。
+    // (x,y)=锁整体中心，s=整体尺寸，alpha=透明度。
+    _drawLock(x, y, s, alpha) {
+      const ctx = this._ctx;
+      ctx.save();
+      ctx.globalAlpha = alpha == null ? 1 : alpha;
+      ctx.lineJoin = 'round';
+      ctx.strokeStyle = '#4a3629';
+      // 锁环（上半圆弧）
+      ctx.lineWidth = Math.max(1, s * 0.13);
+      ctx.beginPath(); ctx.arc(x, y - s * 0.05, s * 0.27, Math.PI, 2 * Math.PI); ctx.stroke();
+      // 锁身（圆角矩形，金色）
+      const w = s * 0.95, h = s * 0.62, r = s * 0.16, bx = x - w / 2, by = y - s * 0.05;
+      ctx.beginPath();
+      if (ctx.roundRect) ctx.roundRect(bx, by, w, h, r);
+      else ctx.rect(bx, by, w, h);
+      ctx.fillStyle = '#f7c948'; ctx.fill();
+      ctx.lineWidth = Math.max(1, s * 0.09); ctx.stroke();
+      // 锁孔
+      ctx.fillStyle = '#4a3629';
+      ctx.beginPath(); ctx.arc(x, by + h * 0.42, s * 0.09, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+    },
     _drawPlot(plot, gx, gy, idx) {
       const ctx = this._ctx, tw = this._tw(), th = this._th(), c = this._cell(gx, gy);
       if (!plot.unlocked) {   // locked → a DIMMED tilled bed (consistent with the field) + lock badge
@@ -1319,13 +1343,11 @@
         const reqLv = REQUIRED_LV[idx] || 2;
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         if (reqLv === this._nextLockLv) {
+          this._drawLock(c.x, c.y - th * 0.1, th * 0.55, 1);
           ctx.fillStyle = '#fff';
-          ctx.font = (th * 0.5) + 'px sans-serif'; ctx.fillText('🔒', c.x, c.y - th * 0.08);
           ctx.font = 'bold ' + (th * 0.4) + 'px "Fredoka",sans-serif'; ctx.fillText('Lv' + reqLv, c.x, c.y + th * 0.4);
         } else {
-          ctx.save(); ctx.globalAlpha = 0.45;
-          ctx.font = (th * 0.3) + 'px sans-serif'; ctx.fillText('🔒', c.x, c.y + th * 0.1);
-          ctx.restore();
+          this._drawLock(c.x, c.y + th * 0.05, th * 0.3, 0.45);
         }
         return;
       }
