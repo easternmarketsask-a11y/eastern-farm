@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="ef-build" content="ef-2607110916">
 <meta name="theme-color" content="#3a7d2c">
 
 <!-- ==================== PWA (add to home screen) ==================== -->
@@ -39,7 +40,8 @@
      worldcup.js (standalone mode) auto-opens the hub on load; its ✕ returns to
      the farm game (index.html). Reads the same data/wc2026.json. -->
 <script>
-  // 与 index.html 一致:新 SW 接管时自动刷新一次,确保观赛台始终是最新代码。
+  // 与 index.html 一致的 PWA 新鲜度守卫（2026-07-11）：唤醒时补 SW 更新检查 + 版本
+  // 信标自愈，修 iOS 多标签页冻结导致的「永远刷不出新版」。详注见 index.html 页尾。
   if ('serviceWorker' in navigator) {
     var __hadController = !!navigator.serviceWorker.controller;
     navigator.serviceWorker.addEventListener('controllerchange', function () {
@@ -47,11 +49,34 @@
       window.__wcReloaded = true;
       window.location.reload();
     });
+    var __pageBuild = (function () { var m = document.querySelector('meta[name="ef-build"]'); return m ? m.getAttribute('content') : ''; })();
+    var __lastFresh = 0;
+    function __checkFresh() {
+      var now = Date.now();
+      if (now - __lastFresh < 20000) return;
+      __lastFresh = now;
+      try { navigator.serviceWorker.getRegistration().then(function (r) { if (r && r.update) { try { r.update(); } catch (e) {} } }); } catch (e) {}
+      if (!__pageBuild || __pageBuild === 'ef-dev') return;
+      fetch('/service-worker.js?v=' + now, { cache: 'no-store' })
+        .then(function (r) { return r.ok ? r.text() : ''; })
+        .then(function (src) {
+          var m = src.match(/CACHE_VERSION\s*=\s*'([^']+)'/), live = m && m[1];
+          if (!live || live === __pageBuild) return;
+          var healed = ''; try { healed = sessionStorage.getItem('ef_heal_ver') || ''; } catch (e) {}
+          if (healed === live) return;
+          try { sessionStorage.setItem('ef_heal_ver', live); } catch (e) {}
+          location.reload();
+        })
+        .catch(function () {});
+    }
     window.addEventListener('load', function () {
       navigator.serviceWorker.register('/service-worker.js', { scope: '/' })
         .then(function (reg) { if (reg && reg.update) { try { reg.update(); } catch (e) {} } })
         .catch(function () {});
+      __checkFresh();
     });
+    window.addEventListener('pageshow', function (e) { if (e && e.persisted) __lastFresh = 0; __checkFresh(); });
+    document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') __checkFresh(); });
   }
 </script>
 <script>window.WC_STANDALONE = true;</script>

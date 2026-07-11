@@ -33,6 +33,16 @@ if ! grep -q "CACHE_VERSION = '${STAMP}'" service-worker.js; then
 fi
 echo "▶ SW 缓存版本: ${STAMP}"
 
+# 0b. 把同一构建号烙进两个页面的 <meta ef-build>（PWA 新鲜度守卫据此判断本页是否过期）
+for hf in src/index.html src/worldcup.html; do
+  sed -i "s/\(<meta name=\"ef-build\" content=\"\)[^\"]*\(\">\)/\1${STAMP}\2/" "$hf"
+  if ! grep -q "name=\"ef-build\" content=\"${STAMP}\"" "$hf"; then
+    echo "✗ 构建号注入失败($hf 里找不到 ef-build meta?) —— 部署中止"
+    exit 1
+  fi
+done
+echo "▶ 页面构建号: ${STAMP}"
+
 # 1. 发布闸门 A: 全部 JS 语法检查(快、零依赖,AI 改坏最常见的一类错误)
 echo "▶ 闸门 A: JS 语法检查…"
 for f in src/js/*.js service-worker.js; do

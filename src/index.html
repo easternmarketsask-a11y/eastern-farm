@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#fdf8ee">
+<!-- 部署构建号（deploy.sh 每次注入 CACHE_VERSION 时间戳）。SW 新鲜度守卫据此
+     判断本页是否已过期（见页尾脚本）。ef-dev = 未部署的本地版本。 -->
+<meta name="ef-build" content="ef-2607110916">
 
 <!-- ==================== PWA (add to home screen) ==================== -->
 <link rel="manifest" href="manifest.webmanifest">
@@ -534,25 +537,53 @@
 <!-- Register the PWA service worker at root scope so it can cache the /src/
      app shell and apply network-first to /data/. Failure is non-fatal. -->
 <script>
+  /* ===== PWA 新鲜度守卫（2026-07-11，Chris 手机永远刷不出新版的根因修复）=====
+     根因：iOS Safari 标签页多时（Chris 39 个）会冻结后台标签页；切回农场是从冻结
+     快照恢复，`load` 不重新触发 → 只在 load 注册的 reg.update() 永不再跑 → 旧 SW
+     一直服务几周前的缓存代码。修法：① 标签页每次「唤醒」(pageshow/visibilitychange)
+     都补一次 SW 更新检查；② 版本信标兜底——cache-bust 抓线上 SW 的 CACHE_VERSION，
+     与本页部署时烙进的 <meta ef-build> 比对，不一致=本页已过期→硬刷新一次（防循环
+     用 sessionStorage 一次性闸）。本守卫必须内联在 HTML（导航 network-first，永远新）,
+     绝不能放进被 stale-while-revalidate 缓存的 JS 文件，否则自愈代码自己会被旧缓存困住。*/
   if ('serviceWorker' in navigator) {
-    // 新版本上线后自动应用:旧 SW 被新 SW 顶替(skipWaiting+clients.claim)时,
-    // controllerchange 触发 → 自动刷新一次,加载最新代码。免去用户手动清 PWA 缓存。
     var __hadController = !!navigator.serviceWorker.controller;
     navigator.serviceWorker.addEventListener('controllerchange', function () {
       if (!__hadController || window.__wcReloaded) return;   // 首次安装不刷;只刷一次
       window.__wcReloaded = true;
-      // 自动刷新前先同步 flush 一次存档（audit P0 (c) 2026-07-07）：这次 reload
-      // 不是用户导航，可能打断在途进度；localStorage.setItem 是同步的，flush 后
-      // 才 reload 保证最新状态已落盘（save 内部自带会话/读失败安全闸）。
+      // 刷新前同步 flush 存档（audit P0 (c)）：save() 内部自带会话/读失败安全闸。
       try { if (window.Farm && window.Farm.state && window.Farm.state.data) window.Farm.state.save(); } catch (e) {}
       window.location.reload();
     });
+    var __pageBuild = (function () {
+      var m = document.querySelector('meta[name="ef-build"]');
+      return m ? m.getAttribute('content') : '';
+    })();
+    var __lastFresh = 0;
+    function __checkFresh() {
+      var now = Date.now();
+      if (now - __lastFresh < 20000) return;   // 节流：pageshow+visibilitychange 常连发
+      __lastFresh = now;
+      // 1) 让 SW 去拉最新 service-worker.js（有新版→install→skipWaiting→activate→
+      //    controllerchange→上面自动刷新）。唤醒冻结标签页后这一步是关键补丁。
+      try { navigator.serviceWorker.getRegistration().then(function (r) { if (r && r.update) { try { r.update(); } catch (e) {} } }); } catch (e) {}
+      // 2) 版本信标自愈（iOS 上 SW 更新链本身不可靠，这条兜底）。
+      if (!__pageBuild || __pageBuild === 'ef-dev') return;
+      fetch('/service-worker.js?v=' + now, { cache: 'no-store' })
+        .then(function (r) { return r.ok ? r.text() : ''; })
+        .then(function (src) {
+          var m = src.match(/CACHE_VERSION\s*=\s*'([^']+)'/), live = m && m[1];
+          if (!live || live === __pageBuild) return;         // 已是最新
+          var healed = ''; try { healed = sessionStorage.getItem('ef_heal_ver') || ''; } catch (e) {}
+          if (healed === live) return;                        // 已为此版刷过一次 → 防循环
+          try { sessionStorage.setItem('ef_heal_ver', live); } catch (e) {}
+          try { if (window.Farm && window.Farm.state && window.Farm.state.data) window.Farm.state.save(); } catch (e) {}
+          location.reload();
+        })
+        .catch(function () {});
+    }
     window.addEventListener('load', function () {
-      // Defer registration off the first-visit download peak (B4 perf): SW install
-      // precaches 61 shell files, which otherwise competes with the ~3.2MB map
-      // download the moment the player enters the farm. requestIdleCallback (8s
-      // timeout fallback) lets the entry settle first. The controllerchange
-      // auto-refresh logic above is unchanged.
+      // 注册推迟到首屏下载高峰之后（B4 perf）：SW install 预缓存 61 个 shell 文件，
+      // 否则与进农场瞬间的 ~3.2MB 地图下载抢带宽。requestIdleCallback(8s 兜底)。
       var doRegister = function () {
         navigator.serviceWorker.register('/service-worker.js', { scope: '/' })
           .then(function (reg) { if (reg && reg.update) { try { reg.update(); } catch (e) {} } })
@@ -560,7 +591,11 @@
       };
       if (window.requestIdleCallback) window.requestIdleCallback(doRegister, { timeout: 8000 });
       else setTimeout(doRegister, 8000);
+      __checkFresh();
     });
+    // 冻结标签页恢复只发 pageshow / visibilitychange（不重跑 load）——补上唤醒检查。
+    window.addEventListener('pageshow', function (e) { if (e && e.persisted) __lastFresh = 0; __checkFresh(); });
+    document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') __checkFresh(); });
   }
 </script>
 
