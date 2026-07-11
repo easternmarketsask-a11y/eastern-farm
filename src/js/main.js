@@ -385,24 +385,26 @@
   // Bottom-sheet nav menu opened by the top-right hamburger (replaces the old bottom bar).
   function openNavMenu() {
     const lang = (Farm.state && Farm.state.data && Farm.state.data.language) || 'zh';
+    // 图标是 index.html 内嵌 sprite 的 symbol id（视觉升级第1批：chrome 不再用 emoji）。
     const items = [
-      { a: 'shop', icon: '🛒', zh: '种子店', en: 'Seeds' },
-      { a: 'tasks', icon: '📋', zh: '任务', en: 'Tasks' },
-      { a: 'orders', icon: '📦', zh: '小东订单', en: 'Orders' },
-      { a: 'storeRewards', icon: '🧾', zh: '领取到店奖励', en: 'Store Rewards' },
-      { a: 'kitchen', icon: '🍳', zh: '小东厨房', en: 'Kitchen' },
-      { a: 'community', icon: '🏘', zh: '社区', en: 'Community' },
-      { a: 'store', icon: '🛍️', zh: '农场商城', en: 'Mall' },
-      { a: 'expand', icon: '🗺️', zh: '扩建农场', en: 'Expand' },
-      { a: 'collection', icon: '📖', zh: '图鉴', en: 'Collection' },
-      { a: 'guide', icon: '❓', zh: '怎么玩', en: 'How to' },
-      { a: 'settings', icon: '⚙️', zh: '设置', en: 'Settings' },
+      { a: 'shop', icon: 'shop', zh: '种子店', en: 'Seeds' },
+      { a: 'tasks', icon: 'tasks', zh: '任务', en: 'Tasks' },
+      { a: 'orders', icon: 'orders', zh: '小东订单', en: 'Orders' },
+      { a: 'storeRewards', icon: 'receipt', zh: '领取到店奖励', en: 'Store Rewards' },
+      { a: 'kitchen', icon: 'kitchen', zh: '小东厨房', en: 'Kitchen' },
+      { a: 'community', icon: 'community', zh: '社区', en: 'Community' },
+      { a: 'store', icon: 'mall', zh: '农场商城', en: 'Mall' },
+      { a: 'expand', icon: 'expand', zh: '扩建农场', en: 'Expand' },
+      { a: 'collection', icon: 'collection', zh: '图鉴', en: 'Collection' },
+      { a: 'guide', icon: 'guide', zh: '怎么玩', en: 'How to' },
+      { a: 'settings', icon: 'settings', zh: '设置', en: 'Settings' },
     ];
     const grid = items.map(it =>
-      '<button class="nav-menu-item" data-nav="' + it.a + '"><span class="nav-menu-icon">' + it.icon +
+      '<button class="nav-menu-item" data-nav="' + it.a + '"><span class="nav-menu-icon">' +
+      '<svg class="ui-icon" aria-hidden="true"><use href="#ui-' + it.icon + '"/></svg>' +
       '</span><span class="nav-menu-label">' + (lang === 'en' ? it.en : it.zh) + '</span></button>'
     ).join('');
-    Farm.ui.showModal('<h2 class="modal-title">📂 ' + (lang === 'en' ? 'Menu' : '菜单') + '</h2><div class="nav-menu-grid">' + grid + '</div>');
+    Farm.ui.showModal('<h2 class="modal-title">' + (lang === 'en' ? 'Menu' : '菜单') + '</h2><div class="nav-menu-grid">' + grid + '</div>');
     document.querySelectorAll('#modalContent .nav-menu-item').forEach(btn => {
       btn.onclick = () => {
         if (Farm.audio) Farm.audio.play('tap');

@@ -2067,6 +2067,13 @@ body.mapmode #warehouseBtn { display: none !important; }
   background: rgba(58, 140, 80, 0.1);   /* 轻绿按压，贴品牌绿 #3a8c50 */
 }
 .action-icon { font-size: 21px; line-height: 1; }
+/* 手绘 SVG chrome 图标（sprite 在 index.html <body> 顶部，视觉升级第1批）。
+   尺寸跟随所在容器：dock 22px、汉堡/今日 20px、菜单弹窗 26px。 */
+.ui-icon { width: 22px; height: 22px; display: block; }
+.hamburger-icon .ui-icon, .today-icon .ui-icon { width: 20px; height: 20px; }
+.hamburger-icon, .today-icon { display: inline-flex; align-items: center; justify-content: center; }
+.nav-menu-icon .ui-icon { width: 26px; height: 26px; }
+.nav-menu-icon { display: inline-flex; align-items: center; justify-content: center; }
 .action-label {
   font-size: 10px;
   font-weight: 700;
