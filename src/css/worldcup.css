@@ -524,10 +524,11 @@
   background: #fff; box-shadow: 0 0 4px rgba(0,0,0,0.2); z-index: 5; }
 
 /* colored disc (spins) */
+/* 6 格交替：沙琪玛(琥珀) / 龙角散(绿) —— 顺序须与 worldcup.js 的 WHEEL_SEGS 一致 */
 .wc-wheel-disc { position: absolute; inset: 11px; border-radius: 50%; will-change: transform;
   background: conic-gradient(from 0deg,
-    var(--wc-pitch-soft) 0 60deg, #f6e3b4 60deg 120deg, var(--wc-amber) 120deg 180deg,
-    var(--wc-live) 180deg 240deg, #f6e3b4 240deg 300deg, #9ccc65 300deg 360deg);
+    var(--wc-amber) 0 60deg, var(--wc-pitch-soft) 60deg 120deg, var(--wc-amber) 120deg 180deg,
+    var(--wc-pitch-soft) 180deg 240deg, var(--wc-amber) 240deg 300deg, var(--wc-pitch-soft) 300deg 360deg);
   box-shadow: inset 0 0 0 4px rgba(255,255,255,0.85), inset 0 0 28px rgba(0,0,0,0.12); }
 .wc-wheel-disc::after { content: ''; position: absolute; inset: 0; border-radius: 50%;
   background: repeating-conic-gradient(from 0deg, rgba(255,255,255,0) 0 59.3deg, rgba(255,255,255,0.85) 59.3deg 60deg); }
@@ -567,6 +568,39 @@
 @keyframes wc-hub-pulse { 0%,100% { box-shadow: 0 4px 12px rgba(58,125,44,0.45); } 50% { box-shadow: 0 4px 20px rgba(106,176,76,0.8); } }
 
 .wc-wheel-result { margin-top: 12px; }
+
+/* ===================== HERO 首屏大转盘 (2026-07-08) ===================== */
+.wc-hero { margin: 10px 12px 2px; }
+.wc-hero[hidden] { display: none !important; }
+.wc-hero-card { position: relative; text-align: center;
+  background: linear-gradient(165deg, #fff8e8, #fdeccb);
+  border: 1px solid #f0d28a; border-radius: 16px; padding: 15px 14px 14px;
+  box-shadow: 0 6px 20px rgba(160,110,20,0.14); }
+.wc-hero-card.ready::before { content: ''; position: absolute; inset: 0; border-radius: 16px;
+  box-shadow: inset 0 0 0 2px rgba(246,198,107,0.55); pointer-events: none; }
+.wc-hero-h { font-family: var(--font-display); font-size: 19px; color: var(--wc-amber-deep); letter-spacing: 0.3px; }
+.wc-hero-sub { font-size: 13px; color: var(--wc-soft); margin: 5px 4px 0; line-height: 1.55; }
+.wc-hero-sub b { color: var(--wc-amber-deep); font-weight: 800; }
+/* 可选「猜晋级」区 */
+.wc-hero-guess { margin: 12px 0 2px; padding: 11px 6px 2px; border-top: 1px dashed #ecd39a; }
+.wc-hero-guess-t { font-size: 13px; color: var(--wc-ink); font-weight: 700; margin-bottom: 9px; }
+.wc-hero-guess-t span { font-weight: 500; font-size: 11.5px; color: var(--wc-soft); margin-left: 4px; }
+.wc-hero .wc-lotto-picks { margin-bottom: 2px; }
+/* 转盘(hero 内略小,避免吃满屏) */
+.wc-hero-wheel { --wc-wheel-size: min(240px, 62vw);
+  --wc-wheel-r: calc(var(--wc-wheel-size) * 0.30);
+  --wc-wheel-dotr: calc(var(--wc-wheel-size) * 0.452);
+  text-align: center; margin: 10px auto 2px; }
+.wc-hero-foot { margin-top: 12px; font-size: 12.5px; color: var(--wc-soft); line-height: 1.5; }
+.wc-hero-foot .vs { color: var(--wc-amber-deep); font-weight: 700; margin: 0 2px; }
+/* hero 按钮 */
+.wc-hero-btn { display: inline-block; margin: 11px 4px 2px; padding: 11px 20px;
+  font-family: var(--font-display); font-size: 15.5px; color: #fff; text-decoration: none;
+  background: linear-gradient(160deg, #6ab04c, var(--wc-pitch)); border: none; border-radius: var(--radius-pill);
+  box-shadow: 0 4px 12px rgba(58,125,44,0.35); cursor: pointer; transition: transform 0.12s; }
+.wc-hero-btn:active { transform: scale(0.97); }
+.wc-hero-btn.ghost { background: #fff; color: var(--wc-pitch); box-shadow: inset 0 0 0 1.5px #cfe6bf; }
+.wc-hero-btn.again { animation: wc-gate-cta 1.6s ease-in-out infinite; }
 
 /* ===================== STREAK TOAST (easter egg) ===================== */
 .wc-streak {
@@ -643,6 +677,7 @@
   .wc-lotto-banner { animation: none !important; }
   .wc-gate-go { animation: none !important; }
   .wc-gate-emoji { animation: none !important; }
+  .wc-hero-btn.again { animation: none !important; }
   .wc-pulse::after { animation: none !important; }
   #wc-hub *, #wc-hub *::before, #wc-hub *::after { scroll-behavior: auto !important; }
 }

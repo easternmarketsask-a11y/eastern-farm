@@ -225,6 +225,9 @@
         Farm.ui.refreshHUD();
       }
       if (Farm.audio) Farm.audio.play('coin');
+      // Haptic on the "money moment" — a slightly richer pattern than a single
+      // pick pulse. iOS Safari ignores vibrate() but it's harmless there.
+      if (navigator.vibrate) { try { navigator.vibrate([15, 40, 15]); } catch (_) {} }
 
       // Celebration toast with breakdown
       const coin = '<span class="coin-icon"></span>';

@@ -280,7 +280,18 @@
 
       if (Farm.harvestStatus) Farm.harvestStatus.render();
 
-      if (Farm.audio) Farm.audio.play('harvest');
+      // Combo: rapid consecutive harvests within COMBO_WINDOW build a streak.
+      // Computed BEFORE the harvest chime so each consecutive pick steps the
+      // pitch up a semitone (Hay Day-style do-re-mi), resetting after 1.5s idle.
+      const _now = Date.now();
+      _comboCount = (_now - _comboLast < COMBO_WINDOW) ? _comboCount + 1 : 1;
+      _comboLast = _now;
+      const _comboStep = Math.min(_comboCount - 1, 7);
+
+      if (Farm.audio) Farm.audio.play('harvest', { step: _comboStep });
+      // Short haptic pulse on every pick — the tactile half of Hay Day's
+      // harvest feel. iOS Safari ignores vibrate() but it's harmless there.
+      if (navigator.vibrate) { try { navigator.vibrate(15); } catch (_) {} }
 
       // Polish: play the "pop" animation BEFORE the grid re-render wipes
       // this plot. The crop scales up + fades out so picking feels alive.
@@ -310,11 +321,6 @@
       // V2: floating "📦 +1" feedback since coins aren't credited until
       // delivery. EP bonuses (jackpot etc.) still float separately because
       // those ARE credited immediately on harvest.
-      // Combo: rapid consecutive harvests build a streak count.
-      const _now = Date.now();
-      _comboCount = (_now - _comboLast < COMBO_WINDOW) ? _comboCount + 1 : 1;
-      _comboLast = _now;
-
       if (evt && evt.target) {
         const rect = evt.target.getBoundingClientRect();
         const lang = Farm.state.data.language;
@@ -339,7 +345,7 @@
         if (_comboCount >= 2) {
           Farm.ui.floatText('🔥 ' + (lang === 'en' ? 'Combo ×' : '连击 ×') + _comboCount,
             rect.left + rect.width/2 - 22, rect.top - 24, '#c44536');
-          if (Farm.audio) Farm.audio.play('coin');
+          if (Farm.audio) Farm.audio.play('coin', { step: _comboStep });
         }
       }
 

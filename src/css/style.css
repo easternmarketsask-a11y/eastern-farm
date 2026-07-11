@@ -2040,6 +2040,9 @@ body.mapmode #warehouseBtn { display: none !important; }
   box-shadow: 0 3px 10px rgba(139, 90, 60, 0.16);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
+  /* B7: fade/slide the dock out/in as a modal opens/closes instead of a hard
+     display:none snap. */
+  transition: opacity 0.2s ease, transform 0.2s ease;
 }
 .action-btn {
   flex: 1 1 0;

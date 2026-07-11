@@ -196,6 +196,16 @@
     // so they're not hidden under the splash overlay.
     wireNav();
     wireTodayButton();
+    // Global tap-sound delegation (B7): every .btn / .ds-btn / close-x / menu
+    // item plays the UI click once, so button audio is consistent instead of
+    // sampled per hand-wired onclick. audio.play('tap') dedupes within 60ms, so
+    // buttons that still call play('tap') themselves won't double up.
+    document.addEventListener('pointerdown', (e) => {
+      const t = e.target;
+      if (!t || !t.closest) return;
+      const btn = t.closest('.btn, .ds-btn, .modal-close-x, .nav-menu-item, .action-btn');
+      if (btn && !btn.disabled && window.Farm && Farm.audio) Farm.audio.play('tap');
+    }, true);
     // Tap the Lv/title status strip to open the growth roadmap (成长之路).
     const statusbarEl = document.getElementById('statusbar');
     if (statusbarEl) {
@@ -649,9 +659,8 @@
 
   function openSettings() {
     const lang = Farm.state.data.language;
-    const muted = Farm.audio && Farm.audio.isMuted();
-    const soundOnLabel = lang === 'en' ? '🔊 On' : '🔊 开';
-    const soundOffLabel = lang === 'en' ? '🔇 Off' : '🔇 静音';
+    const tier = (Farm.audio && Farm.audio.currentTier) ? Farm.audio.currentTier() : 'normal';
+    const ambientOn = !(Farm.audio && Farm.audio.ambientEnabled) ? true : Farm.audio.ambientEnabled();
     const html = `
       <h2 class="modal-title">⚙️ ${Farm.i18n.t('settings_title')}</h2>
 
@@ -666,9 +675,15 @@
       <div style="margin:16px 0;padding:12px;background:var(--cream-bg);border-radius:var(--radius-md);">
         <div style="font-weight:600;margin-bottom:8px;">${Farm.i18n.t('settings_sound')}</div>
         <div style="display:flex;gap:8px;">
-          <button class="btn ${!muted ? '' : 'secondary'}" id="soundOn" style="flex:1;">${soundOnLabel}</button>
-          <button class="btn ${muted ? '' : 'secondary'}" id="soundOff" style="flex:1;">${soundOffLabel}</button>
+          <button class="btn ${tier === 'normal' ? '' : 'secondary'}" id="soundNormal" style="flex:1;">${lang === 'en' ? '🔊 Normal' : '🔊 正常'}</button>
+          <button class="btn ${tier === 'low' ? '' : 'secondary'}" id="soundLow" style="flex:1;">${lang === 'en' ? '🔉 Low' : '🔉 小声'}</button>
+          <button class="btn ${tier === 'off' ? '' : 'secondary'}" id="soundOff" style="flex:1;">${lang === 'en' ? '🔇 Off' : '🔇 关'}</button>
         </div>
+        <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;margin-top:10px;padding-top:10px;border-top:1px dashed var(--border-soft);">
+          <input id="ambientToggle" type="checkbox" ${ambientOn ? 'checked' : ''}
+                 style="width:16px;height:16px;cursor:pointer;"/>
+          <span>${lang === 'en' ? '🍃 Background farm ambience (wind + birds)' : '🍃 农场环境声（轻风 + 鸟鸣）'}</span>
+        </label>
       </div>
 
       <div style="margin:16px 0;padding:12px;background:var(--cream-bg);border-radius:var(--radius-md);">
@@ -742,17 +757,24 @@
     };
     document.getElementById('langZh').onclick = () => applyLanguage('zh');
     document.getElementById('langEn').onclick = () => applyLanguage('en');
-    document.getElementById('soundOn').onclick = () => {
-      if (Farm.audio) {
-        Farm.audio.setMuted(false);
-        Farm.audio.play('tap');  // confirmation blip
-      }
+    document.getElementById('soundNormal').onclick = () => {
+      if (Farm.audio) { Farm.audio.setVolumeTier('normal'); Farm.audio.play('tap'); }
+      openSettings();
+    };
+    document.getElementById('soundLow').onclick = () => {
+      if (Farm.audio) { Farm.audio.setVolumeTier('low'); Farm.audio.play('tap'); }
       openSettings();
     };
     document.getElementById('soundOff').onclick = () => {
-      if (Farm.audio) Farm.audio.setMuted(true);
+      if (Farm.audio) Farm.audio.setVolumeTier('off');
       openSettings();
     };
+    const ambientEl = document.getElementById('ambientToggle');
+    if (ambientEl) {
+      ambientEl.onchange = () => {
+        if (Farm.audio && Farm.audio.setAmbientEnabled) Farm.audio.setAmbientEnabled(ambientEl.checked);
+      };
+    }
     // Farm display: decoration visibility toggle
     const decoEl = document.getElementById('decoToggle');
     if (decoEl) {

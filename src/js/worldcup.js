@@ -348,12 +348,6 @@
           '<button class="wc-close" id="wcClose" aria-label="关闭 Close">✕</button>' +
         '</div>' +
       '</div>' +
-      '<button class="wc-lotto-banner" id="wcLottoBanner" hidden>' +
-        '<span class="bn">' +
-          '<span class="bn-l1">🎁 淘汰赛竞猜有礼进行中</span>' +
-          '<span class="bn-l2">会员参与即得好礼 <i class="bn-go">›</i></span>' +
-        '</span>' +
-      '</button>' +
       '<button class="wc-myprizes-btn" id="wcMyPrizes" hidden>🎁 我的奖品 · 兑奖码 ›</button>' +
       '<div class="wc-tabs" role="tablist">' +
         tabBtn('schedule', '赛程赛果', 'SCHEDULE') +
@@ -361,6 +355,7 @@
         tabBtn('bracket', '对阵图', 'BRACKET') +
       '</div>' +
       '<div class="wc-body">' +
+        '<div class="wc-hero" id="wcHero" hidden></div>' +
         '<section id="wc-schedule"></section>' +
         '<section id="wc-standings" hidden></section>' +
         '<section id="wc-bracket" hidden></section>' +
@@ -371,23 +366,9 @@
     Array.prototype.forEach.call(hub.querySelectorAll('.wc-tabs button'), function (b) {
       b.onclick = function () { switchTab(b.getAttribute('data-tab')); };
     });
-    var lb = hub.querySelector('#wcLottoBanner');
-    // 2026-07-04 Chris：登录后点横幅要直接进大转盘（最少步数）。
-    // 未登录 → 先走登录（关 hub 开登录弹窗，与竞猜卡登录入口同路）；
-    // 已登录 → 直落「最近一场还没玩过」的竞猜卡（自动展开+定位）；
-    // 可玩场次都玩过了/暂无对阵 → 才打开竞猜中心总览。
-    if (lb) lb.onclick = function () {
-      var u = lottoUser();
-      if (!u || !(Farm.fbAuth && Farm.fbAuth.memberDoc)) { loginFromHub(); return; }
-      lottoLoadMine().then(function (mine) {
-        var next = (data.matches || []).filter(function (m) {
-          return isKO(m) && lottoOpen(m) && isTeam(m.home) && isTeam(m.away) && !mine[m.id];
-        }).sort(function (a, b) { return new Date(a.kickoffUtc) - new Date(b.kickoffUtc); })[0];
-        if (next) openLottoMatch(next); else openLottoCenter();
-      }).catch(function () { openLottoCenter(); });
-    };
     var mp = hub.querySelector('#wcMyPrizes');
     if (mp) mp.onclick = openMyPrizes;
+    renderHero();   // 首屏大转盘（会员一进来直接看到、直接能转）
   }
 
   // 有"可报名(开球前、双方已定)"的淘汰赛场 → 横幅出现,点它直达最近一场竞猜
@@ -398,11 +379,10 @@
   }
   function updateLottoBanner() {
     if (!hub) return;
-    var lb = hub.querySelector('#wcLottoBanner');
-    if (lb) lb.hidden = !nearestLottoMatch();
     var mp = hub.querySelector('#wcMyPrizes');
     // 有 Firebase(农场内)就显示;点击时再按登录态给反馈(避开 hub 打开时 auth 尚未就绪的时序)
     if (mp) mp.hidden = !fbReady();
+    renderHero();   // 首屏大转盘按登录/场次/次数状态刷新（自带守卫，不打断进行中的转盘）
   }
   function openLottoMatch(m) {
     switchTab('schedule');
@@ -484,10 +464,15 @@
       document.body.appendChild(hub);    // ensure on top
       hub.classList.remove('wc-closing');
       hub.style.display = 'flex';
+      heroReset();               // 重开 → 大转盘回到就绪态(不残留上次结果)
       switchTab('schedule');
       startTimers();
       checkStreak();
       refreshLive();          // pull live scores in the background, re-render when ready
+      // 登录态可能在 hub 打开后才就绪 → 轻量补渲染几次让大转盘尽快显示(sig/busy 守卫,重复调用无副作用)
+      [500, 1500, 3000].forEach(function (ms) {
+        setTimeout(function () { if (hub && hub.style.display !== 'none') renderHero(); }, ms);
+      });
     }).catch(function (e) {
       console.error('[wc] data load failed', e);
       if (Farm.ui) Farm.ui.toast('观赛台数据加载失败，请检查网络');
@@ -1075,25 +1060,29 @@
   }
 
   // ---- 幸运转盘(揭晓动画;结果由后台报名即抽时定好,转盘必停在真奖)----
-  // 6 格,顺序须与 worldcup.css 里 conic-gradient 一致(从 0° 顺时针):
-  // 0 绿=龙角散 / 1 金=1000币 / 2 琥珀=沙琪玛 / 3 红=气泡饮原味 / 4 金=2000币 / 5 浅绿=气泡饮青提
+  // 2026-07-08 Chris：汽水下架，奖池只剩沙琪玛+龙角散且必中实物 → 转盘 6 格
+  // 全部换成这两款实物照片(交替)，每转必停在真实抽到的那款。1000 农场币做保底
+  // (每转都送)，不占轮盘格，转完在结果卡里另外显示。
+  // 6 格顺序须与 worldcup.css 里 .wc-wheel-disc 的 conic-gradient 一致(从 0° 顺时针):
+  // 0 琥珀=沙琪玛 / 1 绿=龙角散 / 2 琥珀=沙琪玛 / 3 绿=龙角散 / 4 琥珀=沙琪玛 / 5 绿=龙角散
   var WHEEL_SEGS = [
-    { key: 'ryukakusan',    label: '龙角散',       img: 'ryukakusan.webp',    emoji: '🫙', dark: true },
-    { key: 'coins1000',     label: '农场币<br><b class="amt">1000</b>', coin: true, dark: false },
-    { key: 'shaqima',       label: '沙琪玛',       img: 'shaqima.webp',       emoji: '🍪', dark: true },
-    { key: 'yogurt_orig',   label: '气泡饮·原味',  img: 'yogurt_orig.webp',   emoji: '🥤', dark: true },
-    { key: 'coins2000',     label: '农场币<br><b class="amt">2000</b>', coin: true, dark: false },
-    { key: 'yogurt_muscat', label: '气泡饮·青提',  img: 'yogurt_muscat.webp', emoji: '🍇', dark: true }
+    { key: 'shaqima',    label: '沙琪玛', img: 'shaqima.webp',    emoji: '🍪', dark: true },
+    { key: 'ryukakusan', label: '龙角散', img: 'ryukakusan.webp', emoji: '🫙', dark: true },
+    { key: 'shaqima',    label: '沙琪玛', img: 'shaqima.webp',    emoji: '🍪', dark: true },
+    { key: 'ryukakusan', label: '龙角散', img: 'ryukakusan.webp', emoji: '🫙', dark: true },
+    { key: 'shaqima',    label: '沙琪玛', img: 'shaqima.webp',    emoji: '🍪', dark: true },
+    { key: 'ryukakusan', label: '龙角散', img: 'ryukakusan.webp', emoji: '🫙', dark: true }
   ];
+  // 抽到的奖 → 停在哪一格(同款有 3 格,随机挑一格增加变化)。
+  // 返回 -1 = 本次没中实物(仅农场币，库存抽空时的兜底)，调用方跳过转盘直接揭晓币。
   function wheelTargetIndex(win) {
-    var p = win.prize;
-    if (p === 'ryukakusan') return 0;
-    if (p === 'shaqima') return 2;
-    if (p === 'yogurt_orig') return 3;
-    if (p === 'yogurt_muscat') return 5;
-    return (win.coins && win.coins >= 2000) ? 4 : 1;   // coins
+    var p = win.prize, idxs = [];
+    for (var i = 0; i < WHEEL_SEGS.length; i++) if (WHEEL_SEGS[i].key === p) idxs.push(i);
+    if (!idxs.length) return -1;
+    return idxs[Math.floor(Math.random() * idxs.length)];
   }
-  function wheelStageHtml(win) {
+  // 只产出「舞台」(指针+圆盘+标签+GO)，不含外卡片/标题 —— hero 与埋点转盘共用。
+  function wheelStageInner() {
     var labs = '';
     for (var i = 0; i < 6; i++) {
       var s = WHEEL_SEGS[i], home = i * 60 + 30;
@@ -1110,48 +1099,61 @@
     var dots = '';
     for (var d = 0; d < 12; d++)
       dots += '<i class="wc-wheel-dot" style="transform:translate(-50%,-50%) rotate(' + (d * 30) + 'deg) translateY(calc(-1 * var(--wc-wheel-dotr)))"></i>';
-    var head = win.correct ? '🎯 你猜中了晋级队,好礼加码!' : '🎁 转一转,揭晓你的专属好礼';
-    return '<div class="wc-lotto-card wc-wheel-card">' +
-      '<div class="wc-wheel-title">🎡 好礼转盘 · 揭晓你的礼物</div>' +
-      '<div class="wc-wheel-sub">' + head + '</div>' +
-      '<div class="wc-wheel-stage">' +
+    return '<div class="wc-wheel-stage">' +
         '<i class="wc-wheel-ptr"></i>' +
         '<div class="wc-wheel-ring">' + dots +
           '<div class="wc-wheel-disc"></div>' +
           '<div class="wc-wheel-labels">' + labs + '</div>' +
-          '<button class="wc-wheel-hub" type="button"><span class="go">GO</span><span class="gs">点击转动</span></button>' +
+          '<button class="wc-wheel-hub" type="button"><span class="go">GO</span><span class="gs">点击抽奖</span></button>' +
         '</div>' +
       '</div>' +
-      '<div class="wc-wheel-result" style="display:none"></div>' +
+      '<div class="wc-wheel-result" style="display:none"></div>';
+  }
+  function wheelStageHtml(win) {
+    var head = win.correct ? '🎯 你猜中了晋级队,好礼加码!' : '🎁 转一转,揭晓你的专属好礼';
+    return '<div class="wc-lotto-card wc-wheel-card">' +
+      '<div class="wc-wheel-title">🎡 好礼转盘 · 揭晓你的礼物</div>' +
+      '<div class="wc-wheel-sub">' + head + '</div>' +
+      wheelStageInner() +
     '</div>';
   }
-  function wireWheel(el, m, win, u) {
-    // 默认先显 emoji,照片加载成功才换上(永不出现破图)
+  // 破图守护:默认显 emoji,照片加载成功才换上
+  function wireWheelPhotos(el) {
     Array.prototype.forEach.call(el.querySelectorAll('.wc-wheel-photo'), function (img) {
       if (img.complete && img.naturalWidth > 0) img.classList.add('ok');
       else img.onload = function () { this.classList.add('ok'); };
     });
+  }
+  // 把圆盘+标签旋到中奖格正中停在顶部指针下,动画结束(或兜底超时)回调一次。
+  function spinWheelTo(el, idx, done) {
     var disc = el.querySelector('.wc-wheel-disc');
     var layer = el.querySelector('.wc-wheel-labels');
-    var hub = el.querySelector('.wc-wheel-hub');
     var lis = el.querySelectorAll('.wc-wheel-lab .li');
-    if (!disc || !layer || !hub) return;
+    if (!disc || !layer) { done(); return; }
+    var R = 360 * 6 - (idx * 60 + 30);
+    var T = 'transform 4.4s cubic-bezier(.15,.72,.18,1)';
+    disc.style.transition = T; disc.style.transform = 'rotate(' + R + 'deg)';
+    layer.style.transition = T; layer.style.transform = 'rotate(' + R + 'deg)';
+    Array.prototype.forEach.call(lis, function (li) {
+      var home = parseFloat(li.getAttribute('data-home')) || 0;
+      li.style.transition = T;
+      li.style.transform = 'translate(-50%,-50%) rotate(' + (-home - R) + 'deg)';  // 反向自转保持正立
+    });
+    var fired = false;
+    var fin = function () { if (fired) return; fired = true; disc.removeEventListener('transitionend', fin); done(); };
+    disc.addEventListener('transitionend', fin);
+    setTimeout(fin, 4900);   // 兜底
+  }
+  function wireWheel(el, m, win, u) {
+    wireWheelPhotos(el);
+    var hub = el.querySelector('.wc-wheel-hub');
+    if (!hub) return;
     var idx = wheelTargetIndex(win);
     hub.addEventListener('click', function () {
       if (hub._spun) return; hub._spun = true;
+      if (idx < 0) { revealResult(el, m, win, u); return; }   // 仅农场币(库存抽空) → 不转，直接揭晓
       hub.classList.add('spinning'); hub.disabled = true;
-      var R = 360 * 6 - (idx * 60 + 30);   // 中奖格正中停在顶部指针下
-      var T = 'transform 4.4s cubic-bezier(.15,.72,.18,1)';
-      disc.style.transition = T; disc.style.transform = 'rotate(' + R + 'deg)';
-      layer.style.transition = T; layer.style.transform = 'rotate(' + R + 'deg)';
-      Array.prototype.forEach.call(lis, function (li) {
-        var home = parseFloat(li.getAttribute('data-home')) || 0;
-        li.style.transition = T;
-        li.style.transform = 'translate(-50%,-50%) rotate(' + (-home - R) + 'deg)';  // 反向自转保持正立
-      });
-      var done = function () { disc.removeEventListener('transitionend', done); revealResult(el, m, win, u); };
-      disc.addEventListener('transitionend', done);
-      setTimeout(done, 4900);   // 兜底
+      spinWheelTo(el, idx, function () { revealResult(el, m, win, u); });
     });
   }
   function revealResult(el, m, win, u) {
@@ -1182,6 +1184,166 @@
   function lottoRevealKey(uid, id) { return 'wc_lotto_rv_' + uid + '_' + id; }
   function lottoSeenReveal(uid, id) { try { return localStorage.getItem(lottoRevealKey(uid, id)) === '1'; } catch (e) { return false; } }
   function lottoMarkReveal(uid, id) { try { localStorage.setItem(lottoRevealKey(uid, id), '1'); } catch (e) {} }
+
+  /* ===== 首屏大转盘 HERO（2026-07-08 Chris：进观赛台就直接看到大转盘、直接能转。
+     混合玩法：直接转必中实物(沙琪玛/龙角散)；顺手猜晋级队猜对农场币翻倍(可选)。
+     渲染进 .wc-body 顶部的 #wcHero，自带守卫：转盘进行中/结果展示中不被 60s 刷新打断。） ===== */
+  var heroState = { sig: null, busy: false, picked: null, exhausted: false };
+  function heroReset() { heroState.busy = false; heroState.sig = null; heroState.picked = null; }
+  function heroEl() { return hub && hub.querySelector('#wcHero'); }
+  function heroNextMatch(mine) {
+    return (data.matches || []).filter(function (m) {
+      return isKO(m) && lottoOpen(m) && isTeam(m.home) && isTeam(m.away) && !mine[m.id];
+    }).sort(function (a, b) { return new Date(a.kickoffUtc) - new Date(b.kickoffUtc); })[0];
+  }
+  function heroShell(title, sub, bodyHtml, sig) {
+    var el = heroEl(); if (!el) return null;
+    heroState.sig = sig; el.hidden = false;
+    el.innerHTML = '<div class="wc-hero-card">' +
+      '<div class="wc-hero-h">' + title + '</div>' +
+      '<div class="wc-hero-sub">' + sub + '</div>' + bodyHtml + '</div>';
+    return el;
+  }
+  function renderHero() {
+    var el = heroEl();
+    if (!el) return;
+    if (heroState.busy) return;                 // 转盘进行中 / 结果展示中：绝不打断
+
+    if (!fbReady()) {                           // standalone 无 Firebase → 引导进农场
+      if (heroState.sig === 'nofb') return;
+      heroShell('🎡 好礼大转盘 · 会员专属',
+        '转一转必中实物好礼 🥠 沙琪玛 / 龙角散 到店领',
+        '<a class="wc-hero-btn" href="index.html">进农场登录参与 ›</a>', 'nofb');
+      return;
+    }
+    var u = lottoUser();
+    if (!u) {
+      if (heroState.sig === 'nologin') return;
+      var e2 = heroShell('🎡 好礼大转盘 · 会员专属',
+        '转一转必中实物好礼 🥠 沙琪玛 / 龙角散 到店领 · 再送 1000 农场币',
+        '<button class="wc-hero-btn" data-act="login">登录参与 ›</button>', 'nologin');
+      var b = e2 && e2.querySelector('[data-act="login"]'); if (b) b.onclick = loginFromHub;
+      return;
+    }
+    if (!(Farm.fbAuth && Farm.fbAuth.memberDoc)) {   // 登录了但不是会员
+      if (heroState.sig === 'nomember') return;
+      var e3 = heroShell('🎡 好礼大转盘 · 会员专属',
+        '请用你在东方超市登记的会员手机号登录参与 🎁',
+        '<button class="wc-hero-btn" data-act="login">用会员手机号登录 ›</button>', 'nomember');
+      var bm = e3 && e3.querySelector('[data-act="login"]'); if (bm) bm.onclick = loginFromHub;
+      return;
+    }
+    if (heroState.exhausted) {                   // 今日 2 次用完(服务器判定后置位)
+      if (heroState.sig === 'exhausted') return;
+      var e4 = heroShell('🎡 好礼大转盘',
+        '今天的 2 次机会用完啦 🎁 明天再来转，实物继续送',
+        '<button class="wc-hero-btn ghost" data-act="prizes">🎁 看我的奖品 · 兑奖码 ›</button>', 'exhausted');
+      var bp0 = e4 && e4.querySelector('[data-act="prizes"]'); if (bp0) bp0.onclick = openMyPrizes;
+      return;
+    }
+    // 已登录会员：按「我的中奖」决定目标场次(最近一场还没转过的开放淘汰赛)
+    lottoLoadMine().then(function (mine) {
+      if (heroState.busy) return;                // 期间用户已开转 → 别覆盖
+      var el2 = heroEl(); if (!el2) return;
+      var m = heroNextMatch(mine || {});
+      if (!m) {
+        var anyOpen = (data.matches || []).some(function (x) {
+          return isKO(x) && lottoOpen(x) && isTeam(x.home) && isTeam(x.away);
+        });
+        var sg = anyOpen ? 'played' : 'nomatch';
+        if (heroState.sig === sg) return;
+        var e5 = heroShell('🎡 好礼大转盘',
+          anyOpen ? '本轮开放的场次你都转过啦 🎉 下一轮对阵确定后自动开放'
+                  : '下一场淘汰赛对阵确定后，转盘自动开放，稍后再来 ⚽',
+          '<button class="wc-hero-btn ghost" data-act="prizes">🎁 看我的奖品 · 兑奖码 ›</button>', sg);
+        var bp = e5 && e5.querySelector('[data-act="prizes"]'); if (bp) bp.onclick = openMyPrizes;
+        return;
+      }
+      var sig = 'ready:' + m.id;
+      if (heroState.sig === sig) return;          // 已是这场就绪转盘 → 别重画(保住 idle 态)
+      heroState.sig = sig; heroState.picked = null;
+      el2.hidden = false;
+      el2.innerHTML = heroReadyHtml(m);
+      wireHeroReady(el2, m, u);
+    }).catch(function () { /* 读失败 → 保持现状 */ });
+  }
+  function heroReadyHtml(m) {
+    var pick = '<div class="wc-hero-guess">' +
+      '<div class="wc-hero-guess-t">🔮 顺手猜谁晋级？<span>猜中农场币翻倍 · 可选</span></div>' +
+      '<div class="wc-lotto-picks">' + teamPickBtn(m, m.home) +
+        '<span class="wc-lotto-vs">VS</span>' + teamPickBtn(m, m.away) + '</div></div>';
+    return '<div class="wc-hero-card ready">' +
+      '<div class="wc-hero-h">🎡 好礼大转盘 · 会员专属</div>' +
+      '<div class="wc-hero-sub">转一转 <b>必中实物好礼</b> 🥠 沙琪玛 / 龙角散 到店领 · 再送 <span class="coin-icon"></span> 1000 农场币</div>' +
+      pick +
+      '<div class="wc-hero-wheel">' + wheelStageInner() + '</div>' +
+      '<div class="wc-hero-foot">🎁 当前场次 ' + (flag(m.home) || '⚽') + ' ' + esc(cn(m.home)) +
+        ' <span class="vs">vs</span> ' + (flag(m.away) || '⚽') + ' ' + esc(cn(m.away)) + ' · 每天 2 次机会</div>' +
+    '</div>';
+  }
+  function wireHeroReady(el, m, u) {
+    var wheelWrap = el.querySelector('.wc-hero-wheel');
+    if (wheelWrap) wireWheelPhotos(wheelWrap);
+    Array.prototype.forEach.call(el.querySelectorAll('.wc-lotto-pick'), function (btn) {
+      btn.onclick = function () {
+        if (heroState.busy) return;
+        var was = btn.classList.contains('sel');
+        heroState.picked = was ? null : btn.getAttribute('data-team');   // 再点一次可取消
+        Array.prototype.forEach.call(el.querySelectorAll('.wc-lotto-pick'), function (b) {
+          b.classList.toggle('sel', b === btn && !was);
+        });
+      };
+    });
+    var hubBtn = el.querySelector('.wc-wheel-hub');
+    if (!hubBtn) return;
+    hubBtn.addEventListener('click', function () {
+      if (heroState.busy) return;
+      var fn = Farm.fb && Farm.fb.callable && Farm.fb.callable('wcLotteryEnter');
+      if (!fn) { if (Farm.ui) Farm.ui.toast('暂时无法参与,请稍后重试'); return; }
+      heroState.busy = true;
+      hubBtn.classList.add('spinning'); hubBtn.disabled = true;
+      var gs = hubBtn.querySelector('.gs'); if (gs) gs.textContent = '抽奖中…';
+      Array.prototype.forEach.call(el.querySelectorAll('.wc-lotto-pick'), function (b) { b.disabled = true; });
+      // 报名即抽:不猜球传哨兵 '-'(永不等于任何晋级队 → 拿不到猜对加码,但照样必中实物)
+      fn({ matchId: m.id, pickedTeam: heroState.picked || '-', name: u.name, phone: u.phone })
+        .then(function (resp) {
+          var win = (resp && resp.data) ? resp.data : {};
+          if (!lottoMineCache) lottoMineCache = {};
+          lottoMineCache[m.id] = { matchId: m.id, prize: win.prize, coins: win.coins || 0,
+            couponCode: win.couponCode || null, correct: null, redeemed: false };
+          lottoApplyWin(u.memberId, m, win);   // 底币立即到账(幂等)
+          try { if (Farm.audio) Farm.audio.play('coin'); } catch (e) {}
+          try { if (Farm.push && Farm.push.maybePromptAfterHarvest) Farm.push.maybePromptAfterHarvest(); } catch (e) {}
+          var idx = wheelTargetIndex(win);
+          var finish = function () { heroRevealDone(el, m, win, u); };
+          if (idx < 0) finish();                                 // 仅农场币(库存抽空) → 不转直接揭晓
+          else spinWheelTo(wheelWrap || el, idx, finish);
+        })
+        .catch(function (e) {
+          heroState.busy = false;
+          hubBtn.classList.remove('spinning'); hubBtn.disabled = false;
+          var gs2 = hubBtn.querySelector('.gs'); if (gs2) gs2.textContent = '点击抽奖';
+          Array.prototype.forEach.call(el.querySelectorAll('.wc-lotto-pick'), function (b) { b.disabled = false; });
+          var code = (e && e.code) ? String(e.code) : '';
+          if (/resource-exhausted/.test(code)) { heroState.exhausted = true; heroState.sig = null; renderHero(); }
+          if (Farm.ui) Farm.ui.toast(lottoErrMsg(e)); console.warn('[wc-hero]', e);
+        });
+    });
+  }
+  function heroRevealDone(el, m, win, u) {
+    var wheelWrap = el.querySelector('.wc-hero-wheel') || el;
+    revealResult(wheelWrap, m, win, u);   // 复用:结果卡写入 .wc-wheel-result + confetti + 标记已揭晓
+    // busy 保持 true —— 结果卡留屏,不被 60s 刷新覆盖;用户点「再转一场」才继续下一场。
+    var foot = el.querySelector('.wc-hero-foot');
+    if (foot) {
+      foot.innerHTML = '<button class="wc-hero-btn again" data-act="again">🎡 再转一场 ›</button>' +
+        '<button class="wc-hero-btn ghost" data-act="prizes">🎁 我的奖品 ›</button>';
+      var ag = foot.querySelector('[data-act="again"]');
+      if (ag) ag.onclick = function () { heroState.busy = false; heroState.sig = null; renderHero(); };
+      var pz = foot.querySelector('[data-act="prizes"]');
+      if (pz) pz.onclick = openMyPrizes;
+    }
+  }
 
   function lottoRender(el, m) {
     if (!el || !isKO(m)) { if (el) el.style.display = 'none'; return; }

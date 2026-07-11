@@ -55,8 +55,12 @@
     totalCouponsRedeemed: 0,
     maxStreak: 0,
     festivalHarvests: { spring_festival: 0, mid_autumn: 0 },
-    // Audio preference
+    // Audio preference. audioMuted = hard off (backward compatible); audioVolume
+    // = soft tier (1 normal / 0.4 low); ambientOff = disable background bed only.
+    // New fields default via Object.assign(STARTER, parsed) — old saves unaffected.
     audioMuted: false,
+    audioVolume: 1,
+    ambientOff: false,
 
     // ============ Eastern Points cap + exchange (v2 currency design) ============
     // Daily EP credit cap (anti-abuse). 1000 EP/day = $1/day per user.

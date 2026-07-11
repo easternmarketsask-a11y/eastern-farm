@@ -17,6 +17,14 @@
 
   const ui = {
     escapeHtml: escapeHtml,
+
+    // Respect the OS "reduce motion" setting: the big celebratory effects
+    // (confetti, coin rain, flying coins, harvest bursts) are skipped for
+    // motion-sensitive users (target audience includes older family members).
+    // Sounds + HUD number updates still happen — only the large motion is cut.
+    _prefersReducedMotion() {
+      return !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
+    },
     // Last HUD-shown balances — lets refreshHUD tick-count + pulse on change
     // (Hay Day-style juice) instead of snapping numbers silently.
     _shownCoins: null,
@@ -144,6 +152,10 @@
       // on long modals (warehouse, shop, leaderboard). The ✕ is always
       // reachable without scroll, matches universal close-affordance.
       content.innerHTML = '<button class="modal-close-x" aria-label="关闭 Close">✕</button>' + html;
+      // Cancel any in-flight close animation (rapid reopen) so we don't land
+      // .hidden on top of a freshly-shown modal.
+      clearTimeout(this._closeTimer);
+      modal.classList.remove('closing');
       modal.classList.remove('hidden');
       // Mark the body so persistent fixed overlays (e.g. the PWA install banner,
       // z-index 9000) can hide themselves while a modal is open — otherwise they
@@ -167,7 +179,25 @@
     },
 
     hideModal() {
-      document.getElementById('modal').classList.add('hidden');
+      const modal = document.getElementById('modal');
+      // Exit animation (B7): play a 180ms reverse scale+fade before hiding.
+      // The container gets pointer-events:none during .closing (see style.css)
+      // so the dying modal never swallows a tap meant for the screen behind it
+      // (MEMORY: feedback_modal_pointer_events). Skipped under reduced motion.
+      if (modal && !modal.classList.contains('hidden')) {
+        if (this._prefersReducedMotion()) {
+          modal.classList.add('hidden');
+        } else {
+          modal.classList.add('closing');
+          clearTimeout(this._closeTimer);
+          this._closeTimer = setTimeout(() => {
+            modal.classList.add('hidden');
+            modal.classList.remove('closing');
+          }, 185);
+        }
+      }
+      // Dock fades back in immediately (CSS transitions the transform/opacity),
+      // so it eases in as the modal eases out instead of snapping.
       document.body.classList.remove('modal-open');
       // 商店关闭且未购买 → 清掉「买完种子回填原地块」的挂起状态（UX 第 2 批 #4）。
       // 买种成功的路径在 hideModal 之前就把 pending 消费掉了，这里只兜「放弃购买」。
@@ -187,26 +217,43 @@
       }
     },
 
+    // Small toast stack (B7): up to 2 toasts stacked vertically, each with its
+    // own fade timer. A 3rd toast evicts the oldest (FIFO) instead of the old
+    // single-slot overwrite that truncated the previous message — so the
+    // harvest bonus toasts (jackpot / first-of-day / weekend), fired 700ms
+    // apart, no longer cut each other off. Container is created lazily.
+    _toastStack() {
+      let stack = document.getElementById('toastStack');
+      if (!stack) {
+        stack = document.createElement('div');
+        stack.id = 'toastStack';
+        stack.className = 'toast-stack';
+        document.body.appendChild(stack);
+      }
+      return stack;
+    },
+
     toast(text, duration) {
-      // 2800ms 默认：CSS 淡出动画 300ms，起点由 --toast-out-delay 驱动
-      //（UX 第 3 批 #10：原 JS 2500ms 硬切早于 CSS 固定 2.7s 的淡出起点，
-      // toast 是「闪没」不是淡出；自定义时长的 toast 同样对齐）。
       duration = duration || 2800;
-      const el = document.getElementById('toast');
-      // Support inline HTML (for the styled coin-icon span). Callers pass
-      // author-controlled strings only — no XSS risk in this code base.
+      const stack = this._toastStack();
+      // FIFO cap at 2 — evict the oldest immediately if we're already full.
+      while (stack.children.length >= 2) {
+        const old = stack.firstElementChild;
+        if (old && old._toastTimer) clearTimeout(old._toastTimer);
+        stack.removeChild(old);
+      }
+      const el = document.createElement('div');
+      el.className = 'toast';
+      // Author-controlled strings only (no XSS risk here); inline HTML supports
+      // the styled coin/points icon spans.
       el.innerHTML = text;
-      el.classList.remove('hidden');
-      // 淡出起点 = 总时长 - 300ms 淡出动画；display:none 在动画播完后再落。
-      el.style.setProperty('--toast-out-delay', Math.max(0, duration - 300) + 'ms');
-      // Restart animation
-      el.style.animation = 'none';
-      el.offsetHeight;
-      el.style.animation = '';
-      clearTimeout(this._toastTimer);
-      this._toastTimer = setTimeout(() => {
-        el.classList.add('hidden');
-      }, duration + 100);
+      stack.appendChild(el);
+      const dismiss = () => {
+        el.classList.add('toast-out');
+        setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, 320);
+      };
+      el._toastTimer = setTimeout(dismiss, duration);
+      return el;
     },
 
     floatText(text, x, y, color) {
@@ -228,6 +275,9 @@
     // arc, staggered. Each arrival nudges the counter card. Pure DOM +
     // Web Animations API; coins render with the standard .coin-icon disc.
     flyCoins(x, y, n) {
+      // Reduced motion: skip the flight but keep the sound; callers still run
+      // their own refreshHUD (warehouse.deliver does so on a timer).
+      if (this._prefersReducedMotion()) { if (Farm.audio) Farm.audio.play('coin'); return; }
       const target = document.getElementById('coinsValue');
       if (!target) return;
       const r = target.getBoundingClientRect();
@@ -278,6 +328,7 @@
     // Radial particle burst at (x,y) — used for harvest picks & mature pops.
     // emojis: array to sample from; count ~6-10 keeps it lively not noisy.
     burst(x, y, emojis, count) {
+      if (this._prefersReducedMotion()) return;
       emojis = emojis && emojis.length ? emojis : ['✨', '🍃'];
       count = count || 7;
       for (let i = 0; i < count; i++) {
@@ -476,6 +527,7 @@
     // Used by level-up + other big celebrations. Pieces are absolutely
     // positioned, randomly colored, fall + rotate + fade.
     showConfetti(count, duration) {
+      if (this._prefersReducedMotion()) return;
       count = count || 30;
       duration = duration || 2200;
       const layer = document.createElement('div');
@@ -509,6 +561,7 @@
     // shapes, so the player feels the "I just made money" moment. `intensity`
     // (1–3) scales how many coins fall.
     coinBurst(intensity) {
+      if (this._prefersReducedMotion()) return;
       intensity = Math.max(1, Math.min(3, intensity || 1));
       const count = 10 + intensity * 8;
       const layer = document.createElement('div');
