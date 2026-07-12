@@ -1060,7 +1060,7 @@
         '<div class="wc-lotto-win-h">🎉 您已抽中实物!</div>' +
         '<div class="wc-lotto-prize">🎁 ' + esc(PRIZE_CN[win.prize] || win.prize) + '</div>' +
         (win.couponCode ? '<div class="wc-lotto-code">兑奖码 <b>' + esc(win.couponCode) + '</b></div>' : '') +
-        '<div class="wc-lotto-redeem">' + (win.redeemed ? '✓ 已核销' : (win.couponCode ? '到东方超市收银处出示此码领取 · 也可在「我的奖品」查看' : '兑奖码稍后在「我的奖品」查看')) + '</div>' +
+        '<div class="wc-lotto-redeem">' + (win.redeemed ? '✓ 已核销' : (win.couponCode ? ('到东方超市收银处出示此码领取 · <b>' + REDEEM_BY_CN + '</b>有效 · 也可在「我的奖品」查看') : '兑奖码稍后在「我的奖品」查看')) + '</div>' +
         (win.coins ? '<div class="wc-lotto-coins">外加 <span class="coin-icon"></span> ' + win.coins + ' 农场币已到账</div>' : '') +
         '</div>';
     }
@@ -1505,6 +1505,8 @@
     // 概览
     h += '<div class="wc-mp-summary">共参与 <b>' + rows.length + '</b> 次 · 🪙 累计 <b>' + coinsTotal + '</b> 农场币' +
       (phys.length ? ' · 🎁 <b>' + phys.length + '</b> 件实物' : '') + '</div>';
+    var physPending = phys.filter(function (r) { return !r.redeemed; }).length;
+    if (physPending > 0) h += '<div class="wc-mp-deadline">⏰ 实物奖务必在 <b>' + REDEEM_BY_CN + '</b>到东方超市收银处兑换</div>';
     // 每一次抽中的明细:待领实物排最前(要行动),已核销实物 + 农场币随后
     var ordered = rows.slice().sort(function (a, b) {
       var rank = function (r) { var p = r.prize && r.prize !== 'coins'; return p ? (r.redeemed ? 1 : 0) : 2; };
@@ -1519,7 +1521,7 @@
         h += '<div class="wc-mp-item' + (r.redeemed ? ' done' : '') + '">' + head +
           '<div class="wc-mp-pz">🎁 ' + esc(PRIZE_CN[r.prize] || r.prize) + '</div>' +
           '<div class="wc-mp-code">' + (r.couponCode ? esc(r.couponCode) : '生成中…') + '</div>' +
-          '<div class="wc-mp-st">' + (r.redeemed ? '✓ 已核销' : (r.couponCode ? '待领取 · 到店出示此码' : '兑奖码生成中,请稍后刷新')) + '</div>' +
+          '<div class="wc-mp-st">' + (r.redeemed ? '✓ 已核销' : (r.couponCode ? ('待领取 · <b>' + REDEEM_BY_CN + '</b>到店出示此码') : '兑奖码生成中,请稍后刷新')) + '</div>' +
         '</div>';
       } else {
         h += '<div class="wc-mp-coinrec">' + head +
@@ -1912,14 +1914,18 @@
 
   /* ============================================================
      收官 / 退场（2026-07-11，audit P1「7/19 决赛后无退场机制」）
-     三阶段全部从 wc2026.json 决赛场次 kickoffUtc 推导，不写死第二份日期：
-       tournament — 决赛未出结果：现状不变
-       wrapup     — 决赛结束 → 决赛开球+14 天（兑奖窗口）：hub 顶部收官卡、
+     三阶段：
+       tournament — 决赛未出结果：现状不变（从 wc2026.json 决赛 kickoffUtc 判定）
+       wrapup     — 决赛结束 → 兑奖截止（7/31）：hub 顶部收官卡、
                     入口降级为安静「回顾」样式、停 60s ESPN 轮询
-       over       — 窗口过后：开屏入口 + 农场 ⚽ 按钮隐藏，worldcup.html 直链保留可回看
+       over       — 兑奖截止后：开屏入口 + 农场 ⚽ 按钮隐藏，worldcup.html 直链保留可回看
+     兑奖截止 7/31 是店内实物核销的真实业务日期（Chris 定，2026-07-11），不从赛程推导，
+     所以单独写死一份 REDEEM_DEADLINE_MS；因决赛(7/19)恒早于截止(7/31)，两者不冲突。
      ============================================================ */
   var FINAL_RUN_MS = 3.5 * 3600 * 1000;      // 决赛时长余量：加时+点球+颁奖
-  var SUNSET_DAYS = 14;                       // 兑奖窗口（决赛后 14 天入口退场）
+  // 兑奖截止：2026-07-31 当天末（萨斯卡通 CDT = UTC-6）→ 8/1 本地 0 点。截止前实物券仍可到店核销。
+  var REDEEM_DEADLINE_MS = Date.parse('2026-08-01T06:00:00Z');
+  var REDEEM_BY_CN = '7月31日前';             // 兑奖截止文案单一来源，与 REDEEM_DEADLINE_MS 对应
   var NOW_OVERRIDE = null;                    // 测试钩子：mock 当前时间
   function wcNow() { return NOW_OVERRIDE || Date.now(); }
   function finalMatch() {
@@ -1936,7 +1942,8 @@
     // 决赛结束 = 有确定胜者（ESPN/官方/快照），或时间上早已踢完（数据源失效兜底）
     var finalOver = !!koWinner(f) || now > ko + FINAL_RUN_MS;
     if (!finalOver) return 'tournament';
-    return now > ko + SUNSET_DAYS * 86400000 ? 'over' : 'wrapup';
+    // 兑奖截止（7/31）后入口退场；截止前保持 wrapup，玩家还能来店核销
+    return now > REDEEM_DEADLINE_MS ? 'over' : 'wrapup';
   }
   // 按阶段改造两个常驻入口（开屏横幅 + 农场 ⚽ 重入按钮）。幂等，可反复调。
   function applyEntryPhase() {
@@ -1993,7 +2000,7 @@
         if (r.prize && r.prize !== 'coins' && !r.redeemed) pending++;
       });
       var h = '';
-      if (pending > 0) h += '<div class="wc-wrap-pending">🎁 你还有 ' + pending + ' 件实物奖品待领取 — 到店收银台出示兑奖码</div>';
+      if (pending > 0) h += '<div class="wc-wrap-pending">🎁 你还有 ' + pending + ' 件实物奖品待领取 — 请在 ' + REDEEM_BY_CN + ' 到店收银台出示兑奖码</div>';
       h += '<span class="wc-wrap-line">你的战绩：参与 ' + plays + ' 场 · 猜中 ' + hit + ' 场 · 赢得农场币 ' + coins + '</span>';
       s2.innerHTML = h;
     });

@@ -9,8 +9,13 @@
  *       the cached shell. A SW must never be able to hang a navigation (iOS Safari will sit
  *       on a blank screen forever if respondWith never resolves).
  *   - /data/*.json            → network-first (try fresh, timeout→cache fallback offline)
- *   - static sub-resources (css/js/icons) → stale-while-revalidate (cache INSTANTLY,
- *       refresh in background — the 944KB of JS never blocks on the network)
+ *   - static sub-resources (css/js/icons) → network-first with a 4s timeout, cache fallback
+ *       (2026-07-11: changed FROM stale-while-revalidate. SWR served old cached JS until the
+ *       new SW activated, so iOS frozen tabs / a broken update chain trapped users on
+ *       weeks-old code. Network-first means online users ALWAYS run the latest code (matching
+ *       the network-first HTML — no more new-HTML/old-JS mismatch); slow/offline falls back to
+ *       cache so the game still opens in any state. Verified: online=fresh, server-killed=boots
+ *       from cache.)
  *   - cross-origin (Firebase/gstatic CDN) → not intercepted
  *
  * Bump CACHE_VERSION whenever shell assets change so old caches are purged.
@@ -64,7 +69,7 @@ self.addEventListener('notificationclick', (event) => {
 
 // CACHE_VERSION 由 deploy.sh 在每次部署时自动注入时间戳（ef-YYMMDDHHMM），
 // 不再手动 +1 —— 忘 bump 会让全体 PWA 用户静默停在旧版（iOS 要删 App 才能救）。
-const CACHE_VERSION = 'ef-2607111409';
+const CACHE_VERSION = 'ef-2607112318';
 const CACHE = 'eastern-farm-' + CACHE_VERSION;
 // Precache the FULL app shell — HTML + CSS + every JS module + data JSON — so a SW
 // update (which clears the old cache) followed by a flaky mobile network can never leave
