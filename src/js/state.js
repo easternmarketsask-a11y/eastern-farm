@@ -585,15 +585,19 @@
       this.save();
     },
 
-    // Resolve the active farm view. URL param overrides (for shared links/testing),
-    // else the player's saved preference, else 'iso' (Hay Day default).
+    // 农场视图只剩 iso 一套（2026-08-11 三渲染器收编）。
+    //
+    // 历史：曾并存 iso（Hay Day 等距，默认）/ topdown（俯视像素，mapview.js）/
+    // classic（经典竖排，退回 DOM 网格），玩家能在 ⓘ 指南里切。问题是所有手感修复
+    // ——命中盒、聚光灯引导、相机惯性、按压高亮、首屏构图——都只做在 iso 上，
+    // 另两套是「能进去但明显更差」的体验，还得永远跟着一起维护。
+    // 收编前查过云存档：**6/6 全是 iso，没有任何玩家选过另外两套**，所以零迁移代价。
+    //
+    // 🔒 存档神圣：`farmStyle` 字段**保留不删**（老存档带 'topdown'/'classic' 照样能读），
+    // 这里只做值收敛 —— 一律解析成 'iso'。要恢复多视图，改回这个函数 + 从 git 历史
+    // 50a5424 取回 mapview.js 与 guide.js 的画风切换器即可。
     farmStyle() {
-      const s = location.search;
-      if (/[?&]classic=1/.test(s)) return 'classic';
-      if (/[?&](topdown=1|map=1)/.test(s)) return 'topdown';
-      if (/[?&]iso=1/.test(s)) return 'iso';
-      const p = this.data && this.data.farmStyle;
-      return (p === 'topdown' || p === 'classic') ? p : 'iso';
+      return 'iso';
     },
 
     // Replace local state with a cloud-restored snapshot (see firebase-game-sync

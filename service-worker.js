@@ -96,7 +96,7 @@ const PRECACHE = [
   '/src/js/shop.js', '/src/js/tasks.js', '/src/js/events.js', '/src/js/storekeeper.js',
   '/src/js/rewards.js', '/src/js/achievements.js', '/src/js/tutorial.js', '/src/js/guide.js',
   '/src/js/spotlight.js', '/src/js/login-nudge.js', '/src/js/promo.js', '/src/js/share.js',
-  '/src/js/mapview.js', '/src/js/mapview-iso.js', '/src/js/main.js', '/src/js/pwa-install.js',
+  '/src/js/mapview-iso.js', '/src/js/main.js', '/src/js/pwa-install.js',
   '/data/achievements.json', '/data/ai-neighbors.json', '/data/coupons.json', '/data/crops.json',
   '/data/ep-shop.json', '/data/events.json', '/data/i18n.json', '/data/news.json', '/data/tasks.json',
   '/data/recipes.json',

@@ -230,16 +230,17 @@
       });
     }
     wireSplash(() => {
-      // Defer the main farm view (iso or map) until after splash, to guarantee
-      // splash entry buttons always work and avoid any early overlay conflicts.
-      // Guarded: iso init hides the classic DOM grid first, so if it throws the
+      // Defer the iso farm view until after splash, to guarantee splash entry
+      // buttons always work and avoid any early overlay conflicts.
+      // Guarded: iso init hides the underlying DOM grid first, so if it throws the
       // player would be left on a blank screen (splash already removed). On failure
-      // we re-show the classic grid so there's always a playable view.
+      // we re-show that DOM grid so there's always a playable view.
+      // （2026-08-11：原来这里还有一条 Farm.mapView 分支——俯视像素渲染器。
+      //   三渲染器已收编成 iso 一套，mapview.js 已删；DOM 网格仍是 iso 的底座
+      //   兼崩溃兜底，所以下面 catch 里的降级路径保留。）
       try {
         if (Farm.isoView && Farm.isoView.active && Farm.isoView.active()) {
           Farm.isoView.init();
-        } else if (Farm.mapView && Farm.mapView.active && Farm.mapView.active()) {
-          Farm.mapView.init();
         }
       } catch (e) {
         console.error('[boot] farm view init failed — falling back to classic grid', e);

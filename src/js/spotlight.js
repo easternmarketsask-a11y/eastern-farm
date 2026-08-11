@@ -62,10 +62,10 @@
     maybeStart() {
       const d = Farm.state.data;
       if (!d || d.spotlightDone) return;
-      // iso（默认视图）自 2026-07-02 起支持：isoView.plotScreenRect/barnScreenRect
-      // 提供 canvas 上的目标矩形。仅剩 topdown 像素视图仍无定位 API → 跳过
-      // （它不是默认视图，留给 guide 弹窗兜底）。
-      if (Farm.mapView && Farm.mapView._on) return;
+      // iso（现在是唯一视图）自 2026-07-02 起支持：isoView.plotScreenRect/
+      // barnScreenRect 提供 canvas 上的目标矩形。没有这两个 API 就没法给聚光灯
+      // 定位 → 跳过引导（留给 guide 弹窗兜底）。
+      // （2026-08-11：原来还要挡一下 topdown 像素视图，那套渲染器已删。）
       if (Farm.isoView && Farm.isoView._on && !Farm.isoView.plotScreenRect) return;
       // 「毕业」判定放宽（audit P1 引导中断不恢复 2026-07-07）：旧守卫用
       // cropsEverGrown>0 会把「种过但半途刷新」的玩家静默标记完成——引导
