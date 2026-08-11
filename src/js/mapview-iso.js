@@ -104,13 +104,42 @@
   // with farm zoom (see BG_ZOOM_REF). Tune these to position the farm on the meadow; they
   // keep the bg locked to the farm at every pan/zoom.
   const BG_FX = 0.5, BG_FY = 0.66, BG_ANCHOR_GX = 2, BG_ANCHOR_GY = 3.5;
+  // 背景图固有尺寸（hd_bg 1248×832）。_autoFrame 在图片可能还没解码时就要算构图，
+  // 所以用常量兜底，图片加载好之后以实际尺寸为准。
+  const BG_IMG_W = 1248, BG_IMG_H = 832;
+  // ===== 竖屏首屏构图（2026-08-11）=====
+  // 07-07 审计标记「竖屏开局镜头失衡：农场只占屏高约 20%，上方近半屏空天空」，
+  // 07-05 那版把竖屏 fitW 从 0.65 提到 1.15 想靠放大解决 —— 08-11 实测没解决：
+  // 390×844 下地块块 314×159px，占屏宽 80.5%、屏高 18.8%，上方空白仍有 43.9%。
+  //
+  // 真正的根因是两条，跟 zoom 大小无关：
+  // ① 2:1 等距下地块块的屏高恒等于屏宽的一半 —— 宽已经占 80%，高必然只有 19%，
+  //    **再放大也填不满竖屏**，只会把地块顶出屏幕两侧。
+  // ② 背景 hd_bg 是世界锁定的：焦点 BG_FY(0.66，草甸碗) 钉在农场中心，
+  //    可见范围完全由 zoom 决定。zoom 2.29 时 dh≈2596px，竖屏只能看到图片
+  //    y≈0.51–0.81 —— 正好是整张图最平的草甸带，天空和树线全在屏外。
+  //    所以上方那 44% 不是「空」，是背景图最没内容的一块被放大铺满。
+  //
+  // 结论：竖屏构图要靠**降 zoom 把树线/远山放进画面**，而不是继续放大农场。
+  // 下面两个常量就是构图目标，改它们即可微调（横屏/桌面不走这条分支）：
+  const BG_TOP_TARGET = 0.42;   // 视口顶端要看到背景图的哪个纵向分数（0.42≈树线带）
+  // 0.60 是截图对比选出来的：0.55 会把树线顶出视口顶端（上方退回成一片糊的远山），
+  // 0.60 刚好让森林轮廓留在画面里、下方还剩一段前景草地。改这个值前先跑一遍截图。
+  const FARM_SCREEN_Y = 0.60;   // 农场（背景焦点）落在画布高度的哪个位置
   const BG_ZOOM_REF = 0.70;   // zoom at which the bg exactly covers the canvas; >this = covers w/ margin, <this (zoomed out) = shrinks w/ farm, base shows around (no float)
   // ===== TUNABLE: farm position + size (independent of the background) — Chris 2026-06-18 =====
   // FARM_SCALE multiplies ONLY the farm (grid/plots/crops/buildings); the background is
   // unaffected, so this resizes the farm relative to the meadow. FARM_DX/FARM_DY shift the
   // whole farm on screen (pixels at default zoom): +DX → right, +DY → down. Tune these to
   // place the farm exactly on the meadow. (1.0 / 0 / 0 = current look.)
-  const FARM_SCALE = 0.85;     // 0.6 (small) … 1.0 (current) … 1.5 (big)
+  // 2026-08-11 首屏构图：0.85 → 1.15。
+  // 这是「农场显得不重要」和「上方一片空」这两件事的解耦点 ——
+  //   zoom 决定**看到多少风景**（见 BG_TOP_TARGET，降 zoom 才能把树线放进画面），
+  //   FARM_SCALE 决定**农场在这片风景里有多大**（只缩放农场，背景不动）。
+  // 只调 zoom 的话两者会互相打架：降 zoom 露出了树线，农场也跟着缩小
+  // （实测 zoom 2.29→1.75 时地块块从占屏宽 80.5% 掉到 61.4%）。
+  // 提 FARM_SCALE 把农场大小补回来，构图不受影响。
+  const FARM_SCALE = 1.15;     // 0.6 (small) … 1.0 … 1.5 (big)
   const FARM_DX = 0;          // −150 (left) … 0 … +150 (right), pixels
   const FARM_DY = -70;          // −150 (up)   … 0 … +150 (down), pixels
   const PALETTE = ['barn', 'house', 'greenhouse', 'coop', 'stall', 'well', 'tree', 'bush', 'lantern', 'fence', 'wheel', 'bridge'];
@@ -294,15 +323,30 @@
       // 一屏、可平移」构图）；世界锁定的背景随 zoom 同步放大 → 可见窗口滑向
       // 草地带，天空占比大幅回落。横屏/桌面保持原 65% 构图不变。
       const portrait = this._cssH() > this._cssW();
-      const fitW = (this._cssW() * (portrait ? 1.15 : 0.65)) / screenW;   // 包围盒宽 ≈ 115%/65% 视口宽
-      const minTap = 53 / (TW * FARM_SCALE);                        // 地块屏宽 ≥53px
-      const fitH = (this._cssH() * 0.90) / screenH;                 // 高度护栏
-      this._zoom = Math.max(ZMIN, Math.min(ZMAX, Math.min(Math.max(fitW, minTap), fitH)));
+      const W = this._cssW(), H = this._cssH();
+      const minTap = 53 / (TW * FARM_SCALE);                        // 地块屏宽 ≥53px（可点性底线）
+      const fitH = (H * 0.90) / screenH;                            // 高度护栏
+      if (portrait) {
+        // 竖屏：由「树线要落在视口顶端」反解 zoom（推导见文件头 BG_TOP_TARGET 注释）。
+        //   dh = BG_IMG_H · cover · zoom / BG_ZOOM_REF      （cover = 背景铺满画布的基准缩放）
+        //   要求 (FARM_SCREEN_Y·H) / dh === BG_FY − BG_TOP_TARGET
+        const bg = this._img.hd_bg;
+        const bw = (bg && bg.width) || BG_IMG_W, bh = (bg && bg.height) || BG_IMG_H;
+        const cover = Math.max(W / bw, H / bh);
+        const zComp = (FARM_SCREEN_Y * H * BG_ZOOM_REF) / ((BG_FY - BG_TOP_TARGET) * bh * cover);
+        // 农场再小也不能小到点不动：minTap 是硬底线，构图让位于可玩性。
+        // 同时不允许比「包围盒吃满视口宽」更大 —— 否则地块被顶出屏幕两侧。
+        const fitWMax = (W * 1.05) / screenW;
+        this._zoom = Math.max(ZMIN, Math.min(ZMAX, fitH, Math.max(minTap, Math.min(zComp, fitWMax))));
+      } else {
+        // 横屏 / 桌面：维持原「包围盒宽约占视口宽 65%」构图，不动。
+        const fitW = (W * 0.65) / screenW;
+        this._zoom = Math.max(ZMIN, Math.min(ZMAX, Math.min(Math.max(fitW, minTap), fitH)));
+      }
       const ccx = (minx + maxx) / 2, ccy = (miny + maxy) / 2, u = ccx - ccy, v = ccx + ccy;
       this._camX = u * this._tw() / 2;
-      // 竖屏农场（格心）放在屏高 60% 处：比旧 64% 略抬，让背景窗口滑向草地带
-      // （上方从「半屏天空」变为树线+近山），下方仍留一段前景草地。
-      this._camY = this._oy + v * this._th() / 2 - this._cssH() * (portrait ? 0.60 : 0.64);
+      // 农场（格心）落在画布高度的 FARM_SCREEN_Y（竖屏）/ 64%（横屏）处。
+      this._camY = this._oy + v * this._th() / 2 - H * (portrait ? FARM_SCREEN_Y : 0.64);
       this._clampCam();
     },
 
