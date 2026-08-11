@@ -240,6 +240,14 @@ window.addEventListener('load', function () {
   function renderRes(d) {
     var el = $('res'); el.className = 'res show';
     if (!d.found) { el.classList.add('bad'); el.innerHTML = '<div class="st">❌ 查无此券码</div><div class="who">请核对顾客手机上的码</div>'; current = null; return; }
+    // 已作废(2026-08-11 Chris 决定把过了 7/31 兑奖期还没来领的 28 张作废)。
+    // 放在 redeemed 判断之前:作废的券不给「确认核销」按钮,收银员一眼看到不能发奖。
+    if (d.voided) { el.classList.add('bad');
+      el.innerHTML = '<div class="pz">🎁 ' + esc(d.prizeCn) + '</div><div class="who">' + esc(d.name) + ' · ' + esc(d.phone) + '</div>' +
+        '<div class="st">🚫 此券已作废</div>' +
+        '<div class="who">' + esc(d.voidReason || '已过兑奖期') + (d.voidedAt ? ' · ' + esc(d.voidedAt) : '') + '</div>' +
+        '<div class="who">不要发奖。顾客有异议请找 Chris。</div>';
+      current = null; return; }
     if (d.redeemed) { el.classList.add('used');
       el.innerHTML = '<div class="pz">🎁 ' + esc(d.prizeCn) + '</div><div class="who">' + esc(d.name) + ' · ' + esc(d.phone) + '</div>' +
         '<div class="st">⚠️ 此券已核销' + (d.redeemedAt ? ' · ' + esc(d.redeemedAt) : '') + '</div><div class="who">不要重复发奖</div>' +
@@ -266,10 +274,11 @@ window.addEventListener('load', function () {
     var b = $('confirmBtn'); b.disabled = true; b.textContent = '核销中…';
     try {
       var d = await api({ action: 'redeem', code: current });
-      var el = $('res'); el.className = 'res show ' + (d.already ? 'used' : 'valid');
-      el.innerHTML = '<div class="pz">' + (d.already ? '⚠️ 已核销过' : '🎉 核销成功') + '</div>' +
+      var el = $('res'); el.className = 'res show ' + (d.voided ? 'bad' : (d.already ? 'used' : 'valid'));
+      el.innerHTML = '<div class="pz">' + (d.voided ? '🚫 此券已作废' : (d.already ? '⚠️ 已核销过' : '🎉 核销成功')) + '</div>' +
         '<div class="who">🎁 ' + esc(d.prizeCn) + ' · ' + esc(d.name) + '</div>' +
-        '<div class="st">' + (d.already ? '请勿重复发奖' : '已发奖,可进行下一单') + '</div>';
+        '<div class="st">' + (d.voided ? esc(d.reason || '已过兑奖期') + ' · 不要发奖'
+          : (d.already ? '请勿重复发奖' : '已发奖,可进行下一单')) + '</div>';
       current = null; $('code').value = ''; $('code').focus();
     } catch (e) { b.disabled = false; b.textContent = '确认核销并发奖'; $('redeemErr').textContent = '核销失败:' + (e.message || e); }
   }
