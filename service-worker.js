@@ -79,9 +79,7 @@ const CACHE = 'eastern-farm-' + CACHE_VERSION;
 const PRECACHE = [
   '/',                       // root redirect page — cached so a navigation fallback to "/" keeps correct relative paths
   '/src/index.html',
-  '/src/worldcup.html',
   '/src/css/style.css',
-  '/src/css/worldcup.css',
   '/src/manifest.webmanifest',
   '/src/icons/icon-192.png',
   '/src/icons/icon-512.png',
@@ -99,11 +97,13 @@ const PRECACHE = [
   '/src/js/rewards.js', '/src/js/achievements.js', '/src/js/tutorial.js', '/src/js/guide.js',
   '/src/js/spotlight.js', '/src/js/login-nudge.js', '/src/js/promo.js', '/src/js/share.js',
   '/src/js/mapview.js', '/src/js/mapview-iso.js', '/src/js/main.js', '/src/js/pwa-install.js',
-  '/src/js/worldcup.js',
   '/data/achievements.json', '/data/ai-neighbors.json', '/data/coupons.json', '/data/crops.json',
   '/data/ep-shop.json', '/data/events.json', '/data/i18n.json', '/data/news.json', '/data/tasks.json',
-  '/data/recipes.json', '/data/wc2026.json',
+  '/data/recipes.json',
 ];
+// 2026-08-11 世界杯退场：worldcup.html / worldcup.css / worldcup.js / wc2026.json
+// 一并移出预缓存。四个文件仍在仓库里、worldcup.html 直链仍可打开（联网时正常走
+// 网络加载），只是不再让每个玩家在装 PWA 时先下载一份赛事资料。
 
 self.addEventListener('install', (event) => {
   event.waitUntil(

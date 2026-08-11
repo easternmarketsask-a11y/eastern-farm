@@ -56,9 +56,9 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Noto+Sans+SC:wght@400;500;700&family=Plus+Jakarta+Sans:wght@400;500;700&family=ZCOOL+KuaiLe&display=swap" media="print" onload="this.media='all'">
 <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Noto+Sans+SC:wght@400;500;700&family=Plus+Jakarta+Sans:wght@400;500;700&family=ZCOOL+KuaiLe&display=swap"></noscript>
 <link rel="stylesheet" href="css/style.css">
-<!-- WC2026 START — World Cup viewing hub (removable end of July) -->
-<link rel="stylesheet" href="css/worldcup.css">
-<!-- WC2026 END -->
+<!-- 2026-08-11：世界杯已于 7/19 决赛结束、7/31 兑奖截止，主游戏不再加载它的
+     css/js/赛程数据（原来「按钮藏了文件照下」，每次打开白拉约 254KB）。
+     回顾页 worldcup.html 独立保留，它自己会加载 css/worldcup.css + js/worldcup.js。 -->
 </head>
 <body>
 
@@ -190,18 +190,6 @@
       <span class="splash-tagline-zh">好菜自己种</span>
       <span class="splash-tagline-en">Grow your own</span>
     </div>
-    <!-- WC2026 START — World Cup entry (removable end of July) -->
-    <button class="splash-wc" id="splashWorldcup" aria-label="进入 2026 世界杯观赛台 / Open World Cup 2026 hub">
-      <span class="splash-wc-pill">LIVE</span>
-      <img class="splash-wc-emblem" src="assets/images/wc2026-logo-160.webp" alt="FIFA World Cup 2026" loading="lazy">
-      <span class="splash-wc-txt">
-        <span class="splash-wc-zh">2026 世界杯 · 萨省观赛台</span>
-        <span class="splash-wc-en">FIFA World Cup 26 · Live Hub</span>
-        <span class="splash-wc-sub">赛程赛果 · 积分榜 · 对阵图 — 全部萨省时间</span>
-      </span>
-      <span class="splash-wc-go">›</span>
-    </button>
-    <!-- WC2026 END -->
 
     <!-- Reward hook + perks: pull guests over the login line. Hidden once
          signed in (see firebase-auth._renderSplash). -->
@@ -479,58 +467,13 @@
 <script defer src="js/share.js"></script>
 <script defer src="js/mapview.js"></script>
 <script defer src="js/mapview-iso.js"></script>
-<!-- WC2026 START — World Cup viewing hub (removable end of July) -->
-<!-- worldcup.js (97KB raw) is lazy-loaded OFF the cold-start path (B4 perf): it no
-     longer competes with the game shell for bandwidth. Loaded on the first idle
-     after boot (so the in-game ⚽ re-entry button still appears), or immediately if
-     the player taps the splash World Cup entry first. worldcup.html standalone mode
-     still loads worldcup.js directly and is unaffected. worldcup.js stays in the SW
-     PRECACHE list so it is cached like every other module. -->
-<script>
-(function () {
-  var loaded = false, loading = null;
-  function inject() {
-    if (loaded) return Promise.resolve();
-    if (loading) return loading;
-    loading = new Promise(function (resolve, reject) {
-      var s = document.createElement('script');
-      s.src = 'js/worldcup.js';
-      s.onload = function () { loaded = true; resolve(); };
-      s.onerror = function () { loading = null; reject(new Error('worldcup.js load failed')); };
-      document.head.appendChild(s);
-    });
-    return loading;
-  }
-  window.__loadWorldcup = inject;
-  // Bind the splash entry now so a tap works even before the idle-load finishes.
-  // We do NOT set btn._wcWired, so worldcup.js's own wireSplashEntry() will later
-  // replace this onclick with a direct open() (no double-open).
-  function wireSplash() {
-    var btn = document.getElementById('splashWorldcup');
-    if (!btn || btn._wcStub || btn._wcWired) return;
-    btn._wcStub = true;
-    btn.onclick = function () {
-      inject().then(function () {
-        if (window.Farm && Farm.worldcup) Farm.worldcup.open();
-      }).catch(function () {
-        if (window.Farm && Farm.ui && Farm.ui.toast) Farm.ui.toast('世界杯加载失败，请重试 / Load failed, tap again');
-      });
-    };
-  }
-  var tries = 0, poll = setInterval(function () {
-    wireSplash();
-    var b = document.getElementById('splashWorldcup');
-    if (++tries > 12 || (b && (b._wcWired || b._wcStub))) clearInterval(poll);
-  }, 300);
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wireSplash);
-  else wireSplash();
-  // Idle-load the full hub so the floating ⚽ re-entry button materializes shortly
-  // after boot without blocking first paint. Failure is silent (splash tap retries).
-  var idle = window.requestIdleCallback || function (fn) { return setTimeout(fn, 3000); };
-  idle(function () { inject().catch(function () {}); });
-})();
-</script>
-<!-- WC2026 END -->
+<!-- 世界杯已退场（2026-08-11）。原来这里有个 idle 懒加载 worldcup.js 的 IIFE：
+     赛事结束后前端「按钮藏了、文件照下」——每次打开游戏仍要拉 worldcup.js +
+     worldcup.css + wc2026.json（约 254KB），只为读一遍赛程好判断该不该把入口藏起来。
+     现在整段摘除，主游戏零世界杯依赖。
+     ⚠️ 回顾入口没删：farm.easternmarket.ca/worldcup.html 仍可打开（它自己加载
+     js/worldcup.js），/redeem/ 收银核销页也照旧可用。要恢复站内入口，把这段
+     懒加载和 splash 里的 .splash-wc 按钮一起从 git 历史 b241390 取回即可。 -->
 <script defer src="js/main.js"></script>
 <script defer src="js/pwa-install.js"></script>
 
