@@ -85,11 +85,24 @@
     // 「世界杯能看/farm 进不去 + 顶部一直转圈」的不对称症状。所以给每个 loader 套一个
     // 客户端硬超时：5 秒没回就放它过去（模块都有 Farm.xxx && 守卫会优雅降级，数据还有
     // SW 缓存兜底）。绝不让「能不能进游戏」取决于某个 fetch 会不会挂。
+    // ⚠️ 2026-08-11 修：定时器必须在 loader 正常完成后 clearTimeout。
+    // 原来只用 Promise.race 抢，赢了也不清 timer —— 于是 5 秒后那个 setTimeout
+    // 照样触发、照样 console.warn。实测 9 个 JSON 全在 50ms 内就加载完了，
+    // 控制台却每次都打 9 条假的「loader timed out」。玩家无感，但 deploy.sh 的
+    // 冒烟闸门只打印前 4 条警告 —— 9 条假警告永远排在最前面，等于真警告永远
+    // 看不见。保护逻辑本身不变（5 秒没回照样放行），只是别再谎报。
     const withTimeout = function (p, k) {
       if (!p || typeof p.then !== 'function') return p;
-      return Promise.race([p, new Promise(function (res) {
-        setTimeout(function () { console.warn('[boot] loader timed out (continuing):', k); res(null); }, 5000);
-      })]);
+      let timer = null;
+      const guard = new Promise(function (res) {
+        timer = setTimeout(function () {
+          timer = null;
+          console.warn('[boot] loader timed out (continuing):', k);
+          res(null);
+        }, 5000);
+      });
+      const clear = function (v) { if (timer !== null) { clearTimeout(timer); timer = null; } return v; };
+      return Promise.race([p.then(clear, clear), guard]);
     };
     await Promise.all(['i18n', 'crops', 'rewards', 'achievements', 'epShop', 'daily',
       'aiNeighbors', 'tasks', 'kitchen'].map(function (k) {
