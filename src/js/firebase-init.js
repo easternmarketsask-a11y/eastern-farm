@@ -28,12 +28,21 @@
     window.Farm.fb = { available: false, reason };
   }
 
-  if (typeof firebase === 'undefined' || !firebase.initializeApp) {
-    fallback('SDK script missing');
-    return;
+  /* 🔒 可重入：SDK 现在不在，不代表永远不在（2026-08-12）
+     index.html 把 5 个 gstatic 脚本改成了动态按序加载（原来是 defer，会把 50 个
+     本地游戏模块一起扣住 → 弱网下游戏永远打不开）。所以本文件执行时 SDK 很可能
+     还在路上。此时不能像从前那样一口咬定 available:false 就完事 —— 要留个
+     Farm.fbLateInit 回调，等 SDK 落地再补初始化，否则登录/云存档会静默失效。 */
+  function boot() {
+    if (typeof firebase === 'undefined' || !firebase.initializeApp) {
+      fallback('SDK script missing');
+      return false;
+    }
+    return init();
   }
 
-  try {
+  function init() {
+    try {
     if (!firebase.apps.length) {
       firebase.initializeApp(firebaseConfig);
     }
@@ -56,8 +65,28 @@
         catch (e) { return null; }
       },
     };
-    console.log('🔥 Firebase initialized (project: eastern-market-members)');
-  } catch (e) {
-    fallback(e.message);
+      console.log('🔥 Firebase initialized (project: eastern-market-members)');
+      return true;
+    } catch (e) {
+      fallback(e.message);
+      return false;
+    }
   }
+
+  window.Farm = window.Farm || {};
+
+  // 快路径：SDK 已经到了（网速好 / 已缓存）→ 立刻初始化，行为与从前完全一致
+  if (boot()) return;
+
+  // 慢路径：SDK 还在路上 → 由 index.html 的动态加载器在全部落地后回调
+  window.Farm.fbLateInit = function () {
+    if (window.Farm.fb && window.Farm.fb.available) return;   // 已经好了，别重复
+    if (!init()) return;
+    // 补跑依赖 Firebase 的初始化。只有在 main.js 已经试过一次（那次因为
+    // available:false 提前返回了）时才补，否则会和 main.js 稍后那次重复注册
+    // onAuthStateChanged。见 main.js 里的 Farm.__fbAuthInitTried。
+    if (!window.Farm.__fbAuthInitTried) return;
+    try { if (Farm.fbAuth && Farm.fbAuth.init) Farm.fbAuth.init(); } catch (e) {}
+    try { if (Farm.fbQueue && Farm.fbQueue.install) Farm.fbQueue.install(); } catch (e) {}
+  };
 })();

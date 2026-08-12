@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#fdf8ee">
 <!-- 部署构建号（deploy.sh 每次注入 CACHE_VERSION 时间戳）。SW 新鲜度守卫据此
      判断本页是否已过期（见页尾脚本）。ef-dev = 未部署的本地版本。 -->
-<meta name="ef-build" content="ef-2608112306">
+<meta name="ef-build" content="ef-2608121712">
 
 <!-- ==================== PWA (add to home screen) ==================== -->
 <link rel="manifest" href="manifest.webmanifest">
@@ -556,12 +556,36 @@
 
 </div>
 
-<!-- Firebase SDKs (compat builds — keep global firebase.* namespace) -->
-<script defer src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
-<script defer src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
-<script defer src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
-<script defer src="https://www.gstatic.com/firebasejs/10.14.1/firebase-functions-compat.js"></script>
-<script defer src="https://www.gstatic.com/firebasejs/10.14.1/firebase-messaging-compat.js"></script>
+<!-- Firebase SDKs (compat builds — keep global firebase.* namespace)
+     🔒 必须动态加载，绝不能写成 <script defer>（2026-08-12 根因修复，别改回去）
+     原来这 5 个 gstatic 脚本是 defer，而 defer 严格按**文档顺序**执行 —— 它们排在
+     下面 50 个本地游戏模块前面，于是弱网下 CDN 一慢，整个游戏被一起扣住。
+     实测（限速 10kbps，本地缓存 61 条全都在）：36 秒后 state/i18n/crops/ui/farm/
+     isoView/fbAuth **7 个核心模块一个都没执行**，全在排队等 gstatic → 客人眼里
+     就是「一直打不开」。Firebase 只关系到登录和云存档，不该决定游戏能不能开。
+     动态注入的脚本不进 defer 队列：本地模块照常先跑，SDK 到了再补 fbLateInit()。
+     compat 版之间有依赖（app 必须先于 auth/firestore），所以按序串行、不用 async 并发。 -->
+<script>
+(function () {
+  var BASE = 'https://www.gstatic.com/firebasejs/10.14.1/';
+  var FILES = ['firebase-app-compat.js', 'firebase-auth-compat.js',
+               'firebase-firestore-compat.js', 'firebase-functions-compat.js',
+               'firebase-messaging-compat.js'];
+  function next(i) {
+    if (i >= FILES.length) {
+      try { if (window.Farm && window.Farm.fbLateInit) window.Farm.fbLateInit(); } catch (e) {}
+      return;
+    }
+    var s = document.createElement('script');
+    s.src = BASE + FILES[i];
+    s.async = true;                       // 不阻塞解析；顺序由 onload 链自己保证
+    s.onload = function () { next(i + 1); };
+    s.onerror = function () { /* CDN 挂了/被墙 → 游客模式照常玩，不影响开局 */ };
+    (document.head || document.documentElement).appendChild(s);
+  }
+  next(0);
+})();
+</script>
 
 <!-- Module loading: order matters -->
 <script defer src="js/analytics.js"></script>

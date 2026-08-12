@@ -143,6 +143,10 @@
       // unavailable (offline, CDN blocked, etc.) — game continues as guest.
       if (Farm.fbAuth) Farm.fbAuth.init();
       if (Farm.fbQueue) Farm.fbQueue.install();
+      // Firebase SDK 现在是动态加载的（见 index.html），此刻可能还没到，上面两行
+      // 会因 Farm.fb.available=false 提前返回。打上标记，等 SDK 落地后
+      // firebase-init.js 的 fbLateInit 负责补跑，避免登录静默失效。
+      Farm.__fbAuthInitTried = true;
 
       // 3. Language
       // Register the language-change re-render hooks BEFORE the first

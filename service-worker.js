@@ -4,19 +4,14 @@
  * app shell under /src/ AND apply a network-first policy to /data/*.json
  * (a /src/-scoped worker could not see /data/, a sibling of /src/).
  *
- * Strategy:
- *   - navigations (HTML docs) → network-first with a SHORT timeout, ALWAYS falling back to
- *       the cached shell. A SW must never be able to hang a navigation (iOS Safari will sit
- *       on a blank screen forever if respondWith never resolves).
- *   - /data/*.json            → network-first (try fresh, timeout→cache fallback offline)
- *   - static sub-resources (css/js/icons) → network-first with a 4s timeout, cache fallback
- *       (2026-07-11: changed FROM stale-while-revalidate. SWR served old cached JS until the
- *       new SW activated, so iOS frozen tabs / a broken update chain trapped users on
- *       weeks-old code. Network-first means online users ALWAYS run the latest code (matching
- *       the network-first HTML — no more new-HTML/old-JS mismatch); slow/offline falls back to
- *       cache so the game still opens in any state. Verified: online=fresh, server-killed=boots
- *       from cache.)
+ * Strategy (2026-08-12 起)：
+ *   - 同源 GET 一律 **缓存优先**：命中即刻返回，绝不等网络（详见下方 fetch 处理器
+ *     里的长注释与实测数据——上一版「在线优先+超时」的超时只管响应头不管内容体，
+ *     手机弱网「连上了但爬不动」时会把卡死的流交给页面，缓存形同虚设）。
+ *   - 未命中缓存 → 走网络并顺手缓存；离线且未缓存的导航 → 兜底 app shell
+ *   - /service-worker.js 与 cache:'no-store' 请求 → 不拦截（新鲜度信标要真网络）
  *   - cross-origin (Firebase/gstatic CDN) → not intercepted
+ *   - 版本更新由 install 整包预缓存 + activate 清旧缓存 + index.html 内联新鲜度守卫负责
  *
  * Bump CACHE_VERSION whenever shell assets change so old caches are purged.
  * (Task 5a will extend this file with Firebase Cloud Messaging background
@@ -69,7 +64,7 @@ self.addEventListener('notificationclick', (event) => {
 
 // CACHE_VERSION 由 deploy.sh 在每次部署时自动注入时间戳（ef-YYMMDDHHMM），
 // 不再手动 +1 —— 忘 bump 会让全体 PWA 用户静默停在旧版（iOS 要删 App 才能救）。
-const CACHE_VERSION = 'ef-2608112306';
+const CACHE_VERSION = 'ef-2608121712';
 const CACHE = 'eastern-farm-' + CACHE_VERSION;
 // Precache the FULL app shell — HTML + CSS + every JS module + data JSON — so a SW
 // update (which clears the old cache) followed by a flaky mobile network can never leave
@@ -123,6 +118,29 @@ self.addEventListener('activate', (event) => {
   );
 });
 
+/* ===== 取用策略：缓存优先（2026-08-12 根因修复）=====
+ *
+ * 🔒 只要缓存里有，就立刻给，绝不等网络。
+ *
+ * 上一版（2026-07-11 起）是「在线优先 + 超时回退缓存」，看着有兜底，实际有个致命漏洞：
+ *   `fetch()` 在**响应头**到达时就 resolve，不等内容体。
+ *   所以那个 3.5s / 4s / 6s 超时只保护「连上了没」，完全不保护「数据下完了没」。
+ * 手机信号飘时最典型的场景恰恰是「连上了、然后数据爬不动」——这时 Promise.race 早已
+ * 判网络赢，SW 把一个卡死的流交给页面，而缓存里那份好的**一次都不会被用到**。
+ * `css/style.css` 是阻塞渲染的 → 页面白屏；50 个 defer JS 全卡 → 永远进不去。
+ *
+ * 2026-08-12 实测（生产站，缓存已装满 61 条、index/style/main/state 全在）：
+ *   全速     → 0.3 秒可玩
+ *   10kbps   → 1.2 秒画出开屏，**45 秒仍进不去**  ← 东西全在本地却不肯用
+ * 改成缓存优先后同一条件下回到秒开（见 commit 说明）。
+ *
+ * 「永不困在旧代码」（2026-07-11 那次改动的初衷）**不靠这里保证**，靠的是
+ * index.html 里内联的「新鲜度守卫」：controllerchange 自动刷新 +
+ * 版本信标（`fetch('/service-worker.js?v=…', {cache:'no-store'})` 比对
+ * 线上 CACHE_VERSION 与本页 <meta ef-build>，不一致就自愈刷新）。
+ * 新版本经由「新 SW 安装时整包预缓存 + activate 清旧缓存」下发。
+ * ⚠️ 改这里前先读那段守卫（index.html 底部），别把两处的职责搞混。
+ */
 self.addEventListener('fetch', (event) => {
   const req = event.request;
   if (req.method !== 'GET') return;
@@ -131,52 +149,35 @@ self.addEventListener('fetch', (event) => {
   try { url = new URL(req.url); } catch (e) { return; }
   if (url.origin !== self.location.origin) return;  // leave Firebase/CDN alone
 
-  // Best-effort background fetch: cache a fresh 200, return the response (or null on fail).
-  const fetchAndCache = () => fetch(req).then((res) => {
-    if (res && res.status === 200) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {}); }
-    return res;
-  }).catch(() => null);
+  // 🔒 新鲜度信标必须真的走网络，否则自愈机制会被自己的缓存骗过去（版本永远"一致"）。
+  // 它请求的是 /service-worker.js?v=<时间戳>，而下面 match 用了 ignoreSearch，
+  // 不排除的话会命中缓存里的 /service-worker.js → 永远读到旧 CACHE_VERSION。
+  if (url.pathname === '/service-worker.js') return;
+  if (req.cache === 'no-store') return;
 
-  // NAVIGATIONS (HTML documents) → network-first with a SHORT timeout, then ALWAYS fall back
-  // to the cached shell. CRITICAL: a SW must never be able to hang a navigation. A prior
-  // version served navigations via an un-timed fetch, so on iOS Safari a hung document fetch
-  // left the page stuck on a blank screen forever (WeChat's webview runs no SW, so it was
-  // unaffected — that asymmetry was the tell). Racing a timeout guarantees the page always
-  // resolves: fresh HTML when the network is healthy, cached shell within a few seconds when
-  // it isn't.
-  if (req.mode === 'navigate') {
-    const shell = () => caches.match(req)
-      .then((c) => c || caches.match('/src/index.html'))
-      .then((c) => c || Response.error());
-    const net = fetchAndCache();
-    const timeout = new Promise((resolve) => setTimeout(() => resolve(null), 3500));
-    event.respondWith(
-      Promise.race([net, timeout]).then((res) => res || shell()).catch(shell)
-    );
-    return;
-  }
+  event.respondWith((async () => {
+    // 缓存优先：命中即刻返回。ignoreSearch 让 ?fresh= / ?v= 之类的查询串也能命中
+    // （本站静态资源不靠查询串区分版本，版本由 CACHE_VERSION 整包管理）。
+    try {
+      const hit = await caches.match(req, { ignoreSearch: true });
+      if (hit) return hit;
+    } catch (e) { /* 缓存不可用就走网络 */ }
 
-  // /data/*.json → network-first (fresh game data), timeout→cache so a HUNG fetch on flaky
-  // mobile / in-app WebViews can't stall boot's data load forever.
-  if (url.pathname.startsWith('/data/') && url.pathname.endsWith('.json')) {
-    const fromCache = () => caches.match(req).then((c) => c || Response.error());
-    const net = fetchAndCache();
-    const timeout = new Promise((resolve) => setTimeout(() => resolve(null), 6000));
-    event.respondWith(Promise.race([net, timeout]).then((res) => res || fromCache()).catch(fromCache));
-    return;
-  }
-
-  // Static sub-resources (css/js/icons) → NETWORK-FIRST with a short timeout, cache fallback.
-  // 改动理由（2026-07-11，Chris「根源解决，别让任何客人卡在旧版」）：原来是
-  // stale-while-revalidate（先给旧缓存 JS、后台再更新），新代码非得等新 SW 激活才生效
-  // → iOS 冻结标签页 / 更新链失败时，客人被永久困在几周前的旧代码里（Chris 亲历）。
-  // 改成在线优先：只要网络正常就永远拿最新代码（与 network-first 的 HTML 版本一致，
-  // 杜绝 HTML 新 / JS 旧的错配）；网络慢(>4s)或离线才回退缓存 → 离线照常能玩、
-  // 「任何状态下都打得开」。速度代价靠浏览器 HTTP 缓存(max-age=600)兜住，可接受。
-  const fromCacheStatic = () => caches.match(req).then((c) => c || Response.error());
-  const netStatic = fetchAndCache();
-  const timeoutStatic = new Promise((resolve) => setTimeout(() => resolve(null), 4000));
-  event.respondWith(
-    Promise.race([netStatic, timeoutStatic]).then((res) => res || fromCacheStatic()).catch(fromCacheStatic)
-  );
+    // 没缓存才下网络，顺手存起来（首访、按需加载的地图/图片走这条）
+    try {
+      const res = await fetch(req);
+      if (res && res.status === 200) {
+        const copy = res.clone();
+        caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {});
+      }
+      return res;
+    } catch (e) {
+      // 离线且未缓存：导航兜底到 app shell，让游戏至少打得开
+      if (req.mode === 'navigate') {
+        const shell = (await caches.match('/src/index.html')) || (await caches.match('/'));
+        if (shell) return shell;
+      }
+      return Response.error();
+    }
+  })());
 });
