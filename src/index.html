@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#fdf8ee">
 <!-- 部署构建号（deploy.sh 每次注入 CACHE_VERSION 时间戳）。SW 新鲜度守卫据此
      判断本页是否已过期（见页尾脚本）。ef-dev = 未部署的本地版本。 -->
-<meta name="ef-build" content="ef-2608112115">
+<meta name="ef-build" content="ef-2608112306">
 
 <!-- ==================== PWA (add to home screen) ==================== -->
 <link rel="manifest" href="manifest.webmanifest">
@@ -106,6 +106,94 @@
       }
     } catch (_) {}
   }, true);   // 捕获阶段：早于任何后绑的 onclick
+
+  /* ⚠️ 卡住看门狗（2026-08-11，Chris「一刷新就卡住，很久了都是这样」）
+     ------------------------------------------------------------------
+     Chris 反复卡在开屏，而开发机 / 无头浏览器怎么试都复现不出来（生产站全新
+     配置下 260-800ms 就能玩）。他的设备上有我们这边没有的状态，隔空猜没有意义。
+     以前的回答一直是「清一下浏览器缓存」——他说得对：**别的网站都不需要这样，
+     那就是我们的代码有问题**。
+
+     所以：不再让用户当探针，让页面自己报告。8 秒还没就绪就在开屏上显示
+     「卡在哪」+ 两个按钮：强行进入 / 清空本站数据重载。
+     后者做的正是「清缓存」那件事（注销 SW + 删 Cache Storage），
+     但不需要用户懂任何技术，也不需要 Chris 再被告知一次去清缓存。
+
+     零依赖：这段跑的时候 Farm / 任何模块都可能还不存在。 */
+  var WATCHDOG_MS = 8000;
+  setTimeout(function () {
+    try {
+      if (window.__splashReady) return;              // 已经能玩了，不打扰
+      var splash = document.getElementById('splash');
+      if (!splash || !splash.parentNode) return;
+      if (document.getElementById('efStuck')) return;
+
+      var mods = [];
+      var F = window.Farm || {};
+      ['state', 'i18n', 'crops', 'ui', 'farm', 'isoView', 'fbAuth'].forEach(function (k) {
+        mods.push(k + (F[k] ? '✓' : '✗'));
+      });
+      var swTxt = '无';
+      try {
+        if (navigator.serviceWorker) {
+          swTxt = navigator.serviceWorker.controller ? '已接管' : '未接管';
+        }
+      } catch (_) {}
+      var build = (document.querySelector('meta[name="ef-build"]') || {}).content || '?';
+      var scripts = document.querySelectorAll('script[src]').length;
+
+      var box = document.createElement('div');
+      box.id = 'efStuck';
+      box.setAttribute('style', 'position:fixed;left:12px;right:12px;bottom:12px;z-index:99999;'
+        + 'background:#fffdf6;border:2px solid #c98a2e;border-radius:14px;padding:14px;'
+        + 'font:13px/1.6 system-ui,-apple-system,sans-serif;color:#4a3629;'
+        + 'box-shadow:0 6px 22px rgba(0,0,0,.18);');
+      box.innerHTML =
+        '<div style="font-weight:600;margin-bottom:6px;">载入比平时慢，可以这样处理</div>'
+        + '<div style="display:flex;gap:8px;margin-bottom:10px;">'
+        + '<button id="efForce" style="flex:1;padding:11px;border:0;border-radius:10px;'
+        + 'background:#3a8c50;color:#fff;font-size:14px;font-weight:600;">直接进入农场</button>'
+        + '<button id="efReset" style="flex:1;padding:11px;border:1px solid #c98a2e;'
+        + 'border-radius:10px;background:#fff;color:#8a5a12;font-size:14px;">清理并重载</button>'
+        + '</div>'
+        + '<div style="font-size:11px;color:#8a7a68;word-break:break-all;">'
+        + '诊断 ' + build + ' · SW' + swTxt + ' · 脚本' + scripts + ' · ' + mods.join(' ')
+        + '</div>';
+      splash.appendChild(box);
+
+      document.getElementById('efForce').onclick = function () {
+        if (window.__splashDismiss) { window.__splashDismiss(); return; }
+        if (splash && splash.parentNode) splash.remove();
+      };
+      // 「清理并重载」＝注销 Service Worker + 删掉本站所有 Cache Storage + 硬重载。
+      // 这就是以前让用户手动「清缓存」的那件事，一个按钮解决。
+      document.getElementById('efReset').onclick = function () {
+        var btn = this;
+        btn.textContent = '清理中…';
+        btn.disabled = true;
+        var jobs = [];
+        try {
+          if (navigator.serviceWorker && navigator.serviceWorker.getRegistrations) {
+            jobs.push(navigator.serviceWorker.getRegistrations().then(function (rs) {
+              return Promise.all(rs.map(function (r) { return r.unregister(); }));
+            }).catch(function () {}));
+          }
+          if (window.caches && caches.keys) {
+            jobs.push(caches.keys().then(function (ks) {
+              return Promise.all(ks.map(function (k) { return caches.delete(k); }));
+            }).catch(function () {}));
+          }
+        } catch (_) {}
+        // 🔒 绝不碰 localStorage —— 存档在那里，清了等于毁玩家进度
+        Promise.all(jobs).catch(function () {}).then(function () {
+          location.replace(location.pathname + '?fresh=' + Date.now());
+        });
+        setTimeout(function () {                       // 兜底：清理卡住也要重载
+          location.replace(location.pathname + '?fresh=' + Date.now());
+        }, 4000);
+      };
+    } catch (_) {}
+  }, WATCHDOG_MS);
 })();
 </script>
 
