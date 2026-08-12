@@ -334,6 +334,24 @@
     // open it from the「今日」panel (the sign-in card → 去签到/查看) or via tasks.
   }
 
+  // ⚠️ 2026-08-11 Chris「我卡在这个页面按任何地方都没有反应」的根因修复。
+  //
+  // 老设计：#splashStart 的 onclick 在 wireSplash() 里绑，而 wireSplash 排在
+  // boot 的一堆 await 之后。boot 只要慢（弱网、SW 换版、iOS 冻结标签页后恢复），
+  // 这颗按钮就是**死的**——而登录态下 firebase-auth._renderSplash 早就把
+  // 「欢迎回来 · Lv N」画出来了，界面看着完全就绪，按下去毫无反应、也没有任何
+  // 反馈。bootSafe 的应急兜底要等 10 秒才装，没人会等满 10 秒。
+  //
+  // 新设计：**点击意图先于 boot 记录**。DOMContentLoaded 一到就绑一个「预约进场」
+  // 处理器：boot 已好就直接进；没好就把按钮改成「正在加载…」并记下意图，boot 一
+  // 完成立刻自动进场。这样「能不能进游戏」不再取决于 boot 跑没跑完 ——
+  // 最差情况是等，而不是死，而且用户看得见在等。
+  // 「我要进去」这个意图由 index.html 里的内联脚本最先接住（它在 HTML 解析时
+  // 就跑，早于本文件下载完成 —— 详见那段注释）。这里只负责认领。
+  // 🔒 window.__splashEnterRequested / __splashReady / __splashDismiss 是这三个
+  // 文件之间的契约，改名要三处同改：index.html 内联脚本、本文件、bootSafe。
+  function _enterRequested() { return !!window.__splashEnterRequested; }
+
   function wireSplash(onDismiss) {
     const splash = document.getElementById('splash');
     const startBtn = document.getElementById('splashStart');
@@ -351,6 +369,10 @@
       }, 600);
     };
     startBtn.onclick = dismiss;
+    window.__splashReady = true;
+    window.__splashDismiss = dismiss;
+    // 用户在 boot 完成前点过了 —— 现在补上他那一下，不用再点第二次
+    if (_enterRequested()) { dismiss(); return; }
     // Splash login shortcut: dismiss splash + open login modal directly
     if (loginBtn) {
       loginBtn.onclick = () => {
@@ -847,10 +869,18 @@
     const installEmergency = function (why) {
       try {
         const splash = document.getElementById('splash');
-        ['splashStart', 'splashLogin', 'splashWorldcup'].forEach(function (id) {
+        const hard = function () { if (splash && splash.parentNode) splash.remove(); };
+        // ⚠️ 这里必须**强行覆盖** onclick，不能沿用老的 `if (!b.onclick)` 判据 ——
+        // armEarlySplash 一开始就绑了「预约进场」处理器，那个判据永远不成立，
+        // 兜底会被自己架空（2026-08-11）。走到这里说明 boot 已经废了，
+        // 用户的诉求就是「让我进去」，那就直接把开屏撕掉。
+        ['splashStart', 'splashLogin'].forEach(function (id) {
           const b = document.getElementById(id);
-          if (b && !b.onclick) b.onclick = function () { if (splash && splash.parentNode) splash.remove(); };
+          if (b) b.onclick = hard;
         });
+        // 只有**用户已经点过**才替他放行；没点过的人留在开屏页 ——
+        // boot 挂了的情况下自作主张撕掉开屏，等于把人扔进一个可能残缺的农场。
+        if (_enterRequested() && splash && splash.parentNode) hard();
         console.error('[boot] emergency dismiss installed (' + why + ')');
       } catch (_) {}
     };
@@ -864,13 +894,15 @@
     // resolve/reject → 上面的 p.catch 永不触发 → 开屏死。加一道独立超时：10 秒后若
     // 开屏还在、且「进入农场」按钮仍没绑 onclick（= wireSplash 没跑到），就装应急
     // dismiss —— 页面永远不允许「完全不能动」。（正常 boot 早已 <2s 绑好，不会误触。）
+    // 应急兜底：boot 迟迟不完成时，强行放人进去。
+    // 2026-08-11 从 10 秒缩到 6 秒，判据也从「按钮没绑 onclick」改成「boot 没就绪」——
+    // 现在 armEarlySplash 一开始就给按钮绑了处理器，老判据永远不成立、兜底等于失效。
     setTimeout(function () {
       try {
         const s = document.getElementById('splash');
-        const start = document.getElementById('splashStart');
-        if (s && s.parentNode && start && !start.onclick) installEmergency('timeout-10s');
+        if (s && s.parentNode && !window.__splashReady) installEmergency('timeout-6s');
       } catch (_) {}
-    }, 10000);
+    }, 6000);
   }
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', bootSafe);

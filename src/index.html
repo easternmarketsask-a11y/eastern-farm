@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#fdf8ee">
 <!-- 部署构建号（deploy.sh 每次注入 CACHE_VERSION 时间戳）。SW 新鲜度守卫据此
      判断本页是否已过期（见页尾脚本）。ef-dev = 未部署的本地版本。 -->
-<meta name="ef-build" content="ef-2608111240">
+<meta name="ef-build" content="ef-2608112115">
 
 <!-- ==================== PWA (add to home screen) ==================== -->
 <link rel="manifest" href="manifest.webmanifest">
@@ -56,6 +56,59 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Noto+Sans+SC:wght@400;500;700&family=Plus+Jakarta+Sans:wght@400;500;700&family=ZCOOL+KuaiLe&display=swap" media="print" onload="this.media='all'">
 <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Noto+Sans+SC:wght@400;500;700&family=Plus+Jakarta+Sans:wght@400;500;700&family=ZCOOL+KuaiLe&display=swap"></noscript>
 <link rel="stylesheet" href="css/style.css">
+
+<!-- ⚠️ 开屏按钮的「保命接管」——必须在 <head>，必须用事件委托（2026-08-11）
+     ================================================================
+     Chris 2026-08-11：「我卡在这个页面按任何地方都没有反应」。
+
+     根因不是 boot 慢，是**按钮的点击处理住在 main.js 里，而 main.js 恰恰是
+     还没下载完的那个东西**。150kbps 实测复现：
+         1.6s  开屏按钮已经画出来了（看着完全就绪、可以点）
+         6.0s  window.Farm 还不存在 —— 52 个 <script defer> 一个都没执行完
+         点下去毫无反应，连「我在加载」都没有
+     HTML+CSS 先到，渲染出一个漂亮的可点按钮，背后却是空的。
+     （历史上「世界杯能看 / 农场进不去」那个怪症状同源：世界杯按钮当年是
+       内联绑的，农场按钮不是。）
+
+     🔒 为什么必须是 <head> + 事件委托，而不是「按钮后面写个内联脚本」：
+     37KB 的 HTML 在慢网下要好几秒才传完。按钮在第 214 行、脚本在第 243 行 ——
+     实测按钮已经能点了、脚本那几行还没到。委托挂在 document 上，
+     按钮**还不存在时就已经能接住点击**，与解析进度彻底无关。
+
+     它只做一件事：把「我要进去」记下来并给出反馈。真正的进场由 main.js 的
+     wireSplash() 认领 window.__splashEnterRequested 完成。
+     🔒 这三个全局是 index.html 与 main.js 之间的契约，改名要两处同改：
+        __splashEnterRequested / __splashReady / __splashDismiss -->
+<script>
+(function () {
+  window.__splashEnterRequested = false;
+  document.addEventListener('click', function (e) {
+    var t = e.target;
+    var btn = null;
+    while (t && t !== document) {
+      if (t.id === 'splashStart' || t.id === 'splashLogin') { btn = t; break; }
+      t = t.parentNode;
+    }
+    if (!btn) return;
+    // boot 已就绪 → 交给真正的 dismiss（main.js 填的）
+    if (window.__splashReady && window.__splashDismiss) { window.__splashDismiss(); return; }
+    if (window.__splashEnterRequested) return;
+    window.__splashEnterRequested = true;
+    // 静默是最糟的失败态 —— 至少让人知道「收到了，在加载」
+    try {
+      var s = document.getElementById('splashStart');
+      if (s) {
+        var zh = s.querySelector('.splash-start-zh');
+        var en = s.querySelector('.splash-start-en');
+        if (zh) zh.textContent = '正在加载…';
+        if (en) en.textContent = 'Loading…';
+        s.style.opacity = '0.7';
+      }
+    } catch (_) {}
+  }, true);   // 捕获阶段：早于任何后绑的 onclick
+})();
+</script>
+
 <!-- 2026-08-11：世界杯已于 7/19 决赛结束、7/31 兑奖截止，主游戏不再加载它的
      css/js/赛程数据（原来「按钮藏了文件照下」，每次打开白拉约 254KB）。
      回顾页 worldcup.html 独立保留，它自己会加载 css/worldcup.css + js/worldcup.js。 -->
