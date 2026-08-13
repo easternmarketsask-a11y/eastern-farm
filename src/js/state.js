@@ -531,6 +531,40 @@
       } catch (e) { /* DOM 不可用（极早期）——save() 的早退保护仍然生效 */ }
     },
 
+    /* 腾空间：只删**可再生**的数据，按「丢了最不心疼」的顺序来。
+       🔒 绝不碰 SAVE_KEY 和 SESSION_KEY —— 前者是玩家进度，后者是多标签页
+       防覆盖的凭据（删了会让另一个标签页误判接管，反而毁存档）。
+       返回是否真的腾出了空间（没腾出就别白重试一次）。 */
+    _reclaimStorage() {
+      let freed = 0;
+      // ① 积分同步队列 —— 实测就是它撑满的；服务端有 eventId 去重，重发安全
+      try {
+        if (window.Farm && Farm.fbQueue && Farm.fbQueue.reclaim) freed += Farm.fbQueue.reclaim();
+      } catch (e) {}
+      // ② 纯缓存性质的键，删了下次自动重新生成/重新拉
+      const regenerable = [
+        'eastern_farm_weather_v2',   // 天气缓存
+        'ef_wc_live_snap_v1',        // 世界杯实时快照（赛事已于 2026-07 退场）
+        'wc2026_prefs_v1',           // 世界杯偏好
+      ];
+      for (const k of regenerable) {
+        try {
+          const raw = localStorage.getItem(k);
+          if (raw !== null) { freed += (k.length + raw.length) * 2; localStorage.removeItem(k); }
+        } catch (e) {}
+      }
+      // ③ 最后手段：存档的**备份**副本。主存档写得进去比留着备份重要 ——
+      //    备份的意义是「主存档坏了能救」，而现在的处境是主存档根本写不进去。
+      if (freed === 0) {
+        try {
+          const raw = localStorage.getItem(SAVE_KEY + '_backup');
+          if (raw !== null) { freed += raw.length * 2; localStorage.removeItem(SAVE_KEY + '_backup'); }
+        } catch (e) {}
+      }
+      if (freed > 0) console.warn('[state] 腾出约 ' + Math.round(freed / 1024) + ' KB');
+      return freed > 0;
+    },
+
     // 「这台设备存不下进度」一次性提示（读取抛错 / setItem 抛错共用）。
     _warnStorageOnce() {
       if (this._saveWarned) return;
@@ -590,6 +624,21 @@
         this.data.lastSavedAt = Date.now();   // stamp before serialize (cloud restore compares this)
         localStorage.setItem(SAVE_KEY, JSON.stringify(this.data));
       } catch (e) {
+        /* 🔒 存储满了要**自愈**，不是弹一句话就算完（2026-08-13）。
+           改之前是「抛错 → 弹一句删不掉的提示 → 进度从此不再保存」，
+           而 Chris 手机实测的真相是：localStorage 那个 5MB 桶被
+           `eastern_farm_sync_queue_v1` 撑满了，存档自己才 4KB ——
+           完全有空间可腾，我们却选择了放弃。
+           所以：先清掉**可再生**的东西，再重试一次。成功了就当无事发生
+           （连提示都不该弹，玩家根本不需要知道）。 */
+        if (this._reclaimStorage()) {
+          try {
+            localStorage.setItem(SAVE_KEY, JSON.stringify(this.data));
+            console.warn('[state] 存储已满 → 清理可再生数据后重试成功');
+            if (window.__efTrack) { try { window.__efTrack('storage_recovered'); } catch (_) {} }
+            return;   // 自愈成功：不标 _saveBlocked、不弹提示
+          } catch (e2) { e = e2; }
+        }
         console.error('Save failed', e);
         if (!this._storageErr) this._storageErr = e;   // 写失败的异常同样要上报病因
         this._warnStorageOnce();

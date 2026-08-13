@@ -69,6 +69,9 @@
     <div class="row"><span class="k">正在读取状态…</span><span class="v"></span></div>
   </div>
 
+  <!-- 只在 localStorage 真的快满时才出现（见脚本末尾）。平时不该让人看见一个
+       听起来很吓人的按钮。 -->
+  <button class="ghost" id="btnFree" style="display:none;">🧹 腾出存储空间（存档不动）</button>
   <button class="ghost" id="btnCopy">复制这张表</button>
 
   <p class="note">
@@ -135,16 +138,37 @@
   add('存储占用', '查询中…');
   add('其中网页缓存', '…');
 
-  // 3) 本地一共存了多少（逐键累加，UTF-16 计量——WebKit 就是按这个算配额的）
+  /* 3) 本地一共存了多少 —— 🔑 必须**逐键列出**，只报总数等于没报。
+        Chris 2026-08-13 手机实测：总量 5.0MB / 7 项、存档才 4KB，
+        光看总数根本不知道是谁吃掉的（答案是积分同步队列）。
+        WebKit 的 localStorage 是**独立的 5MB 桶**，跟上面那个 origin 配额
+        （他机器上 39GB、显示 0%）完全无关 —— 所以只看 storage.estimate()
+        会得出「一点都没满」的错误结论。这一段才是真正该看的地方。
+        UTF-16 计量（×2），与 WebKit 算配额的口径一致。 */
   try {
-    var tot = 0, cnt = 0, biggest = '', bn = 0;
+    var tot = 0, items = [];
     for (var i = 0; i < localStorage.length; i++) {
       var k = localStorage.key(i);
       var n = (k.length + (localStorage.getItem(k) || '').length) * 2;
-      tot += n; cnt++;
-      if (n > bn) { bn = n; biggest = k; }
+      tot += n;
+      items.push([k, n]);
     }
-    add('本地存的数据', mb(tot) + ' · ' + cnt + ' 项');
+    items.sort(function (a, b) { return b[1] - a[1]; });
+    var FULL = 5 * 1024 * 1024;   // WebKit 的硬上限
+    var pct = Math.round(tot * 1000 / FULL) / 10;
+    add('本地存的数据', mb(tot) + ' / 5 MB (' + pct + '%) · ' + items.length + ' 项',
+        pct >= 80 ? 'bad' : 'ok');
+    // 快满了才把「腾空间」按钮露出来
+    if (pct >= 70) {
+      var fb = document.getElementById('btnFree');
+      if (fb) fb.style.display = 'block';
+    }
+    for (var j = 0; j < items.length; j++) {
+      // 名字太长会把手机版面撑爆，中间省略
+      var nm = items[j][0];
+      if (nm.length > 26) nm = nm.slice(0, 14) + '…' + nm.slice(-10);
+      add('　└ ' + nm, mb(items[j][1]), items[j][1] > FULL / 4 ? 'bad' : '');
+    }
   } catch (e) { add('本地存的数据', '读不到(' + e.name + ')', 'bad'); }
 
   // 4) 已装在本机的版本（Cache Storage 名字里带版本号）
@@ -268,6 +292,43 @@
 
   document.getElementById('btnGo').onclick = function () {
     location.href = '/src/index.html?fresh=' + Date.now();
+  };
+
+  /* 🧹 腾空间 —— 存储满时的现场急救（2026-08-13 加）。
+     游戏代码里已经有自愈（开机裁队列 + 存档写失败重试），但那要**游戏能启动**
+     才跑得到。这页存在的意义正是「游戏启动不了」，所以这里必须有一份不依赖
+     游戏的。只删可再生的数据：
+       - eastern_farm_sync_queue_v1 积分同步队列（实测就是它撑满 5MB 桶的；
+         服务端按 eventId 去重，重发安全）
+       - 天气缓存 / 世界杯遗留快照
+     🔒 绝不碰 eastern_farm_save_v1（存档）和 ef_session_token（多标签页凭据，
+        删了会让别的标签页误判接管，反而毁存档）。 */
+  var FREEABLE = ['eastern_farm_sync_queue_v1', 'eastern_farm_weather_v2',
+                  'ef_wc_live_snap_v1', 'wc2026_prefs_v1'];
+  document.getElementById('btnFree').onclick = function () {
+    var btn = this, freed = 0;
+    for (var i = 0; i < FREEABLE.length; i++) {
+      try {
+        var raw = localStorage.getItem(FREEABLE[i]);
+        if (raw !== null) {
+          freed += (FREEABLE[i].length + raw.length) * 2;
+          localStorage.removeItem(FREEABLE[i]);
+        }
+      } catch (e) {}
+    }
+    // 立刻验证一次「现在能写了吗」——这才是他真正关心的事
+    var writable = false;
+    try {
+      localStorage.setItem('__ef_probe', 'x');
+      localStorage.removeItem('__ef_probe');
+      writable = true;
+    } catch (e) {}
+    btn.textContent = freed
+      ? ('✅ 腾出 ' + mb(freed) + (writable ? '，存档现在能写了' : '，但还是写不进去'))
+      : '没有可清的（存储不是被我们占的）';
+    btn.disabled = true;
+    // 重新量一遍，让表上的数字当场变
+    setTimeout(function () { location.reload(); }, 1800);
   };
 
   /* 复制这张表 —— 诊断只有传回来才有用。手机上截图会漏行、念给我会漏字，
