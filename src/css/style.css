@@ -1143,6 +1143,20 @@ body.mapmode #warehouseBtn { display: none !important; }
   cursor: pointer;
 }
 .auth-ghost:hover { color: var(--leaf-dark); }
+/* 次要动作里也分轻重：「第一次登录用手机号激活」和「收不到？改用其他邮箱」
+   是真正会被用到的出路，不能和「取消」一样淡 —— 藏起来的结果是顾客打电话到店里问。 */
+.auth-ghost--strong {
+  color: var(--leaf-green);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.auth-sent-line {
+  margin: 0 0 10px;
+  font-size: 15px;
+  line-height: 1.65;
+  color: var(--warm-text);
+}
 
 .auth-title { margin-bottom: 2px; }
 .auth-sub {
