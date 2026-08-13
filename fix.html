@@ -305,14 +305,26 @@
         删了会让别的标签页误判接管，反而毁存档）。 */
   var FREEABLE = ['eastern_farm_sync_queue_v1', 'eastern_farm_weather_v2',
                   'ef_wc_live_snap_v1', 'wc2026_prefs_v1'];
+  // 世界杯抽奖遗留键：一场比赛一个键、从不清理，赛事 2026-07 已退场
+  var FREEABLE_PREFIX = ['wc_lotto_rv_', 'wc_lotto_cr_'];
   document.getElementById('btnFree').onclick = function () {
-    var btn = this, freed = 0;
-    for (var i = 0; i < FREEABLE.length; i++) {
+    var btn = this, freed = 0, i;
+    // ⚠️ 前缀键必须先收集再删 —— 边遍历边 removeItem 会让索引错位、漏掉一半
+    var doomed = FREEABLE.slice();
+    try {
+      for (i = 0; i < localStorage.length; i++) {
+        var k = localStorage.key(i);
+        for (var p = 0; p < FREEABLE_PREFIX.length; p++) {
+          if (k && k.indexOf(FREEABLE_PREFIX[p]) === 0) { doomed.push(k); break; }
+        }
+      }
+    } catch (e) {}
+    for (i = 0; i < doomed.length; i++) {
       try {
-        var raw = localStorage.getItem(FREEABLE[i]);
+        var raw = localStorage.getItem(doomed[i]);
         if (raw !== null) {
-          freed += (FREEABLE[i].length + raw.length) * 2;
-          localStorage.removeItem(FREEABLE[i]);
+          freed += (doomed[i].length + raw.length) * 2;
+          localStorage.removeItem(doomed[i]);
         }
       } catch (e) {}
     }

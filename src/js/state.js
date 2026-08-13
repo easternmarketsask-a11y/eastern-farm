@@ -451,7 +451,16 @@
         // 「进度静默清零」。确认不了就整会话内存态运行，绝不落盘。
         let confirmNull = null, confirmThrew = false;
         try { confirmNull = localStorage.getItem(SAVE_KEY); } catch (e) { confirmThrew = true; }
-        if (this._saveBlocked || confirmThrew || confirmNull !== null) {
+        /* 🔒 空串必须当作「没有存档」，不能当作「存档还在」（2026-08-13 修）。
+           原来写的是 `confirmNull !== null`，于是值是 `''` 时：
+             上面 `if (saved)` 判它「没存档」→ 走到这个分支
+             这里 `'' !== null` 又成立   → 判它「存档还在，别覆盖」
+           两句话自相矛盾，结果是**存储完全正常的设备被永久禁止落盘**，
+           每次刷新都从头开始，还弹一句删不掉的提示。已在浏览器复现。
+           本条守卫的本意是「读不到 ≠ 不存在，别拿初始状态覆盖真存档」——
+           而空串里没有任何进度可保护，覆盖它零损失。 */
+        const confirmHasRealSave = typeof confirmNull === 'string' && confirmNull !== '';
+        if (this._saveBlocked || confirmThrew || confirmHasRealSave) {
           this._saveBlocked = true;
           // 这条路径**没有异常**也会走到：saved 是空串 '' 时 `if (saved)` 判它「没存档」，
           // 而这里 `'' !== null` 又成立 → 存储明明好好的，落盘却被永久关掉。
@@ -553,6 +562,22 @@
           if (raw !== null) { freed += (k.length + raw.length) * 2; localStorage.removeItem(k); }
         } catch (e) {}
       }
+      /* ③ 世界杯抽奖遗留键：`wc_lotto_rv_<uid>_<matchId>` / `wc_lotto_cr_...`
+         **一场比赛一个键、从来不清理**（worldcup.js），是典型的「键数量无界」
+         写法。赛事 2026-07-31 已收尾兑奖截止，这些键对现在的游戏毫无用处。
+         按前缀扫掉。⚠️ 必须先收集再删 —— 边遍历 localStorage 边 removeItem
+         会让索引错位、漏掉一半。 */
+      try {
+        const doomed = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (k && (k.indexOf('wc_lotto_rv_') === 0 || k.indexOf('wc_lotto_cr_') === 0)) doomed.push(k);
+        }
+        for (const k of doomed) {
+          const raw = localStorage.getItem(k);
+          if (raw !== null) { freed += (k.length + raw.length) * 2; localStorage.removeItem(k); }
+        }
+      } catch (e) {}
       // ③ 最后手段：存档的**备份**副本。主存档写得进去比留着备份重要 ——
       //    备份的意义是「主存档坏了能救」，而现在的处境是主存档根本写不进去。
       if (freed === 0) {

@@ -4,11 +4,17 @@
  * app shell under /src/ AND apply a network-first policy to /data/*.json
  * (a /src/-scoped worker could not see /data/, a sibling of /src/).
  *
- * Strategy (2026-08-12 起)：
- *   - 同源 GET 一律 **缓存优先**：命中即刻返回，绝不等网络（详见下方 fetch 处理器
- *     里的长注释与实测数据——上一版「在线优先+超时」的超时只管响应头不管内容体，
- *     手机弱网「连上了但爬不动」时会把卡死的流交给页面，缓存形同虚设）。
- *   - 未命中缓存 → 走网络并顺手缓存；离线且未缓存的导航 → 兜底 app shell
+ * Strategy (2026-08-13 起)：
+ *   🔒 **SW 只从缓存回答，从不代替浏览器上网。** 这是本文件最高的不变量，
+ *      违反它就等于把「页面可能永久白屏」重新装回去（下方 fetch 处理器有长注释）。
+ *   - **只拦预缓存清单里的那 62 个文件**（PRECACHE_SET 同步判断）；
+ *     其余同源请求（地图/作物图片、世界杯、任何新文件）一律同步 return，
+ *     交给浏览器原生处理。Cache Storage 因此稳定在这 62 个文件，不再随按需缓存长大。
+ *   - 清单内：**缓存优先**，命中即刻返回，绝不等网络（2026-08-12 实测：
+ *     上一版「在线优先+超时」的超时只管响应头不管内容体，手机弱网
+ *     「连上了但爬不动」时会把卡死的流交给页面，缓存形同虚设）。
+ *   - 清单内但缓存意外丢失 → **有界**网络（fetchBounded 8 秒真 abort）；
+ *     失败时导航兜底 app shell。绝不无限期等待。
  *   - /service-worker.js 与 cache:'no-store' 请求 → 不拦截（新鲜度信标要真网络）
  *   - cross-origin (Firebase/gstatic CDN) → not intercepted
  *   - 版本更新由 install 整包预缓存 + activate 清旧缓存 + index.html 内联新鲜度守卫负责
@@ -101,6 +107,27 @@ const PRECACHE = [
 // 一并移出预缓存。四个文件仍在仓库里、worldcup.html 直链仍可打开（联网时正常走
 // 网络加载），只是不再让每个玩家在装 PWA 时先下载一份赛事资料。
 
+/* 🔒 同步可查的预缓存清单（2026-08-13）——「拦不拦截」必须是**同步**判断。
+   `respondWith()` 只能在 fetch 处理器执行期间同步调用；一旦先 `await` 去查缓存，
+   就已经接管了这个请求，之后即使没命中也只能自己想办法给出响应 —— 而历史上
+   「自己想办法」就是 `await fetch(req)` 无超时，也就是**能永久挂住页面**。
+   有了这个 Set，不在清单里的东西可以同步 `return`，彻底交还浏览器。 */
+const PRECACHE_SET = new Set(PRECACHE);
+
+/* 有界的网络取用：给 fetch 装上真正的中止闸。
+   ⚠️ 单纯 Promise.race 是不够的 —— `fetch()` 在**响应头**到达时就 resolve，
+   race 赢了不代表内容体下完了，卡住的流照样会交给页面（2026-08-12 实测教训）。
+   所以这里用 AbortController **真的把它掐掉**，让上层拿到一个明确的失败，
+   而不是一个永远读不完的 body。 */
+function fetchBounded(req, ms) {
+  const ac = new AbortController();
+  const timer = setTimeout(() => { try { ac.abort(); } catch (e) {} }, ms);
+  return fetch(req, { signal: ac.signal }).then(
+    (res) => { clearTimeout(timer); return res; },
+    (err) => { clearTimeout(timer); throw err; }
+  );
+}
+
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE)
@@ -162,24 +189,44 @@ self.addEventListener('fetch', (event) => {
      🔒 对救命路径而言「打得开」压倒「是最新的」。它随每次部署整包预缓存更新，
      而它要做的事（注销 SW + 清缓存）本来也不依赖是不是最新版。 */
 
+  /* 🔒 只管预缓存清单里的那 62 个文件，别的一律**同步 return**（2026-08-13）。
+     ------------------------------------------------------------------------
+     改之前是「同源 GET 全都拦，没命中就 `await fetch(req)`」——那个 fetch **没有
+     超时**，而它包在 respondWith 里，所以手机弱网「连上了、数据爬不动」时
+     respondWith 永不 resolve = **页面被无限期挂住**。同一类错在后台
+     (StockWise PR #88) 已经修过一次，后台由此定规「导航一律不拦截」。
+
+     ⚠️ 这个坑最阴的地方：它连**急救页自己**都能挡住。/fix.html 存在的意义就是
+     「别的都打不开时」，而它跟别的资源走同一条 respondWith —— 要救人的和被救的
+     困在同一个坑里。急救出口能被它要救的东西挡住，这个设计本身就是错的。
+
+     现在的不变量：**SW 只从缓存回答，从不代替浏览器上网。**
+       - 不在清单里（地图/作物图片、世界杯、任何新文件）→ 同步 return，
+         浏览器原生处理（有它自己的超时、重试、HTTP 缓存）。顺带好处：
+         Cache Storage 不再随按需缓存无限增长，稳定在这 62 个文件。
+       - 在清单里 → 缓存优先；万一缓存被系统清了，才走**有界**网络（8 秒真中止）。
+     这样能被我们挂住的窗口只剩「清单内文件且缓存恰好丢失」，且有硬上界。 */
+  if (!PRECACHE_SET.has(url.pathname)) return;
+
   event.respondWith((async () => {
     // 缓存优先：命中即刻返回。ignoreSearch 让 ?fresh= / ?v= 之类的查询串也能命中
     // （本站静态资源不靠查询串区分版本，版本由 CACHE_VERSION 整包管理）。
     try {
       const hit = await caches.match(req, { ignoreSearch: true });
       if (hit) return hit;
-    } catch (e) { /* 缓存不可用就走网络 */ }
+    } catch (e) { /* 缓存不可用就走下面的有界网络 */ }
 
-    // 没缓存才下网络，顺手存起来（首访、按需加载的地图/图片走这条）
+    // 走到这里说明缓存里本该有却没有（被系统清了 / 预缓存那一项失败过）。
+    // 🔒 必须有界：宁可给一个明确的失败让人重试，也绝不无限期挂着。
     try {
-      const res = await fetch(req);
+      const res = await fetchBounded(req, 8000);
       if (res && res.status === 200) {
         const copy = res.clone();
         caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {});
       }
       return res;
     } catch (e) {
-      // 离线且未缓存：导航兜底到 app shell，让游戏至少打得开
+      // 离线/超时且未缓存：导航兜底到 app shell，让游戏至少打得开
       if (req.mode === 'navigate') {
         const shell = (await caches.match('/src/index.html')) || (await caches.match('/'));
         if (shell) return shell;
