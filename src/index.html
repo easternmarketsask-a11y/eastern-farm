@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#fdf8ee">
 <!-- 部署构建号（deploy.sh 每次注入 CACHE_VERSION 时间戳）。SW 新鲜度守卫据此
      判断本页是否已过期（见页尾脚本）。ef-dev = 未部署的本地版本。 -->
-<meta name="ef-build" content="ef-2608121712">
+<meta name="ef-build" content="ef-2608121923">
 
 <!-- ==================== PWA (add to home screen) ==================== -->
 <link rel="manifest" href="manifest.webmanifest">
@@ -688,18 +688,24 @@
         })
         .catch(function () {});
     }
-    window.addEventListener('load', function () {
-      // 注册推迟到首屏下载高峰之后（B4 perf）：SW install 预缓存 61 个 shell 文件，
-      // 否则与进农场瞬间的 ~3.2MB 地图下载抢带宽。requestIdleCallback(8s 兜底)。
-      var doRegister = function () {
-        navigator.serviceWorker.register('/service-worker.js', { scope: '/' })
-          .then(function (reg) { if (reg && reg.update) reg.update().catch(function () {}); })
-          .catch(function (e) { console.warn('[pwa] SW registration failed:', e); });
-      };
-      if (window.requestIdleCallback) window.requestIdleCallback(doRegister, { timeout: 8000 });
-      else setTimeout(doRegister, 8000);
-      __checkFresh();
-    });
+    /* 🔒 自愈绝不能挂在 load 事件上（2026-08-12 修，别改回去）
+       -------------------------------------------------------------
+       原来注册 SW 和 __checkFresh() 都写在 window.addEventListener('load', …) 里。
+       而 `load` 要等**页面所有资源下完**才触发 —— 于是出现了最坏的死结：
+         页面卡住 → load 永不触发 → 自愈永不运行 → 永远卡住。
+       自愈机制偏偏在唯一需要它的场景里从不运行。（pageshow 同理，它排在 load 之后。）
+       改成纯定时器：与页面加载完成与否无关，到点就跑。
+       延迟仍保留 8 秒（SW install 要预缓存 61 个文件，别跟首屏抢带宽），
+       但 __checkFresh 提前到 2.5 秒 —— 它只拉一个 10KB 的 SW 文件，很轻，
+       而卡住的人越早知道「本页已过期」越好。 */
+    var doRegister = function () {
+      navigator.serviceWorker.register('/service-worker.js', { scope: '/' })
+        .then(function (reg) { if (reg && reg.update) reg.update().catch(function () {}); })
+        .catch(function (e) { console.warn('[pwa] SW registration failed:', e); });
+    };
+    if (window.requestIdleCallback) window.requestIdleCallback(doRegister, { timeout: 8000 });
+    else setTimeout(doRegister, 8000);
+    setTimeout(__checkFresh, 2500);
     // 冻结标签页恢复只发 pageshow / visibilitychange（不重跑 load）——补上唤醒检查。
     window.addEventListener('pageshow', function (e) { if (e && e.persisted) __lastFresh = 0; __checkFresh(); });
     document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') __checkFresh(); });

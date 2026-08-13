@@ -64,7 +64,7 @@ self.addEventListener('notificationclick', (event) => {
 
 // CACHE_VERSION 由 deploy.sh 在每次部署时自动注入时间戳（ef-YYMMDDHHMM），
 // 不再手动 +1 —— 忘 bump 会让全体 PWA 用户静默停在旧版（iOS 要删 App 才能救）。
-const CACHE_VERSION = 'ef-2608121712';
+const CACHE_VERSION = 'ef-2608121923';
 const CACHE = 'eastern-farm-' + CACHE_VERSION;
 // Precache the FULL app shell — HTML + CSS + every JS module + data JSON — so a SW
 // update (which clears the old cache) followed by a flaky mobile network can never leave
@@ -154,6 +154,9 @@ self.addEventListener('fetch', (event) => {
   // 不排除的话会命中缓存里的 /service-worker.js → 永远读到旧 CACHE_VERSION。
   if (url.pathname === '/service-worker.js') return;
   if (req.cache === 'no-store') return;
+  // 🔒 急救页永远走网络（/fix.html）——它存在的意义就是「别的都打不开时的出路」，
+  // 一旦被自己的缓存困住就彻底失去意义。整页 ~4KB 零依赖，走网络代价可忽略。
+  if (url.pathname === '/fix.html') return;
 
   event.respondWith((async () => {
     // 缓存优先：命中即刻返回。ignoreSearch 让 ?fresh= / ?v= 之类的查询串也能命中
