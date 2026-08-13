@@ -362,15 +362,36 @@
     const loginBtn = document.getElementById('splashLogin');
     if (!splash || !startBtn) { if (onDismiss) onDismiss(); return; }
     let fired = false;
+    let removed = false;
+    /* 🔒 真正的移除必须可重试，绝不能只靠那个 600ms 定时器（2026-08-12 修，别改回去）
+       -----------------------------------------------------------------------
+       Chris 2026-08-12：开屏完整显示「欢迎回来 · Lv7 园丁」，点任何地方都没反应，
+       连「正在加载…」都不出现 —— 那说明走的是「已就绪 → __splashDismiss()」这条路，
+       而 dismiss() 第一行 `if (fired) return` 直接把它吃掉了。
+       成因：加载慢时他先点了一下，boot 完成后 wireSplash 会替他补执行 dismiss()
+       （见下面的 _enterRequested 分支）→ fired 置 true、移除排到 600ms 之后。
+       而 iOS 对后台/繁忙标签页会**冻结计时器**（他开着 44 个标签页），那一次
+       setTimeout 没跑到 → 开屏留在屏幕上，但闸门已经落下 → 之后每一次点击都是空转。
+       一次性闸门 + 延后执行 + 不校验结果 = 永久死锁。
+       修法：fired 只用来防重复播音效/重复回调；**只要开屏还在 DOM 里，
+       任何一次点击都必须能把它拿掉**。 */
+    const finish = () => {
+      if (removed) return;
+      removed = true;
+      try { if (splash.parentNode) splash.remove(); } catch (_) {}
+      if (onDismiss) onDismiss();
+    };
     const dismiss = () => {
-      if (fired) return;
+      if (fired) {
+        // 已经 dismiss 过、开屏却还在 → 定时器被系统掐了。立刻硬移除，不是 return。
+        if (splash.parentNode) finish();
+        return;
+      }
       fired = true;
       splash.classList.add('dismissed');
       if (Farm.audio) Farm.audio.play('plant');
-      setTimeout(() => {
-        splash.remove();
-        if (onDismiss) onDismiss();
-      }, 600);
+      setTimeout(finish, 600);          // 正常路径：等淡出动画
+      setTimeout(finish, 2500);         // 兜底：动画/计时器被掐也一定会消失
     };
     startBtn.onclick = dismiss;
     window.__splashReady = true;

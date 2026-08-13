@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#fdf8ee">
 <!-- 部署构建号（deploy.sh 每次注入 CACHE_VERSION 时间戳）。SW 新鲜度守卫据此
      判断本页是否已过期（见页尾脚本）。ef-dev = 未部署的本地版本。 -->
-<meta name="ef-build" content="ef-2608122059">
+<meta name="ef-build" content="ef-2608122114">
 
 <!-- ==================== PWA (add to home screen) ==================== -->
 <link rel="manifest" href="manifest.webmanifest">
@@ -81,6 +81,28 @@
         __splashEnterRequested / __splashReady / __splashDismiss -->
 <script>
 (function () {
+  /* 🔒 「有人来了」必须在这里数，不能用 Farm.track（2026-08-12 加）
+     -------------------------------------------------------------
+     Farm.track 住在 analytics.js 里，而 'open' 又发在 main.js 的 boot 里 ——
+     两者都是「游戏成功跑起来」之后才发生的事。于是长期以来：
+       **打不开的客人在后台数据里等于不存在。**
+     Chris 问「其他客人现在会不会好了」，我答不上来，正是因为漏斗里
+     那 228 个访客是「成功进去的人」，不是「来过的人」。
+     这一发放在 <head> 内联，HTML 一到就计数，不依赖任何模块。
+     后台「新手漏斗」用 来到页面 − 成功进入 = 打不开人数。 */
+  var TRACK_URL = 'https://stockwise-app-873982544406.us-central1.run.app/api/public/game-track';
+  window.__efTrack = function (ev) {
+    try {
+      fetch(TRACK_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ event: ev }),
+        keepalive: true,          // 页面被关掉/跳走也要送达
+      }).catch(function () {});
+    } catch (_) { /* 埋点永远不许影响游戏 */ }
+  };
+  window.__efTrack('open_attempt');
+
   window.__splashEnterRequested = false;
   document.addEventListener('click', function (e) {
     var t = e.target;
@@ -91,7 +113,19 @@
     }
     if (!btn) return;
     // boot 已就绪 → 交给真正的 dismiss（main.js 填的）
-    if (window.__splashReady && window.__splashDismiss) { window.__splashDismiss(); return; }
+    if (window.__splashReady && window.__splashDismiss) {
+      window.__splashDismiss();
+      /* 🔒 兜底：调完还在就自己动手（2026-08-12）
+         点击是用户的明确意图，绝不允许「点了没反应」。main.js 那边的 dismiss
+         历史上会因为一次性闸门 + 被冻结的定时器而空转（Chris 亲历，开屏卡着
+         点任何地方都没用）。那边已修，这里再兜一层：本段内联在 <head>、
+         零依赖，就算 main.js 整个坏掉也能把开屏拿掉，让人进得去。 */
+      setTimeout(function () {
+        var sp = document.getElementById('splash');
+        if (sp && sp.parentNode) { try { sp.remove(); } catch (_) {} }
+      }, 900);
+      return;
+    }
     if (window.__splashEnterRequested) return;
     window.__splashEnterRequested = true;
     // 静默是最糟的失败态 —— 至少让人知道「收到了，在加载」
@@ -160,6 +194,8 @@
         + '诊断 ' + build + ' · SW' + swTxt + ' · 脚本' + scripts + ' · ' + mods.join(' ')
         + '</div>';
       splash.appendChild(box);
+      // 卡住了也要留下痕迹 —— 否则后台永远只看得见「成功进去的人」
+      try { if (window.__efTrack) window.__efTrack('stuck'); } catch (_) {}
 
       document.getElementById('efForce').onclick = function () {
         if (window.__splashDismiss) { window.__splashDismiss(); return; }
