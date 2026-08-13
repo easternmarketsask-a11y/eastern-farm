@@ -329,6 +329,7 @@
       let saved = null;
       try { saved = localStorage.getItem(SAVE_KEY); }
       catch (e) {
+        this._storageErr = e;   // 记下异常本身，_warnStorageOnce 要用它上报病因
         // ⚠️ 存档神圣（audit P0 (b)）：「读不到」≠「不存在」。读取一旦抛错，本会话
         // 永久禁止一切 save()（含心跳/mutator/flush）——否则下面的「无存档」分支会
         // 用初始状态覆盖真存档，正是「20 分钟进度静默清零」的根因之一。
@@ -452,6 +453,10 @@
         try { confirmNull = localStorage.getItem(SAVE_KEY); } catch (e) { confirmThrew = true; }
         if (this._saveBlocked || confirmThrew || confirmNull !== null) {
           this._saveBlocked = true;
+          // 这条路径**没有异常**也会走到：saved 是空串 '' 时 `if (saved)` 判它「没存档」，
+          // 而这里 `'' !== null` 又成立 → 存储明明好好的，落盘却被永久关掉。
+          // 单独标一个病因名，别和真的抛错混在一起（两者的修法完全不同）。
+          if (!this._storageErr && !confirmThrew) this._storagePhantom = true;
           console.warn('[state] save key unreadable or reappeared — in-memory session, will NOT write starter over it');
         } else {
           this.save();   // guarded internally; a blocked browser just warns, never throws here
@@ -530,6 +535,22 @@
     _warnStorageOnce() {
       if (this._saveWarned) return;
       this._saveWarned = true;
+      /* 🔍 上报病因（2026-08-13 加）——在此之前，「客人存不下进度」这件事
+         **一个数都没有**，只能靠 Chris 打电话说他看见了那句提示。而这三种
+         情况的修法完全不同，猜错就白修一轮：
+           quota    → 真的满了 → 该给缓存/存档减负
+           security → Cookie 被拦 / 无痕 / App 内置浏览器隔离 → 减负没用
+           phantom  → 存储是好的，是我们自己的判定把落盘关掉了（空串路径）
+         无 PII，只累加计数器。埋点永远不许影响游戏，整段包在 try 里。 */
+      try {
+        const err = this._storageErr;
+        const name = err && err.name ? String(err.name) : '';
+        let ev = 'storage_err_other';
+        if (this._storagePhantom) ev = 'storage_err_phantom';
+        else if (/quota|full/i.test(name + ' ' + (err && err.message || ''))) ev = 'storage_err_quota';
+        else if (/security/i.test(name)) ev = 'storage_err_security';
+        if (window.__efTrack) window.__efTrack(ev);
+      } catch (e) { /* 埋点失败绝不影响游戏 */ }
       // 延后一拍再弹：让 Firebase 登录先解析出 memberDoc，好决定给哪版文案。
       // 已登录会员的进度实时同步在云端（members.gameStats，换设备也不丢）→ 本地存不下
       // 不等于丢进度，给「安心版」，别把会员吓着（Chris 手机 iOS Safari 存储受限，
@@ -570,6 +591,7 @@
         localStorage.setItem(SAVE_KEY, JSON.stringify(this.data));
       } catch (e) {
         console.error('Save failed', e);
+        if (!this._storageErr) this._storageErr = e;   // 写失败的异常同样要上报病因
         this._warnStorageOnce();
       }
       // Phase-1 neighbor sync: piggyback on save() so any stat change

@@ -9,13 +9,23 @@
   🔒 急救页（2026-08-12）——农场打不开时的唯一出路，也是唯一的现场诊断入口。
 
   设计约束（改动前务必守住，破一条这页就在真正需要它的时候用不了）：
-  1. 单文件、零外部依赖：不引 CSS / 字体 / 图片 / 任何 js。整页 ~4KB，
+  1. 单文件、零外部依赖：不引 CSS / 字体 / 图片 / 任何 js。
      最烂的网络也能打开——而这页存在的意义正是「别的都打不开的时候」。
-  2. service-worker.js 里把 /fix.html 列为**不拦截**，永远走网络拿最新的，
-     绝不可能被自己的缓存困住（缓存优先策略下这条是必须的）。
+  2. service-worker.js 里 /fix.html 走**缓存优先**（和别的静态资源一样）。
+     ⚠️ 别按早期注释以为它「不拦截、永远走网络」——2026-08-12 实测那样写会让
+     急救页自己在卡流下空白卡死（commit 5a06b58）。对救命路径而言「打得开」
+     压倒「是最新的」；它随每次部署整包预缓存更新。
   3. 🔒 绝不碰 localStorage —— 玩家存档在 eastern_farm_save_v1 里。
      只注销 SW + 删 Cache Storage（那两样删了会自动重下）。
+     唯一例外是下面的写入探针，它只写自己的 __ef_probe 键并立刻删掉。
   4. 诊断信息要**给人看**，不是给控制台看：Chris 用手机，打不开开发者工具。
+
+  🔍 2026-08-13 扩充：加「存储真实占用」+「存档能不能写」探针。
+     起因：Chris 手机上弹出「这台设备存不下本地缓存」那句提示，说明他设备上
+     localStorage 在**抛异常**（state.js 的 _warnStorageOnce 只有抛错才触发）。
+     本机实测整站只占 2.9 MB / 配额 10 GB，撑爆配额这条讲不通 → 必须拿到他设备
+     上真实的**异常名**（QuotaExceededError=真满了 / SecurityError=Cookie 被拦
+     或无痕模式）才能对症。这两条是完全不同的病，猜错就白修一轮。
 -->
 <style>
   :root { color-scheme: light; }
@@ -59,6 +69,8 @@
     <div class="row"><span class="k">正在读取状态…</span><span class="v"></span></div>
   </div>
 
+  <button class="ghost" id="btnCopy">复制这张表</button>
+
   <p class="note">
     「清理」只会删掉本机存的<b>网页文件副本</b>（会自动重新下载），
     <b>不会动你的农场存档</b>——存档存在另一个地方，清理碰不到它。<br><br>
@@ -80,21 +92,75 @@
     document.getElementById('diag').innerHTML = h;
   }
 
+  function mb(n) {
+    if (typeof n !== 'number' || !isFinite(n)) return '?';
+    return n >= 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB';
+  }
+
   // 1) 存档在不在（最要紧的一条，先让人安心）
   var saveInfo = '读不到';
   var saveCls = 'bad';
   try {
     var raw = localStorage.getItem(SAVE_KEY);
-    if (raw) { saveInfo = '在 · ' + Math.round(raw.length / 1024) + ' KB'; saveCls = 'ok'; }
+    // ⚠️ 空串要单独报：state.js 里 `if (saved)` 判定空串为「没存档」，
+    // 而随后的二次确认 `'' !== null` 又成立 → 本会话永久禁止落盘 + 弹提示。
+    // 这是「存储明明好好的却说存不下」的一条真实路径，不单列就永远查不出来。
+    if (raw === '') { saveInfo = '⚠️ 空的(不是没有)'; saveCls = 'bad'; }
+    else if (raw) { saveInfo = '在 · ' + Math.round(raw.length / 1024) + ' KB'; saveCls = 'ok'; }
     else { saveInfo = '这台设备上没有'; saveCls = ''; }
   } catch (e) { saveInfo = '读不到(' + e.name + ')'; }
   add('农场存档', saveInfo, saveCls);
 
-  // 2) 已装在本机的版本（Cache Storage 名字里带版本号）
+  /* 2) 🔑 决定性的一条：存档到底能不能写。
+        游戏里那句「这台设备存不下本地缓存」只有在 localStorage 抛异常时才弹，
+        而异常名直接指向病因，是完全不同的两种病：
+          QuotaExceededError → 真的满了 → 该给缓存减负
+          SecurityError      → Cookie 被拦 / 无痕模式 / 内置浏览器隔离 → 减负没用
+        只写自己的 __ef_probe 键（约 1KB，够触发配额边界），读回后立刻删。
+        🔒 绝不碰 SAVE_KEY。 */
+  var writeInfo = '—', writeCls = '';
+  try {
+    var probe = new Array(512).join('ab');   // ~1KB
+    localStorage.setItem('__ef_probe', probe);
+    var back = localStorage.getItem('__ef_probe');
+    localStorage.removeItem('__ef_probe');
+    if (back === probe) { writeInfo = '✅ 能写'; writeCls = 'ok'; }
+    else { writeInfo = '⚠️ 写了读不回来'; writeCls = 'bad'; }
+  } catch (e) {
+    writeInfo = '❌ 不能(' + (e && e.name ? e.name : '未知') + ')';
+    writeCls = 'bad';
+  }
+  add('存档能写吗', writeInfo, writeCls);
+
+  add('存储占用', '查询中…');
+  add('其中网页缓存', '…');
+
+  // 3) 本地一共存了多少（逐键累加，UTF-16 计量——WebKit 就是按这个算配额的）
+  try {
+    var tot = 0, cnt = 0, biggest = '', bn = 0;
+    for (var i = 0; i < localStorage.length; i++) {
+      var k = localStorage.key(i);
+      var n = (k.length + (localStorage.getItem(k) || '').length) * 2;
+      tot += n; cnt++;
+      if (n > bn) { bn = n; biggest = k; }
+    }
+    add('本地存的数据', mb(tot) + ' · ' + cnt + ' 项');
+  } catch (e) { add('本地存的数据', '读不到(' + e.name + ')', 'bad'); }
+
+  // 4) 已装在本机的版本（Cache Storage 名字里带版本号）
   add('本机已装版本', '查询中…');
   add('已缓存文件数', '…');
   add('离线接管(SW)', '…');
   add('线上最新版本', '…');
+  add('打开方式', (function () {
+    var u = navigator.userAgent;
+    var standalone = (window.navigator.standalone === true)
+      || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+    if (/MicroMessenger/i.test(u)) return '微信内置浏览器';
+    if (/FBAN|FBAV|Instagram/i.test(u)) return 'App 内置浏览器';
+    return standalone ? '主屏图标(PWA)' : '普通浏览器标签';
+  })());
+  add('Cookie', navigator.cookieEnabled ? '允许' : '❌ 被拦', navigator.cookieEnabled ? '' : 'bad');
   add('浏览器', (function () {
     var u = navigator.userAgent;
     var m = /(CriOS|Chrome)\/([\d.]+)/.exec(u);
@@ -109,15 +175,47 @@
     paint();
   }
 
+  /* 5) 整站占了多少 / 配额多大。iOS 的配额跟磁盘剩余空间挂钩，开发机上量不出来，
+        必须在真机上读。usage 逼近 quota 才是「真的满了」，否则别再往配额上想。 */
+  try {
+    if (navigator.storage && navigator.storage.estimate) {
+      navigator.storage.estimate().then(function (e) {
+        var pct = e.quota ? Math.round((e.usage / e.quota) * 1000) / 10 : null;
+        setRow('存储占用', mb(e.usage) + ' / ' + mb(e.quota) + (pct !== null ? ' (' + pct + '%)' : ''),
+               pct !== null && pct > 80 ? 'bad' : 'ok');
+      }).catch(function (er) { setRow('存储占用', '查不到(' + er.name + ')', 'bad'); });
+    } else { setRow('存储占用', '浏览器不支持查询'); }
+  } catch (e) { setRow('存储占用', '查不到', 'bad'); }
+
   try {
     if (window.caches && caches.keys) {
       caches.keys().then(function (ks) {
         setRow('本机已装版本', ks.length ? ks.join(', ').replace(/eastern-farm-/g, '') : '(无)');
-        if (!ks.length) { setRow('已缓存文件数', '0'); return; }
-        return caches.open(ks[0]).then(function (c) { return c.keys(); })
-          .then(function (keys) { setRow('已缓存文件数', String(keys.length)); });
+        if (!ks.length) { setRow('已缓存文件数', '0'); setRow('其中网页缓存', '0'); return; }
+        // 逐条量真实字节：estimate() 的 usageDetails 只有 Chrome 有，iOS 读不到
+        var files = 0, bytes = 0;
+        var chain = Promise.resolve();
+        ks.forEach(function (k) {
+          chain = chain.then(function () {
+            return caches.open(k).then(function (c) { return c.keys(); }).then(function (reqs) {
+              files += reqs.length;
+              setRow('已缓存文件数', String(files));
+              var inner = Promise.resolve();
+              reqs.forEach(function (r) {
+                inner = inner.then(function () {
+                  return caches.open(k).then(function (c) { return c.match(r); })
+                    .then(function (res) { return res ? res.blob() : null; })
+                    .then(function (b) { if (b) bytes += b.size; })
+                    .catch(function () {});
+                });
+              });
+              return inner;
+            });
+          });
+        });
+        return chain.then(function () { setRow('其中网页缓存', mb(bytes)); });
       }).catch(function (e) { setRow('本机已装版本', '查不到(' + e.name + ')', 'bad'); });
-    } else { setRow('本机已装版本', '浏览器不支持缓存', ''); setRow('已缓存文件数', '—'); }
+    } else { setRow('本机已装版本', '浏览器不支持缓存', ''); setRow('已缓存文件数', '—'); setRow('其中网页缓存', '—'); }
   } catch (e) { setRow('本机已装版本', '查不到', 'bad'); }
 
   try {
@@ -170,6 +268,57 @@
 
   document.getElementById('btnGo').onclick = function () {
     location.href = '/src/index.html?fresh=' + Date.now();
+  };
+
+  /* 复制这张表 —— 诊断只有传回来才有用。手机上截图会漏行、念给我会漏字，
+     一键复制粘进对话是最短的路。降级到 execCommand 是给不支持 clipboard API
+     的 iOS 老版本用的（这页的用户恰恰就是环境不正常的那批）。 */
+  document.getElementById('btnCopy').onclick = function () {
+    var btn = this;
+    var txt = '农场诊断 ' + new Date().toLocaleString('zh-CN') + '\n'
+            + location.host + '\n';
+    for (var i = 0; i < rows.length; i++) {
+      txt += rows[i].k + ': ' + String(rows[i].v).replace(/<[^>]*>/g, '') + '\n';
+    }
+    txt += 'UA: ' + navigator.userAgent + '\n';
+    var ok = function () { btn.textContent = '✅ 已复制，粘贴给 Chris/Claude'; };
+    // ⚠️ clipboard API 被拒**必须**继续降级，不能就此放弃：iOS 上它会因为
+    // 权限/非用户手势/内置浏览器等一堆理由 reject，而这页的用户恰恰环境不正常。
+    var legacy = function () {
+      try {
+        var ta = document.createElement('textarea');
+        ta.value = txt;
+        ta.setAttribute('readonly', '');
+        ta.style.cssText = 'position:absolute;left:-9999px;';
+        document.body.appendChild(ta);
+        ta.select();
+        ta.setSelectionRange(0, txt.length);
+        var done = document.execCommand('copy');
+        document.body.removeChild(ta);
+        done ? ok() : show();
+      } catch (e) { show(); }
+    };
+    // 两条路都不通 → 把内容摊在页面上让人长按复制/截图，绝不留一句「复制不了」了事
+    var show = function () {
+      btn.textContent = '长按下面的文字复制';
+      var pre = document.getElementById('diagText');
+      if (!pre) {
+        pre = document.createElement('textarea');
+        pre.id = 'diagText';
+        pre.style.cssText = 'width:100%;height:180px;margin-bottom:12px;font:12px/1.5 monospace;'
+          + 'border:1px solid #ecdfc8;border-radius:10px;padding:10px;background:#fff;color:#4a3629;'
+          + '-webkit-user-select:text;user-select:text;';
+        btn.parentNode.insertBefore(pre, btn.nextSibling);
+      }
+      pre.value = txt;
+    };
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(txt).then(ok).catch(legacy);
+        return;
+      }
+    } catch (e) {}
+    legacy();
   };
 })();
 </script>
