@@ -64,7 +64,7 @@ self.addEventListener('notificationclick', (event) => {
 
 // CACHE_VERSION 由 deploy.sh 在每次部署时自动注入时间戳（ef-YYMMDDHHMM），
 // 不再手动 +1 —— 忘 bump 会让全体 PWA 用户静默停在旧版（iOS 要删 App 才能救）。
-const CACHE_VERSION = 'ef-2608121923';
+const CACHE_VERSION = 'ef-2608122059';
 const CACHE = 'eastern-farm-' + CACHE_VERSION;
 // Precache the FULL app shell — HTML + CSS + every JS module + data JSON — so a SW
 // update (which clears the old cache) followed by a flaky mobile network can never leave
@@ -73,6 +73,7 @@ const CACHE = 'eastern-farm-' + CACHE_VERSION;
 // without them). Cached individually below so one missing file can't block the rest.
 const PRECACHE = [
   '/',                       // root redirect page — cached so a navigation fallback to "/" keeps correct relative paths
+  '/fix.html',               // 🔒 急救页必须预缓存：它是"别的都打不开时"的出路，自己绝不能依赖网络
   '/src/index.html',
   '/src/css/style.css',
   '/src/manifest.webmanifest',
@@ -154,9 +155,12 @@ self.addEventListener('fetch', (event) => {
   // 不排除的话会命中缓存里的 /service-worker.js → 永远读到旧 CACHE_VERSION。
   if (url.pathname === '/service-worker.js') return;
   if (req.cache === 'no-store') return;
-  // 🔒 急救页永远走网络（/fix.html）——它存在的意义就是「别的都打不开时的出路」，
-  // 一旦被自己的缓存困住就彻底失去意义。整页 ~4KB 零依赖，走网络代价可忽略。
-  if (url.pathname === '/fix.html') return;
+  /* ⚠️ 急救页 /fix.html 一定要走下面的**缓存优先**，绝不能在这里 return 放行网络。
+     2026-08-12 我第一版就是写成「永远走网络」，理由听起来很对（"不能被旧缓存困住"），
+     实测直接打脸：同样的卡流条件下，农场秒开、**急救页自己空白卡死** ——
+     它在唯一需要它的场景里必然失效，等于不存在。
+     🔒 对救命路径而言「打得开」压倒「是最新的」。它随每次部署整包预缓存更新，
+     而它要做的事（注销 SW + 清缓存）本来也不依赖是不是最新版。 */
 
   event.respondWith((async () => {
     // 缓存优先：命中即刻返回。ignoreSearch 让 ?fresh= / ?v= 之类的查询串也能命中
