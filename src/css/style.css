@@ -992,31 +992,8 @@ body.mapmode #warehouseBtn { display: none !important; }
 }
 
 /* =============== AUTH (phone OTP + email) ============= */
-.auth-tab-bar {
-  display: flex;
-  gap: 4px;
-  padding: 4px;
-  background: var(--cream-bg);
-  border-radius: 12px;
-  margin-bottom: 14px;
-}
-.auth-tab {
-  flex: 1;
-  border: none;
-  background: transparent;
-  padding: 9px 4px;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--warm-text-soft);
-  border-radius: 9px;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-.auth-tab.active {
-  background: #fff;
-  color: var(--leaf-dark);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-}
+/* 2026-08-12：顶部 50/50「手机号 / 邮箱」标签栏已移除（.auth-tab-bar / .auth-tab
+   随之删掉，别再加回来）。邮箱是遗留登录方式，现在收在底部 .auth-alt-link 里。 */
 .auth-field { margin-bottom: 14px; }
 .auth-label {
   display: block;
@@ -1033,7 +1010,7 @@ body.mapmode #warehouseBtn { display: none !important; }
 }
 .auth-input {
   width: 100%;
-  height: 44px;
+  height: 52px;                 /* 44 → 52：主力客群是中老年顾客，指头准头要留余量 */
   padding: 8px 12px;
   border: 1.5px solid var(--border-soft);
   border-radius: 10px;
@@ -1070,9 +1047,12 @@ body.mapmode #warehouseBtn { display: none !important; }
 }
 .auth-input-phone {
   flex: 1;
+  min-width: 0;                 /* flex 子项默认 min-width:auto，窄屏会把边框撑破 */
   border: none;
   border-radius: 0;
-  height: 42px;
+  height: 50px;
+  font-size: 18px;              /* ≥16px：否则 iOS 一聚焦就整页放大 */
+  letter-spacing: 0.02em;
 }
 .auth-input-phone:focus { outline: none; }
 
@@ -1084,28 +1064,106 @@ body.mapmode #warehouseBtn { display: none !important; }
   min-height: 78px;
 }
 
-/* 6-box OTP grid */
-.auth-otp-grid {
-  display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 8px;
-}
-.auth-otp-box {
-  height: 56px;
-  font-size: 26px;
-  font-weight: 700;
-  text-align: center;
-  border: 1.5px solid var(--border-soft);
-  border-radius: 10px;
+/* 验证码：单个输入框（2026-08-12 取代原来的 6 格子网格）
+   为什么不用 6 格子，见 firebase-auth.js 的 _renderPhoneStep2 上方那段 🔒 注释。
+   字号 22px 远大于 16px —— 低于 16px 时 iOS Safari 一聚焦就把整页放大。 */
+.auth-code-input {
+  width: 100%;
+  height: 60px;
+  box-sizing: border-box;
+  border: 2px solid var(--border-soft);
+  border-radius: 14px;
   background: #fff;
   color: var(--leaf-dark);
-  box-sizing: border-box;
+  font-size: 22px;
+  font-weight: 700;
+  text-align: center;
+  letter-spacing: 0.42em;
+  text-indent: 0.42em;          /* 抵消 letter-spacing 在末位多出的间距，视觉真正居中 */
   caret-color: var(--leaf-green);
+  transition: border-color 0.15s ease, background 0.15s ease;
 }
-.auth-otp-box:focus {
+.auth-code-input::placeholder {
+  color: #cfc4b0;
+  font-weight: 600;
+}
+.auth-code-input:focus {
   outline: none;
   border-color: var(--leaf-green);
-  background: #f4fef6;
+  background: #f6fef8;
+}
+.auth-code-hint {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  min-height: 18px;
+}
+.auth-sms-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--warm-text-soft);
+}
+/* 「正在连接」的呼吸点——唯一的动效，只在真的还在等的时候出现 */
+.auth-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--leaf-green);
+  animation: authPulse 1.1s ease-in-out infinite;
+}
+@keyframes authPulse {
+  0%, 100% { opacity: 0.25; }
+  50%      { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .auth-dot { animation: none; opacity: 0.7; }
+}
+
+/* 主按钮整行 + 底下一条安静的次要动作，取代原来并排的两个同等按钮 */
+.auth-primary {
+  width: 100%;
+  height: 52px;
+  font-size: 17px;
+  margin-top: 2px;
+}
+.auth-primary:disabled { opacity: 0.45; }
+.auth-ghost {
+  display: block;
+  width: 100%;
+  margin-top: 10px;
+  padding: 8px;
+  border: none;
+  background: none;
+  color: var(--warm-text-soft);
+  font-family: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+.auth-ghost:hover { color: var(--leaf-dark); }
+
+.auth-title { margin-bottom: 2px; }
+.auth-sub {
+  text-align: center;
+  font-size: 13px;
+  color: var(--warm-text-soft);
+  margin: 0 0 16px;
+  line-height: 1.5;
+}
+.auth-alt-row { text-align: center; margin-top: 14px; }
+.auth-alt-link {
+  border: none;
+  background: none;
+  color: var(--leaf-green);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 8px;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 /* Inline error pill */

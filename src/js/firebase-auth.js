@@ -354,30 +354,38 @@
       const lang = Farm.state.data.language;
       const remembered = localStorage.getItem(REMEMBER_KEY) || '';
 
+      /* 🔒 不要再放回顶部那条 50/50「手机号 / 邮箱」标签栏（2026-08-12 重设计）
+         手机号是几乎所有会员的登录方式，邮箱只是早年遗留的少数账号。
+         把两者并排摆在第一屏，等于一进来就先问一个大多数人不需要回答的问题，
+         对我们的主力客群（35-55 岁妈妈、长辈）尤其多余。邮箱收进底部小链接。 */
       const phoneTab = this._activeTab === 'phone';
-      const tabBar = `
-        <div class="auth-tab-bar">
-          <button class="auth-tab ${phoneTab ? 'active' : ''}" data-auth-tab="phone">
-            📱 ${lang === 'en' ? 'Phone' : '手机号'}
-          </button>
-          <button class="auth-tab ${!phoneTab ? 'active' : ''}" data-auth-tab="email">
-            ✉️ ${lang === 'en' ? 'Email' : '邮箱'}
-          </button>
-        </div>
-      `;
 
       const body = phoneTab
         ? (this._phoneStep === 1 ? this._renderPhoneStep1(lang, remembered) : this._renderPhoneStep2(lang))
         : this._renderEmailTab(lang);
 
+      const altLink = phoneTab
+        ? `<button class="auth-alt-link" data-auth-tab="email">${lang === 'en' ? 'Sign in with email instead' : '用邮箱登录'}</button>`
+        : `<button class="auth-alt-link" data-auth-tab="phone">${lang === 'en' ? 'Sign in with phone instead' : '用手机号登录'}</button>`;
+
+      const heading = phoneTab && this._phoneStep === 2
+        ? (lang === 'en' ? 'Enter your code' : '输入验证码')
+        : (lang === 'en' ? 'Member sign in' : '会员登录');
+      const sub = phoneTab && this._phoneStep === 2
+        ? (lang === 'en'
+            ? `Sent to ${this._formatPhone((this._currentPhoneE164 || '').replace('+1', ''))}`
+            : `已发送到 ${this._formatPhone((this._currentPhoneE164 || '').replace('+1', ''))}`)
+        : (lang === 'en' ? 'Use the phone number you gave us in store' : '请用您在店里登记的手机号');
+
       const html = `
-        <h2 class="modal-title">${lang === 'en' ? 'Member Sign In' : '会员登录'}</h2>
-        ${tabBar}
+        <h2 class="modal-title auth-title">${heading}</h2>
+        <p class="auth-sub">${sub}</p>
         <div id="authError" class="auth-error"></div>
         ${body}
+        <div class="auth-alt-row">${altLink}</div>
         <p class="auth-footnote">${lang === 'en'
-          ? 'Not a member? Sign up free at 133-412 Willowgrove Square, Saskatoon.'
-          : '还不是会员？到 133-412 Willowgrove Square 店内免费办理。'}</p>
+          ? 'Not a member yet? Sign up free at 133-412 Willowgrove Square.'
+          : '还不是会员？到店免费办理 · 133-412 Willowgrove Square'}</p>
       `;
       Farm.ui.showModal(html);
       this._wireLoginModal();
@@ -386,48 +394,45 @@
     _renderPhoneStep1(lang, remembered) {
       return `
         <div class="auth-field">
-          <label class="auth-label">${lang === 'en' ? 'Phone number' : '手机号码'}</label>
           <div class="auth-phone-input">
             <span class="auth-phone-prefix">+1</span>
             <input type="tel" id="authPhone" class="auth-input auth-input-phone"
                    inputmode="numeric" autocomplete="tel-national" maxlength="14"
                    value="${remembered}" placeholder="(306) 123-4567"/>
           </div>
-          <div class="auth-hint">${lang === 'en' ? 'Use the phone you registered at the store' : '请使用您在店内留过的手机号'}</div>
         </div>
         <div class="auth-recaptcha-wrap">
           <div id="authRecaptcha"></div>
         </div>
-        <div class="btn-row">
-          <button class="btn secondary" onclick="Farm.ui.hideModal()">${Farm.i18n.t('btn_cancel')}</button>
-          <button class="btn" id="authSendBtn">${lang === 'en' ? 'Send Code' : '发送验证码'}</button>
-        </div>
+        <button class="btn auth-primary" id="authSendBtn">${lang === 'en' ? 'Send code' : '发送验证码'}</button>
+        <button class="auth-ghost" onclick="Farm.ui.hideModal()">${Farm.i18n.t('btn_cancel')}</button>
       `;
     },
 
+    /* 🔒 验证码用**一个**输入框，不要再改回 6 个格子（2026-08-12，Chris「这个输入框太长了」）
+       -------------------------------------------------------------------------------
+       6 格子看着现代，代价却全落在最不该出问题的地方：
+       · 390px 屏上 6 格 + 5 道间隙挤在 310px 里，格子被压窄、数字被裁；
+         而第一格为了吃 iOS 自动填充设了 maxlength=6，整串码塞进去就是「一个很长的框」。
+       · iOS 的 one-time-code 自动填充本来就是**按单字段**设计的，塞进 6 格要靠
+         「把多位数分发到各格」的补丁，历史上已经因此丢过 5 位数字（见旧 _wireOtpBoxes 注释）。
+       · 还要自己实现聚焦跳转、退格回跳、方向键、粘贴分发 —— 全是可以不存在的 bug 面。
+       单字段 + letter-spacing 是 Apple / Stripe 在手机上的做法：自动填充零补丁、
+       永不溢出、代码少一大截，对长辈也更直白（只有一个地方可以打字）。
+       字号必须 ≥16px，否则 iOS Safari 一聚焦就整页放大。 */
     _renderPhoneStep2(lang) {
       return `
         <div class="auth-field">
-          <label class="auth-label">${lang === 'en' ? 'Verification code' : '验证码'}</label>
-          <div class="auth-otp-grid" id="authOtpGrid">
-            ${[0, 1, 2, 3, 4, 5].map(i =>
-              // Only the FIRST box gets one-time-code autocomplete; iOS only
-              // looks at the focused field, and we now distribute multi-digit
-              // input across all 6 (see _wireOtpBoxes). Other boxes get
-              // autocomplete=off to suppress weird keyboard suggestions.
-              i === 0
-                ? `<input type="tel" inputmode="numeric" maxlength="6" class="auth-otp-box" data-otp-idx="0" autocomplete="one-time-code"/>`
-                : `<input type="tel" inputmode="numeric" maxlength="1" class="auth-otp-box" data-otp-idx="${i}" autocomplete="off"/>`
-            ).join('')}
-          </div>
-          <div class="auth-hint">
+          <input type="tel" id="authCode" class="auth-code-input"
+                 inputmode="numeric" autocomplete="one-time-code" maxlength="6"
+                 placeholder="------" aria-label="${lang === 'en' ? 'Verification code' : '验证码'}"/>
+          <div class="auth-hint auth-code-hint">
+            <span id="authSmsStatus" class="auth-sms-status"></span>
             <span id="authResendArea"></span>
           </div>
         </div>
-        <div class="btn-row">
-          <button class="btn secondary" id="authBackBtn">${lang === 'en' ? 'Back' : '返回'}</button>
-          <button class="btn" id="authVerifyBtn" disabled>${lang === 'en' ? 'Verify' : '验证登录'}</button>
-        </div>
+        <button class="btn auth-primary" id="authVerifyBtn" disabled>${lang === 'en' ? 'Sign in' : '登录'}</button>
+        <button class="auth-ghost" id="authBackBtn">${lang === 'en' ? 'Use a different number' : '换个号码'}</button>
       `;
     },
 
@@ -441,16 +446,14 @@
           <label class="auth-label">${lang === 'en' ? 'Password' : '密码'}</label>
           <input type="password" id="authPassword" class="auth-input" autocomplete="current-password"/>
         </div>
-        <div class="btn-row">
-          <button class="btn secondary" onclick="Farm.ui.hideModal()">${Farm.i18n.t('btn_cancel')}</button>
-          <button class="btn" id="authEmailBtn">${lang === 'en' ? 'Sign in' : '登录'}</button>
-        </div>
+        <button class="btn auth-primary" id="authEmailBtn">${lang === 'en' ? 'Sign in' : '登录'}</button>
+        <button class="auth-ghost" onclick="Farm.ui.hideModal()">${Farm.i18n.t('btn_cancel')}</button>
       `;
     },
 
     _wireLoginModal() {
-      // Tab switching
-      document.querySelectorAll('.auth-tab[data-auth-tab]').forEach(btn => {
+      // 手机号 ⇄ 邮箱切换（现在是底部那条小链接，不再是顶部标签栏）
+      document.querySelectorAll('[data-auth-tab]').forEach(btn => {
         btn.onclick = () => {
           this._activeTab = btn.dataset.authTab;
           this._phoneStep = 1;
@@ -483,12 +486,13 @@
         if (sendBtn) sendBtn.onclick = () => this._sendCode();
 
       } else if (this._activeTab === 'phone' && this._phoneStep === 2) {
-        this._wireOtpBoxes();
+        this._wireCodeInput();
         document.getElementById('authBackBtn').onclick = () => {
           this._phoneStep = 1;
           this._renderLoginModal();
         };
         document.getElementById('authVerifyBtn').onclick = () => this._verifyOtp();
+        this._renderSmsStatus();
         this._startResendCountdown(60);
 
       } else if (this._activeTab === 'email') {
@@ -503,66 +507,43 @@
       }
     },
 
-    _wireOtpBoxes() {
-      const boxes = document.querySelectorAll('.auth-otp-box');
-      // Distribute a multi-digit string across boxes — handles iOS Safari
-      // SMS auto-fill (whole 6-digit code drops into the focused box) AND
-      // user paste. Previously we sliced to 1 digit and threw away the
-      // other 5 — Chris's "OTP input bug" root cause.
-      const distribute = (digits) => {
-        for (let i = 0; i < boxes.length; i++) {
-          boxes[i].value = digits[i] || '';
-        }
-        if (digits.length >= boxes.length) {
-          boxes[boxes.length - 1].focus();
-          this._updateOtpVerifyBtn();
-          setTimeout(() => this._verifyOtp(), 100);
-        } else if (digits.length > 0) {
-          boxes[digits.length].focus();
-          this._updateOtpVerifyBtn();
-        } else {
-          this._updateOtpVerifyBtn();
+    // 单个验证码输入框：只留数字、满 6 位自动提交。自动填充/粘贴不用任何补丁。
+    _wireCodeInput() {
+      const el = document.getElementById('authCode');
+      if (!el) return;
+      el.oninput = () => {
+        const v = (el.value || '').replace(/\D/g, '').slice(0, 6);
+        if (el.value !== v) el.value = v;
+        this._updateOtpVerifyBtn();
+        if (v.length === 6) {
+          el.blur();                       // 收起键盘，让人看得见按钮状态
+          setTimeout(() => this._verifyOtp(), 80);
         }
       };
-      boxes.forEach((box, idx) => {
-        box.oninput = (e) => {
-          const v = (e.target.value || '').replace(/\D/g, '');
-          // Multi-digit value (autofill / paste / suggestion bar)
-          if (v.length > 1) {
-            distribute(v);
-            return;
-          }
-          // Single-digit normal input
-          e.target.value = v;
-          if (v && idx < boxes.length - 1) {
-            boxes[idx + 1].focus();
-          }
-          this._updateOtpVerifyBtn();
-          if (this._collectOtp().length === 6) {
-            setTimeout(() => this._verifyOtp(), 100);
-          }
-        };
-        box.onkeydown = (e) => {
-          if (e.key === 'Backspace' && !box.value && idx > 0) {
-            boxes[idx - 1].focus();
-          } else if (e.key === 'ArrowLeft' && idx > 0) {
-            boxes[idx - 1].focus();
-          } else if (e.key === 'ArrowRight' && idx < boxes.length - 1) {
-            boxes[idx + 1].focus();
-          }
-        };
-        // Paste handler — covers desktop Ctrl/Cmd+V, mobile long-press paste
-        box.onpaste = (e) => {
-          e.preventDefault();
-          const raw = (e.clipboardData || window.clipboardData).getData('text');
-          distribute(raw.replace(/\D/g, ''));
-        };
-      });
-      setTimeout(() => boxes[0] && boxes[0].focus(), 100);
+      el.onkeydown = (e) => { if (e.key === 'Enter') this._verifyOtp(); };
+      setTimeout(() => el.focus(), 120);
+    },
+
+    // 短信在路上时给一句实话，而不是让人对着一个不动的框猜（Chris：等了很久才出现）
+    _renderSmsStatus() {
+      const el = document.getElementById('authSmsStatus');
+      if (!el) return;
+      const lang = Farm.state.data.language;
+      if (this._confirmation) { el.textContent = ''; return; }
+      el.innerHTML = `<span class="auth-dot"></span>${lang === 'en'
+        ? 'Sending… you can start typing the code now'
+        : '正在连接…收到短信可以直接输入'}`;
+      const p = this._smsPending;
+      if (!p) return;
+      p.then(() => {
+        const now = document.getElementById('authSmsStatus');
+        if (now) now.textContent = '';
+      }).catch(() => {});
     },
 
     _collectOtp() {
-      return Array.from(document.querySelectorAll('.auth-otp-box')).map(b => b.value).join('');
+      const el = document.getElementById('authCode');
+      return (el && el.value ? el.value : '').replace(/\D/g, '');
     },
 
     _updateOtpVerifyBtn() {
@@ -633,43 +614,68 @@
         sendBtn.textContent = lang === 'en' ? 'Sending…' : '发送中…';
       }
 
-      // Race: SMS send + membership lookup. Started SYNCHRONOUSLY.
-      const smsP = Promise.race([
-        Farm.fb.auth.signInWithPhoneNumber(e164, this._recaptcha),
-        new Promise((_, rej) => setTimeout(() => rej(new Error('RECAPTCHA_TIMEOUT')), 20000)),
-      ]);
+      // SMS 发送 + 会员查询，同步启动（signInWithPhoneNumber 之前绝不能有 await，
+      // 否则 iOS 的用户手势被吃掉、reCAPTCHA iframe 会静默挂死）
+      const smsP = Farm.fb.auth.signInWithPhoneNumber(e164, this._recaptcha);
+      /* 🔒 查询失败 ≠ 不是会员（2026-08-12）
+         原来是 `.catch(() => null)`，然后把 null 和「查无此人」一起当成非会员，
+         直接甩一句「此手机号未在店内登记，请到店办理」。网络抖一下，真会员就被
+         当面告知自己不是会员 —— 正是 CLAUDE.md 那条「『请求失败』永远不能显示成
+         『没有内容』」的反面教材。失败就标记出来，放行让人继续填码。 */
       const memberP = Farm.fb.db.collection('members')
-        .where('phone', '==', e164).limit(1).get().catch(() => null);
+        .where('phone', '==', e164).limit(1).get()
+        .catch(() => ({ __failed: true }));
+
+      /* 🔒 立刻切到输入验证码那一屏，不要等 smsP（2026-08-12，Chris「等了很久才出现输入框」）
+         短信是 Firebase **服务器端**发的，客户端这个 promise 只是「回执」。
+         弱网下回执可能十几秒才回来，而短信早就到手机上了 —— 于是人手里握着验证码，
+         屏幕上却没有地方填。回执改为后台等：先给框，拿到了再填 _confirmation；
+         用户提前输完也没关系，_verifyOtp 会等它。 */
+      this._currentPhoneE164 = e164;
+      this._confirmation = null;
+      this._smsPending = smsP;
+      localStorage.setItem(REMEMBER_KEY, phoneRaw);
+      this._phoneStep = 2;
+      this._renderLoginModal();
+
+      smsP.then(result => {
+        this._confirmation = result;
+        const s = document.getElementById('authSmsStatus');
+        if (s) s.textContent = '';
+      }).catch(e => {
+        if (this._phoneStep !== 2) return;
+        this._phoneStep = 1;
+        this._renderLoginModal();
+        this._handleSmsError(e, lang, document.getElementById('authSendBtn'));
+      });
+
+      // 兜底：真的一直没回执，给一句可行动的话，而不是让人干等
+      setTimeout(() => {
+        if (this._confirmation || this._phoneStep !== 2) return;
+        const s = document.getElementById('authSmsStatus');
+        if (s) {
+          s.innerHTML = '';
+          s.textContent = lang === 'en'
+            ? 'Still connecting — if you got the code, enter it; it will go through.'
+            : '网络较慢，仍在连接。收到验证码就先填，能提交。';
+        }
+      }, 20000);
 
       memberP.then(snap => {
-        if (!snap || snap.empty) {
-          // Non-member: clean up orphan auth user (1 SMS is unfortunately spent
-          // due to iOS sync constraint — unavoidable trade-off)
-          if (Farm.fb.auth.currentUser) {
-            Farm.fb.auth.currentUser.delete().catch(() => {});
-          }
-          smsP.catch(() => {});
-          this._showError(lang === 'en'
-            ? 'This phone is not registered at our store.\nPlease visit 133-412 Willowgrove Square to sign up (free).\nMon–Sat 10am–6:30pm · (306) 244-5522'
-            : '此手机号未在店内登记。\n请光临本店免费办理：\n📍 133-412 Willowgrove Square\n🕐 周一至周六 10am–6:30pm\n☎️ (306) 244-5522');
-          if (sendBtn) {
-            sendBtn.disabled = false;
-            sendBtn.textContent = lang === 'en' ? 'Send Code' : '发送验证码';
-          }
-          return;
+        if (!snap || snap.__failed) return;          // 查不动就放行，别冤枉会员
+        if (!snap.empty) return;                     // 是会员，继续填码
+        // 确认不是会员：清掉刚建的孤儿账号，退回第一步说明白怎么办
+        if (Farm.fb.auth.currentUser) {
+          Farm.fb.auth.currentUser.delete().catch(() => {});
         }
-        // Member found → wait for SMS to actually send
-        smsP.then(result => {
-          this._confirmation = result;
-          // Remember phone for next time AND retain for verify step
-          // (the authPhone input is gone by step 2)
-          this._currentPhoneE164 = e164;
-          localStorage.setItem(REMEMBER_KEY, phoneRaw);
-          this._phoneStep = 2;
-          this._renderLoginModal();
-        }).catch(e => {
-          this._handleSmsError(e, lang, sendBtn);
-        });
+        smsP.catch(() => {});
+        this._smsPending = null;
+        this._confirmation = null;
+        this._phoneStep = 1;
+        this._renderLoginModal();
+        this._showError(lang === 'en'
+          ? 'This phone is not registered at our store.\nPlease visit 133-412 Willowgrove Square to sign up (free).\nMon–Sat 10am–6:30pm · (306) 244-5522'
+          : '此手机号未在店内登记。\n请光临本店免费办理：\n📍 133-412 Willowgrove Square\n🕐 周一至周六 10am–6:30pm\n☎️ (306) 244-5522');
       });
     },
 
@@ -707,12 +713,21 @@
         this._showError(lang === 'en' ? 'Please enter the 6-digit code.' : '请输入 6 位验证码。');
         return;
       }
+      const btn = document.getElementById('authVerifyBtn');
+      if (btn) { btn.disabled = true; btn.textContent = lang === 'en' ? 'Signing in…' : '登录中…'; }
+      /* 用户可能比回执快（弱网下常见）——等一下那份回执再验，
+         而不是甩一句「会话已过期」把人赶回去重发。 */
+      if (!this._confirmation && this._smsPending) {
+        try { this._confirmation = await this._smsPending; } catch (e) { /* 下面统一处理 */ }
+      }
       if (!this._confirmation) {
-        this._showError(lang === 'en' ? 'Session expired. Resend code.' : '会话已过期，请重新发送验证码。');
+        // 报错时把「正在连接…」收掉，否则一红一绿两句话自相矛盾
+        const st = document.getElementById('authSmsStatus');
+        if (st) st.textContent = '';
+        this._showError(lang === 'en' ? 'Could not reach the server. Tap “Use a different number” and try again.' : '连接不上服务器，请点「换个号码」重新发送。');
+        if (btn) { btn.disabled = false; btn.textContent = lang === 'en' ? 'Sign in' : '登录'; }
         return;
       }
-      const btn = document.getElementById('authVerifyBtn');
-      if (btn) { btn.disabled = true; btn.textContent = lang === 'en' ? 'Verifying…' : '验证中…'; }
       try {
         const credential = await this._confirmation.confirm(code);
         const user = credential.user;
@@ -738,7 +753,10 @@
       } catch (e) {
         console.warn('OTP verify failed', e);
         this._showError(lang === 'en' ? 'Incorrect verification code.' : '验证码不正确。');
-        if (btn) { btn.disabled = false; btn.textContent = lang === 'en' ? 'Verify' : '验证登录'; }
+        if (btn) { btn.disabled = false; btn.textContent = lang === 'en' ? 'Sign in' : '登录'; }
+        // 码错了就把框清空并重新聚焦，别让人自己去删 6 个数字
+        const codeEl = document.getElementById('authCode');
+        if (codeEl) { codeEl.value = ''; codeEl.focus(); }
       }
     },
 
