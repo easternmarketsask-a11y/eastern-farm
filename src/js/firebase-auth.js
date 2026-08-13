@@ -694,6 +694,14 @@
         msg = lang === 'en' ? 'Too many attempts. Try again later.' : '尝试次数过多，请稍后再试。';
       } else if (e && (e.code === 'auth/captcha-check-failed' || e.code === 'auth/invalid-app-credential')) {
         msg = lang === 'en' ? 'Bot check failed. Refresh and try again.' : '机器人验证失败，请刷新页面后重试。';
+      } else if (e && /SMS_REGION|region.*not.*allow/i.test(String(e.message || '') + String(e.code || ''))) {
+        /* 2026-08-12 起项目开了短信区域白名单，只放行加拿大号码（防「短信泵」诈骗：
+           攻击者拿登录页向境外高费率号码狂发验证码，跟当地运营商分成，钱由我们付）。
+           Firebase 甩回来的是 SMS_REGION_NOT_ALLOWED 这种内部串，顾客看不懂 ——
+           必须翻译成人话，并给出一条能走的路，否则就是「点了没反应」的另一种形态。 */
+        msg = lang === 'en'
+          ? 'We can only text Canadian numbers. If your number changed, please update it in store: 133-412 Willowgrove Square.'
+          : '目前只能向加拿大号码发送验证码。\n如果您换了号码，请到店更新：133-412 Willowgrove Square。';
       } else {
         msg = lang === 'en' ? 'Failed to send code. Please try again.' : '发送失败，请稍后再试。';
       }
