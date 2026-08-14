@@ -231,6 +231,7 @@
       // 在 _autoFrame 之前（搬完水塘再定镜头）。
       this._migratePond();
       this._repairPlotsOnWater();
+      this._repairDecoOverlaps();
       this._resize();
       window.addEventListener('resize', () => { this._resize(); this._clampCam(); this.render(); });
       cv.addEventListener('pointerdown', (e) => this._down(e));
@@ -325,6 +326,30 @@
           this._cellToPlot[p.gx + ',' + p.gy] = i;
           moved = true;
         }
+      }
+      if (moved && Farm.state.save) Farm.state.save();
+    },
+
+    /* 装饰摆件落在被占格上（历史存档在互斥检查补齐之前可能已经叠了）→ 搬到最近
+       空格。每次进图跑，幂等：没重叠零写入。与 _repairPlotsOnWater 同一套路。 */
+    _repairDecoOverlaps() {
+      const d = Farm.state.data;
+      if (!d || !Array.isArray(d.decorations)) return;
+      let moved = false;
+      for (let i = 0; i < d.decorations.length; i++) {
+        const o = d.decorations[i];
+        if (!Number.isInteger(o.gx) || !Number.isInteger(o.gy)) continue;   // 未落位的交给 _decoPlacements
+        const k = o.gx + ',' + o.gy;
+        const clash = this._plotCellSet()[k] || this._terrain()[k] === 'water'
+          || this._buildingAt(o.gx, o.gy) >= 0 || this._decoAt(o.gx, o.gy) !== i;   // ≠i = 两个摆件同格，后者搬
+        if (!clash) continue;
+        let best = null, bd = Infinity;
+        for (let gy = 0; gy < ROWS; gy++) for (let gx = 0; gx < COLS; gx++) {
+          if (!this._decoCellFree(gx, gy, i)) continue;
+          const dist = (gx - o.gx) * (gx - o.gx) + (gy - o.gy) * (gy - o.gy);
+          if (dist < bd) { bd = dist; best = [gx, gy]; }
+        }
+        if (best) { o.gx = best[0]; o.gy = best[1]; moved = true; }
       }
       if (moved && Farm.state.save) Farm.state.save();
     },
@@ -784,7 +809,13 @@
       if (gx < 0 || gy < 0 || gx + b.w > COLS || gy + b.h > ROWS) return false;
       const plotCells = this._plotCellSet(), occ = {}, map = (Farm.state.data.map) || [], t = this._terrain();
       for (let i = 0; i < map.length; i++) { if (i === exceptIdx) continue; const o = map[i], ob = BUILDINGS[o.type]; if (!ob) continue; for (let y = 0; y < ob.h; y++) for (let x = 0; x < ob.w; x++) occ[(o.gx + x) + ',' + (o.gy + y)] = 1; }
-      for (let y = 0; y < b.h; y++) for (let x = 0; x < b.w; x++) { const k = (gx + x) + ',' + (gy + y); if (!this._ownedCell(gx + x, gy + y) || plotCells[k] || occ[k] || t[k] === 'water') return false; }
+      for (let y = 0; y < b.h; y++) for (let x = 0; x < b.w; x++) {
+        const k = (gx + x) + ',' + (gy + y);
+        if (!this._ownedCell(gx + x, gy + y) || plotCells[k] || occ[k] || t[k] === 'water') return false;
+        // 🔒 全局互斥（2026-08-13 Chris:「所有建造物默认不可重叠」）——装饰摆件
+        // 占的格建筑也不能压。此前四类放置里唯独漏了「别人检查装饰」这半边。
+        if (this._decoAt(gx + x, gy + y) >= 0) return false;
+      }
       return true;
     },
     _buildingAt(gx, gy) {
@@ -862,6 +893,7 @@
       if (this._cellToPlot[gx + ',' + gy] != null) return false;            // already a plot
       if (this._terrain()[gx + ',' + gy] === 'water') return false;
       if (this._buildingAt(gx, gy) >= 0) return false;                       // under a building
+      if (this._decoAt(gx, gy) >= 0) return false;                           // 装饰摆件占格（全局互斥）
       return true;
     },
     _plotCost() {   // 单一定价源（与商城 extra_plot_coins 同价，B5 地块统一）
@@ -946,8 +978,8 @@
       if (this._brush === 'grass') { if (t[k] != null) { delete t[k]; this.render(); } return; }
       // 🔒 水不能刷在菜地/建筑上（2026-08-13）——否则又造出「水塘压着菜地」，
       // 而 _cellFreeForPlot/_canPlace 只挡得住「后放的一方」，挡不住后刷的水。
-      if (this._brush === 'water' && (this._cellToPlot[k] != null || this._buildingAt(gx, gy) >= 0)) {
-        if (Farm.ui && Farm.ui.toast) Farm.ui.toast(this._lang() === 'en' ? 'Water can\'t go on plots or buildings' : '水塘不能压着菜地或建筑');
+      if (this._brush === 'water' && (this._cellToPlot[k] != null || this._buildingAt(gx, gy) >= 0 || this._decoAt(gx, gy) >= 0)) {
+        if (Farm.ui && Farm.ui.toast) Farm.ui.toast(this._lang() === 'en' ? 'That spot is taken — water can\'t go on plots or buildings' : '这格已被占用，水塘要画在空地上');
         return;
       }
       if (t[k] !== this._brush) { t[k] = this._brush; this.render(); }
