@@ -57,6 +57,17 @@
 
     canBuy(item) {
       const data = Farm.state.data;
+      // 等级解锁（2026-08-14 商城扩充）：高档商品随等级逐步开放，
+      // 给商城一条「往上看」的进度线。放最前——没到级连价格都不用比。
+      if (item.min_level != null && (data.level || 1) < item.min_level) {
+        return { ok: false, reason: 'level_locked' };
+      }
+      // 限购件数（拖拉机/奶牛这类 prestige 单品 ×1 = 稀缺感）。
+      // extra_plot 的帽子在下面单独算，这里只管装饰/宠物。
+      if (item.max_owned != null && item.kind === 'decoration'
+          && this._ownedCount(item) >= item.max_owned) {
+        return { ok: false, reason: 'max_owned' };
+      }
       const price = this.priceOf(item);
       const balance = price.currency === 'coins' ? data.coins : data.eastPoints;
       if (balance < price.amount) {
@@ -107,10 +118,11 @@
       switch (item.kind) {
         case 'stack_consumable':
           // E.g. acceleration_ticket → state.activeEffects.accelerationCharges++
+          // item.amount 支持礼包装（×5 捆）一次加多张（2026-08-14 商城扩充）。
           Farm.state.data.activeEffects[item.stock_key] =
-            (Farm.state.data.activeEffects[item.stock_key] || 0) + 1;
+            (Farm.state.data.activeEffects[item.stock_key] || 0) + (item.amount || 1);
           Farm.state.save();
-          return { kind: 'consumable_added', stockKey: item.stock_key };
+          return { kind: 'consumable_added', stockKey: item.stock_key, amount: (item.amount || 1) };
 
         case 'festival_seeds':
           // Add 5 random festival seeds
@@ -232,6 +244,7 @@
         ? `${price.amount} <span class="${curIcon}"></span>`
         : (can.reason === 'max_owned' ? (lang === 'en' ? '✓ MAX' : '✓ 已满')
           : can.reason === 'daily_cap' ? (lang === 'en' ? 'Daily max' : '今日已满')
+          : can.reason === 'level_locked' ? (lang === 'en' ? `Lv ${it.min_level}` : `Lv ${it.min_level} 解锁`)
                                        : `${price.amount} <span class="${curIcon}"></span>`);
       const dis = affordable ? '' : 'disabled';
       const cat = it.category || 'consumable';

@@ -1,19 +1,7 @@
 {
-  "_comment": "Shop catalog. id is save-stable (don't rename). 'kind' drives the purchase effect — see ep-shop.js _apply(). 'category' groups in UI. Price currency: items with 'cost_coins' are bought with 农场币 (farm coins); items with 'cost_ep' are bought with 超市积分 (East Points). Decorations/pets render on the farm via 'decoration_emoji'.",
+  "_comment": "Shop catalog. id is save-stable (don't rename). 'kind' drives the purchase effect — see ep-shop.js _apply(). 'category' groups in UI. Price currency: items with 'cost_coins' are bought with 农场币 (farm coins); items with 'cost_ep' are bought with 超市积分 (East Points). Decorations/pets render on the farm via 'decoration_emoji'. 2026-08-14 扩充: 'min_level' 等级解锁(未到级显示 Lv N 解锁), 'max_owned' 限购件数(prestige 单品), 'amount' 礼包倍数(stack_consumable 一次加多张)。",
   "_schema_version": 2,
   "items": [
-    {
-      "id": "acceleration_ticket",
-      "name_zh": "加速券",
-      "name_en": "Acceleration Ticket",
-      "icon": "⚡",
-      "cost_ep": 10,
-      "category": "consumable",
-      "kind": "stack_consumable",
-      "stock_key": "accelerationCharges",
-      "desc_zh": "瞬间让一块地的作物成熟。用完即消。",
-      "desc_en": "Instantly mature one crop. One-shot consumable."
-    },
     {
       "id": "fertilizer",
       "name_zh": "催熟剂",
@@ -41,6 +29,32 @@
       "desc_en": "Fertilize one plot — that crop yields double (×2) when harvested. Max 5 per day."
     },
     {
+      "id": "fertilizer_bundle",
+      "name_zh": "化肥大袋 ×5",
+      "name_en": "Fertilizer Sack ×5",
+      "icon": "🌟",
+      "cost_coins": 650,
+      "daily_buy_cap": 1,
+      "category": "consumable",
+      "kind": "stack_consumable",
+      "stock_key": "fertilizerCharges",
+      "amount": 5,
+      "desc_zh": "整袋更划算：5 次施肥比单买省 100 币。每天限 1 袋。",
+      "desc_en": "Five fertilizer charges, 100 coins cheaper. One sack per day."
+    },
+    {
+      "id": "acceleration_ticket",
+      "name_zh": "加速券",
+      "name_en": "Acceleration Ticket",
+      "icon": "⚡",
+      "cost_ep": 10,
+      "category": "consumable",
+      "kind": "stack_consumable",
+      "stock_key": "accelerationCharges",
+      "desc_zh": "瞬间让一块地的作物成熟。用完即消。",
+      "desc_en": "Instantly mature one crop. One-shot consumable."
+    },
+    {
       "id": "lottery_ticket",
       "name_zh": "抽奖券",
       "name_en": "Lottery Ticket",
@@ -61,6 +75,31 @@
       "kind": "festival_seeds",
       "desc_zh": "5 包随机节日限定种子（水仙/年橘/芋头/柚子/桂花），平时也能种。",
       "desc_en": "5 random festival seeds (narcissus, kumquat, taro, pomelo, osmanthus) — plant any time."
+    },
+    {
+      "id": "accel_bundle",
+      "name_zh": "加速券 ×5 礼包",
+      "name_en": "Acceleration ×5 Pack",
+      "icon": "⚡",
+      "cost_ep": 45,
+      "category": "consumable",
+      "kind": "stack_consumable",
+      "stock_key": "accelerationCharges",
+      "amount": 5,
+      "desc_zh": "一次囤 5 张加速券，比单买省 10%。",
+      "desc_en": "Five acceleration tickets, 10% off vs singles."
+    },
+    {
+      "id": "deco_tulips",
+      "name_zh": "郁金香花圃",
+      "name_en": "Tulip Bed",
+      "icon": "🌷",
+      "category": "decoration",
+      "kind": "decoration",
+      "decoration_emoji": "🌷",
+      "desc_zh": "一畦荷兰郁金香，春天的颜色。",
+      "desc_en": "A bed of tulips, the colour of spring.",
+      "cost_coins": 100
     },
     {
       "id": "deco_sunflower",
@@ -87,6 +126,30 @@
       "desc_en": "Permanent decoration. A cozy wooden fence."
     },
     {
+      "id": "deco_mushroom",
+      "name_zh": "蘑菇圈",
+      "name_en": "Fairy Ring",
+      "icon": "🍄",
+      "category": "decoration",
+      "kind": "decoration",
+      "decoration_emoji": "🍄",
+      "desc_zh": "雨后冒出来的小蘑菇圈，据说会带来好运。",
+      "desc_en": "A ring of mushrooms after the rain, said to bring luck.",
+      "cost_coins": 160
+    },
+    {
+      "id": "deco_rock",
+      "name_zh": "景观石",
+      "name_en": "Garden Rock",
+      "icon": "🪨",
+      "category": "decoration",
+      "kind": "decoration",
+      "decoration_emoji": "🪨",
+      "desc_zh": "一块沉稳的园林石，配竹子最有味道。",
+      "desc_en": "A quiet garden rock, best beside bamboo.",
+      "cost_coins": 180
+    },
+    {
       "id": "deco_bamboo",
       "name_zh": "翠竹",
       "name_en": "Bamboo",
@@ -99,6 +162,97 @@
       "desc_en": "Permanent decoration. A graceful cluster of bamboo."
     },
     {
+      "id": "deco_windchime",
+      "name_zh": "玻璃风铃",
+      "name_en": "Wind Chime",
+      "icon": "🎐",
+      "category": "decoration",
+      "kind": "decoration",
+      "decoration_emoji": "🎐",
+      "desc_zh": "挂在檐下，风一过就叮咚作响。",
+      "desc_en": "Hangs by the eaves, chiming with every breeze.",
+      "cost_coins": 220,
+      "min_level": 3
+    },
+    {
+      "id": "deco_snowman",
+      "name_zh": "小雪人",
+      "name_en": "Snowman",
+      "icon": "⛄",
+      "category": "decoration",
+      "kind": "decoration",
+      "decoration_emoji": "⛄",
+      "desc_zh": "萨斯卡通的冬天同款，夏天也不会化。",
+      "desc_en": "Saskatoon-winter classic. Never melts, even in July.",
+      "cost_coins": 240,
+      "min_level": 3
+    },
+    {
+      "id": "deco_sakura",
+      "name_zh": "樱花树",
+      "name_en": "Cherry Blossom",
+      "icon": "🌸",
+      "category": "decoration",
+      "kind": "decoration",
+      "decoration_emoji": "🌸",
+      "desc_zh": "四月的粉色，落英铺满草地。",
+      "desc_en": "April pink, petals drifting across the lawn.",
+      "cost_coins": 260,
+      "min_level": 4
+    },
+    {
+      "id": "deco_maple",
+      "name_zh": "红枫树",
+      "name_en": "Red Maple",
+      "icon": "🍁",
+      "category": "decoration",
+      "kind": "decoration",
+      "decoration_emoji": "🍁",
+      "desc_zh": "一树加拿大的秋天。",
+      "desc_en": "A whole Canadian autumn in one tree.",
+      "cost_coins": 280,
+      "min_level": 4
+    },
+    {
+      "id": "deco_birdnest",
+      "name_zh": "鸟窝树",
+      "name_en": "Nesting Tree",
+      "icon": "🪺",
+      "category": "decoration",
+      "kind": "decoration",
+      "decoration_emoji": "🪺",
+      "desc_zh": "树杈上有个鸟窝，清晨有鸟叫。",
+      "desc_en": "A nest in the branches, birdsong at dawn.",
+      "cost_coins": 320,
+      "min_level": 5
+    },
+    {
+      "id": "deco_lotus",
+      "name_zh": "荷花缸",
+      "name_en": "Lotus Basin",
+      "icon": "🪷",
+      "category": "decoration",
+      "kind": "decoration",
+      "decoration_emoji": "🪷",
+      "desc_zh": "一缸亭亭的荷，夏日限定的凉意。",
+      "desc_en": "A basin of lotus, summer cool in a corner.",
+      "cost_coins": 350,
+      "min_level": 5
+    },
+    {
+      "id": "deco_beehive",
+      "name_zh": "蜜蜂箱",
+      "name_en": "Beehive",
+      "icon": "🐝",
+      "category": "decoration",
+      "kind": "decoration",
+      "decoration_emoji": "🐝",
+      "desc_zh": "勤劳的小蜜蜂，给菜地授粉。",
+      "desc_en": "Busy bees pollinating your plots.",
+      "cost_coins": 380,
+      "min_level": 5
+    },
+    {
       "id": "deco_fountain",
       "name_zh": "小喷泉",
       "name_en": "Fountain",
@@ -109,6 +263,32 @@
       "kind": "decoration",
       "desc_zh": "永久装饰品。潺潺水声的小喷泉。",
       "desc_en": "Permanent decoration. A gently bubbling fountain."
+    },
+    {
+      "id": "deco_canoe",
+      "name_zh": "小木船",
+      "name_en": "Canoe",
+      "icon": "🛶",
+      "category": "decoration",
+      "kind": "decoration",
+      "decoration_emoji": "🛶",
+      "desc_zh": "泊在水塘边的小船，傍晚可以划两圈。",
+      "desc_en": "Moored by the pond for an evening paddle.",
+      "cost_coins": 450,
+      "min_level": 6
+    },
+    {
+      "id": "deco_tent",
+      "name_zh": "露营帐篷",
+      "name_en": "Camping Tent",
+      "icon": "⛺",
+      "category": "decoration",
+      "kind": "decoration",
+      "decoration_emoji": "⛺",
+      "desc_zh": "后院露营，数星星到睡着。",
+      "desc_en": "Backyard camping. Count stars till you doze off.",
+      "cost_coins": 520,
+      "min_level": 6
     },
     {
       "id": "deco_cabin",
@@ -133,6 +313,32 @@
       "kind": "decoration",
       "desc_zh": "永久装饰品。雨后挂在农场上的彩虹。",
       "desc_en": "Permanent decoration. A rainbow arching over your farm."
+    },
+    {
+      "id": "deco_tractor",
+      "name_zh": "小拖拉机",
+      "name_en": "Farm Tractor",
+      "icon": "🚜",
+      "category": "decoration",
+      "kind": "decoration",
+      "decoration_emoji": "🚜",
+      "desc_zh": "正经农场的排面。全场限购一台。",
+      "desc_en": "A real farm's pride. Limit one.",
+      "cost_coins": 900,
+      "min_level": 8,
+      "max_owned": 1
+    },
+    {
+      "id": "deco_wishing_bamboo",
+      "name_zh": "许愿竹",
+      "name_en": "Wishing Bamboo",
+      "icon": "🎋",
+      "category": "decoration",
+      "kind": "decoration",
+      "decoration_emoji": "🎋",
+      "desc_zh": "把心愿挂上枝头。用超市积分兑换。",
+      "desc_en": "Hang your wishes on the branches. Points-exclusive.",
+      "cost_ep": 40
     },
     {
       "id": "decoration_lantern",
@@ -171,6 +377,45 @@
       "desc_en": "A permanent companion. A chick hopping around your farm."
     },
     {
+      "id": "pet_turtle",
+      "name_zh": "小乌龟",
+      "name_en": "Turtle",
+      "icon": "🐢",
+      "category": "pet",
+      "kind": "decoration",
+      "decoration_emoji": "🐢",
+      "desc_zh": "慢慢走，不着急。",
+      "desc_en": "Slow and steady, never in a rush.",
+      "cost_coins": 380,
+      "min_level": 3
+    },
+    {
+      "id": "pet_duck",
+      "name_zh": "小鸭",
+      "name_en": "Duckling",
+      "icon": "🦆",
+      "category": "pet",
+      "kind": "decoration",
+      "decoration_emoji": "🦆",
+      "desc_zh": "摇摇摆摆，最爱水塘。",
+      "desc_en": "Waddles everywhere, loves the pond.",
+      "cost_coins": 420,
+      "min_level": 3
+    },
+    {
+      "id": "pet_squirrel",
+      "name_zh": "小松鼠",
+      "name_en": "Squirrel",
+      "icon": "🐿️",
+      "category": "pet",
+      "kind": "decoration",
+      "decoration_emoji": "🐿️",
+      "desc_zh": "囤粮小能手，尾巴最蓬松。",
+      "desc_en": "Champion hoarder, fluffiest tail.",
+      "cost_coins": 480,
+      "min_level": 4
+    },
+    {
       "id": "pet_cat",
       "name_zh": "小猫",
       "name_en": "Cat",
@@ -181,6 +426,32 @@
       "kind": "decoration",
       "desc_zh": "永久陪伴。慵懒晒太阳的小猫。",
       "desc_en": "A permanent companion. A cat lazing in the sun."
+    },
+    {
+      "id": "pet_hedgehog",
+      "name_zh": "小刺猬",
+      "name_en": "Hedgehog",
+      "icon": "🦔",
+      "category": "pet",
+      "kind": "decoration",
+      "decoration_emoji": "🦔",
+      "desc_zh": "夜里出来巡园的小护卫。",
+      "desc_en": "Little night patrol of the garden.",
+      "cost_coins": 520,
+      "min_level": 4
+    },
+    {
+      "id": "pet_pig",
+      "name_zh": "小猪",
+      "name_en": "Piglet",
+      "icon": "🐖",
+      "category": "pet",
+      "kind": "decoration",
+      "decoration_emoji": "🐖",
+      "desc_zh": "吃饱就晒太阳，快乐很简单。",
+      "desc_en": "Eats, then sunbathes. Simple joys.",
+      "cost_coins": 550,
+      "min_level": 5
     },
     {
       "id": "pet_rabbit",
@@ -195,16 +466,17 @@
       "desc_en": "A permanent companion. A rabbit hopping among the crops."
     },
     {
-      "id": "decoration_dog",
-      "name_zh": "农场狗狗",
-      "name_en": "Farm Dog",
-      "icon": "🐶",
-      "cost_ep": 200,
+      "id": "pet_goat",
+      "name_zh": "小山羊",
+      "name_en": "Goat",
+      "icon": "🐐",
       "category": "pet",
       "kind": "decoration",
-      "decoration_emoji": "🐶",
-      "desc_zh": "永久陪伴。它会在农场里走来走去，无任何功能但很治愈。",
-      "desc_en": "A permanent companion. Wanders around your farm, no utility, pure joy."
+      "decoration_emoji": "🐐",
+      "desc_zh": "会帮你「修剪」杂草——顺便啃点别的。",
+      "desc_en": "Trims your weeds, and a few other things.",
+      "cost_coins": 700,
+      "min_level": 6
     },
     {
       "id": "guard_dog",
@@ -217,6 +489,72 @@
       "decoration_emoji": "🐕",
       "desc_zh": "永久守护。在岗时邻居更难顺走你的菜，还有机会逮住小馋嘴让 TA 赔礼。",
       "desc_en": "A permanent guardian. Fewer crops get grabbed while away, and may catch a nibbler red-handed."
+    },
+    {
+      "id": "pet_swan",
+      "name_zh": "白天鹅",
+      "name_en": "Swan",
+      "icon": "🦢",
+      "category": "pet",
+      "kind": "decoration",
+      "decoration_emoji": "🦢",
+      "desc_zh": "水塘从此有了主角。",
+      "desc_en": "The pond has a star now.",
+      "cost_coins": 880,
+      "min_level": 7
+    },
+    {
+      "id": "pet_cow",
+      "name_zh": "奶牛",
+      "name_en": "Dairy Cow",
+      "icon": "🐄",
+      "category": "pet",
+      "kind": "decoration",
+      "decoration_emoji": "🐄",
+      "desc_zh": "真·农场的标志。产不产奶看心情。",
+      "desc_en": "The mark of a real farm. Milk on her own schedule.",
+      "cost_coins": 1200,
+      "min_level": 8
+    },
+    {
+      "id": "pet_horse",
+      "name_zh": "小马",
+      "name_en": "Pony",
+      "icon": "🐎",
+      "category": "pet",
+      "kind": "decoration",
+      "decoration_emoji": "🐎",
+      "desc_zh": "农场天花板。全场限购一匹。",
+      "desc_en": "Top of the barnyard. Limit one.",
+      "cost_coins": 1500,
+      "min_level": 9,
+      "max_owned": 1
+    },
+    {
+      "id": "pet_peacock",
+      "name_zh": "孔雀",
+      "name_en": "Peacock",
+      "icon": "🦚",
+      "category": "pet",
+      "kind": "decoration",
+      "decoration_emoji": "🦚",
+      "desc_zh": "开屏那一刻，整个农场都亮了。积分尊享，限一只。",
+      "desc_en": "When it fans out, the whole farm lights up. Points-exclusive, limit one.",
+      "cost_ep": 150,
+      "min_level": 10,
+      "max_owned": 1
+    },
+    {
+      "id": "decoration_dog",
+      "name_zh": "农场狗狗",
+      "name_en": "Farm Dog",
+      "icon": "🐶",
+      "cost_ep": 200,
+      "category": "pet",
+      "kind": "decoration",
+      "decoration_emoji": "🐶",
+      "desc_zh": "永久陪伴。它会在农场里走来走去，无任何功能但很治愈。",
+      "desc_en": "A permanent companion. Wanders around your farm, no utility, pure joy."
     },
     {
       "id": "extra_plot_coins",
@@ -244,15 +582,97 @@
     }
   ],
   "_lottery_prizes": [
-    { "id": "lot_coins_sm", "weight": 25, "kind": "coins", "amount": 100, "label_zh": "+100 农场币", "label_en": "+100 coins", "icon": "🪙" },
-    { "id": "lot_coins_md", "weight": 15, "kind": "coins", "amount": 300, "label_zh": "+300 农场币", "label_en": "+300 coins", "icon": "🪙" },
-    { "id": "lot_coins_lg", "weight": 5, "kind": "coins", "amount": 1000, "label_zh": "+1000 农场币", "label_en": "+1000 coins", "icon": "💰" },
-    { "id": "lot_ep_sm", "weight": 20, "kind": "ep", "amount": 3, "label_zh": "+3 超市积分", "label_en": "+3 points", "icon": "🎫" },
-    { "id": "lot_ep_md", "weight": 10, "kind": "ep", "amount": 15, "label_zh": "+15 超市积分", "label_en": "+15 points", "icon": "🎫" },
-    { "id": "lot_ep_lg", "weight": 3, "kind": "ep", "amount": 30, "label_zh": "+30 超市积分", "label_en": "+30 points", "icon": "💎" },
-    { "id": "lot_seed_pack", "weight": 12, "kind": "seed_pack", "amount": 3, "label_zh": "随机种子 ×3", "label_en": "3 random seeds", "icon": "🌱" },
-    { "id": "lot_acc_ticket", "weight": 8, "kind": "shop_item", "itemId": "acceleration_ticket", "amount": 1, "label_zh": "加速券 ×1", "label_en": "1 Acceleration", "icon": "⚡" },
-    { "id": "lot_fertilizer", "weight": 7, "kind": "shop_item", "itemId": "fertilizer_pro", "amount": 1, "label_zh": "化肥 ×1（产量翻倍）", "label_en": "1 Fertilizer (×2 yield)", "icon": "🌟" },
-    { "id": "lot_jackpot", "weight": 1, "kind": "ep", "amount": 100, "label_zh": "🎉 大奖 +100 超市积分", "label_en": "🎉 JACKPOT +100 points", "icon": "🎰" }
+    {
+      "id": "lot_coins_sm",
+      "weight": 25,
+      "kind": "coins",
+      "amount": 100,
+      "label_zh": "+100 农场币",
+      "label_en": "+100 coins",
+      "icon": "🪙"
+    },
+    {
+      "id": "lot_coins_md",
+      "weight": 15,
+      "kind": "coins",
+      "amount": 300,
+      "label_zh": "+300 农场币",
+      "label_en": "+300 coins",
+      "icon": "🪙"
+    },
+    {
+      "id": "lot_coins_lg",
+      "weight": 5,
+      "kind": "coins",
+      "amount": 1000,
+      "label_zh": "+1000 农场币",
+      "label_en": "+1000 coins",
+      "icon": "💰"
+    },
+    {
+      "id": "lot_ep_sm",
+      "weight": 20,
+      "kind": "ep",
+      "amount": 3,
+      "label_zh": "+3 超市积分",
+      "label_en": "+3 points",
+      "icon": "🎫"
+    },
+    {
+      "id": "lot_ep_md",
+      "weight": 10,
+      "kind": "ep",
+      "amount": 15,
+      "label_zh": "+15 超市积分",
+      "label_en": "+15 points",
+      "icon": "🎫"
+    },
+    {
+      "id": "lot_ep_lg",
+      "weight": 3,
+      "kind": "ep",
+      "amount": 30,
+      "label_zh": "+30 超市积分",
+      "label_en": "+30 points",
+      "icon": "💎"
+    },
+    {
+      "id": "lot_seed_pack",
+      "weight": 12,
+      "kind": "seed_pack",
+      "amount": 3,
+      "label_zh": "随机种子 ×3",
+      "label_en": "3 random seeds",
+      "icon": "🌱"
+    },
+    {
+      "id": "lot_acc_ticket",
+      "weight": 8,
+      "kind": "shop_item",
+      "itemId": "acceleration_ticket",
+      "amount": 1,
+      "label_zh": "加速券 ×1",
+      "label_en": "1 Acceleration",
+      "icon": "⚡"
+    },
+    {
+      "id": "lot_fertilizer",
+      "weight": 7,
+      "kind": "shop_item",
+      "itemId": "fertilizer_pro",
+      "amount": 1,
+      "label_zh": "化肥 ×1（产量翻倍）",
+      "label_en": "1 Fertilizer (×2 yield)",
+      "icon": "🌟"
+    },
+    {
+      "id": "lot_jackpot",
+      "weight": 1,
+      "kind": "ep",
+      "amount": 100,
+      "label_zh": "🎉 大奖 +100 超市积分",
+      "label_en": "🎉 JACKPOT +100 points",
+      "icon": "🎰"
+    }
   ]
 }
