@@ -4,7 +4,7 @@
    ============================================================ */
 
 /* Font families are loaded via a single parallel <link> in index.html
-   (Fredoka + Noto Sans SC + Plus Jakarta Sans + ZCOOL KuaiLe). The former
+   (Noto Sans SC + Plus Jakarta Sans + ZCOOL XiaoWei). The former
    @import here forced a serial request chain — the browser had to download
    style.css first, THEN discover and fetch this second stylesheet, delaying
    first paint ~2.3s on slow networks (B4 perf audit). Do NOT re-add @import. */
@@ -34,11 +34,18 @@
                  0 5px 0 #6f3d24,
                  0 8px 10px rgba(60, 35, 12, 0.30);
 
-  --font-zh: 'Noto Sans SC', 'PingFang SC', sans-serif;
-  --font-en: 'Plus Jakarta Sans', 'Quicksand', sans-serif;
-  /* Kawaii display font: ZCOOL KuaiLe (rounded playful CJK) + Fredoka (rounded
-     Latin). Used for titles, buttons, nav labels, currency. */
-  --font-display: 'ZCOOL KuaiLe', 'Fredoka', 'Plus Jakarta Sans', sans-serif;
+  /* ---- 字体系统（2026-08-13 重设计：高档 · 专业 · 友好 · 有质感）----
+     display = ZCOOL XiaoWei 站酷小薇：书法骨架的中文标题字，精品农产包装气质。
+       只有 400 一档 → body 上有 font-synthesis:none 防假粗；⚠️ 小于 13px 别用它
+       （笔画细节糊掉），小号标签走 --font-zh 加重。
+     zh = Noto Sans SC：中文正文与 UI（专业感的底盘）。
+     en = Plus Jakarta Sans：英文（几何人文，天生 premium）。
+     num = 数字专用：PJS + tabular-nums —— 金币/积分/倒计时数字等宽齐稳，
+       这是「质感」最便宜也最有效的一处（XiaoWei 的数字纤细，撑不起 HUD）。 */
+  --font-zh: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --font-en: 'Plus Jakarta Sans', 'Noto Sans SC', sans-serif;
+  --font-display: 'ZCOOL XiaoWei', 'Noto Sans SC', 'PingFang SC', sans-serif;
+  --font-num: 'Plus Jakarta Sans', 'Noto Sans SC', sans-serif;
 
   /* Kawaii accent palette (Chris's refs): leaf green / pumpkin orange / amber. */
   --kawaii-green: #4CAF50;
@@ -66,6 +73,10 @@ html, body {
   color: var(--warm-text);
   background: var(--cream-bg);
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  /* XiaoWei 只有 400：禁掉浏览器假粗（涂抹感是「廉价」的头号来源）。
+     Noto/PJS 三档真字重都已加载，不受影响。 */
+  font-synthesis: none;
   overscroll-behavior: none;
   user-select: none;
   -webkit-user-select: none;
@@ -238,8 +249,8 @@ body {
   font-size: 13px;
   line-height: 1;
 }
-/* Kawaii rounded numbers + tinted candy fills per currency. */
-.currency .value { font-family: var(--font-display); font-size: 15px; }
+/* 数字走 --font-num（PJS 700 + tabular-nums）：金币跳动时位宽不抖，质感所在。 */
+.currency .value { font-family: var(--font-num); font-variant-numeric: tabular-nums; font-weight: 700; font-size: 14.5px; letter-spacing: 0.01em; }
 .currency.coins {
   color: #b8860b;
   background: linear-gradient(180deg, #fffdf4 0%, #fff1cf 100%);
@@ -321,7 +332,8 @@ body {
   flex-shrink: 0;
 }
 .status-level {
-  font-family: var(--font-display);
+  font-family: var(--font-num);
+  font-variant-numeric: tabular-nums;
   font-size: 13px;
   color: var(--barn-red);
   font-weight: 700;
@@ -600,7 +612,9 @@ body {
   opacity: 0.78;
 }
 .journey-level {
-  font-family: var(--font-display);
+  font-family: var(--font-num);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
   font-size: 13px;
   color: var(--barn-red);
   white-space: nowrap;
@@ -2150,9 +2164,12 @@ body.mapmode #warehouseBtn { display: none !important; }
   font-size: 10px;
   font-weight: 700;
   color: var(--deep-green, #2a5c34);
-  letter-spacing: 0.2px;
+  letter-spacing: 0.04em;
   white-space: nowrap;
-  font-family: var(--font-display);   /* kawaii rounded nav labels */
+  /* 10px 小标签不用 display 字（XiaoWei 笔画细节在这个字号糊掉），
+     Noto 600 + 微字距 = 安静、专业。 */
+  font-family: var(--font-zh);
+  font-weight: 600;
 }
 
 .task-badge {
@@ -2281,6 +2298,7 @@ body.modal-open #bottombar { display: none; }
    clear of the floating close-x in the cream corner. */
 .modal-title {
   font-family: var(--font-display);
+  letter-spacing: 0.05em;
   font-size: 20px;
   color: #fff3dd;
   background: linear-gradient(180deg, #b08252 0%, #8a6240 100%);
@@ -2826,7 +2844,8 @@ body.modal-open #bottombar { display: none; }
 }
 .splash-title-zh {
   font-family: var(--font-display);
-  font-size: 38px;
+  letter-spacing: 0.08em;
+  font-size: 40px;
   color: #2a5c34;
   margin-top: 6px;
   letter-spacing: 4px;
@@ -2834,8 +2853,10 @@ body.modal-open #bottombar { display: none; }
 }
 .splash-title-en {
   font-family: var(--font-en);
-  font-size: 16px;
-  font-weight: 500;
+  font-size: 12.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.28em;
   color: #E8522A;
   letter-spacing: 6px;
   text-transform: uppercase;
@@ -3213,10 +3234,11 @@ body.modal-open #bottombar { display: none; }
   color: var(--warm-text-soft);
 }
 .ep-overview-value {
-  /* Numbers use the Latin display/number stack — the CJK display font
-     (ZCOOL KuaiLe) has no Latin digit glyphs, so a plain "0" rendered as a
-     .notdef tofu box here (audit B3 P2). */
-  font-family: var(--font-en), var(--font-zh), sans-serif;
+  /* 大数字统一走 --font-num（历史：KuaiLe 无拉丁数字曾渲染成 tofu，audit B3 P2；
+     现 display 是 XiaoWei，但数字仍走 num —— HUD 数字要的是稳，不是雅）。 */
+  font-family: var(--font-num);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
   font-size: 32px;
   color: var(--purple-points);
   margin: 2px 0;
@@ -4243,7 +4265,7 @@ body.modal-open .pwa-install-banner { display: none; }
 
 /* — Top bar: compact Lv chip + currency chips + hamburger all in the logo row — */
 .topbar-level {
-  font: 700 12px/1 "Fredoka", system-ui, sans-serif;
+  font: 700 12px/1 var(--font-num); font-variant-numeric: tabular-nums;
   color: #fff; background: var(--leaf-green, #3a8c50);
   padding: 3px 8px; border-radius: 999px; white-space: nowrap; flex-shrink: 0;
 }
@@ -4252,7 +4274,7 @@ body.modal-open .pwa-install-banner { display: none; }
   display: inline-flex; align-items: center; gap: 3px;
   background: #fffdf6; border: 1.5px solid var(--border-soft, #e9e1cd);
   border-radius: 999px; padding: 3px 8px 3px 6px; cursor: pointer;
-  font: 700 12.5px/1 "Fredoka", system-ui, sans-serif; color: var(--warm-text, #5a4a36);
+  font: 700 12.5px/1 var(--font-num); font-variant-numeric: tabular-nums; color: var(--warm-text, #5a4a36);
 }
 .topbar-cur .icon { width: 15px; height: 15px; flex-shrink: 0; }
 .topbar-cur:active { transform: scale(0.95); }
@@ -4313,7 +4335,7 @@ body.modal-open .pwa-install-banner { display: none; }
   display: flex; flex-direction: column; align-items: center; gap: 5px;
   background: #fffdf6; border: 1.5px solid var(--border-soft, #e9e1cd);
   border-radius: 14px; padding: 12px 4px; cursor: pointer;
-  font: 600 12px/1.1 "Fredoka", system-ui, sans-serif; color: var(--warm-text, #5a4a36);
+  font: 600 12px/1.1 var(--font-zh); color: var(--warm-text, #5a4a36);
 }
 .nav-menu-item:active { transform: scale(0.95); background: #f6f1e3; }
 .nav-menu-icon { font-size: 24px; line-height: 1; }

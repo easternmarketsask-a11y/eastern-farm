@@ -33,6 +33,11 @@
     { x1: 0, y1: 0, x2: 12, y2: 13, coins: 1500, points: 0 },    // L2 → bottom
     { x1: 0, y1: 0, x2: 15, y2: 15, coins: 3000, points: 30 },   // L3 → far corner (coins + points)
   ];
+  // 🔒 默认水塘（2026-08-13 换位）：谷仓前方的空地。菜地列 (x 1..3) 往下长永远
+  // 到不了 x=5，建筑占 (5..6, 2..5)，所以这团水与谁都不相邻、不重叠。
+  const DEFAULT_POND = { '6,6': 'water', '5,7': 'water', '6,7': 'water', '5,8': 'water', '6,8': 'water' };
+  // 旧默认水塘（在菜地生长路径上，已废弃）—— _migratePond 认这个形状搬家。
+  const LEGACY_POND_KEYS = ['1,6', '2,6', '2,7', '3,7', '1,7'];
   const GRASS_A = '#8bbf5a', GRASS_B = '#83b653', GRASS_EDGE = 'rgba(60,90,40,0.18)';
   const SOIL_TOP = '#9c6b3f', SOIL_FURROW = 'rgba(80,50,26,0.5)';
   const ASSET_DIR = 'assets/images/map/';
@@ -195,10 +200,13 @@
         Farm.state.data.map = [{ type: 'house', gx: 5, gy: 2 }, { type: 'barn', gx: 5, gy: 4 }];
         Farm.state.save();
       }
-      // Default decorative pond for brand-new players (mapTerrain untouched = null). An
-      // irregular cell cluster (front-left of the plots) → a natural irregular pond.
+      // Default decorative pond for brand-new players (mapTerrain untouched = null).
+      // 🔒 位置必须避开菜地生长列（2026-08-13 Chris:「水塘跟菜地分开，不能重叠」）。
+      // 旧默认在 (1..3, 6..7) —— 正好是菜地列往下长的路：第 13 块地按老公式排到
+      // (1,6)，跟水塘同格（Chris 自己的农场就是这样撞上的）。新位置在谷仓前方
+      // (5..6, 6..8)，菜地列 (x 1..3) 永远长不到，与建筑 (5..6, 2..5) 也不相邻。
       if (Farm.state.data.mapTerrain == null) {
-        Farm.state.data.mapTerrain = { '1,6': 'water', '2,6': 'water', '2,7': 'water', '3,7': 'water', '1,7': 'water' };
+        Farm.state.data.mapTerrain = DEFAULT_POND;
         Farm.state.save();
       }
 
@@ -211,6 +219,10 @@
       Object.keys(ASSET_SRC).forEach((k) => { const im = new Image(); im.onload = () => { this._img[k] = im; this._bgKey = null; if (this._on) this.render(); }; im.src = ASSET_DIR + ASSET_SRC[k]; });   // _bgKey=null → re-render cached backdrop once the landscape/tiles finish loading
       this._undoForwardOnce();
       this._buildLayout();
+      // ⚠️ 顺序：必须在 _buildLayout 之后（老存档的 plot 坐标在那里才补上），
+      // 在 _autoFrame 之前（搬完水塘再定镜头）。
+      this._migratePond();
+      this._repairPlotsOnWater();
       this._resize();
       window.addEventListener('resize', () => { this._resize(); this._clampCam(); this.render(); });
       cv.addEventListener('pointerdown', (e) => this._down(e));
@@ -255,6 +267,59 @@
       if (Farm.state.save) Farm.state.save();
     },
 
+    /* 旧默认水塘搬家（一次性，flag=pondMoveV1）。只在地形**正好等于**旧默认
+       5 格时才搬——用户自己画过的水塘一格都不动。目标格若被占（极端情况）就放弃，
+       靠 _repairPlotsOnWater 兜底把菜地挪开。 */
+    _migratePond() {
+      const d = Farm.state.data;
+      if (!d || d.pondMoveV1) return;
+      d.pondMoveV1 = true;   // 先落 flag：无论搬不搬，只判一次
+      const t = d.mapTerrain || {};
+      const keys = Object.keys(t);
+      const isLegacy = keys.length === LEGACY_POND_KEYS.length
+        && LEGACY_POND_KEYS.every((k) => t[k] === 'water');
+      if (!isLegacy) { if (Farm.state.save) Farm.state.save(); return; }
+      // 目标格必须全空（无菜地/建筑/装饰）
+      const taken = {};
+      (d.plots || []).forEach((p) => { if (Number.isInteger(p.gx)) taken[p.gx + ',' + p.gy] = 1; });
+      (d.map || []).forEach((o) => {
+        const b = BUILDINGS[o.type]; const w = b ? b.w : 1, h = b ? b.h : 1;
+        for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) taken[(o.gx + x) + ',' + (o.gy + y)] = 1;
+      });
+      (d.decorations || []).forEach((o) => { if (Number.isInteger(o.gx)) taken[o.gx + ',' + o.gy] = 1; });
+      if (Object.keys(DEFAULT_POND).some((k) => taken[k])) { if (Farm.state.save) Farm.state.save(); return; }
+      d.mapTerrain = Object.assign({}, DEFAULT_POND);
+      if (Farm.state.save) Farm.state.save();
+    },
+
+    /* 菜地落在水格上 = 数据级重叠（Chris 的第 13 块地就是：老公式把它排到 (1,6)，
+       正好是旧默认水塘的一格）。每次进图都跑，幂等：有重叠才搬、没重叠零写入。
+       搬到最近的可用格（欧氏距离），保证「水塘跟菜地分开」。 */
+    _repairPlotsOnWater() {
+      const d = Farm.state.data;
+      if (!d || !Array.isArray(d.plots)) return;
+      const t = this._terrain();
+      let moved = false;
+      for (let i = 0; i < d.plots.length; i++) {
+        const p = d.plots[i];
+        if (!Number.isInteger(p.gx) || t[p.gx + ',' + p.gy] !== 'water') continue;
+        // 由近及远找第一个能放菜地的格子
+        let best = null, bd = Infinity;
+        for (let gy = 0; gy < ROWS; gy++) for (let gx = 0; gx < COLS; gx++) {
+          if (!this._cellFreeForPlot(gx, gy)) continue;
+          const dist = (gx - p.gx) * (gx - p.gx) + (gy - p.gy) * (gy - p.gy);
+          if (dist < bd) { bd = dist; best = [gx, gy]; }
+        }
+        if (best) {
+          delete this._cellToPlot[p.gx + ',' + p.gy];
+          p.gx = best[0]; p.gy = best[1];
+          this._cellToPlot[p.gx + ',' + p.gy] = i;
+          moved = true;
+        }
+      }
+      if (moved && Farm.state.save) Farm.state.save();
+    },
+
     _buildLayout() {
       this._cellToPlot = {};
       const plots = Farm.state.data.plots || [];
@@ -263,7 +328,18 @@
         const p = plots[i];
         // plots now carry their own cell coords (so new plots can sit anywhere on owned
         // land); migrate legacy index-derived plots once.
-        if (!Number.isInteger(p.gx) || !Number.isInteger(p.gy)) { p.gx = PLOT_OX + (i % PLOT_COLS); p.gy = PLOT_OY + Math.floor(i / PLOT_COLS); migrated = true; }
+        if (!Number.isInteger(p.gx) || !Number.isInteger(p.gy)) {
+          let gx = PLOT_OX + (i % PLOT_COLS), gy = PLOT_OY + Math.floor(i / PLOT_COLS);
+          // ⚠️ 老公式落点可能撞水/撞已占格（第 13 块 → (1,6) = 旧默认水塘）。
+          // 撞了就沿列继续往下找空格，别把菜地种进水塘里。
+          const terr = this._terrain();
+          let guard = 0;
+          while (guard++ < COLS * ROWS && (terr[gx + ',' + gy] === 'water' || this._cellToPlot[gx + ',' + gy] != null)) {
+            gx += 1;
+            if (gx >= PLOT_OX + PLOT_COLS) { gx = PLOT_OX; gy += 1; }
+          }
+          p.gx = gx; p.gy = gy; migrated = true;
+        }
         this._cellToPlot[p.gx + ',' + p.gy] = i;
       }
       if (migrated && Farm.state.save) Farm.state.save();
@@ -308,6 +384,12 @@
       for (const o of map) { const b = BUILDINGS[o.type]; const w = b ? b.w : 1, h = b ? b.h : 1; acc(o.gx, o.gy); acc(o.gx + w - 1, o.gy + h - 1); }
       const decos = Farm.state.data.decorations || [];
       for (const d of decos) { if (Number.isInteger(d.gx) && Number.isInteger(d.gy)) acc(d.gx, d.gy); }
+      // 水塘也框进开局镜头（2026-08-13 换位后它在谷仓前方，不框会切出画面外）
+      const terr = this._terrain();
+      for (const k of Object.keys(terr)) {
+        if (terr[k] !== 'water') continue;
+        const a = k.split(','); acc(+a[0], +a[1]);
+      }
       if (minx === Infinity) { minx = miny = 0; maxx = maxy = 1; }
 
       const span = (maxx - minx) + (maxy - miny);   // iso screen diagonal (du === dv === Δgx+Δgy)
@@ -852,8 +934,14 @@
     _paintCell(gx, gy) {
       if (!this._inBounds(gx, gy)) return;
       const t = this._terrain(), k = gx + ',' + gy;
-      if (this._brush === 'grass') { if (t[k] != null) { delete t[k]; this.render(); } }
-      else if (t[k] !== this._brush) { t[k] = this._brush; this.render(); }
+      if (this._brush === 'grass') { if (t[k] != null) { delete t[k]; this.render(); } return; }
+      // 🔒 水不能刷在菜地/建筑上（2026-08-13）——否则又造出「水塘压着菜地」，
+      // 而 _cellFreeForPlot/_canPlace 只挡得住「后放的一方」，挡不住后刷的水。
+      if (this._brush === 'water' && (this._cellToPlot[k] != null || this._buildingAt(gx, gy) >= 0)) {
+        if (Farm.ui && Farm.ui.toast) Farm.ui.toast(this._lang() === 'en' ? 'Water can\'t go on plots or buildings' : '水塘不能压着菜地或建筑');
+        return;
+      }
+      if (t[k] !== this._brush) { t[k] = this._brush; this.render(); }
     },
 
     // ---- build-mode DOM UI (mirrors the top-down view) ----
@@ -861,7 +949,7 @@
       const en = this._lang() === 'en';
       const btn = document.createElement('button');
       btn.id = 'isoBuildBtn';
-      btn.style.cssText = 'position:fixed;right:14px;z-index:20;border:none;border-radius:24px;padding:11px 16px;min-height:44px;box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;font:600 15px/1 "Fredoka",system-ui,sans-serif;color:#fff;background:#4CAF50;box-shadow:0 3px 10px rgba(0,0,0,.22);cursor:pointer;';
+      btn.style.cssText = 'position:fixed;right:14px;z-index:20;border:none;border-radius:24px;padding:11px 16px;min-height:44px;box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;font:600 15px/1 "Noto Sans SC",system-ui,sans-serif;color:#fff;background:#4CAF50;box-shadow:0 3px 10px rgba(0,0,0,.22);cursor:pointer;';
       btn.onclick = () => this.toggleBuild();
       document.body.appendChild(btn); this._buildBtn = btn;
       if (!(Farm.state.data && Farm.state.data.mapBuildSeen) && btn.animate) this._buildPulse = btn.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.09)' }, { transform: 'scale(1)' }], { duration: 1300, iterations: Infinity, easing: 'ease-in-out' });
@@ -869,26 +957,26 @@
       const tray = document.createElement('div'); tray.id = 'isoPalette';
       tray.style.cssText = 'position:fixed;left:0;right:0;z-index:20;display:none;flex-direction:column;gap:8px;padding:9px 10px;background:rgba(255,255,255,.94);box-shadow:0 -3px 12px rgba(0,0,0,.12);';
       const tabs = document.createElement('div'); tabs.style.cssText = 'display:flex;gap:6px;justify-content:center;';
-      [['build', en ? '🏠 Build' : '🏠 建筑'], ['terrain', en ? '🖌 Terrain' : '🖌 地形']].forEach(([m, label]) => { const t = document.createElement('button'); t.dataset.mode = m; t.textContent = label; t.style.cssText = 'border:none;border-radius:13px;padding:6px 16px;cursor:pointer;font:600 13px/1 "Fredoka",system-ui,sans-serif;'; t.onclick = () => this.setEditMode(m); tabs.appendChild(t); });
+      [['build', en ? '🏠 Build' : '🏠 建筑'], ['terrain', en ? '🖌 Terrain' : '🖌 地形']].forEach(([m, label]) => { const t = document.createElement('button'); t.dataset.mode = m; t.textContent = label; t.style.cssText = 'border:none;border-radius:13px;padding:6px 16px;cursor:pointer;font:600 13px/1 "Noto Sans SC",system-ui,sans-serif;'; t.onclick = () => this.setEditMode(m); tabs.appendChild(t); });
       this._modeTabs = tabs; tray.appendChild(tabs);
       // single horizontal SCROLLING row (no wrap) → compact, takes minimal height
       const rowCss = 'display:flex;flex-wrap:nowrap;gap:8px;align-items:flex-end;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;padding-bottom:2px;scrollbar-width:none;';
       const pb = document.createElement('div'); pb.style.cssText = rowCss;
       // 菜地 (new farmable plot) — first item so it's front-and-centre
       const pit = document.createElement('button'); pit.dataset.type = '__plot';
-      pit.style.cssText = 'border:1px solid #cdebc9;border-radius:14px;background:#f3fbef;padding:8px 10px 6px;min-width:64px;flex:0 0 auto;cursor:pointer;font:500 12px/1.3 "Fredoka",system-ui,sans-serif;color:#444;';
+      pit.style.cssText = 'border:1px solid #cdebc9;border-radius:14px;background:#f3fbef;padding:8px 10px 6px;min-width:64px;flex:0 0 auto;cursor:pointer;font:500 12px/1.3 "Noto Sans SC",system-ui,sans-serif;color:#444;';
       pit.innerHTML = '<div style="font-size:11px;color:#3a8c50;margin-top:4px;font-weight:600">🌱 ' + (en ? 'Plot' : '菜地') + '</div><div class="palCost" style="font-size:12px;font-weight:600;color:#3a8c50;margin-top:1px"><span class="coin-icon"></span> ' + this._plotCost() + '</div>';
       const pic = document.createElement('div'); pic.style.cssText = 'width:44px;height:38px;margin:0 auto;background-size:contain;background-repeat:no-repeat;background-position:center;'; pic.style.backgroundImage = "url('" + ASSET_DIR + "hd_soil.webp')"; pit.insertBefore(pic, pit.firstChild);
       pit.onclick = () => this._addPlot(); pb.appendChild(pit);
-      PALETTE.forEach((type) => { const b = BUILDINGS[type]; const item = document.createElement('button'); item.dataset.type = type; item.style.cssText = 'border:1px solid #e0e0e0;border-radius:14px;background:#fff;padding:8px 10px 6px;min-width:64px;flex:0 0 auto;cursor:pointer;font:500 12px/1.3 "Fredoka",system-ui,sans-serif;color:#444;'; item.innerHTML = '<div style="font-size:11px;color:#888;margin-top:4px">' + (en ? b.en : b.zh) + '</div><div class="palCost" style="font-size:12px;font-weight:600;color:#3a8c50;margin-top:1px"><span class="coin-icon"></span> ' + (b.cost || 0) + '</div>'; const ic = document.createElement('div'); ic.style.cssText = 'width:44px;height:38px;margin:0 auto;background-size:contain;background-repeat:no-repeat;background-position:center;'; ic.style.backgroundImage = "url('" + ASSET_DIR + ASSET_SRC[b.img] + "')"; item.insertBefore(ic, item.firstChild); item.onclick = () => this._addBuilding(type); pb.appendChild(item); });
+      PALETTE.forEach((type) => { const b = BUILDINGS[type]; const item = document.createElement('button'); item.dataset.type = type; item.style.cssText = 'border:1px solid #e0e0e0;border-radius:14px;background:#fff;padding:8px 10px 6px;min-width:64px;flex:0 0 auto;cursor:pointer;font:500 12px/1.3 "Noto Sans SC",system-ui,sans-serif;color:#444;'; item.innerHTML = '<div style="font-size:11px;color:#888;margin-top:4px">' + (en ? b.en : b.zh) + '</div><div class="palCost" style="font-size:12px;font-weight:600;color:#3a8c50;margin-top:1px"><span class="coin-icon"></span> ' + (b.cost || 0) + '</div>'; const ic = document.createElement('div'); ic.style.cssText = 'width:44px;height:38px;margin:0 auto;background-size:contain;background-repeat:no-repeat;background-position:center;'; ic.style.backgroundImage = "url('" + ASSET_DIR + ASSET_SRC[b.img] + "')"; item.insertBefore(ic, item.firstChild); item.onclick = () => this._addBuilding(type); pb.appendChild(item); });
       this._palBuild = pb; tray.appendChild(pb);
       const pt = document.createElement('div'); pt.style.cssText = rowCss;
-      BRUSHES.forEach((br) => { const item = document.createElement('button'); item.dataset.brush = br.key; item.style.cssText = 'border:1px solid #e0e0e0;border-radius:14px;background:#fff;padding:8px 10px 6px;min-width:64px;flex:0 0 auto;cursor:pointer;font:500 12px/1.3 "Fredoka",system-ui,sans-serif;color:#444;'; item.innerHTML = '<div style="width:40px;height:30px;margin:0 auto;border-radius:8px;background:' + br.color + '"></div><div style="font-size:11px;color:#888;margin-top:4px">' + (en ? br.en : br.zh) + '</div>'; item.onclick = () => this.setBrush(br.key); pt.appendChild(item); });
+      BRUSHES.forEach((br) => { const item = document.createElement('button'); item.dataset.brush = br.key; item.style.cssText = 'border:1px solid #e0e0e0;border-radius:14px;background:#fff;padding:8px 10px 6px;min-width:64px;flex:0 0 auto;cursor:pointer;font:500 12px/1.3 "Noto Sans SC",system-ui,sans-serif;color:#444;'; item.innerHTML = '<div style="width:40px;height:30px;margin:0 auto;border-radius:8px;background:' + br.color + '"></div><div style="font-size:11px;color:#888;margin-top:4px">' + (en ? br.en : br.zh) + '</div>'; item.onclick = () => this.setBrush(br.key); pt.appendChild(item); });
       this._palTerrain = pt; tray.appendChild(pt);
       document.body.appendChild(tray); this._palette = tray;
 
       const hint = document.createElement('div'); hint.id = 'isoBuildHint';
-      hint.style.cssText = 'position:fixed;left:0;right:0;z-index:19;text-align:center;display:none;pointer-events:none;font:500 13px/1.4 "Fredoka",system-ui,sans-serif;color:#fff;';
+      hint.style.cssText = 'position:fixed;left:0;right:0;z-index:19;text-align:center;display:none;pointer-events:none;font:500 13px/1.4 "Noto Sans SC",system-ui,sans-serif;color:#fff;';
       hint.innerHTML = '<span style="background:rgba(0,0,0,.45);padding:6px 14px;border-radius:16px"></span>';
       document.body.appendChild(hint); this._hint = hint;
 
@@ -1129,7 +1217,10 @@
     _drawPond(cells) {
       if (!cells || !cells.length) return;
       const ctx = this._ctx, tw = this._tw(), th = this._th();
-      const rx = tw * 0.72, ry = th * 0.80, oy = th * 0.12;   // per-cell blob; oy sinks it into the ground
+      // 半径收敛（2026-08-13）：0.72/0.80 时波峰能伸进相邻格中心（归一化距离 0.93 < 1），
+      // 视觉上水漫过菜地。0.62/0.70 相邻水格仍能融成一团，但够不到邻格中心；
+      // 残余的轻微溢出由「水塘画在地块之下」兜底（见 render 里的调用处）。
+      const rx = tw * 0.62, ry = th * 0.70, oy = th * 0.12;   // per-cell blob; oy sinks it into the ground
       const t = Date.now() / 1000;
       // Build an IRREGULAR closed blob per cell (wobbly radius keyed on the cell's stable
       // seed → natural pond outline, not a uniform oval). Overlapping cell-blobs merge.
@@ -1238,7 +1329,7 @@
       // Soil beds (plots) + terrain tiles, back-to-front. Grass cells draw nothing
       // (the base shows through). Plot cells use the raised soil bed.
       const plotCells = this._plotCellSet();
-      const waterCells = [];
+      const waterCells = [], groundTiles = [];
       for (let s = 0; s <= (COLS - 1) + (ROWS - 1); s++) {
         for (let gx = 0; gx < COLS; gx++) {
           const gy = s - gx; if (gy < 0 || gy >= ROWS) continue;
@@ -1257,10 +1348,14 @@
             if (pl && pl.unlocked) key = 'soil';
           }
           if (terrain[k] === 'path') key = 'path';
-          if (key !== 'grass') this._tileImg(key, c);
+          if (key !== 'grass') groundTiles.push({ key, c });
         }
       }
+      // 🔒 水塘画在田土/小路**之下**（2026-08-13 Chris:「水塘跟菜地分开」）。
+      // 有机水塘的波浪轮廓天然会溢出水格边界一点；先画水塘再画地块，溢出的
+      // 水沿被土床盖住 = 岸线自然贴着田边，绝不会出现「水漫到菜地上」。
       this._drawPond(waterCells);
+      for (const tI of groundTiles) this._tileImg(tI.key, tI.c);
 
       // build-mode grid overlay
       if (this._build) {
@@ -1389,7 +1484,7 @@
         if (reqLv === this._nextLockLv) {
           this._drawLock(c.x, c.y - th * 0.1, th * 0.55, 1);
           ctx.fillStyle = '#fff';
-          ctx.font = 'bold ' + (th * 0.4) + 'px "Fredoka",sans-serif'; ctx.fillText('Lv' + reqLv, c.x, c.y + th * 0.4);
+          ctx.font = '700 ' + (th * 0.4) + 'px "Plus Jakarta Sans","Noto Sans SC",sans-serif'; ctx.fillText('Lv' + reqLv, c.x, c.y + th * 0.4);
         } else {
           this._drawLock(c.x, c.y + th * 0.05, th * 0.3, 0.45);
         }
@@ -1401,7 +1496,7 @@
         const t = Date.now() / 1000, pulse = 0.5 + 0.5 * Math.sin(t * 2 + gx + gy);
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         ctx.fillStyle = 'rgba(255,248,232,' + (0.34 + pulse * 0.22) + ')';
-        ctx.font = 'bold ' + (th * 0.42) + 'px "Fredoka",sans-serif';
+        ctx.font = '700 ' + (th * 0.42) + 'px "Plus Jakarta Sans","Noto Sans SC",sans-serif';
         ctx.fillText('+', c.x, c.y); return;
       }
       const p = Farm.crops.getProgress ? Farm.crops.getProgress(plot) : 1, mature = Farm.crops.isMature(plot);

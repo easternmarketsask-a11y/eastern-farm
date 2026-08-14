@@ -43,18 +43,19 @@
 <meta name="twitter:description" content="玩农场游戏、赚超市积分。免费玩，无下载，天天收获！">
 <meta name="twitter:image" content="https://farm.easternmarket.ca/src/assets/images/share-card.png">
 
-<!-- Kawaii display fonts (rounded, playful). The CSS already references
-     'ZCOOL KuaiLe' (--font-display) but the link was missing, so it silently
-     fell back to system fonts. Load it + Fredoka (rounded Latin) so headings/
-     buttons get the cute look. display=swap → graceful fallback if offline. -->
+<!-- 字体系统（2026-08-13 重设计，Chris:「高档专业友好，要有质感」）：
+     ZCOOL XiaoWei 站酷小薇 = 标题/大数字的中文 display（笔画有提按、收笔见锋，
+     精品农产包装的气质，取代卡通的 ZCOOL KuaiLe + Fredoka）；
+     Noto Sans SC = 中文正文/UI；Plus Jakarta Sans = 英文 + 所有数字（tabular）。
+     display=swap → graceful fallback if offline. -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <!-- ALL web fonts in ONE parallel request (was split across this link + a
      serial @import in style.css → ~2.3s first-paint stall on slow nets, B4).
      Loaded async via media="print"→onload so it never blocks render; display=swap
      already gives a system-font fallback until the webfont arrives. -->
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Noto+Sans+SC:wght@400;500;700&family=Plus+Jakarta+Sans:wght@400;500;700&family=ZCOOL+KuaiLe&display=swap" media="print" onload="this.media='all'">
-<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Noto+Sans+SC:wght@400;500;700&family=Plus+Jakarta+Sans:wght@400;500;700&family=ZCOOL+KuaiLe&display=swap"></noscript>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Plus+Jakarta+Sans:wght@400;500;700&family=ZCOOL+XiaoWei&display=swap" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Plus+Jakarta+Sans:wght@400;500;700&family=ZCOOL+XiaoWei&display=swap"></noscript>
 <link rel="stylesheet" href="css/style.css">
 
 <!-- ⚠️ 开屏按钮的「保命接管」——必须在 <head>，必须用事件委托（2026-08-11）

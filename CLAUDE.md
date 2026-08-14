@@ -277,10 +277,16 @@ See `docs/GAME-DESIGN.md` for full spec. TL;DR:
   garlic) but aren't infantilized
 - **Avoid**: high-saturation neon, dark mode (this is sunny daytime feel),
   Comic Sans, Material Design generic chips
-- **Typography**:
-  - Chinese: 思源黑体 / Noto Sans SC (rounded weights)
-  - English: Plus Jakarta Sans or Quicksand
-  - **No serif fonts** — too formal for the cozy vibe
+- **Typography**（2026-08-13 重设计：高档 · 专业 · 友好 · 有质感）:
+  - Display（标题/大字）: **ZCOOL XiaoWei 站酷小薇** —— 书法骨架的中文标题字，
+    精品农产包装气质。只有 400 一档（body 已设 `font-synthesis:none` 防假粗）；
+    **小于 13px 不用它**（笔画细节糊掉），小标签走 Noto Sans SC 加重
+  - Chinese body: Noto Sans SC 400/500/700
+  - English: Plus Jakarta Sans
+  - Numbers（金币/积分/倒计时）: `--font-num` = Plus Jakarta Sans 700 +
+    `font-variant-numeric: tabular-nums` —— HUD 数字要稳不要雅，跳动时位宽不抖
+  - ❌ 卡通体（ZCOOL KuaiLe / Fredoka）已于 2026-08-13 移除，别加回来
+  - 正文不用衬线体；display 的笔锋对比是刻意保留的例外
 
 ---
 

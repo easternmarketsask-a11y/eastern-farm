@@ -63,12 +63,12 @@
       const ZH = lang !== 'en';
       const CN = '"PingFang SC","Microsoft YaHei","Noto Sans SC",sans-serif';
       const EN = '"Plus Jakarta Sans","Quicksand",Arial,sans-serif';
-      const FD = '"ZCOOL KuaiLe",' + CN;   // display font (rounded, playful)
+      const FD = '"ZCOOL XiaoWei",' + CN;   // display font（小薇：精品农牌气质，2026-08-13 字体重设计）
       const canvas = document.createElement('canvas');
       canvas.width = W; canvas.height = H;
       const ctx = canvas.getContext('2d');
 
-      // Wait for webfonts (ZCOOL KuaiLe / Noto Sans SC) before drawing —
+      // Wait for webfonts (ZCOOL XiaoWei / Noto Sans SC) before drawing —
       // otherwise canvas falls back to a system font with different metrics,
       // which makes centered text look subtly off-center. Best-effort.
       try { if (document.fonts && document.fonts.ready) await document.fonts.ready; } catch (e) {}
