@@ -861,6 +861,26 @@
       const d = (Farm.state.data.decorations) || []; for (let i = 0; i < d.length; i++) if (i !== exceptIdx && d[i].gx === gx && d[i].gy === gy) return false;
       return true;
     },
+    /* 🔒「这格不能建」的唯一视觉语言（2026-08-13 Chris:「不用提示文字，
+       移到不可用的位置就出现红色 X 就好」）。红底 + 白叉画在格子中心，
+       建筑拖动 / 摆件拖动 / 水笔刷三处共用这一个画法，别再各写各的。
+       画在格子上而不是弹 toast —— 手指正按在那儿，反馈就该出现在那儿。 */
+    _drawBlockedX(cx, cy) {
+      const ctx = this._ctx, th = this._th();
+      const r = Math.max(9, th * 0.42);
+      ctx.save();
+      ctx.beginPath(); ctx.arc(cx, cy, r, 0, 6.283);
+      ctx.fillStyle = 'rgba(214,48,48,0.94)'; ctx.fill();
+      ctx.lineWidth = Math.max(1.5, r * 0.16); ctx.strokeStyle = 'rgba(255,255,255,0.95)'; ctx.stroke();
+      const a = r * 0.46;
+      ctx.beginPath();
+      ctx.moveTo(cx - a, cy - a); ctx.lineTo(cx + a, cy + a);
+      ctx.moveTo(cx + a, cy - a); ctx.lineTo(cx - a, cy + a);
+      ctx.lineWidth = Math.max(2, r * 0.24); ctx.lineCap = 'round';
+      ctx.strokeStyle = '#fff'; ctx.stroke();
+      ctx.restore();
+    },
+
     _delChip(o) { const b = BUILDINGS[o.type], c = this._cell(o.gx + b.w - 1, o.gy), th = this._th(); return { x: c.x + this._tw() / 2 * 0.5, y: c.y - th * 0.2, r: Math.max(12, th * 0.5) }; },
     _addBuilding(type) {
       const b = BUILDINGS[type], en = this._lang() === 'en', cost = b.cost || 0;
@@ -979,7 +999,10 @@
       // 🔒 水不能刷在菜地/建筑上（2026-08-13）——否则又造出「水塘压着菜地」，
       // 而 _cellFreeForPlot/_canPlace 只挡得住「后放的一方」，挡不住后刷的水。
       if (this._brush === 'water' && (this._cellToPlot[k] != null || this._buildingAt(gx, gy) >= 0 || this._decoAt(gx, gy) >= 0)) {
-        if (Farm.ui && Farm.ui.toast) Farm.ui.toast(this._lang() === 'en' ? 'That spot is taken — water can\'t go on plots or buildings' : '这格已被占用，水塘要画在空地上');
+        // 🔒 不弹文字提示（Chris 2026-08-13）——刷到占用格就在那一格显红叉，
+        // 与拖动建筑/摆件同一套视觉语言。刷过去自动淡出，不需要用户关掉任何东西。
+        this._blockedCell = { gx, gy, t: Date.now() };
+        this.render();
         return;
       }
       if (t[k] !== this._brush) { t[k] = this._brush; this.render(); }
@@ -1398,6 +1421,20 @@
       this._drawPond(waterCells);
       for (const tI of groundTiles) this._tileImg(tI.key, tI.c);
 
+      // 水笔刷刷到占用格 → 那一格显红叉（0.9 秒后自动消失，不留残影）
+      if (this._blockedCell) {
+        const age = Date.now() - this._blockedCell.t;
+        if (age > 900) { this._blockedCell = null; }
+        else {
+          const bc = this._cell(this._blockedCell.gx, this._blockedCell.gy);
+          ctx.save();
+          ctx.globalAlpha = age > 600 ? (1 - (age - 600) / 300) : 1;   // 末尾 0.3s 淡出
+          this._diamond(bc.x, bc.y, tw, th); ctx.fillStyle = 'rgba(220,60,60,0.30)'; ctx.fill();
+          this._drawBlockedX(bc.x, bc.y);
+          ctx.restore();
+        }
+      }
+
       // build-mode grid overlay
       if (this._build) {
         ctx.strokeStyle = 'rgba(255,255,255,0.22)'; ctx.lineWidth = 1;
@@ -1438,6 +1475,20 @@
         }
       });
       draws.sort((a, c) => a.d - c.d); draws.forEach(x => x.fn());
+
+      /* 🔒 红叉必须画在深度排序**之后**（2026-08-13）——它是「这里不能放」的
+         唯一提示，不能被任何东西遮住。放进 draws 里试过：拖到菜地上时红叉被
+         排序更靠后的菜地土床整个盖掉，正好在最需要它的场景里失效。 */
+      if (this._moving && !this._moving.valid) {
+        const m = this._moving;
+        let mx, my;
+        if (m.kind === 'building') {
+          const bb = BUILDINGS[(Farm.state.data.map[m.idx] || {}).type];
+          const mid = this._cell(m.gx + (bb ? (bb.w - 1) / 2 : 0), m.gy + (bb ? (bb.h - 1) / 2 : 0));
+          mx = mid.x; my = mid.y;
+        } else { const c2 = this._cell(m.gx, m.gy); mx = c2.x; my = c2.y; }
+        this._drawBlockedX(mx, my);
+      }
 
       // 按压反馈：被按住的地块盖半透明白菱形（_down 设 _pressCell，up/cancel/拖拽清）。
       // cy 偏移 th*0.12 与空地命中测试的视觉床中心一致。
@@ -1643,7 +1694,11 @@
     },
     _drawDeco(d, moving) {
       const ctx = this._ctx, tw = this._tw(), th = this._th(), c = this._cell(d.gx, d.gy);
-      if (moving) { this._diamond(c.x, c.y, tw, th); ctx.fillStyle = this._moving && this._moving.valid ? 'rgba(76,175,80,0.34)' : 'rgba(220,60,60,0.36)'; ctx.fill(); }
+      if (moving) {
+        const ok = !(this._moving && !this._moving.valid);
+        this._diamond(c.x, c.y, tw, th);
+        ctx.fillStyle = ok ? 'rgba(76,175,80,0.34)' : 'rgba(220,60,60,0.36)'; ctx.fill();
+      }
       // painted iso animal sprite for pets — a clean base-less animal that sits on
       // the cell with a gentle idle bob + slight drift (a living pet, not a sliding card).
       const anim = d.itemId && ANIMALS[d.itemId];
