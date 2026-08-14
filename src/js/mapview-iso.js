@@ -33,11 +33,19 @@
     { x1: 0, y1: 0, x2: 12, y2: 13, coins: 1500, points: 0 },    // L2 → bottom
     { x1: 0, y1: 0, x2: 15, y2: 15, coins: 3000, points: 30 },   // L3 → far corner (coins + points)
   ];
-  // 🔒 默认水塘（2026-08-13 换位）：谷仓前方的空地。菜地列 (x 1..3) 往下长永远
-  // 到不了 x=5，建筑占 (5..6, 2..5)，所以这团水与谁都不相邻、不重叠。
-  const DEFAULT_POND = { '6,6': 'water', '5,7': 'water', '6,7': 'water', '5,8': 'water', '6,8': 'water' };
-  // 旧默认水塘（在菜地生长路径上，已废弃）—— _migratePond 认这个形状搬家。
-  const LEGACY_POND_KEYS = ['1,6', '2,6', '2,7', '3,7', '1,7'];
+  // 🔒 默认水塘 v2（2026-08-13 二次修正）：谷仓正前方**隔一整排草**。
+  // v1 的 (6,6) 与谷仓底座 (6,5) 是相邻格——有机水塘的波浪轮廓一溢出就贴着
+  // 房子了（Chris:「水塘跟房子连在一起了」）。规矩：**默认水塘与任何建筑
+  // footprint、菜地生长列(x1..3)之间至少隔 1 格草。**
+  // 建筑占 (5..6, 2..5)，v2 最北的格是 y=7 → y=6 整排是草；x 最小 5 → 与
+  // 菜地列隔着 x=4 一列草。
+  const DEFAULT_POND = { '6,7': 'water', '5,8': 'water', '6,8': 'water', '7,8': 'water', '6,9': 'water' };
+  // 历代默认水塘形状 —— _migratePond 只认这些**精确形状**搬家（用户自己画的不动）：
+  // v0 在菜地生长路径上（第13块地曾直接落进水里）；v1 贴着谷仓。
+  const LEGACY_POND_SHAPES = [
+    ['1,6', '2,6', '2,7', '3,7', '1,7'],             // v0
+    ['6,6', '5,7', '6,7', '5,8', '6,8'],             // v1
+  ];
   const GRASS_A = '#8bbf5a', GRASS_B = '#83b653', GRASS_EDGE = 'rgba(60,90,40,0.18)';
   const SOIL_TOP = '#9c6b3f', SOIL_FURROW = 'rgba(80,50,26,0.5)';
   const ASSET_DIR = 'assets/images/map/';
@@ -267,17 +275,18 @@
       if (Farm.state.save) Farm.state.save();
     },
 
-    /* 旧默认水塘搬家（一次性，flag=pondMoveV1）。只在地形**正好等于**旧默认
-       5 格时才搬——用户自己画过的水塘一格都不动。目标格若被占（极端情况）就放弃，
-       靠 _repairPlotsOnWater 兜底把菜地挪开。 */
+    /* 旧默认水塘搬家（一次性，flag=pondMoveV2）。只在地形**正好等于**某代默认
+       形状时才搬——用户自己画过的水塘一格都不动。目标格若被占（极端情况）就放弃，
+       靠 _repairPlotsOnWater 兜底把菜地挪开。
+       （pondMoveV1 是 v1 位置的旧 flag，已废弃不再读——v1 自己也成了要搬走的历史形状。） */
     _migratePond() {
       const d = Farm.state.data;
-      if (!d || d.pondMoveV1) return;
-      d.pondMoveV1 = true;   // 先落 flag：无论搬不搬，只判一次
+      if (!d || d.pondMoveV2) return;
+      d.pondMoveV2 = true;   // 先落 flag：无论搬不搬，只判一次
       const t = d.mapTerrain || {};
       const keys = Object.keys(t);
-      const isLegacy = keys.length === LEGACY_POND_KEYS.length
-        && LEGACY_POND_KEYS.every((k) => t[k] === 'water');
+      const isLegacy = LEGACY_POND_SHAPES.some((shape) =>
+        keys.length === shape.length && shape.every((k) => t[k] === 'water'));
       if (!isLegacy) { if (Farm.state.save) Farm.state.save(); return; }
       // 目标格必须全空（无菜地/建筑/装饰）
       const taken = {};
