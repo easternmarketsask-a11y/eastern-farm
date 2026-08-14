@@ -131,8 +131,8 @@
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;padding:8px 10px;border:1px solid var(--border-soft);border-radius:12px;">
           <div style="font-size:22px;">🔥</div>
           <div style="flex:1;line-height:1.4;">
-            <div style="font-size:13px;font-weight:600;">${lang === 'en' ? 'Cooking speed' : '出菜速度'} · Lv ${csLevel}/${COOK_SPEED_MAX}${csPct > 0 ? ` (−${csPct}%)` : ''}</div>
-            <div style="font-size:11px;color:var(--warm-text-soft);">${lang === 'en' ? 'All stoves cook faster — permanent.' : '所有灶台永久出菜更快'}</div>
+            <div style="font-size:13px;font-weight:600;white-space:nowrap;">${lang === 'en' ? 'Cooking speed' : '出菜速度'}</div>
+            <div style="font-size:11px;color:var(--warm-text-soft);">Lv&nbsp;${csLevel}/${COOK_SPEED_MAX}${csPct > 0 ? ` (−${csPct}%)` : ''} · ${lang === 'en' ? 'all stoves, permanent' : '所有灶台永久生效'}</div>
           </div>
           ${csMaxed
             ? `<span style="font-size:12px;color:var(--leaf-dark,#3a8c50);font-weight:600;">${lang === 'en' ? '✓ MAX' : '✓ 已满级'}</span>`

@@ -2445,10 +2445,12 @@ body.modal-open #bottombar { display: none; }
 .seed-card .seed-meta {
   display: flex;
   align-items: stretch;
-  gap: 6px;
+  gap: 5px 6px;
   margin-top: 4px;
   min-width: 0;
-  flex-wrap: wrap;  /* on narrow cards, time+owned wrap below price */
+  /* 2026-08-14 打磨：价格块恒独占一行、时长+数量恒在第二行。
+     旧的「窄卡才换行」让相邻卡片一行/两行混排，整页参差不齐。 */
+  flex-wrap: wrap;
 }
 /* Card itself must not overflow its grid cell, otherwise it pushes
    the right-column card off-screen on narrow viewports. */
@@ -2466,7 +2468,7 @@ body.modal-open #bottombar { display: none; }
   padding: 3px 8px 4px;
   border-radius: 7px;
   line-height: 1.1;
-  flex: 1 1 auto;
+  flex: 1 1 100%;   /* 价格块独占整行（对齐一致性，见 .seed-meta 注释） */
   min-width: 0;
 }
 .seed-card .seed-cost {
@@ -2500,6 +2502,15 @@ body.modal-open #bottombar { display: none; }
 .seed-card .seed-cost .seed-value { color: #8a6308; }
 .seed-card .seed-sell .seed-value { color: #2e6b1d; }
 
+/* 徽章行容器：时长+持有数永远同排（2026-08-14 打磨——旧布局让两个徽章
+   各自换行，相邻卡片一行/两行混排，整页参差不齐）。 */
+.seed-card .seed-chips {
+  flex: 1 1 100%;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
 /* Right-side chips: time + owned */
 .seed-card .seed-time,
 .seed-card .seed-owned {
@@ -2722,11 +2733,27 @@ body.modal-open #bottombar { display: none; }
 }
 
 /* =============== TOAST =============== */
-.toast {
+/* 2026-08-14 推广前打磨：布局职责挪到 .toast-stack ——
+   旧写法每条 toast 各自 fixed 在 top:80px，两条并发时**原地重叠**成一团。
+   现在 stack 是唯一定位者（fixed + flex column），toast 自然向下排。 */
+.toast-stack {
   position: fixed;
   top: 80px;
   left: 50%;
   transform: translateX(-50%);
+  width: max-content;
+  max-width: min(86vw, 420px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  /* 必须压过世界杯观赛台(z 7000)与所有弹窗(z 100)；仍低于 PWA 安装横幅(9000)。 */
+  z-index: 7500;
+  pointer-events: none;         /* 不挡下层点击…… */
+}
+.toast {
+  pointer-events: auto;         /* ……但 toast 本体可点（点一下就关） */
+  cursor: pointer;
   background: var(--warm-text);
   color: white;
   padding: 10px 20px;
@@ -2734,23 +2761,20 @@ body.modal-open #bottombar { display: none; }
   font-size: 13px;
   font-weight: 500;
   box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-  /* 必须压过世界杯观赛台(z 7000)：toast 是全游戏唯一的轻量反馈通道，
-     原 z 200 在观赛台内完全不可见——「报名已截止」等提示用户根本看不到，
-     加重了「点了没反应」的体感（2026-07-02 与登录弹窗被压同批修复）。
-     仍低于 PWA 安装横幅(9000)。toast 无 pointer-events 影响。 */
-  z-index: 7500;
-  /* 淡出起点由 JS 按每条 toast 的实际时长写入 --toast-out-delay
-     （ui.js toast()），保证不同 duration 的 toast 都能完整播完 300ms
-     淡出后才被 display:none，而不是固定 2.7s 起淡（UX 第 3 批 #10）。 */
+  /* 淡出起点由 JS 按每条 toast 的实际时长写入 --toast-out-delay（ui.js toast()，
+     2026-08-14 起真的在写了——此前这个变量从没被写过，所有 toast 一律 2.5s 起淡，
+     8 秒的重要提示实际 2.8 秒就看不见）。 */
   animation: toastIn 0.3s ease, toastOut 0.3s ease var(--toast-out-delay, 2.5s) forwards;
 }
 .toast.hidden { display: none; }
+/* 点按即关：立即淡出（覆盖时间轴动画） */
+.toast.toast-out { animation: toastOut 0.3s ease forwards; }
 @keyframes toastIn {
-  from { opacity: 0; transform: translateX(-50%) translateY(-20px); }
-  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+  from { opacity: 0; transform: translateY(-20px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 @keyframes toastOut {
-  to { opacity: 0; transform: translateX(-50%) translateY(-20px); }
+  to { opacity: 0; transform: translateY(-20px); }
 }
 
 /* Floating "+coins" effect after harvest */

@@ -85,8 +85,7 @@
                   <div class="seed-name">${c[nameKey]}</div>
                   <div class="seed-meta">
                     ${priceCell}
-                    <span class="seed-time">⏱${formatMinutes(c.grow_minutes)}</span>
-                    ${statusCell}
+                    <span class="seed-chips"><span class="seed-time">⏱${formatMinutes(c.grow_minutes)}</span>${statusCell}</span>
                   </div>
                 </div>
               </div>
@@ -232,8 +231,7 @@
               <div class="seed-name">${c[nameKey]}${lastTag}</div>
               <div class="seed-meta">
                 <span class="seed-sell"><span class="seed-label">${marketPriceLabel}</span>${priceHtml}</span>
-                <span class="seed-time">⏱${formatMinutes(c.grow_minutes)}</span>
-                <span class="seed-owned">× ${owned}</span>
+                <span class="seed-chips"><span class="seed-time">⏱${formatMinutes(c.grow_minutes)}</span><span class="seed-owned">× ${owned}</span></span>
               </div>
             </div>
             ${fillBtn}

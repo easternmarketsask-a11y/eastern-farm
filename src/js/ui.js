@@ -247,8 +247,18 @@
       // Author-controlled strings only (no XSS risk here); inline HTML supports
       // the styled coin/points icon spans.
       el.innerHTML = text;
+      /* ⚠️ CSS 的 toastOut 动画起点是 var(--toast-out-delay, 2.5s)。注释一直声称
+         「由 JS 按实际时长写入」，但这行**从来没存在过** —— 结果所有 toast 不管
+         要求多长，2.5 秒就开始淡出：8 秒的重要提示实际 2.8 秒就看不见了
+         （2026-08-14 推广前体检抓到）。 */
+      el.style.setProperty('--toast-out-delay', Math.max(0, duration - 300) + 'ms');
+      // 点一下就关（Chris 阻塞项 #5「提示要能关掉」推广到所有 toast）
+      el.addEventListener('click', () => dismiss(), { once: true });
       stack.appendChild(el);
       const dismiss = () => {
+        if (el._toastDone) return;
+        el._toastDone = true;
+        clearTimeout(el._toastTimer);
         el.classList.add('toast-out');
         setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, 320);
       };

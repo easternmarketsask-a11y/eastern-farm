@@ -617,11 +617,17 @@
       setTimeout(function () {
         if (!(window.Farm && Farm.ui && Farm.ui.toast)) return;
         var isMember = !!(window.Farm && Farm.fbAuth && Farm.fbAuth.memberDoc);
+        // 文案要短（Chris 阻塞项 #5）：一屏小字念不完的提示等于没提示。
+        // 自愈（_reclaimStorage）成功时根本走不到这里，所以这句只对
+        // 「真的写不进去」的设备说话；点一下即可关掉（ui.toast 全局支持）。
+        var en = (Farm.state && Farm.state.data && Farm.state.data.language) === 'en';
         if (isMember) {
-          Farm.ui.toast('你已登录，进度已同步到云端，换设备也不会丢 ✓。这台设备的浏览器暂时存不下本地缓存（存储已满或 iOS Safari 限制），不影响你玩。想更顺畅可点分享→「添加到主屏幕」，以后从图标打开。', 8000);
+          Farm.ui.toast(en ? 'Progress is safe in the cloud (this device cannot save locally)'
+                           : '进度已存云端 ✓ 本机暂时存不了，不影响玩', 6000);
         } else {
-          // 游客 + 存储受限：正向引导登录（登录=进度上云，绕开本地存储限制），不吓人。
-          Farm.ui.toast('放心玩，随时可以玩 🌱。想把进度保存下来，就用会员手机号登录一下——进度会存到云端，换手机也不丢。', 7000);
+          // 游客只有本地存档 → 引导登录（登录=进度上云）
+          Farm.ui.toast(en ? 'Sign in to save your progress to the cloud'
+                           : '登录一下，进度就能存到云端 🌱', 6000);
         }
       }, 3500);
     },
