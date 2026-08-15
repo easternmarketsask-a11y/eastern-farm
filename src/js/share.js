@@ -298,9 +298,9 @@
         </p>
         <img id="shareCardImg" src="${dataUrl}" alt="farm card"
              style="width:100%;border-radius:14px;box-shadow:0 4px 16px rgba(90,60,30,0.2);display:block;"/>
-        <div class="btn-row" style="margin-top:14px;gap:8px;flex-wrap:wrap;">
+        <div class="btn-row share-actions" style="margin-top:14px;gap:8px;flex-wrap:wrap;">
           ${canNativeShare ? `<button class="btn" id="shareNativeBtn" style="flex:1;">📤 ${lang === 'en' ? 'Share' : '分享'}</button>` : ''}
-          <button class="btn secondary" id="shareDownloadBtn" style="flex:1;">⬇️ ${lang === 'en' ? 'Save' : '下载图片'}</button>
+          <button class="btn secondary" id="shareDownloadBtn" style="flex:1;">⬇️ ${lang === 'en' ? 'Save' : '存图'}</button>
           <button class="btn secondary" id="shareCopyBtn" style="flex:1;">🔗 ${lang === 'en' ? 'Copy link' : '复制链接'}</button>
         </div>
         <div class="btn-row" style="margin-top:8px;">

@@ -145,7 +145,9 @@
         const prog = this.progress(ach);
         const pct = prog && prog.target > 0 ? Math.min(100, prog.current / prog.target * 100) : 0;
         const name = ach[nameKey] || ach.name_zh;
-        const desc = unlocked ? (ach[descKey] || ach.desc_zh) : lockedLabel;
+        // 未解锁也直接写条件（2026-08-15）：「农场大师 · 未解锁 · 8/10」看不出 10 是什么，
+        // 玩家没法奔着它去；隐藏成就（ach.hidden）才用「未解锁」占位
+        const desc = (unlocked || !ach.hidden) ? (ach[descKey] || ach.desc_zh) : lockedLabel;
         const progRow = prog && !unlocked ? `
           <div class="ach-bar"><div class="ach-fill" style="width:${pct}%"></div></div>
           <div class="ach-progress">${prog.current} / ${prog.target}</div>

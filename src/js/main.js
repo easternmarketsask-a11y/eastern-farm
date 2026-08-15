@@ -588,6 +588,18 @@
     });
 
     if (_collectionTab === 'crops') bindCropDetailClicks(lang, grown);
+    // 成长之路：打开就把「当前等级」那几行滚到眼前（2026-08-15）—— Lv8 的玩家
+    // 原来要先划过 Lv1–7 三十几行绿色 ✓ 才看得到下一步是什么
+    if (_collectionTab === 'journey') {
+      const row = document.querySelector('.journey-row.journey-current') || document.querySelector('.journey-row.journey-future');
+      const box = document.getElementById('modalContent');
+      if (row && box) {
+        requestAnimationFrame(() => {
+          const top = row.offsetTop - box.clientHeight * 0.35;
+          if (top > 0) box.scrollTop = top;
+        });
+      }
+    }
   }
 
   // Build the "成长之路 / Journey" timeline: titles + plot-unlock milestones,

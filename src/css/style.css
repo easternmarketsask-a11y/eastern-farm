@@ -2764,7 +2764,8 @@ body.modal-open #bottombar { display: none; }
    现在 stack 是唯一定位者（fixed + flex column），toast 自然向下排。 */
 .toast-stack {
   position: fixed;
-  top: 80px;
+  /* 顶栏(~48)+状态胶囊(top 50, 高 ~46)之下：原 80px 会压住胶囊下沿 16px（2026-08-15） */
+  top: calc(104px + env(safe-area-inset-top));
   left: 50%;
   transform: translateX(-50%);
   width: max-content;
@@ -3879,7 +3880,7 @@ body.modal-open #bottombar { display: none; }
 /* ============ 7-day sign-in calendar (login-calendar.js) ============ */
 .lc-grid {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(7, minmax(0, 1fr));   /* 七格等宽：1fr 会被「+2 种子」这种长字撑宽（2026-08-15） */
   gap: 5px;
   margin: 12px 0 8px;
 }
@@ -4576,6 +4577,9 @@ body.modal-open .pwa-install-banner { display: none; }
 
 /* 设置页声音三档：别折成「正/常」两行 */
 .settings-sound-row .btn { white-space: nowrap; padding-left: 8px; padding-right: 8px; font-size: 13px; }
+
+/* 晒农场三颗动作钮：并排别把「下载图片」折成两行 */
+.share-actions .btn { white-space: nowrap; padding-left: 10px; padding-right: 10px; }
 
 /* 邻居广场底栏：三颗并排别折行 */
 .nb-footer .btn { white-space: nowrap; padding-left: 10px; padding-right: 10px; }

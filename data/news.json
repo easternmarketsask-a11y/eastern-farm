@@ -109,10 +109,10 @@
     {
       "id": "feature_login_phone",
       "category": "feature",
-      "title_zh": "📱 手机号登录",
-      "title_en": "📱 Phone number sign-in",
-      "body_zh": "游戏会员登录现在用手机号 + 短信验证码，和店里会员卡同一个账户。",
-      "body_en": "Game sign-in now uses phone + SMS code — same account as your Eastern Market membership."
+      "title_zh": "🪪 会员登录",
+      "title_en": "🪪 Member sign-in",
+      "body_zh": "用店里登记的邮箱 + 密码登录，和会员卡同一个账户；第一次登录用手机号激活即可。",
+      "body_en": "Sign in with the email + password on your membership — same account as your Eastern Market card. First time? Activate with your phone number."
     },
     {
       "id": "festival_spring_coming",

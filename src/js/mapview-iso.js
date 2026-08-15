@@ -1261,15 +1261,26 @@
         return;
       }
       const ctr = this._screenToCell(this._cssW() / 2, this._cssH() / 2);
-      const tries = [[ctr.gx - (b.w >> 1), ctr.gy - (b.h >> 1)]];
+      const c0x = ctr.gx - (b.w >> 1), c0y = ctr.gy - (b.h >> 1);
+      // 候选位按「离屏幕中心多近」排（2026-08-15）：原来中心占着就从 (0,0) 逐行扫，
+      // 新建筑常被丢到地图角落、半个身子在画面外，玩家还以为没建成
+      const tries = [[c0x, c0y]];
       for (let gy = 0; gy + b.h <= ROWS; gy++) for (let gx = 0; gx + b.w <= COLS; gx++) tries.push([gx, gy]);
+      tries.sort((p1, p2) => (Math.abs(p1[0] - c0x) + Math.abs(p1[1] - c0y)) - (Math.abs(p2[0] - c0x) + Math.abs(p2[1] - c0y)));
       for (const [gx, gy] of tries) if (this._footprintFree(gx, gy, type, -1)) {
         if (cost > 0 && !Farm.state.spendCoins(cost)) { if (Farm.ui && Farm.ui.toast) Farm.ui.toast(en ? 'Not enough coins' : '农场币不足'); return; }
         (Farm.state.data.map = Farm.state.data.map || []).push({ type, gx, gy }); this._sel = Farm.state.data.map.length - 1;
         Farm.state.save(); this.render();
         if (Farm.ui && Farm.ui.refreshHUD) Farm.ui.refreshHUD();
         this._refreshPaletteAfford();
-        const charm = charmOf(b), c = this._cell(gx + (b.w - 1) / 2, gy + (b.h - 1) / 2), r = this._cv.getBoundingClientRect();
+        let c = this._cell(gx + (b.w - 1) / 2, gy + (b.h - 1) / 2);
+        // 落点跑出画面（或贴边）→ 镜头挪过去，让人看见自己刚花钱建的东西
+        const W = this._cssW(), H = this._cssH(), m = this._tw();
+        if (c.x < m || c.x > W - m || c.y < m * 1.5 || c.y > H - m) {
+          this._camX += c.x - W / 2; this._camY += c.y - H * 0.55; this._clampCam(); this.render();
+          c = this._cell(gx + (b.w - 1) / 2, gy + (b.h - 1) / 2);
+        }
+        const charm = charmOf(b), r = this._cv.getBoundingClientRect();
         if (Farm.ui && Farm.ui.floatText) Farm.ui.floatText('✨+' + charm + (en ? ' charm' : ' 魅力'), r.left + c.x - 20, r.top + c.y - this._th() * 2, '#e8a020');
         if (Farm.audio) Farm.audio.play('coin');
         if (Farm.ui && Farm.ui.toast) Farm.ui.toast(en ? ('Placed ' + b.en + ' (-' + cost + ' coins) — drag to move') : ('已建' + b.zh + '（-' + cost + ' 农场币）拖动可移动'));
