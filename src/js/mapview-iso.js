@@ -94,6 +94,11 @@
   // cost = 农场币 to place (coins; East Points stay scarce for real rewards). charm =
   // 农场魅力 gained (derived ≈ cost/8) — a vanity progression to drive the build impulse.
   const BUILDINGS = {
+    // 我的家（2026-08-14 Chris:「能不能建造自己住的房子, 并且不断升级美化」）:
+    // 全场限一座, 点开有专属面板, 5 级升级线是金币经济的长期出口(合计 22500)。
+    // 只有一张房子贴图 → 分级视觉走「贴图 + 逐级手绘加装」(_drawHomeExtras):
+    // 花坛 → 暖窗灯+炊烟 → 彩旗 → 金色灯串, 尺寸也随级微涨。水塘同款手绘工艺。
+    home: { img: 'house', w: 2, h: 2, sc: 2.3, zh: '我的家', en: 'My Home', tap: 'home', cost: 300, unique: true },
     barn: { img: 'barn', w: 2, h: 2, sc: 2.4, zh: '谷仓·仓库', en: 'Barn · Storage', tap: 'warehouse', cost: 350 },
     house: { img: 'house', w: 2, h: 2, sc: 2.6, zh: '小屋·种子店', en: 'Cottage · Shop', tap: 'shop', cost: 400 },
     greenhouse: { img: 'greenhouse', w: 2, h: 2, sc: 2.4, zh: '温室', en: 'Greenhouse', cost: 600 },
@@ -155,7 +160,15 @@
   const FARM_SCALE = 1.15;     // 0.6 (small) … 1.0 … 1.5 (big)
   const FARM_DX = 0;          // −150 (left) … 0 … +150 (right), pixels
   const FARM_DY = -70;          // −150 (up)   … 0 … +150 (down), pixels
-  const PALETTE = ['barn', 'house', 'greenhouse', 'coop', 'stall', 'well', 'tree', 'bush', 'lantern', 'fence', 'wheel', 'bridge'];
+  const PALETTE = ['home', 'barn', 'house', 'greenhouse', 'coop', 'stall', 'well', 'tree', 'bush', 'lantern', 'fence', 'wheel', 'bridge'];
+  // 我的家升级表: 每级的名字/升级价/玩家等级门槛/魅力值。lv 存在 map 对象上(o.lv)。
+  const HOME_LEVELS = [
+    { zh: '温馨小家', en: 'Cozy Home',       cost: 0,     needLv: 1, charm: 40 },
+    { zh: '花园小屋', en: 'Garden Home',     cost: 1200,  needLv: 3, charm: 90 },
+    { zh: '暖灯之家', en: 'Lantern Home',    cost: 3000,  needLv: 5, charm: 160 },
+    { zh: '彩旗农舍', en: 'Festive House',   cost: 6000,  needLv: 7, charm: 260 },
+    { zh: '梦想庄园', en: 'Dream Estate',    cost: 12000, needLv: 9, charm: 400 },
+  ];
   // EP-shop pets → painted iso animal sprites (replaces the emoji pet).
   const ANIMALS = { pet_chick: 'animal_chicken', pet_cat: 'animal_cat', pet_rabbit: 'animal_rabbit', decoration_dog: 'animal_dog', guard_dog: 'animal_dog' };
   const BRUSHES = [
@@ -688,7 +701,7 @@
       const hit = this._plotAtPoint(p.x, p.y);
       if (hit) { this._tapCell(hit.gx, hit.gy); return; }
       const bidx = this._buildingAtPoint(p.x, p.y);
-      if (bidx >= 0) { this._stickyEnd(); const o = Farm.state.data.map[bidx], b = BUILDINGS[o.type]; if (o.type === 'coop') { this._collectCoop(o, p); } else if (b.tap === 'warehouse' && Farm.warehouse && Farm.warehouse.open) Farm.warehouse.open(); else if (b.tap === 'shop' && Farm.shop && Farm.shop.open) Farm.shop.open(); else if (Farm.ui && Farm.ui.toast) Farm.ui.toast(this._lang() === 'en' ? b.en : b.zh); return; }
+      if (bidx >= 0) { this._stickyEnd(); const o = Farm.state.data.map[bidx], b = BUILDINGS[o.type]; if (o.type === 'coop') { this._collectCoop(o, p); } else if (b.tap === 'home') { this._openHomePanel(bidx); } else if (b.tap === 'warehouse' && Farm.warehouse && Farm.warehouse.open) Farm.warehouse.open(); else if (b.tap === 'shop' && Farm.shop && Farm.shop.open) Farm.shop.open(); else if (Farm.ui && Farm.ui.toast) Farm.ui.toast(this._lang() === 'en' ? b.en : b.zh); return; }
       this._tapCell(c.gx, c.gy);
     },
     // Frontmost plot whose on-screen sprite box contains (px,py). Planted plots get
@@ -881,9 +894,127 @@
       ctx.restore();
     },
 
+    /* 我的家面板: 当前级名 + 魅力 + 下一级预览与升级按钮。
+       升级 = 变美(手绘加装逐级出现) + 魅力涨, 是金币的长期出口。 */
+    _openHomePanel(idx) {
+      const o = (Farm.state.data.map || [])[idx];
+      if (!o || o.type !== 'home' || !(Farm.ui && Farm.ui.showModal)) return;
+      const en = this._lang() === 'en';
+      const lv = Math.min(o.lv || 1, HOME_LEVELS.length);
+      const cur = HOME_LEVELS[lv - 1], next = HOME_LEVELS[lv];
+      const playerLv = Farm.state.data.level || 1;
+      const perks = en
+        ? ['A flower bed by the door', 'Warm window light & chimney smoke', 'Festive bunting on the eaves', 'Golden string lights at dusk']
+        : ['门前多一畦花坛', '暖黄窗灯 + 袅袅炊烟', '屋檐挂上节日彩旗', '入夜亮起金色灯串'];
+      let body = '<div style="text-align:center;font-size:44px;line-height:1;">🏡</div>'
+        + '<div style="text-align:center;font-family:var(--font-display);font-size:20px;margin-top:6px;">'
+        + (en ? cur.en : cur.zh) + ' <span style="font-family:var(--font-num);font-size:14px;color:var(--warm-text-soft);">Lv ' + lv + '/' + HOME_LEVELS.length + '</span></div>'
+        + '<div style="text-align:center;font-size:12.5px;color:var(--warm-text-soft);margin-top:4px;">'
+        + (en ? 'Charm' : '魅力') + ' +' + cur.charm + '</div>';
+      if (next) {
+        const needMore = playerLv < next.needLv;
+        const canPay = (Farm.state.data.coins || 0) >= next.cost;
+        body += '<div style="margin:14px 0 4px;padding:12px;border:1.5px dashed var(--border-soft);border-radius:12px;">'
+          + '<div style="font-size:13px;font-weight:600;">' + (en ? 'Next: ' : '下一级：') + (en ? next.en : next.zh) + '</div>'
+          + '<div style="font-size:12px;color:var(--warm-text-soft);margin-top:3px;">✨ ' + perks[lv - 1] + ' · ' + (en ? 'Charm' : '魅力') + ' +' + next.charm + '</div>'
+          + '</div>'
+          + (needMore
+            ? '<button class="btn secondary" disabled style="width:100%;">' + (en ? ('Unlocks at player Lv ' + next.needLv) : ('玩家 Lv ' + next.needLv + ' 解锁')) + '</button>'
+            : '<button class="btn" id="homeUpgradeBtn" style="width:100%;" ' + (canPay ? '' : 'disabled') + '>'
+              + (en ? 'Upgrade' : '升级') + ' · ' + next.cost + ' <span class="coin-icon"></span></button>');
+      } else {
+        body += '<div style="text-align:center;margin-top:12px;font-size:13px;color:var(--leaf-dark);">'
+          + (en ? 'Fully upgraded — the pride of the whole farm.' : '已是满级——全农场的骄傲。') + '</div>';
+      }
+      body += '<div class="btn-row" style="margin-top:12px;"><button class="btn secondary" onclick="Farm.ui.hideModal()" style="width:100%;">'
+        + (en ? 'Close' : '关闭') + '</button></div>';
+      Farm.ui.showModal('<h2 class="modal-title">' + (en ? 'My Home' : '我的家') + '</h2>' + body);
+      const btn = document.getElementById('homeUpgradeBtn');
+      if (btn) btn.onclick = () => {
+        if (!next) return;
+        if (!Farm.state.spendCoins(next.cost)) { if (Farm.ui.toast) Farm.ui.toast(en ? 'Not enough coins' : '农场币不足'); return; }
+        o.lv = lv + 1;
+        Farm.state.save();
+        if (Farm.audio) Farm.audio.play('achievement');
+        if (Farm.ui.refreshHUD) Farm.ui.refreshHUD();
+        if (Farm.ui.confettiBurst) Farm.ui.confettiBurst();
+        this.render();
+        this._openHomePanel(idx);   // 面板原地刷新到新等级
+      };
+    },
+
+    /* 我的家逐级手绘加装(2026-08-14)。只有一张房子贴图, 分级视觉全靠这里 ——
+       与水塘同一套「手绘工艺」。坐标以 _blit 的实际绘制盒为基准(cx 居中, by 底边):
+       Lv2 门前花坛 · Lv3 暖窗灯+炊烟(动) · Lv4 屋檐彩旗 · Lv5 金色灯串(闪)+光晕。 */
+    _drawHomeExtras(cx, by, boxW, boxH, lv) {
+      const ctx = this._ctx, t = Date.now() / 1000;
+      const im = this._img.house;
+      // _blit 的等比缩放: 实际画出的宽高
+      let w = boxW, h = boxH;
+      if (im && im.width) { const sc = Math.min(boxW / im.width, boxH / im.height); w = im.width * sc; h = im.height * sc; }
+      ctx.save();
+      if (lv >= 5) {   // 光晕垫底, 别盖过别的元素
+        const g = ctx.createRadialGradient(cx, by - h * 0.42, h * 0.1, cx, by - h * 0.42, h * 0.75);
+        g.addColorStop(0, 'rgba(255,214,120,0.20)'); g.addColorStop(1, 'rgba(255,214,120,0)');
+        ctx.fillStyle = g; ctx.fillRect(cx - w, by - h * 1.25, w * 2, h * 1.5);
+      }
+      if (lv >= 2) {   // 门前花坛: 一条绿带 + 三色小花
+        const fy = by - h * 0.02, fw = w * 0.34;
+        ctx.fillStyle = '#5d9e46';
+        ctx.beginPath(); ctx.ellipse(cx - w * 0.22, fy, fw / 2, h * 0.035, -0.18, 0, 6.283); ctx.fill();
+        const cols = ['#e86aa2', '#f6c445', '#ff8a5c'];
+        for (let i = 0; i < 5; i++) {
+          ctx.fillStyle = cols[i % 3];
+          ctx.beginPath();
+          ctx.arc(cx - w * 0.22 + (i - 2) * fw * 0.17, fy - h * 0.028 - (i % 2) * h * 0.012, Math.max(1.6, w * 0.016), 0, 6.283);
+          ctx.fill();
+        }
+      }
+      if (lv >= 3) {   // 暖窗灯 + 炊烟(缓慢上升的三团)
+        ctx.fillStyle = 'rgba(255,208,110,0.55)';
+        ctx.beginPath(); ctx.ellipse(cx + w * 0.16, by - h * 0.30, w * 0.075, h * 0.055, 0, 0, 6.283); ctx.fill();
+        for (let i = 0; i < 3; i++) {
+          const ph = ((t * 0.35 + i * 0.33) % 1);
+          const sx = cx - w * 0.255 + Math.sin(ph * 6.28 + i) * w * 0.03;
+          const sy = by - h * (0.92 + ph * 0.30);
+          ctx.fillStyle = 'rgba(240,240,238,' + (0.38 * (1 - ph)) + ')';
+          ctx.beginPath(); ctx.arc(sx, sy, w * (0.022 + ph * 0.030), 0, 6.283); ctx.fill();
+        }
+      }
+      if (lv >= 4) {   // 屋檐彩旗: 一条微垂的绳 + 小三角旗
+        const x1 = cx - w * 0.36, y1 = by - h * 0.58, x2 = cx + w * 0.36, y2 = by - h * 0.63;
+        ctx.strokeStyle = 'rgba(120,90,60,0.8)'; ctx.lineWidth = Math.max(0.8, w * 0.006);
+        ctx.beginPath(); ctx.moveTo(x1, y1); ctx.quadraticCurveTo(cx, y1 + h * 0.07, x2, y2); ctx.stroke();
+        const cols = ['#e85d5d', '#f6c445', '#5aa0c8', '#6ab04c'];
+        for (let i = 1; i <= 6; i++) {
+          const q = i / 7, mx = (1 - q) * (1 - q) * x1 + 2 * (1 - q) * q * cx + q * q * x2;
+          const my = (1 - q) * (1 - q) * y1 + 2 * (1 - q) * q * (y1 + h * 0.07) + q * q * y2;
+          ctx.fillStyle = cols[i % 4];
+          ctx.beginPath(); ctx.moveTo(mx - w * 0.022, my); ctx.lineTo(mx + w * 0.022, my); ctx.lineTo(mx, my + h * 0.042); ctx.closePath(); ctx.fill();
+        }
+      }
+      if (lv >= 5) {   // 金色灯串: 沿屋檐一排小灯, 相位交替微闪
+        for (let i = 0; i < 7; i++) {
+          const q = (i + 0.5) / 7;
+          const lx = cx - w * 0.36 + q * w * 0.72;
+          const ly = by - h * (0.67 - Math.abs(q - 0.5) * 0.09);
+          const tw2 = 0.55 + 0.45 * Math.sin(t * 2.2 + i * 1.7);
+          ctx.fillStyle = 'rgba(255,214,110,' + (0.45 + 0.4 * tw2) + ')';
+          ctx.beginPath(); ctx.arc(lx, ly, Math.max(1.4, w * 0.014) * (1 + tw2 * 0.3), 0, 6.283); ctx.fill();
+        }
+      }
+      ctx.restore();
+    },
+
     _delChip(o) { const b = BUILDINGS[o.type], c = this._cell(o.gx + b.w - 1, o.gy), th = this._th(); return { x: c.x + this._tw() / 2 * 0.5, y: c.y - th * 0.2, r: Math.max(12, th * 0.5) }; },
     _addBuilding(type) {
       const b = BUILDINGS[type], en = this._lang() === 'en', cost = b.cost || 0;
+      // unique 建筑（我的家）全场限一座——已有就把镜头意义上的入口指回升级面板
+      if (b.unique) {
+        const map = Farm.state.data.map || [];
+        const at = map.findIndex((m) => m && m.type === type);
+        if (at >= 0) { this._openHomePanel(at); return; }
+      }
       // must be able to afford it (农场币) — show the shortfall, nudge to earn more.
       if (cost > 0 && Farm.state.data.coins < cost) {
         const need = cost - Farm.state.data.coins;
@@ -990,7 +1121,12 @@
       if (this._refreshModeUI) this._refreshModeUI();   // refresh the charm count in the hint
     },
     _farmCharm() {
-      let s = 0; (Farm.state.data.map || []).forEach((o) => { const b = BUILDINGS[o.type]; if (b) s += charmOf(b); }); return s;
+      let s = 0; (Farm.state.data.map || []).forEach((o) => {
+        const b = BUILDINGS[o.type]; if (!b) return;
+        // 我的家按等级计魅力(HOME_LEVELS.charm), 升级=美化, 魅力跟着涨
+        if (o.type === 'home') { s += (HOME_LEVELS[Math.min((o.lv || 1), HOME_LEVELS.length) - 1] || {}).charm || 40; return; }
+        s += charmOf(b);
+      }); return s;
     },
     _paintCell(gx, gy) {
       if (!this._inBounds(gx, gy)) return;
@@ -1637,7 +1773,11 @@
       // 按压反馈（audit B2 P2）：被按住的建筑以底边为锚缩到 94%（Hay Day 式
       // squash），与地块按压高亮同一套 _down/_up 生命周期。
       const pk = (!this._build && idx != null && idx === this._pressBuilding) ? 0.94 : 1;
-      if (!this._blit(this._img[b.img], cc.x, by, b.w * tw * 0.92 * BLD * pk, b.sc * th * 2.2 * BLD * pk)) { ctx.fillStyle = '#c0392b'; ctx.fillRect(cc.x - tw * 0.4, by - th, tw * 0.8, th); }
+      // 我的家: 尺寸随等级微涨(满级 +14%), 升级看得见
+      const homeLv = (o.type === 'home' && idx != null && Farm.state.data.map[idx]) ? Math.min(Farm.state.data.map[idx].lv || 1, HOME_LEVELS.length) : 1;
+      const hz = o.type === 'home' ? (1 + 0.035 * (homeLv - 1)) : 1;
+      if (!this._blit(this._img[b.img], cc.x, by, b.w * tw * 0.92 * BLD * pk * hz, b.sc * th * 2.2 * BLD * pk * hz)) { ctx.fillStyle = '#c0392b'; ctx.fillRect(cc.x - tw * 0.4, by - th, tw * 0.8, th); }
+      if (o.type === 'home' && homeLv > 1 && !moving) this._drawHomeExtras(cc.x, by, b.w * tw * 0.92 * BLD * hz, b.sc * th * 2.2 * BLD * hz, homeLv);
       ctx.globalAlpha = 1;
       // coop ready-to-collect egg bubble (read the real map entry for eggAt)
       // coop ready-to-collect indicator: a SMALL egg bubble nestled just above the
