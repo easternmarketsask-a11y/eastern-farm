@@ -108,6 +108,21 @@ farm / isoView / fbAuth 七个核心模块一个都没执行**，全在排队等
 
 ---
 
+## 🔒 存档与身份两条铁律（2026-08-15）
+
+**① 同帐号多设备必须收敛到同一个农场。** `firebase-game-sync.restoreFromCloud`
+是「富者胜出」：云端明显更富→自动换（本地先备份到 `eastern_farm_save_replaced_v1`）；
+本地更富→保留（随后 push 追平）；相等看时间；各有所长→`_offerSaveChoice` 弹窗玩家选。
+❌ 别改回「只恢复到全空设备」——那会让任何一份陈旧本地档永远挡住真农场，且反推云端。
+❌ 被换下的档**永远先备份**，「永不弃档」是底线。
+
+**② 名字只用玩家自己起的，没有就没有。** 远景邻居名牌（`mapview-iso._distantFarms`）
+只挂 `gameStats.nickname`；没起昵称=匿名小屋不挂牌。「X邻居」式打码名是真实玩家的
+隐私占位（会员实名不进游戏），但看着像假人，**不上名牌**。假称呼（王阿姨/李大爷…）
+一律禁止（`ai-neighbors.RETIRED=true`）。昵称唯一保存入口 `lifeStory.saveNickname`。
+
+---
+
 ## Why This Exists
 
 Eastern Market is a Saskatoon supermarket (2,000+ SKUs, run by Chris). Chris
