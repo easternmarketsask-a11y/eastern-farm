@@ -830,7 +830,9 @@
       const tw = this._tw(), th = this._th();
       // 空地用贴床矮盒（audit B2 P2：旧统一高盒让聚光灯洞 60% 罩在空草地上，
       // 「点这块发光的地」指向含糊）；有作物才用罩住整棵植株的高盒。
-      if (!p.crop) return { left: r.left + c.x - tw / 2, top: r.top + c.y - th * 0.5, width: tw, height: th * 1.4 };
+      // 高 1.05th 正好罩住这块菱形床（2026-08-15：原 1.4th 会把前一块锁定地的 🔒 徽章
+      // 也框进「点这块发光的地」的洞里，新手看着像是要点那把锁）
+      if (!p.crop) return { left: r.left + c.x - tw / 2, top: r.top + c.y - th * 0.52, width: tw, height: th * 1.05 };
       return { left: r.left + c.x - tw / 2, top: r.top + c.y - th * 1.6, width: tw, height: th * 2.2 };
     },
     barnScreenRect() {
@@ -839,10 +841,19 @@
       const o = map.find(m => m && m.type === 'barn');
       if (!o) return null;
       const b = BUILDINGS.barn;
-      const c = this._cell(o.gx + (b.w - 1) / 2, o.gy + (b.h - 1) / 2);
+      const tw = this._tw(), th = this._th();
+      // 与 _drawBuilding / _blit 同一套盒子：底边 by、最大宽高按 BLD 缩、再按贴图长宽比收
+      //（2026-08-15 之前用 tw*sc 的近似方盒，比真实谷仓高出一倍多，聚光灯洞大半罩着
+      // 谷仓上方的空草地和锁定地块，「点谷仓」指向不清）
+      const cc = this._cell(o.gx + (b.w - 1) / 2, o.gy + (b.h - 1) / 2);
+      const front = this._cell(o.gx + (b.w - 1), o.gy + (b.h - 1));
+      const by = front.y + th / 2 + th * 0.18;
+      let w = b.w * tw * 0.92 * BLD, h = b.sc * th * 2.2 * BLD;
+      const im = this._img[b.img];
+      if (im && im.width && im.height) { const sc = Math.min(w / im.width, h / im.height); w = im.width * sc; h = im.height * sc; }
       const r = this._cv.getBoundingClientRect();
-      const s = this._tw() * b.sc;   // 建筑贴图宽度近似
-      return { left: r.left + c.x - s / 2, top: r.top + c.y - s * 0.95, width: s, height: s * 1.05 };
+      const pad = th * 0.15;
+      return { left: r.left + cc.x - w / 2 - pad, top: r.top + by - h - pad, width: w + pad * 2, height: h + pad * 2 };
     },
 
     // ===== editor (build / terrain / decoration), iso-aware =====

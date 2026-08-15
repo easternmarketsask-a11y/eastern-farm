@@ -40,7 +40,7 @@
     "steal_done": { "zh": "🧺 从 {name} 家顺了一棵，已入库", "en": "🧺 Grabbed one from {name}'s farm!" },
     "steal_daily_cap": { "zh": "今天顺得够多啦，明天再来～", "en": "You've grabbed plenty today — back tomorrow!" },
     "steal_target_cap": { "zh": "在这家就顺这么多啦，去别家逛逛～", "en": "Enough from this neighbor — visit others!" },
-    "steal_warehouse_full": { "zh": "仓库满了，先去卖菜再来顺～", "en": "Silo's full — sell some crops first!" },
+    "steal_warehouse_full": { "zh": "仓库满了，先去卖菜再来顺～", "en": "Barn's full — sell some crops first!" },
 
     "report_title": { "zh": "回家小报", "en": "While you were away" },
     "report_bad_header": { "zh": "小馋嘴来过", "en": "Little nibblers" },
@@ -121,11 +121,11 @@
     "tutorial_step2_title": { "zh": "2. 等一会儿", "en": "2. Wait a bit" },
     "tutorial_step2_body": { "zh": "种子会自己长大（最快约 5 分钟）。等的时候先逛逛任务和商店，回来正好收。", "en": "Crops grow on their own (fastest ~5 min). Browse the tasks & shop while you wait." },
     "tutorial_step3_title": { "zh": "3. 卖给东方超市", "en": "3. Sell to Eastern Market" },
-    "tutorial_step3_body": { "zh": "收的菜先进仓库，攒一批后送到东方超市，换农场币和超市积分。", "en": "Harvested crops go to the silo. Deliver to Eastern Market for coins + Store Points." },
+    "tutorial_step3_body": { "zh": "收的菜先进仓库，攒一批后送到东方超市，换农场币和超市积分。", "en": "Harvested crops go to the barn. Deliver to Eastern Market for coins + Store Points." },
     "tutorial_btn_start": { "zh": "开始种菜 →", "en": "Start farming →" },
 
     "toast_first_plant": { "zh": "🌱 种下第一棵菜！开张大吉 +10 农场币", "en": "🌱 Your first seed! +10 coins to start" },
-    "toast_first_harvest": { "zh": "🎉 第一次收获！进仓库的菜可以送去东方超市", "en": "🎉 First harvest! Deliver from the silo to Eastern Market" },
+    "toast_first_harvest": { "zh": "🎉 第一次收获！进谷仓的菜可以送去东方超市", "en": "🎉 First harvest! Deliver from the barn to Eastern Market" },
 
     "harvest_status_ready": { "zh": "🌾 {n} 棵已熟可收", "en": "🌾 {n} ready to harvest" },
     "harvest_status_btn_all": { "zh": "全部收获", "en": "Harvest All" },
@@ -163,13 +163,13 @@
 
   "_storekeeper_pool_default_en": [
     "Tip: tap any brown plot to plant your first seed.",
-    "Mature crops glow green. Tap to harvest into the silo.",
+    "Mature crops glow green. Tap to harvest into the barn.",
     "Shanghai bok choy is the fastest — only 5 minutes.",
     "Chinese chives can be cut 3 times from one planting.",
     "Lotus root takes 5 hours but sells for C400. Long-game.",
-    "Harvested crops go to your silo. Sell to Eastern Market for coins.",
-    "Daily 1st sale gets +20% bonus. Don't sit on the silo.",
-    "Silo holds 20. Hit the cap and you can't harvest more — sell first or expand.",
+    "Harvested crops go to your barn. Sell to Eastern Market for coins.",
+    "Daily 1st sale gets +20% bonus. Don't sit on the barn.",
+    "Barn holds 20. Hit the cap and you can't harvest more — sell first or expand.",
     "Check the 'Market price' label in the plant picker to compare crops.",
     "Finish 3 daily tasks to earn bonus points.",
     "Visit 3 neighbors → +5 points.",
