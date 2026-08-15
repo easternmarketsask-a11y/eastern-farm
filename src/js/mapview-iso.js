@@ -1603,6 +1603,13 @@
     },
     _tree(x, y, s) {
       const ctx = this._ctx;
+      const im = this._img && this._img.tree;
+      if (im && im.width) {
+        const h = s * 1.85, w = h * (im.width / im.height);
+        this._shadow(x + s * 0.14, y + s * 0.05, s * 0.58, 0.16);
+        ctx.drawImage(im, x - w / 2, y - h + s * 0.08, w, h);
+        return;
+      }
       ctx.fillStyle = '#5a3a22';
       ctx.beginPath();
       ctx.moveTo(x - s * 0.07, y + s * 0.04);
@@ -1786,11 +1793,11 @@
       ctx.restore();
       // 2) surface water — 黄昏暖倒影，不再是正午冰蓝
       const g = ctx.createLinearGradient(0, minY - ry + oy, 0, maxY + ry + oy);
-      g.addColorStop(0, '#d8eef0');
-      g.addColorStop(0.28, '#f0d8a4');
-      g.addColorStop(0.62, '#6eb0b8');
-      g.addColorStop(1, '#3d8490');
-      ctx.fillStyle = g; blobs(0.84, 0.82); ctx.fill();
+      g.addColorStop(0, '#e8f0dc');
+      g.addColorStop(0.22, '#f2d8a0');
+      g.addColorStop(0.55, '#6aa8b0');
+      g.addColorStop(1, '#3a7a86');
+      ctx.fillStyle = g; blobs(0.88, 0.84); ctx.fill();
       // 左上受光的一抹金
       let cxp = 0, cyp = 0;
       for (const c of cells) { cxp += c.x; cyp += c.y; }
@@ -1822,10 +1829,13 @@
           ctx.restore();
         }
       }
-      // 4) a small lily pad + flower for charm
-      const lp = cells[0];
-      ctx.fillStyle = '#5fae5a'; ctx.beginPath(); ctx.ellipse(lp.x - rx * 0.26, lp.y + oy + th * 0.18, rx * 0.24, ry * 0.22, 0, 0, 6.283); ctx.fill();
-      ctx.fillStyle = '#f6c0d8'; ctx.beginPath(); ctx.arc(lp.x - rx * 0.26, lp.y + oy + th * 0.18, rx * 0.085, 0, 6.283); ctx.fill();
+      // 4) 暖色草岸，不要粉花睡莲（宣传图是一条溪，不是卡通塘）
+      ctx.save();
+      ctx.globalAlpha = 0.35;
+      ctx.strokeStyle = '#6a8a40';
+      ctx.lineWidth = Math.max(2, th * 0.14);
+      blobs(1.02, 1.04); ctx.stroke();
+      ctx.restore();
       ctx.restore();
     },
     _startLoop() {
@@ -1843,9 +1853,9 @@
       const ctx = this._ctx, tw = this._tw(), th = this._th();
       // 金色黄昏天空（对齐 2026-08-15 宣传插画）：上暖下金，草地再盖住下半。
       const base = ctx.createLinearGradient(0, 0, 0, H);
-      base.addColorStop(0, '#f4c89a');
-      base.addColorStop(0.28, '#f6d4a8');
-      base.addColorStop(0.50, '#f0dfb4');
+      base.addColorStop(0, '#f3b090');
+      base.addColorStop(0.22, '#f6c49a');
+      base.addColorStop(0.48, '#f0d8a8');
       base.addColorStop(0.68, '#c8c07a');
       base.addColorStop(1, '#8eae4a');
       ctx.fillStyle = base; ctx.fillRect(0, 0, W, H);
@@ -1945,11 +1955,11 @@
       const N = 46;
       // 三层叠出手绘土路: 宽的路基 → 亮的路面 → 两道车辙
       const passes = [
-        { w: tw * 0.78, col: 'rgba(86,122,48,0.40)', off: 0 },
-        { w: tw * 0.56, col: 'rgba(160,126,82,0.58)', off: 0 },
-        { w: tw * 0.40, col: 'rgba(214,178,122,0.68)', off: 0 },
-        { w: tw * 0.045, col: 'rgba(120,92,56,0.45)', off: tw * 0.09 },
-        { w: tw * 0.045, col: 'rgba(120,92,56,0.45)', off: -tw * 0.09 },
+        { w: tw * 0.82, col: 'rgba(86,122,48,0.28)', off: 0 },
+        { w: tw * 0.58, col: 'rgba(168,128,78,0.86)', off: 0 },
+        { w: tw * 0.42, col: 'rgba(214,176,118,0.94)', off: 0 },
+        { w: tw * 0.05, col: 'rgba(110,82,48,0.55)', off: tw * 0.10 },
+        { w: tw * 0.05, col: 'rgba(110,82,48,0.55)', off: -tw * 0.10 },
       ];
       for (const ps of passes) {
         ctx.lineCap = 'round'; ctx.lineJoin = 'round';
@@ -2188,8 +2198,12 @@
       const hl = this._cell(0, -3).y;   // 林线 y(与 _drawHorizon 同一条对角线)
       // 整面铺草甸底色: 菱形之间的反锯齿细缝不再漏出天空色(亮格线的元凶)。
       // 从林脚以下起铺(hl+0.8th), 树脚由菱形格自然探上去咬合, 不再一刀切。
-      const gTop = Math.max(0, hl + th * 2.8);
-      ctx.fillStyle = 'rgb(127,160,80)';
+      const gTop = Math.max(0, hl + th * 2.4);
+      const meadow = ctx.createLinearGradient(0, gTop, 0, H);
+      meadow.addColorStop(0, 'rgb(127,160,80)');
+      meadow.addColorStop(0.4, 'rgb(118,158,68)');
+      meadow.addColorStop(1, 'rgb(96,148,58)');
+      ctx.fillStyle = meadow;
       ctx.fillRect(0, gTop, W, H - gTop);
       for (let gy = gy0; gy <= gy1; gy++) {
         for (let gx = gx0; gx <= gx1; gx++) {
@@ -2229,8 +2243,9 @@
             bb2 = bb2 * (1 - fade) + 80 * fade;
           }
           ctx.fillStyle = 'rgb(' + (rr | 0) + ',' + (gg | 0) + ',' + (bb2 | 0) + ')';
-          ctx.globalAlpha = dHl < 1.15 ? Math.max(0.15, (dHl - 0.7) / 0.45) : 1;
-          this._diamond(c.x, c.y, tw * 1.08, th * 1.08);
+          ctx.globalAlpha = dHl < 1.15 ? Math.max(0.12, (dHl - 0.7) / 0.45) : 0.55;
+          ctx.beginPath();
+          ctx.ellipse(c.x, c.y, tw * 0.78, th * 0.68, 0, 0, 6.283);
           ctx.fill();
           ctx.globalAlpha = 1;
           // 点缀: 草簇(内外都有, 外面更密) / 小花(只在农场内)
@@ -2349,17 +2364,16 @@
       hill(th * 4.0, th * 1.20, '#a8b86a', 2.6);
       hill(th * 2.5, th * 0.95, '#7fa050', 0.9);
       // 坡上散落圆树 + 几棵细柏，像宣传图后景，不要一排尖塔
-      const step = tw * 2.2;
+      const step = tw * 1.55;
       const x0 = -((this._camX * 0.55) % step) - step;
       for (let x = x0; x < W + step; x += step) {
         const seed = Math.abs(Math.round((x + this._camX * 0.55) / step));
         const hsh = ((seed * 2654435761) >>> 0) % 1000 / 1000;
-        if (hsh < 0.22) continue;
+        if (hsh < 0.16) continue;
         const tx = x + (hsh - 0.5) * tw;
         const ty = hl - th * (1.4 + hsh * 3.2);
         const ts = tw * (0.42 + hsh * 0.50);
-        if (hsh > 0.78) this._cypress(tx, ty, ts * 1.15);
-        else this._tree(tx, ty, ts);
+        this._tree(tx, ty, ts);
       }
     },
     /* 地平薄雾: 必须画在**地面之后**(第一版画在 _drawHorizon 里, 随即被地面
@@ -2695,7 +2709,16 @@
       const cc = this._cell(o.gx + (b.w - 1) / 2, o.gy + (b.h - 1) / 2);
       const front = this._cell(o.gx + (b.w - 1), o.gy + (b.h - 1));
       const by = front.y + th / 2 + th * 0.18;
-      if (!moving) this._shadow(cc.x, by - th * 0.35, b.w * tw * 0.7, 0.18);   // contact shadow grounds the building
+      if (!moving) {
+        this._shadow(cc.x + tw * 0.22, by - th * 0.18, b.w * tw * 0.82, 0.16);
+        const ctxS = this._ctx;
+        ctxS.save();
+        ctxS.fillStyle = 'rgba(40,52,18,0.10)';
+        ctxS.beginPath();
+        ctxS.ellipse(cc.x + tw * 0.55, by + th * 0.06, b.w * tw * 0.62, th * 0.42, 0.55, 0, 6.283);
+        ctxS.fill();
+        ctxS.restore();
+      }
       ctx.globalAlpha = moving ? 0.82 : 1;
       // 按压反馈（audit B2 P2）：被按住的建筑以底边为锚缩到 94%（Hay Day 式
       // squash），与地块按压高亮同一套 _down/_up 生命周期。
