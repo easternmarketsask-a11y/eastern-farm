@@ -196,12 +196,21 @@
       const tasksList = Farm.state.data.dailyTasks || [];
       const wt = Farm.state.data.weeklyTask;
 
+      // 卡片图标按任务类型（2026-08-15）：原来清一色 📋，三张卡长得一样；
+      // 指定作物的任务直接用那棵菜的插画，「种 5 棵上海苗」一眼看出是上海苗
+      const TYPE_ICON = { plant: '🌱', plant_new: '🌱', plant_specific: '🌱', harvest: '🧺', harvest_specific: '🧺',
+        buy_seed: '🛒', order: '🚚', cook: '🍳', earn_coins: '💰', spend_coins: '🪙', variety: '🌈' };
+      const iconOf = (t, isWeekly) => {
+        if (t.claimed) return '✅';
+        if (t.cropId && Farm.cropArt && Farm.cropArt.icon && Farm.crops.get(t.cropId)) return Farm.cropArt.icon(t.cropId, 30);
+        return TYPE_ICON[t.type] || (isWeekly ? '🗓' : '📋');
+      };
       const card = (t, isWeekly) => {
         const title = lang === 'en' ? t.title_en : t.title_zh;
         const pct = Math.min(100, t.progress / t.target * 100);
         return `
           <div class="task-card ${t.claimed ? 'done' : ''}">
-            <div style="font-size:24px;">${t.claimed ? '✅' : (isWeekly ? '🗓' : '📋')}</div>
+            <div class="task-icon" style="font-size:24px;display:flex;align-items:center;justify-content:center;width:34px;">${iconOf(t, isWeekly)}</div>
             <div class="task-info">
               <div class="task-title">${title}</div>
               <div class="task-progress">${Math.min(t.progress, t.target)} / ${t.target}</div>
@@ -216,7 +225,7 @@
       };
 
       const weeklyHtml = wt
-        ? `<div class="seed-group-title">🗓 ${lang === 'en' ? 'Weekly challenge' : '本周挑战'}</div>${card(wt, true)}`
+        ? `<div class="seed-group-title">🏅 ${lang === 'en' ? 'Weekly challenge' : '本周挑战'}</div>${card(wt, true)}`
         : '';
       const dailyHtml = tasksList.length === 0
         ? `<p style="text-align:center;color:var(--warm-text-soft);padding:20px;">${Farm.i18n.t('tasks_all_done')}</p>`

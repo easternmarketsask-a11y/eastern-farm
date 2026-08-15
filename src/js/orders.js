@@ -68,8 +68,12 @@
       let lineCount = r < 0.4 ? 1 : (r < 0.74 ? 2 : (r < 0.92 ? 3 : 4));
       lineCount = Math.min(lineCount, lineMax, pool.length);
 
-      // pick distinct crops
-      const picks = pool.slice();
+      // pick distinct crops —— 优先挑板上其他订单还没要的菜（2026-08-15）：
+      // 池子小时三张单全是「小葱 0/4 · 小葱 0/3 · 小葱 0/2」，看着像复读机
+      const onBoard = new Set();
+      ((Farm.state.data.orders) || []).forEach((o) => (o.items || []).forEach((it) => onBoard.add(it.cropId)));
+      const freshPool = pool.filter((c) => !onBoard.has(c.id));
+      const picks = (freshPool.length >= lineCount ? freshPool : pool).slice();
       for (let i = picks.length - 1; i > 0; i--) { const j = this._rand(i + 1); const t = picks[i]; picks[i] = picks[j]; picks[j] = t; }
       const chosen = picks.slice(0, lineCount);
 
