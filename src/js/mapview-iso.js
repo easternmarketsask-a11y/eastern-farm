@@ -182,13 +182,17 @@
   ];
   // EP-shop pets → painted iso animal sprites (replaces the emoji pet).
   const ANIMALS = { pet_chick: 'animal_chicken', pet_cat: 'animal_cat', pet_rabbit: 'animal_rabbit', decoration_dog: 'animal_dog', guard_dog: 'animal_dog' };
-  /* 小动物体型（2026-08-15 Chris：「宠物小鸡小狗比人都大不好吧」）：以摊前站着的路人
-     🧍（th*1.5 高）为尺子 —— 狗到人腰、猫到人膝、鸡兔到人脚踝。数值是「占路人身高的比例」，
-     _drawAnimal / _drawDeco 用它算最大高度；emoji 兜底宠物也走同一张表（没列的按 0.5）。 */
+  /* 小动物体型（2026-08-15 Chris：「宠物小鸡小狗比人都大不好吧」）
+     以摊前站着的路人为尺子，数值 = 占人身高的比例（实测：emoji 人的墨迹高度 ≈ 字号
+     th*1.5，所以这个比例是诚实的）。按现实来：狗到人大腿(0.40)、猫到小腿(0.30)、
+     鸡鸭到膝下(0.26)、乌龟贴地(0.15)；马/牛这类大牲口才接近或超过人高。
+     ⚠️ 第一版给到 0.62/0.42（狗到腰）实测仍读作「和人一样大」——小动物要明显矮于人
+     才像院子里的活物。_drawAnimal / _drawDeco 都用它；emoji 兜底宠物同表（没列的按 0.3）。 */
   const PERSON_H = 1.5;                       // 路人 emoji 字号（th 的倍数），见 _drawBuilding 摊前路人
-  const ANIMAL_SCALE = { pet_chick: 0.42, pet_rabbit: 0.42, pet_cat: 0.52, decoration_dog: 0.62, guard_dog: 0.62,
-    pet_turtle: 0.32, pet_duck: 0.42, pet_squirrel: 0.36, pet_hedgehog: 0.34, pet_horse: 0.95, pet_peacock: 0.7, pet_goat: 0.75, pet_pig: 0.6, pet_sheep: 0.7, pet_cow: 0.9 };
-  const animalH = (itemId, th) => th * PERSON_H * (ANIMAL_SCALE[itemId] || 0.5);   // 最大高度（px）
+  const ANIMAL_SCALE = { pet_chick: 0.26, pet_rabbit: 0.24, pet_cat: 0.30, decoration_dog: 0.40, guard_dog: 0.40,
+    pet_turtle: 0.15, pet_duck: 0.26, pet_squirrel: 0.19, pet_hedgehog: 0.17, pet_swan: 0.36,
+    pet_horse: 1.05, pet_cow: 0.85, pet_goat: 0.50, pet_sheep: 0.45, pet_pig: 0.40, pet_peacock: 0.45 };
+  const animalH = (itemId, th) => th * PERSON_H * (ANIMAL_SCALE[itemId] || 0.3);   // 最大高度（px）
   const BRUSHES = [
     { key: 'path', zh: '小路', en: 'Path', color: '#a8743a' },
     { key: 'water', zh: '水塘', en: 'Water', color: '#5aa0c8' },

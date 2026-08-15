@@ -95,6 +95,20 @@ farm / isoView / fbAuth 七个核心模块一个都没执行**，全在排队等
 所以 SW 的 fetch 处理器**必须放行 `/service-worker.js` 与 `cache:'no-store'` 请求**，
 否则信标会被自己的缓存骗过去，自愈机制静默失效（已加测试验证能看见新版本）。
 
+### ③ 预缓存必须绕开 HTTP 缓存（2026-08-15，「刷新了还是旧代码」的根因）
+
+`cache.add(url)` **走浏览器 HTTP 缓存**，而 GitHub Pages 对所有静态文件发
+`Cache-Control: max-age=600`。于是新版 SW 安装时拿到的是**上一版的文件**，把它们装进
+**新版本号的缓存**里，再缓存优先地一直发下去 —— 缓存名是新的、内容是旧的。
+玩家刷新完全救不了（脏东西就在缓存里面），版本信标空刷一次后那道一次性防循环闸
+还会**永久压住**自愈。
+
+🔒 `service-worker.js` 的 `precacheAll()` 每一项都用 `new Request(u, { cache: 'reload' })`，
+**别改回 `cache.add(u)`**。页面侧的新鲜度守卫发现版本不一致时，先 `postMessage`
+一个 `refresh-precache` 让 SW 重抓整包再刷新，不再空刷。
+回归测试 `scripts/verify/sw-update-test.mjs`（起一台发 max-age=600 的本地服务器真复现
+「装好 v1 → 部署 v2 → 刷新」）已钉进 `deploy.sh` **闸门 C**，约 5 秒。
+
 ### 实测数据（生产站，改前 → 改后）
 
 | 场景 | 改前 | 改后 |
