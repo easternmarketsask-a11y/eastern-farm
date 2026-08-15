@@ -100,7 +100,11 @@
     // 花坛 → 暖窗灯+炊烟 → 彩旗 → 金色灯串, 尺寸也随级微涨。水塘同款手绘工艺。
     home: { img: 'house', w: 2, h: 2, sc: 2.3, zh: '我的家', en: 'My Home', tap: 'home', cost: 300, unique: true },
     barn: { img: 'barn', w: 2, h: 2, sc: 2.4, zh: '谷仓·仓库', en: 'Barn · Storage', tap: 'warehouse', cost: 350 },
-    house: { img: 'house', w: 2, h: 2, sc: 2.6, zh: '小屋·种子店', en: 'Cottage · Shop', tap: 'shop', cost: 400 },
+    // 种子店(类型名 house 是历史存档键, 不能改): 2026-08-14 换用摊位贴图 ——
+    // Chris:「种子店看起来像住房不像商店, 建筑要跟用途匹配利于识别」。
+    // 红白雨棚+菜筐一眼是店; 空白招牌由 _drawShopSign 画上「种子」。
+    // 房子贴图让给「我的家」专用, 从此一图一义。
+    house: { img: 'stall', w: 2, h: 2, sc: 2.8, zh: '种子铺', en: 'Seed Stand', tap: 'shop', cost: 400 },
     greenhouse: { img: 'greenhouse', w: 2, h: 2, sc: 2.4, zh: '温室', en: 'Greenhouse', cost: 600 },
     coop: { img: 'coop', w: 2, h: 2, sc: 2.3, zh: '鸡舍', en: 'Coop', cost: 450 },
     stall: { img: 'stall', w: 2, h: 2, sc: 2.8, zh: '超市摊位', en: 'Stall', cost: 320 },
@@ -160,7 +164,9 @@
   const FARM_SCALE = 1.15;     // 0.6 (small) … 1.0 … 1.5 (big)
   const FARM_DX = 0;          // −150 (left) … 0 … +150 (right), pixels
   const FARM_DY = -70;          // −150 (up)   … 0 … +150 (down), pixels
-  const PALETTE = ['home', 'barn', 'house', 'greenhouse', 'coop', 'stall', 'well', 'tree', 'bush', 'lantern', 'fence', 'wheel', 'bridge'];
+  // 'stall' 2026-08-14 从面板下架: 摊位贴图现在是种子店的专属形象, 再卖同款
+  // 装饰摊 = 两个一样的摊分不清哪个能买种子。已放置的照常渲染不受影响。
+  const PALETTE = ['home', 'barn', 'house', 'greenhouse', 'coop', 'well', 'tree', 'bush', 'lantern', 'fence', 'wheel', 'bridge'];
   // 我的家升级表: 每级的名字/升级价/玩家等级门槛/魅力值。lv 存在 map 对象上(o.lv)。
   const HOME_LEVELS = [
     { zh: '温馨小家', en: 'Cozy Home',       cost: 0,     needLv: 1, charm: 40 },
@@ -1006,6 +1012,40 @@
       ctx.restore();
     },
 
+    /* 种子店招牌(2026-08-14): 摊位贴图自带一块空白招牌(雨棚下方偏左),
+       把「种子」写上去 —— 招牌是最强的「这是商店」信号, 也点明卖什么。
+       位置按贴图比例手调(截图校准), 字随建筑一起缩放。 */
+    _drawShopSign(cx, by, boxW, boxH) {
+      const ctx = this._ctx, im = this._img.stall;
+      let w = boxW, h = boxH;
+      if (im && im.width) { const sc = Math.min(boxW / im.width, boxH / im.height); w = im.width * sc; h = im.height * sc; }
+      const fs = Math.max(6, h * 0.062);
+      if (fs < 7) return;   // 缩得太小就别画了, 糊成一团反而脏
+      ctx.save();
+      const en = this._lang() === 'en';
+      const txt = en ? 'SEEDS' : '种子';
+      // 木牌底 + 字: 贴图上那块板离菜筐太近, 裸写字会压在菜叶花色上读不清 ——
+      // 自己垫一块奶油底小木牌(截图校准过位置), 任何背景下都清楚。
+      ctx.translate(cx - w * 0.075, by - h * 0.487);
+      ctx.transform(1, 0.055, 0, 1, 0, 0);   // 微剪切贴合等距透视
+      ctx.font = '400 ' + fs + 'px "ZCOOL XiaoWei","Noto Sans SC",sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      const tw2 = ctx.measureText(txt).width;
+      const pw2 = tw2 + fs * 0.9, ph2 = fs * 1.45, r2 = fs * 0.28;
+      ctx.beginPath();
+      ctx.moveTo(-pw2 / 2 + r2, -ph2 / 2);
+      ctx.arcTo(pw2 / 2, -ph2 / 2, pw2 / 2, ph2 / 2, r2);
+      ctx.arcTo(pw2 / 2, ph2 / 2, -pw2 / 2, ph2 / 2, r2);
+      ctx.arcTo(-pw2 / 2, ph2 / 2, -pw2 / 2, -ph2 / 2, r2);
+      ctx.arcTo(-pw2 / 2, -ph2 / 2, pw2 / 2, -ph2 / 2, r2);
+      ctx.closePath();
+      ctx.fillStyle = '#fbf3dd'; ctx.fill();
+      ctx.lineWidth = Math.max(1, fs * 0.09); ctx.strokeStyle = '#b08a56'; ctx.stroke();
+      ctx.fillStyle = '#6d4c28';
+      ctx.fillText(txt, 0, fs * 0.05);
+      ctx.restore();
+    },
+
     _delChip(o) { const b = BUILDINGS[o.type], c = this._cell(o.gx + b.w - 1, o.gy), th = this._th(); return { x: c.x + this._tw() / 2 * 0.5, y: c.y - th * 0.2, r: Math.max(12, th * 0.5) }; },
     _addBuilding(type) {
       const b = BUILDINGS[type], en = this._lang() === 'en', cost = b.cost || 0;
@@ -1778,6 +1818,7 @@
       const hz = o.type === 'home' ? (1 + 0.035 * (homeLv - 1)) : 1;
       if (!this._blit(this._img[b.img], cc.x, by, b.w * tw * 0.92 * BLD * pk * hz, b.sc * th * 2.2 * BLD * pk * hz)) { ctx.fillStyle = '#c0392b'; ctx.fillRect(cc.x - tw * 0.4, by - th, tw * 0.8, th); }
       if (o.type === 'home' && homeLv > 1 && !moving) this._drawHomeExtras(cc.x, by, b.w * tw * 0.92 * BLD * hz, b.sc * th * 2.2 * BLD * hz, homeLv);
+      if (o.type === 'house' && !moving) this._drawShopSign(cc.x, by, b.w * tw * 0.92 * BLD, b.sc * th * 2.2 * BLD);
       ctx.globalAlpha = 1;
       // coop ready-to-collect egg bubble (read the real map entry for eggAt)
       // coop ready-to-collect indicator: a SMALL egg bubble nestled just above the
