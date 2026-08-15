@@ -87,6 +87,17 @@
       d.diary.push({ t: Date.now(), k: kind, zh, en });
       if (d.diary.length > 120) d.diary.splice(0, d.diary.length - 120);   // 封顶防存档膨胀
     },
+    /* 公共记录口(2026-08-15): 其他系统写一条带去重键的日记。
+       常客好感等(动态人名)用它 —— 对账规则只适合静态里程碑。 */
+    record(key, zh, en) {
+      const d = this._diary();
+      if (d.diaryMarks[key]) return false;
+      d.diaryMarks[key] = 1;
+      this._diaryAdd(key, zh, en);
+      Farm.state.save();
+      return true;
+    },
+
     /* 对账: 未标记且已满足的规则补记(幂等)。返回是否有新条目。 */
     diaryReconcile() {
       if (Farm.state._visitLock) return false;

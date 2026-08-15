@@ -21,6 +21,15 @@
      —— 路人是身份, 不是假名。 */
   const AVATARS = ['🐰', '🦊', '🐻', '🐼', '🐨', '🐯', '🦁', '🐮', '🐷', '🐸', '🐥', '🦉'];
   const ANON = { zh: '路人', en: 'A passerby', face: '🚶' };
+  /* 常客好感(2026-08-15, 人生故事第三支柱): 好感记在**真实玩家**身上 ——
+     同一位玩家买满 3/10/25 次升级, 出价越来越高、回头越来越勤,
+     升级送小礼物 + 写进日记。匿名路人没有身份, 不累好感。 */
+  const TIERS = [
+    { at: 3,  bonus: 0.05, zh: '熟客',   en: 'Regular' },
+    { at: 10, bonus: 0.10, zh: '老主顾', en: 'Loyal customer' },
+    { at: 25, bonus: 0.15, zh: '挚友',   en: 'Best friend' },
+  ];
+  const tierOf = (n) => { let t = null; for (const x of TIERS) if (n >= x.at) t = x; return t; };
   const WAIT_MS = 3 * 3600e3;          // 路人最多等 3 小时
   const GAP_MIN = 25, GAP_MAX = 45;    // 成交后下一位的间隔（分钟）
   const FIRST_DELAY_MS = 4 * 60e3;     // 新农场开张 4 分钟后来第一位
@@ -41,7 +50,7 @@
           .filter((m) => m && m.uid && m.uid !== me)
           .map((m) => {
             let h = 0; for (let i = 0; i < m.uid.length; i++) h = (h * 31 + m.uid.charCodeAt(i)) >>> 0;
-            return { name: Farm.fbGameSync.displayName(m.doc), face: AVATARS[h % AVATARS.length] };
+            return { uid: m.uid, name: Farm.fbGameSync.displayName(m.doc), face: AVATARS[h % AVATARS.length] };
           })
           .filter((m) => m.name);
         this._poolAt = now;
@@ -77,19 +86,34 @@
       const qty = 1 + Math.floor(Math.random() * Math.min(3, 1 + Math.floor(lvl / 3)));
       const mult = 1.35 + Math.random() * 0.25;
       const unit = Farm.crops.sellPriceOf ? Farm.crops.sellPriceOf(def) : def.sell_price;
-      // 真实玩家优先, 没有就匿名路人(绝不造假名)
+      // 真实玩家优先, 没有就匿名路人(绝不造假名)。
+      // 常客按好感加权回头: 买得多的人更常来 —— 关系是双向的。
       const ppl = this._pool;
-      const who = (ppl && ppl.length)
-        ? ppl[Math.floor(Math.random() * ppl.length)]
-        : null;
+      let who = null;
+      if (ppl && ppl.length) {
+        const regs = this._st().regulars || {};
+        const weights = ppl.map((m) => 1 + Math.min(((regs[m.uid] || {}).n || 0), 10) * 0.35);
+        let sum = 0; for (const w of weights) sum += w;
+        let roll = Math.random() * sum;
+        for (let i = 0; i < ppl.length; i++) { roll -= weights[i]; if (roll <= 0) { who = ppl[i]; break; } }
+        if (!who) who = ppl[ppl.length - 1];
+      }
+      // 常客等级加价(封顶 1.75×): 熟人愿意多给一点
+      let mult2 = mult;
+      let visits = 0;
+      if (who) {
+        visits = ((this._st().regulars || {})[who.uid] || {}).n || 0;
+        const tier = tierOf(visits);
+        if (tier) mult2 = Math.min(1.75, mult + tier.bonus);
+      }
       const now = Date.now();
       this._st().customer = {
         crop: def.id, qty,
-        price: Math.ceil(unit * qty * mult),
-        pct: Math.round((mult - 1) * 100),
+        price: Math.ceil(unit * qty * mult2),
+        pct: Math.round((mult2 - 1) * 100),
         zh: who ? who.name : ANON.zh, en: who ? who.name : ANON.en,
         face: who ? who.face : ANON.face,
-        real: !!who,
+        real: !!who, uid: who ? who.uid : null, visits,
         bornAt: now, expireAt: now + WAIT_MS,
       };
       Farm.state.save();
@@ -117,6 +141,35 @@
       Farm.state.addCoins(c.price);
       if (Farm.state.addXp) Farm.state.addXp(2 + c.qty);
       st.sold = (st.sold || 0) + 1;
+      // 常客好感: 真实玩家 +1 次; 跨级 → 小礼物(种子×2) + 日记 + 庆祝
+      if (c.real && c.uid) {
+        if (!st.regulars) st.regulars = {};
+        const r = st.regulars[c.uid] || { n: 0, name: c.zh, face: c.face };
+        r.n += 1; r.name = c.zh; r.face = c.face; r.lastAt = Date.now();
+        st.regulars[c.uid] = r;
+        const tier = TIERS.find((x) => x.at === r.n);   // 恰好跨级
+        if (tier) {
+          // 礼物: 已解锁作物里随机一种的种子 ×2(零真实成本)
+          try {
+            const pool2 = (Farm.crops.available ? Farm.crops.available(Farm.state.data.level || 1, null) : [])
+              .filter((cd) => cd && cd.seed_cost > 0);
+            if (pool2.length && Farm.state.addSeed) {
+              const g = pool2[Math.floor(Math.random() * pool2.length)];
+              Farm.state.addSeed(g.id, 2);
+              if (Farm.ui && Farm.ui.toast) Farm.ui.toast(en
+                ? (c.face + ' ' + c.en + ' is now a ' + tier.en + '! Gift: ' + (g.icon || '') + ' seeds ×2')
+                : (c.face + ' ' + c.zh + ' 成了你的' + tier.zh + '！回礼：' + (g.name_zh || '') + '种子×2'), 4200);
+            }
+          } catch (e) {}
+          if (Farm.lifeStory && Farm.lifeStory.record) {
+            Farm.lifeStory.record('regular_' + c.uid + '_' + tier.at,
+              c.face + ' ' + c.zh + ' 成了菜摊的' + tier.zh + '（第 ' + r.n + ' 次光顾）。',
+              c.face + ' ' + c.en + ' became a ' + tier.en.toLowerCase() + ' (visit #' + r.n + ').');
+          }
+          if (Farm.ui && Farm.ui.confettiBurst) Farm.ui.confettiBurst();
+          if (Farm.audio) Farm.audio.play('achievement');
+        }
+      }
       st.customer = null;
       st.nextAt = Date.now() + (GAP_MIN + Math.random() * (GAP_MAX - GAP_MIN)) * 60e3;
       Farm.state.save();
@@ -138,20 +191,43 @@
       if (!c) {
         const st = this._st();
         const mins = Math.max(1, Math.ceil(((st.nextAt || 0) - Date.now()) / 60e3));
-        body = '<div style="text-align:center;padding:16px 4px;">'
+        // 常客簿: 好感前三名(全是真实玩家)
+        const regs = Object.values(st.regulars || {}).sort((a, b2) => (b2.n || 0) - (a.n || 0)).slice(0, 3);
+        const regHtml = regs.length
+          ? '<div style="margin-top:14px;text-align:left;">'
+            + '<div style="font-size:12px;color:var(--warm-text-soft);margin-bottom:6px;">📒 ' + (en ? 'Regulars' : '常客簿') + '</div>'
+            + regs.map((r) => {
+                const t2 = tierOf(r.n);
+                return '<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:#fffdf4;'
+                  + 'border:1px solid var(--border-soft);border-radius:10px;margin-bottom:5px;font-size:13px;">'
+                  + '<span>' + (r.face || '🙂') + '</span><span style="flex:1;font-weight:600;">' + r.name + '</span>'
+                  + '<span style="color:var(--warm-text-soft);font-size:12px;">'
+                  + (t2 ? ((en ? t2.en : t2.zh) + ' · ') : '') + '×' + r.n + '</span></div>';
+              }).join('')
+            + '</div>'
+          : '';
+        body = '<div style="text-align:center;padding:16px 4px 4px;">'
           + '<div style="font-size:44px;">🥬</div>'
           + '<div style="font-size:13.5px;color:var(--warm-text-soft);margin-top:8px;line-height:1.6;">'
           + (en ? ('No customer right now — someone should stroll by in ~' + mins + ' min.')
                 : ('这会儿没有客人，大约 ' + mins + ' 分钟后会有路人逛过来。'))
-          + '</div></div>';
+          + '</div></div>' + regHtml;
       } else {
         const def = Farm.crops.get(c.crop) || {};
         const cropName = en ? (def.name_en || c.crop) : (def.name_zh || c.crop);
         const stock = this.stockOf(c.crop);
         const enough = stock >= c.qty;
+        const rr2 = (c.real && c.uid && (this._st().regulars || {})[c.uid]) || null;
+        const tierNow = rr2 ? tierOf(rr2.n) : null;
+        const badge = rr2
+          ? '<div style="font-size:11.5px;color:var(--leaf-dark);margin-top:3px;">'
+            + (tierNow ? ('💚 ' + (en ? tierNow.en : tierNow.zh) + ' · ') : '')
+            + (en ? ('visit #' + (rr2.n + 1)) : ('第 ' + (rr2.n + 1) + ' 次光顾')) + '</div>'
+          : '';
         body = '<div style="text-align:center;">'
           + '<div style="font-size:46px;line-height:1;">' + c.face + '</div>'
           + '<div style="font-family:var(--font-display);font-size:18px;margin-top:6px;">' + (en ? c.en : c.zh) + '</div>'
+          + badge
           + '<div style="margin:12px 0;padding:12px;border:1.5px dashed var(--border-soft);border-radius:12px;font-size:14px;line-height:1.7;">'
           + (en ? ('Wants <b>' + c.qty + ' × ' + (def.icon || '🥬') + ' ' + cropName + '</b><br>offering <b>' + c.price + '</b> <span class="coin-icon"></span> <span style="color:var(--leaf-dark);font-weight:600;">(+' + c.pct + '% vs market)</span>')
                 : ('想买 <b>' + c.qty + ' 棵 ' + (def.icon || '🥬') + ' ' + cropName + '</b><br>出价 <b>' + c.price + '</b> <span class="coin-icon"></span> <span style="color:var(--leaf-dark);font-weight:600;">（比市价高 ' + c.pct + '%）</span>'))
