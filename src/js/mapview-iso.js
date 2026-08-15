@@ -1508,10 +1508,15 @@
     // move things around on a phone. Lower zoom than the tight play view.
     _buildFrame() {
       const plots = Farm.state.data.plots || []; let minx = Infinity, miny = Infinity, maxx = -Infinity, maxy = -Infinity;
-      const add = (gx, gy) => { minx = Math.min(minx, gx); miny = Math.min(miny, gy); maxx = Math.max(maxx, gx); maxy = Math.max(maxy, gy); };
+      let minU = Infinity, maxU = -Infinity, minV = Infinity, maxV = -Infinity;   // 屏幕轴范围（同 _autoFrame）
+      const add = (gx, gy) => {
+        minx = Math.min(minx, gx); miny = Math.min(miny, gy); maxx = Math.max(maxx, gx); maxy = Math.max(maxy, gy);
+        const u = gx - gy, v = gx + gy;
+        minU = Math.min(minU, u); maxU = Math.max(maxU, u); minV = Math.min(minV, v); maxV = Math.max(maxV, v);
+      };
       for (let i = 0; i < plots.length; i++) add(this._plotGX(i), this._plotGY(i));
       (Farm.state.data.map || []).forEach((o) => { const b = BUILDINGS[o.type]; if (b) { add(o.gx, o.gy); add(o.gx + b.w - 1, o.gy + b.h - 1); } });
-      if (minx === Infinity) { minx = 0; miny = 0; maxx = COLS - 1; maxy = ROWS - 1; }
+      if (minx === Infinity) { minx = 0; miny = 0; maxx = COLS - 1; maxy = ROWS - 1; add(0, 0); add(COLS - 1, ROWS - 1); add(COLS - 1, 0); add(0, ROWS - 1); }
       minx -= 2; miny -= 2; maxx += 2; maxy += 2;   // empty-land margin to drop things into
       const span = (maxx - minx) + (maxy - miny);
       const screenW = span * TW / 2, screenH = span * TH / 2 + TH * 3;

@@ -48,6 +48,9 @@ const warns = [];
     const before = errors.length;
     const r = await ev(`(function(){try{${expr}; return 'ok';}catch(e){return 'THREW: '+e.message;}})()`);
     await sleep(700);
+    // 步骤本身抛异常也算错（2026-08-15：_buildFrame 的 ReferenceError 曾只显示在
+    // 这一行的「THREW」里，汇总仍是 errors: 0，被当成通过并部署了）
+    if (typeof r === 'string' && r.indexOf('THREW') === 0) errors.push('[step ' + label + '] ' + r);
     const newErrs = errors.length - before;
     console.log(`• ${label}: ${r}${newErrs ? '  (+' + newErrs + ' console errors)' : ''}`);
   };
@@ -80,5 +83,5 @@ const warns = [];
 
   await call('Target.closeTarget', { targetId: tab.id }).catch(() => {});
   ws.close();
-  process.exit(0);
+  process.exit(errors.length ? 1 : 0);
 })().catch(e => { console.error('sweep failed:', e.message); process.exit(1); });
