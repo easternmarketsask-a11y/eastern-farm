@@ -51,7 +51,9 @@
     ['6,7', '5,8', '6,8', '7,8', '6,9'],             // v2(十字→四瓣, 不真实)
   ];
   const USE_PAINTED_BG = false;   // 2026-08-14 程序化世界上线; true = 回滚旧照片背景
-  const GRASS_A = '#8bbf5a', GRASS_B = '#83b653', GRASS_EDGE = 'rgba(60,90,40,0.18)';
+  // 2026-08-15 宣传图同款光色：左上侧光、金色黄昏、草地偏暖黄绿。
+  // 只改程序化调色/影子方向，不引入位图背景（USE_PAINTED_BG 铁律照旧）。
+  const GRASS_A = '#7eaa3d', GRASS_B = '#72963a', GRASS_EDGE = 'rgba(60,90,40,0.18)';
   const SOIL_TOP = '#9c6b3f', SOIL_FURROW = 'rgba(80,50,26,0.5)';
   const ASSET_DIR = 'assets/images/map/';
   // All map art is served as WebP (B4 perf: 6.6MB PNG → 0.84MB WebP, -87%).
@@ -256,7 +258,7 @@
 
       const cv = document.createElement('canvas');
       cv.id = 'isoCanvas';
-      cv.style.cssText = 'position:fixed;z-index:5;touch-action:none;display:block;background:#86b030;';
+      cv.style.cssText = 'position:fixed;z-index:5;touch-action:none;display:block;background:#7a9a38;';
       document.body.appendChild(cv);
       this._cv = cv; this._ctx = cv.getContext('2d');
 
@@ -1573,8 +1575,9 @@
     // soft contact shadow under an object → grounds it (Hay-Day depth)
     _shadow(cx, cy, w, alpha) {
       const ctx = this._ctx; ctx.save(); ctx.beginPath();
-      ctx.ellipse(cx, cy, w * 0.5, w * 0.2, 0, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(38,46,26,' + (alpha || 0.16) + ')'; ctx.fill(); ctx.restore();
+      // 光从左上（与宣传图一致）→ 影子往右下拉长一点
+      ctx.ellipse(cx + w * 0.16, cy + w * 0.05, w * 0.52, w * 0.20, 0.55, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(42,48,22,' + (alpha || 0.18) + ')'; ctx.fill(); ctx.restore();
     },
     // ---- world-anchored landscape backdrop (cx,cy are camera-adjusted, so it pans) ----
     _drawHills(cx, cy, span) {
@@ -1760,11 +1763,20 @@
     // temporarily points at the offscreen cache canvas).
     _drawBackdrop(W, H) {
       const ctx = this._ctx, tw = this._tw(), th = this._th();
-      // Base gradient: sky → soft green. Fills any pixel the photo doesn't, and is
-      // the fallback before the image loads.
+      // 金色黄昏天空（对齐 2026-08-15 宣传插画）：上暖下金，草地再盖住下半。
       const base = ctx.createLinearGradient(0, 0, 0, H);
-      base.addColorStop(0, '#eaf4ef'); base.addColorStop(0.55, '#d2e8c6'); base.addColorStop(1, '#b5cf86');
+      base.addColorStop(0, '#f4c89a');
+      base.addColorStop(0.28, '#f6d4a8');
+      base.addColorStop(0.50, '#f0dfb4');
+      base.addColorStop(0.68, '#c8c07a');
+      base.addColorStop(1, '#8eae4a');
       ctx.fillStyle = base; ctx.fillRect(0, 0, W, H);
+      // 左上太阳：柔光晕，不画硬边日轮（避免像贴纸）
+      const sun = ctx.createRadialGradient(W * 0.16, H * 0.07, 0, W * 0.16, H * 0.07, Math.max(W, H) * 0.55);
+      sun.addColorStop(0, 'rgba(255,228,170,0.55)');
+      sun.addColorStop(0.22, 'rgba(255,196,120,0.22)');
+      sun.addColorStop(1, 'rgba(255,180,90,0)');
+      ctx.fillStyle = sun; ctx.fillRect(0, 0, W, H);
 
       /* 🔒 程序化世界(2026-08-14 Chris:「怎样使地形真正跟农场物件融合,
          不受画面缩放影响, 大型游戏是怎么做到的」):
@@ -2078,7 +2090,7 @@
          农场内(0..COLS/ROWS)是耕作草甸(割草条带+已拥有更亮), 世界外是野草甸
          (色噪更野、微微偏黄), 靠近地平线渐入薄雾。没有照片, 就没有"贴不贴合":
          地面本身就是格子。缩放只是换个比例重画 —— 程序化天生矢量, 永不发糊。 */
-      const HAZE = { r: 205, g: 224, b: 178 };
+      const HAZE = { r: 228, g: 206, b: 158 };
       // 视口能看到的格子范围(反解四角 + 余量)
       const corners = [this._screenToCell(0, 0), this._screenToCell(W, 0),
                        this._screenToCell(0, H), this._screenToCell(W, H)];
@@ -2092,7 +2104,7 @@
       // 整面铺草甸底色: 菱形之间的反锯齿细缝不再漏出天空色(亮格线的元凶)。
       // 从林脚以下起铺(hl+0.8th), 树脚由菱形格自然探上去咬合, 不再一刀切。
       const gTop = Math.max(0, hl + th * 0.8);
-      ctx.fillStyle = 'rgb(154,197,98)';
+      ctx.fillStyle = 'rgb(132,168,68)';
       ctx.fillRect(0, gTop, W, H - gTop);
       for (let gy = gy0; gy <= gy1; gy++) {
         for (let gx = gx0; gx <= gx1; gx++) {
@@ -2106,13 +2118,13 @@
           // 基色: 农场内亮耕作绿(条带), 未拥有微降饱和, 世界外野草(偏黄+噪点强)
           let rr, gg, bb2;
           // 农场基色(耕作绿 + 割草条带)
-          const stripe = ((gx + gy) & 1) ? -4 : 0;
+          const stripe = ((gx + gy) & 1) ? -5 : 0;
           const nzIn = (r1 - 0.5) * 5;
-          let fr = 150 + stripe + nzIn, fg = 199 + stripe + nzIn * 0.7, fb = 96 + stripe * 0.6 + nzIn * 0.5;
+          let fr = 138 + stripe + nzIn, fg = 174 + stripe + nzIn * 0.7, fb = 70 + stripe * 0.6 + nzIn * 0.5;
           if (inWorld && !owned) { fr = fr * 0.95 + 7; fg = fg * 0.95 + 4; fb = fb * 0.93 + 7; }
           // 野地基色(微偏黄, 噪点略强但收敛)
           const nzOut = (r1 - 0.5) * 8;
-          const wr = 157 + nzOut, wg = 197 + nzOut * 0.8, wb = 94 + (r2 - 0.5) * 8;
+          const wr = 146 + nzOut, wg = 170 + nzOut * 0.8, wb = 68 + (r2 - 0.5) * 8;
           // 农场↔野地按「出界距离」渐变(6 格内过渡), 不出现生硬色阶边框
           const dOut = Math.max(0, Math.max(-gx, -gy, gx - (COLS - 1), gy - (ROWS - 1)));
           const wMix = Math.max(0, Math.min(1, dOut / 6));
@@ -2123,13 +2135,21 @@
             const k = Math.max(0, Math.min(1, dHl));
             rr = rr * k + HAZE.r * (1 - k); gg = gg * k + HAZE.g * (1 - k); bb2 = bb2 * k + HAZE.b * (1 - k);
           }
+          // 远景收掉菱形条带对比，草地更像宣传图的一整片，而不是格子被单
+          if (dHl < 2.4) {
+            const fade = Math.max(0, Math.min(1, 1 - dHl / 2.4));
+            const midR = (rr + 132) / 2, midG = (gg + 168) / 2, midB = (bb2 + 68) / 2;
+            rr = rr * (1 - fade) + midR * fade;
+            gg = gg * (1 - fade) + midG * fade;
+            bb2 = bb2 * (1 - fade) + midB * fade;
+          }
           ctx.fillStyle = 'rgb(' + (rr | 0) + ',' + (gg | 0) + ',' + (bb2 | 0) + ')';
           this._diamond(c.x, c.y, tw * 1.04, th * 1.04);   // 1.04: 盖住反锯齿细缝
           ctx.fill();
           // 点缀: 草簇(内外都有, 外面更密) / 小花(只在农场内)
           const tuftP = inWorld ? 0.90 : 0.82;
           if (r2 > tuftP && dHl > 0.7) {
-            ctx.strokeStyle = inWorld ? '#6a9c48' : '#7c9a4e';
+            ctx.strokeStyle = inWorld ? '#5e8a38' : '#6d8840';
             ctx.lineWidth = Math.max(0.8, tw * 0.018); ctx.lineCap = 'round';
             const bx = c.x + (r1 - 0.5) * tw * 0.4, byy = c.y + (r2 - 0.5) * th * 0.4;
             for (let i = -1; i <= 1; i++) {
@@ -2147,8 +2167,43 @@
           }
         }
       }
+      this._drawTreeShadows(W, H, hl);
       // 程序化世界没有照片可采样 —— 地面到处都是草, 乡路/小屋永远可画
       return () => 1;
+    },
+    /* 云杉林的长影子：光从左上打来，影子往右下铺在草甸上。
+       跟宣传图同一套光方向；画进相机缓存，30fps 零成本。 */
+    _drawTreeShadows(W, H, hl) {
+      const ctx = this._ctx, tw = this._tw(), th = this._th();
+      if (hl > H + th * 4 || hl < -th * 8) return;
+      ctx.save();
+      const step = tw * 1.35;
+      const x0 = -((this._camX * 0.7) % step) - step * 2;
+      for (let x = x0; x < W + step * 2; x += step) {
+        const seed = Math.abs(Math.round((x + this._camX) / step));
+        const hsh = ((seed * 2654435761) >>> 0) % 1000 / 1000;
+        if (hsh < 0.38) continue;
+        const len = th * (3.6 + hsh * 5.2);
+        const wid = tw * (0.42 + hsh * 0.28);
+        const ang = 0.58 + (hsh - 0.5) * 0.22;
+        const cx = x + tw * (0.6 + hsh * 0.5);
+        const cy = hl + th * 1.8 + len * 0.40;
+        ctx.fillStyle = 'rgba(32,44,16,0.08)';
+        ctx.beginPath(); ctx.ellipse(cx, cy, wid * 1.45, len * 1.12, ang, 0, 6.283); ctx.fill();
+        ctx.fillStyle = 'rgba(32,44,16,' + (0.12 + hsh * 0.06) + ')';
+        ctx.beginPath(); ctx.ellipse(cx, cy, wid, len, ang, 0, 6.283); ctx.fill();
+      }
+      ctx.restore();
+    },
+    /* 整幅暖光罩：让作物/建筑贴图也沾上宣传图的金色侧光，很淡，不把菜染黄。 */
+    _drawGoldenHour(W, H) {
+      const ctx = this._ctx;
+      const g = ctx.createRadialGradient(W * 0.14, H * 0.06, 0, W * 0.14, H * 0.06, Math.max(W, H) * 1.15);
+      g.addColorStop(0, 'rgba(255,210,140,0.20)');
+      g.addColorStop(0.38, 'rgba(255,186,110,0.08)');
+      g.addColorStop(1, 'rgba(40,55,25,0.055)');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, W, H);
     },
     /* 程序化地平线: 一切以世界坐标锚定 —— 林线沿着世界北缘的等 gx+gy 对角线,
        跟着缩放/平移走(和农场同一套变换), 所以农场永远贴着自己的地平线。
@@ -2172,10 +2227,10 @@
         }
         ctx.lineTo(W, hl + th * 2); ctx.lineTo(0, hl + th * 2); ctx.closePath(); ctx.fill();
       };
-      hill(th * 5.0, th * 0.9, '#b7cfa2', 0.8);
-      hill(th * 3.3, th * 1.1, '#93b57f', 2.9);
+      hill(th * 5.0, th * 0.9, '#c8b98a', 0.8);
+      hill(th * 3.3, th * 1.1, '#8fa86a', 2.9);
       // 云杉/阔叶混交林剪影: 沿林线一排确定性鼓包(世界 x 相位 → 平移一致)
-      ctx.fillStyle = '#4a7350';
+      ctx.fillStyle = '#3a5840';
       ctx.beginPath();
       ctx.moveTo(-tw, hl + th * 1.2);
       const step = tw * 0.52;
@@ -2188,6 +2243,21 @@
         ctx.quadraticCurveTo(x + step * 0.75, hl - hgt * 0.85, x + step, hl - th * (0.2 + hsh * 0.5));
       }
       ctx.lineTo(W + tw, hl + th * 1.4); ctx.lineTo(-tw, hl + th * 1.4); ctx.closePath(); ctx.fill();
+      // 树冠受光边：左上那侧一抹暖边，跟宣传图的逆光林线同一语言
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.strokeStyle = 'rgba(255,210,140,0.22)';
+      ctx.lineWidth = Math.max(1.2, th * 0.10);
+      ctx.beginPath();
+      ctx.moveTo(-tw, hl - th * 0.4);
+      for (let x = x0; x < W + step * 2; x += step) {
+        const seed = Math.abs(Math.round((x + this._camX) / step));
+        const hsh = ((seed * 2654435761) >>> 0) % 1000 / 1000;
+        const hgt = th * (1.6 + hsh * 1.5);
+        ctx.lineTo(x + step * 0.5, hl - hgt * 0.92);
+      }
+      ctx.stroke();
+      ctx.restore();
     },
     /* 地平薄雾: 必须画在**地面之后**(第一版画在 _drawHorizon 里, 随即被地面
        整面底色盖掉, 林脚剩一条生硬横线 —— 截图实证的顺序 bug)。 */
@@ -2196,9 +2266,9 @@
       const hl = this._cell(0, -3).y;
       if (hl > H + th * 4 || hl < -th * 6) return;
       const mist = ctx.createLinearGradient(0, hl - th * 0.6, 0, hl + th * 2.4);
-      mist.addColorStop(0, 'rgba(74,115,80,0.42)');
-      mist.addColorStop(0.4, 'rgba(190,215,170,0.30)');
-      mist.addColorStop(1, 'rgba(190,215,170,0)');
+      mist.addColorStop(0, 'rgba(62,78,42,0.38)');
+      mist.addColorStop(0.4, 'rgba(220,190,130,0.26)');
+      mist.addColorStop(1, 'rgba(220,190,130,0)');
       ctx.fillStyle = mist; ctx.fillRect(0, hl - th * 0.6, W, th * 3.0);
     },
 
@@ -2343,6 +2413,7 @@
       }
 
       this._drawLockedLand();
+      this._drawGoldenHour(W, H);
       this._drawParticles(tw); this._drawFestival();
     },
     _rectPath(x1, y1, x2, y2) {   // cell-rect → screen parallelogram path

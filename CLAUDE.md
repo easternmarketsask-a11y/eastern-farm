@@ -306,6 +306,9 @@ See `docs/GAME-DESIGN.md` for full spec. TL;DR:
   清晰、贴合是构造保证。旧照片背景 `hd_bg.webp` 已退役但资产保留，
   `mapview-iso.js` 里 `USE_PAINTED_BG=true` 可一键回滚。别再往世界里
   引入「不懂格子」的整幅位图
+- **金色黄昏光（2026-08-15）**：程序化天空/草地/林影对齐宣传插画
+  （`promo/keyart-farm-*.jpg`）——左上侧光、暖黄绿草地、云杉往右下拉长影。
+  只改调色和影子方向，不换位图。别把天空改回冷薄荷绿。
 - **Rounded everything**: chunky rounded buttons, soft shadows, no sharp lines
 - **Cute but not babyish**: crops have personality (smiling tomato, sleepy
   garlic) but aren't infantilized
