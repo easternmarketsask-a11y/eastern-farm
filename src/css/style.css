@@ -4066,7 +4066,9 @@ body.modal-open .pwa-install-banner { display: none; }
 .pwa-install-banner {
   position: fixed;
   left: 50%;
-  bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  /* 抬到底部 dock（约 82px 高）之上：原来贴底直接把 任务/商店/谷仓/菜单 整条盖住，
+     横幅不关掉就点不到（2026-08-15 截图实证）；小东头像与建造钮也在同一带 */
+  bottom: calc(96px + env(safe-area-inset-bottom, 0px));
   transform: translateX(-50%);
   z-index: 9000;
   width: calc(100% - 24px);
