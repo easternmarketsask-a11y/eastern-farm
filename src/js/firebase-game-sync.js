@@ -106,6 +106,32 @@
             const def = (Farm.crops && Farm.crops.get) ? Farm.crops.get(p.c) : null;
             return { i: p.i, c: p.c, p: p.p, g: (def && def.grow_minutes) || 0 };
           }),
+        /* 🗺️ 世界布局镜像(2026-08-14, 共享世界 Phase A —— Chris:「要看到真实的
+           邻居农场, 每个农场有相应的地理空间, 走得够远理论上能走访所有农场」):
+           把农场的**几何布局**(地块坐标/建筑/水塘/小路/装饰/家的等级)放进公开
+           档案, 供以后把邻居的农场**实景**画在共享地图上。零隐私(纯游戏视觉),
+           压缩键名控制体积(约 1-4KB), 随既有 60 秒防抖一起推。
+           ⚠️ Phase B(渲染邻居实景+世界坐标)要等大家的客户端先跑几天这段代码,
+           数据攒起来了才有东西可画 —— 所以镜像先行。 */
+        worldLayout: {
+          v: 1,
+          plots: (s.plots || [])
+            .filter((p) => p && p.unlocked && Number.isInteger(p.gx))
+            .slice(0, 48)
+            .map((p) => ({ x: p.gx, y: p.gy, c: p.crop || null, p: p.plantedAt || 0 })),
+          bld: (s.map || [])
+            .filter((o) => o && Number.isInteger(o.gx))
+            .slice(0, 24)
+            .map((o) => ({ t: o.type, x: o.gx, y: o.gy, lv: o.lv || 0 })),
+          terr: Object.entries(s.mapTerrain || {})
+            .slice(0, 96)
+            .map(([k, t]) => ({ k, t })),
+          deco: (s.decorations || [])
+            .filter((d) => d && Number.isInteger(d.gx))
+            .slice(0, 40)
+            .map((d) => ({ d: d.itemId, x: d.gx, y: d.gy })),
+          landLevel: s.landLevel || 0,
+        },
         // Live balances for the admin 游戏管理 panel (display only — the
         // authoritative copy stays in the local save).
         coins: s.coins || 0,
@@ -155,6 +181,16 @@
           gameSave ? { gameStats: payload, gameSave: gameSave } : { gameStats: payload },
           { merge: true }
         );
+        /* 世界门牌号的地基: worldJoinedAt 只设一次(本地存档记 flag 防覆盖)。
+           排序按它升序 = 新农场永远接在路的末端, 老农场的门牌**永不漂移**。 */
+        if (!Farm.state.data.worldStamped) {
+          try {
+            await Farm.fb.db.collection('farm_players').doc(uid).set(
+              { worldJoinedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
+            Farm.state.data.worldStamped = true;
+            Farm.state.save();
+          } catch (e) { /* 下轮再试 */ }
+        }
         // Mirror the SAME game-safe stats to the public farm_players/ collection
         // (zero PII). The app's social reads (leaderboard / neighbors / self-rank)
         // query this collection, because members/ is locked to list limit<=1 by
