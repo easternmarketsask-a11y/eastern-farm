@@ -126,7 +126,7 @@
   const BLD = 0.7;   // global building-sprite scale (Chris 2026-06-18: buildings were too big) — shrinks all building sprites uniformly so the starter farm fits the central meadow
   const charmOf = (b) => Math.max(1, Math.round((b.cost || 0) / 8));
   const COOP_INTERVAL = 5 * 60 * 1000, COOP_REWARD = 30;   // 鸡舍每 5 分钟产一窝蛋，收一次 +30 农场币
-  const BED_W = 0.88;   // soil-bed width as a fraction of the cell → <1 leaves a grass gap so plots are distinct/tappable
+  const BED_W = 1.02;   // 宣传图是一整块垄沟田：格略重叠，垄线跨格连续
   // World-locked backdrop placement (mapview-iso _drawBackdrop). The landscape image's
   // focal point (BG_FX, BG_FY in image fractions = the central flat meadow) is pinned to
   // world cell (BG_ANCHOR_GX, BG_ANCHOR_GY) ≈ the farm start-area centre, and it scales
@@ -1617,11 +1617,22 @@
         ctx.ellipse(x + dx, y - s * 0.72 + dy, rx, ry, 0, 0, Math.PI * 2);
         ctx.fill();
       };
-      blob(0, s * 0.10, s * 0.50, s * 0.44, '#3a7038');
-      blob(-s * 0.24, s * 0.04, s * 0.36, s * 0.34, '#4a8640');
-      blob(s * 0.24, s * 0.06, s * 0.34, s * 0.32, '#4a8640');
-      blob(-s * 0.04, -s * 0.16, s * 0.30, s * 0.28, '#5fa04c');
-      blob(s * 0.10, -s * 0.10, s * 0.16, s * 0.14, 'rgba(255,220,140,0.22)');
+      blob(0, s * 0.08, s * 0.54, s * 0.48, '#3d7340');
+      blob(-s * 0.26, s * 0.02, s * 0.38, s * 0.36, '#52964a');
+      blob(s * 0.26, s * 0.04, s * 0.36, s * 0.34, '#4a8a42');
+      blob(-s * 0.02, -s * 0.20, s * 0.34, s * 0.30, '#6aad52');
+      blob(s * 0.12, -s * 0.12, s * 0.18, s * 0.16, 'rgba(255,220,140,0.28)');
+    },
+    _cypress(x, y, s) {
+      const ctx = this._ctx;
+      ctx.fillStyle = '#3d5c38';
+      ctx.beginPath();
+      ctx.ellipse(x, y - s * 0.95, s * 0.16, s * 0.95, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#5a7a40';
+      ctx.beginPath();
+      ctx.ellipse(x - s * 0.04, y - s * 1.15, s * 0.10, s * 0.55, 0, 0, Math.PI * 2);
+      ctx.fill();
     },
     _tuft(x, y, s) {
       const ctx = this._ctx; ctx.fillStyle = '#74b252';
@@ -1669,6 +1680,38 @@
     // Empty-plot soil bed: a painted soil cube EXTRACTED from a crop sprite, so it
     // matches the crops' own baked soil exactly → every plot (empty or planted) is a
     // consistent raised tilled bed. Bottom-anchored like the crops so heights line up.
+    _drawFurrowBed(c) {
+      // 宣传图那块田：扁的等距垄沟土面；垄线用屏幕斜率对齐，邻格连成一块田
+      const ctx = this._ctx, tw = this._tw(), th = this._th();
+      const w = tw * BED_W, h = th * BED_W;
+      const cy = c.y + th * 0.06;
+      this._diamond(c.x, cy, w, h);
+      const g = ctx.createLinearGradient(c.x - w * 0.45, cy - h * 0.35, c.x + w * 0.3, cy + h * 0.4);
+      g.addColorStop(0, '#c8965c');
+      g.addColorStop(0.42, '#a56a38');
+      g.addColorStop(1, '#6a3f20');
+      ctx.fillStyle = g;
+      ctx.fill();
+      ctx.save();
+      ctx.beginPath();
+      this._diamond(c.x, cy, w * 0.97, h * 0.93);
+      ctx.clip();
+      ctx.strokeStyle = 'rgba(62,34,14,0.42)';
+      ctx.lineWidth = Math.max(1.2, th * 0.08);
+      ctx.lineCap = 'round';
+      const slope = th / tw;
+      const spacing = th * 0.20;
+      const b0 = Math.round((cy - slope * c.x) / spacing) * spacing;
+      for (let k = -6; k <= 6; k++) {
+        const b = b0 + k * spacing;
+        const x1 = c.x - tw * 0.55, x2 = c.x + tw * 0.55;
+        ctx.beginPath();
+        ctx.moveTo(x1, slope * x1 + b);
+        ctx.lineTo(x2, slope * x2 + b);
+        ctx.stroke();
+      }
+      ctx.restore();
+    },
     _tilledDiamond(cx, cy) {
       const im = this._img.plot_bed, ctx = this._ctx, tw = this._tw(), th = this._th();
       if (im && im.width) { const w = tw * 1.04, s = w / im.width, hh = im.height * s; ctx.drawImage(im, cx - w / 2, cy + th * 0.6 - hh, w, hh); return; }
@@ -1683,14 +1726,8 @@
       // black "boards" / quilt). overlap a hair to hide anti-aliased seams.
       if (key === 'grass') return;   // grass = the smooth solid base fill (drawn in render); no per-tile quilt
       if (key === 'soil') {
-        // Chris's painted tilled-soil bed (raised cube). Drawn per plot → distinct
-        // raised beds on the green field, Hay-Day style. cy = top-face center fraction.
-        const im = this._img.hd_soil;
-        // BED_W < 1 leaves a small grass gap between adjacent beds so each plot
-        // reads as a DISTINCT, separately-tappable patch (Chris 2026-06-18: beds
-        // looked merged/stacked). Was tw*1.18 (overlapping → one brown mass).
-        if (im) { const w = tw * BED_W, sc = w / im.width, dh = im.height * sc; ctx.drawImage(im, c.x - w / 2, c.y - dh * 0.42, w, dh); return; }
-        this._diamond(c.x, c.y, tw * BED_W, th * BED_W); ctx.fillStyle = SOIL_TOP; ctx.fill(); return;
+        this._drawFurrowBed(c);
+        return;
       }
       // path / water = FLAT diamonds matching the flat ground (no raised cube → no
       // clash with the green field). Subtle detail keeps them readable.
@@ -2151,8 +2188,8 @@
       const hl = this._cell(0, -3).y;   // 林线 y(与 _drawHorizon 同一条对角线)
       // 整面铺草甸底色: 菱形之间的反锯齿细缝不再漏出天空色(亮格线的元凶)。
       // 从林脚以下起铺(hl+0.8th), 树脚由菱形格自然探上去咬合, 不再一刀切。
-      const gTop = Math.max(0, hl + th * 0.8);
-      ctx.fillStyle = 'rgb(132,168,68)';
+      const gTop = Math.max(0, hl + th * 2.8);
+      ctx.fillStyle = 'rgb(127,160,80)';
       ctx.fillRect(0, gTop, W, H - gTop);
       for (let gy = gy0; gy <= gy1; gy++) {
         for (let gx = gx0; gx <= gx1; gx++) {
@@ -2167,7 +2204,7 @@
           let rr, gg, bb2;
           // 农场基色: 大块起伏取代奇偶棋盘，近看也不像铺瓷砖
           const patch = Math.sin(gx * 0.52 + gy * 0.37) * 7 + Math.sin(gx * 0.19 - gy * 0.24) * 5;
-          const stripe = ((gx + gy) & 1) ? -1.2 : 0;
+          const stripe = ((gx + gy) & 1) ? -0.35 : 0;
           const nzIn = (r1 - 0.5) * 6;
           let fr = 134 + patch + stripe + nzIn, fg = 170 + patch * 0.85 + stripe + nzIn * 0.7, fb = 66 + patch * 0.4 + stripe * 0.6 + nzIn * 0.5;
           if (inWorld && !owned) { fr = fr * 0.95 + 7; fg = fg * 0.95 + 4; fb = fb * 0.93 + 7; }
@@ -2178,26 +2215,27 @@
           const dOut = Math.max(0, Math.max(-gx, -gy, gx - (COLS - 1), gy - (ROWS - 1)));
           const wMix = Math.max(0, Math.min(1, dOut / 6));
           rr = fr * (1 - wMix) + wr * wMix; gg = fg * (1 - wMix) + wg * wMix; bb2 = fb * (1 - wMix) + wb * wMix;
-          // 地平薄雾: 靠近林线的两行渐渐融进雾色
-          const dHl = (c.y - hl) / (th * 3.2);
+          // 地平：近山脚不画菱形格（宣传图远坡是一整片），再往前才淡入草地格
+          const dHl = (c.y - hl) / (th * 4.4);
+          if (dHl < 0.7) continue;
           if (dHl < 1) {
             const k = Math.max(0, Math.min(1, dHl));
             rr = rr * k + HAZE.r * (1 - k); gg = gg * k + HAZE.g * (1 - k); bb2 = bb2 * k + HAZE.b * (1 - k);
           }
-          // 远景收掉菱形条带对比，草地更像宣传图的一整片，而不是格子被单
-          if (dHl < 2.4) {
-            const fade = Math.max(0, Math.min(1, 1 - dHl / 2.4));
-            const midR = (rr + 132) / 2, midG = (gg + 168) / 2, midB = (bb2 + 68) / 2;
-            rr = rr * (1 - fade) + midR * fade;
-            gg = gg * (1 - fade) + midG * fade;
-            bb2 = bb2 * (1 - fade) + midB * fade;
+          if (dHl < 1.8) {
+            const fade = Math.max(0, Math.min(1, 1 - dHl / 1.8));
+            rr = rr * (1 - fade) + 127 * fade;
+            gg = gg * (1 - fade) + 160 * fade;
+            bb2 = bb2 * (1 - fade) + 80 * fade;
           }
           ctx.fillStyle = 'rgb(' + (rr | 0) + ',' + (gg | 0) + ',' + (bb2 | 0) + ')';
+          ctx.globalAlpha = dHl < 1.15 ? Math.max(0.15, (dHl - 0.7) / 0.45) : 1;
           this._diamond(c.x, c.y, tw * 1.08, th * 1.08);
           ctx.fill();
+          ctx.globalAlpha = 1;
           // 点缀: 草簇(内外都有, 外面更密) / 小花(只在农场内)
           const tuftP = inWorld ? 0.82 : 0.72;
-          if (r2 > tuftP && dHl > 0.55) {
+          if (r2 > tuftP && dHl > 1.15) {
             ctx.strokeStyle = inWorld ? '#5e8a38' : '#6d8840';
             ctx.lineWidth = Math.max(0.8, tw * 0.018); ctx.lineCap = 'round';
             const bx = c.x + (r1 - 0.5) * tw * 0.4, byy = c.y + (r2 - 0.5) * th * 0.4;
@@ -2222,27 +2260,8 @@
     },
     /* 云杉林的长影子：光从左上打来，影子往右下铺在草甸上。
        跟宣传图同一套光方向；画进相机缓存，30fps 零成本。 */
-    _drawTreeShadows(W, H, hl) {
-      const ctx = this._ctx, tw = this._tw(), th = this._th();
-      if (hl > H + th * 4 || hl < -th * 8) return;
-      ctx.save();
-      const step = tw * 1.35;
-      const x0 = -((this._camX * 0.7) % step) - step * 2;
-      for (let x = x0; x < W + step * 2; x += step) {
-        const seed = Math.abs(Math.round((x + this._camX) / step));
-        const hsh = ((seed * 2654435761) >>> 0) % 1000 / 1000;
-        if (hsh < 0.38) continue;
-        const len = th * (3.6 + hsh * 5.2);
-        const wid = tw * (0.42 + hsh * 0.28);
-        const ang = 0.58 + (hsh - 0.5) * 0.22;
-        const cx = x + tw * (0.6 + hsh * 0.5);
-        const cy = hl + th * 1.8 + len * 0.40;
-        ctx.fillStyle = 'rgba(32,44,16,0.08)';
-        ctx.beginPath(); ctx.ellipse(cx, cy, wid * 1.45, len * 1.12, ang, 0, 6.283); ctx.fill();
-        ctx.fillStyle = 'rgba(32,44,16,' + (0.12 + hsh * 0.06) + ')';
-        ctx.beginPath(); ctx.ellipse(cx, cy, wid, len, ang, 0, 6.283); ctx.fill();
-      }
-      ctx.restore();
+    _drawTreeShadows() {
+      // 云杉墙已经改成坡上散树，旧的林脚长影子会变成半山腰脏斑，不再画。
     },
     /* 整幅暖光罩：让作物/建筑贴图也沾上宣传图的金色侧光，很淡，不把菜染黄。 */
     _drawGoldenHour(W, H) {
@@ -2312,41 +2331,35 @@
       const ctx = this._ctx, tw = this._tw(), th = this._th();
       const hl = this._cell(0, -3).y;
       if (hl > H + th * 6) return;
+      // 对齐宣传图 8.jpg：远景是金绿滚圆草坡 + 零星圆树，没有锯齿云杉墙
       const hill = (yOff, amp, col, phase) => {
         ctx.fillStyle = col;
         ctx.beginPath();
-        const n = 28;
+        const n = 32;
         for (let i = 0; i <= n; i++) {
           const x = (i / n) * W;
-          const wx = (x + this._camX * 0.35) / (W / 2.2);
-          const ph = Math.sin(wx + phase) * amp + Math.sin(wx * 2.3 + phase * 1.7) * amp * 0.35;
+          const wx = (x + this._camX * 0.28) / (W / 2.4);
+          const ph = Math.sin(wx + phase) * amp + Math.sin(wx * 1.7 + phase * 1.4) * amp * 0.4;
           if (i === 0) ctx.moveTo(x, hl - yOff + ph); else ctx.lineTo(x, hl - yOff + ph);
         }
-        ctx.lineTo(W, hl + th * 2); ctx.lineTo(0, hl + th * 2); ctx.closePath(); ctx.fill();
+        ctx.lineTo(W, hl + th * 3); ctx.lineTo(0, hl + th * 3); ctx.closePath(); ctx.fill();
       };
-      hill(th * 6.2, th * 1.05, '#d2c4a0', 0.4);
-      hill(th * 4.6, th * 0.95, '#b8b07a', 1.6);
-      hill(th * 3.1, th * 1.15, '#7f9a58', 2.9);
-      ctx.fillStyle = '#2c4632';
-      ctx.beginPath();
-      ctx.moveTo(-tw, hl + th * 1.15);
-      const band = 22;
-      for (let i = 0; i <= band; i++) {
-        const x = (i / band) * W;
-        const wx = (x + this._camX) / (tw * 1.4);
-        ctx.lineTo(x, hl - th * (0.15 + 0.22 * (0.5 + 0.5 * Math.sin(wx * 1.7))));
-      }
-      ctx.lineTo(W + tw, hl + th * 1.15);
-      ctx.closePath();
-      ctx.fill();
-      const step = tw * 0.44;
-      const x0 = -((this._camX * 1.0) % step) - step * 2;
-      for (let x = x0; x < W + step * 2; x += step) {
-        const seed = Math.abs(Math.round((x + this._camX) / step));
+      hill(th * 7.4, th * 1.15, '#e8c99a', 0.3);
+      hill(th * 5.6, th * 1.05, '#d2c07a', 1.4);
+      hill(th * 4.0, th * 1.20, '#a8b86a', 2.6);
+      hill(th * 2.5, th * 0.95, '#7fa050', 0.9);
+      // 坡上散落圆树 + 几棵细柏，像宣传图后景，不要一排尖塔
+      const step = tw * 2.2;
+      const x0 = -((this._camX * 0.55) % step) - step;
+      for (let x = x0; x < W + step; x += step) {
+        const seed = Math.abs(Math.round((x + this._camX * 0.55) / step));
         const hsh = ((seed * 2654435761) >>> 0) % 1000 / 1000;
-        if (hsh < 0.10) continue;
-        const hgt = th * (1.15 + hsh * 2.15);
-        this._drawSpruce(x + (hsh - 0.5) * step * 0.7, hl + th * 0.52, hgt);
+        if (hsh < 0.22) continue;
+        const tx = x + (hsh - 0.5) * tw;
+        const ty = hl - th * (1.4 + hsh * 3.2);
+        const ts = tw * (0.42 + hsh * 0.50);
+        if (hsh > 0.78) this._cypress(tx, ty, ts * 1.15);
+        else this._tree(tx, ty, ts);
       }
     },
     /* 地平薄雾: 必须画在**地面之后**(第一版画在 _drawHorizon 里, 随即被地面
@@ -2355,11 +2368,11 @@
       const ctx = this._ctx, th = this._th();
       const hl = this._cell(0, -3).y;
       if (hl > H + th * 4 || hl < -th * 6) return;
-      const mist = ctx.createLinearGradient(0, hl - th * 0.6, 0, hl + th * 2.4);
-      mist.addColorStop(0, 'rgba(62,78,42,0.38)');
-      mist.addColorStop(0.4, 'rgba(220,190,130,0.26)');
+      const mist = ctx.createLinearGradient(0, hl - th * 0.8, 0, hl + th * 2.8);
+      mist.addColorStop(0, 'rgba(232,201,154,0.18)');
+      mist.addColorStop(0.45, 'rgba(220,190,130,0.08)');
       mist.addColorStop(1, 'rgba(220,190,130,0)');
-      ctx.fillStyle = mist; ctx.fillRect(0, hl - th * 0.6, W, th * 3.0);
+      ctx.fillStyle = mist; ctx.fillRect(0, hl - th * 0.8, W, th * 3.6);
     },
 
     _blitBackdrop(ctx, W, H) {
@@ -2578,9 +2591,7 @@
     _drawPlot(plot, gx, gy, idx) {
       const ctx = this._ctx, tw = this._tw(), th = this._th(), c = this._cell(gx, gy);
       if (!plot.unlocked) {   // locked → a DIMMED tilled bed (consistent with the field) + lock badge
-        const im = this._img.hd_soil;
-        if (im) { const w = tw * BED_W, sc = w / im.width, dh = im.height * sc; ctx.save(); ctx.globalAlpha = 0.5; ctx.drawImage(im, c.x - w / 2, c.y - dh * 0.42, w, dh); ctx.restore(); }
-        else { this._diamond(c.x, c.y, tw * 0.88, th * 0.88); ctx.fillStyle = 'rgba(120,90,60,0.5)'; ctx.fill(); }
+        ctx.save(); ctx.globalAlpha = 0.45; this._drawFurrowBed(c); ctx.restore();
         this._diamond(c.x, c.y, tw * 0.96, th * 0.96); ctx.fillStyle = 'rgba(55,65,50,0.3)'; ctx.fill();
         // 徽章 LOD（audit B2 P1）：只有「下一档可解锁」等级的地块画完整 🔒+Lv
         // 徽章（同档 ≤2 块，互不相邻遮挡）；更远档的锁定格只画一枚半透明小锁点，
@@ -2616,18 +2627,24 @@
       // soft contact shadow so the plant sits IN the bed (not floating)
       this._shadow(c.x, c.y + th * 0.42, tw * (0.4 + fr * 0.12));
       if (mature) {
-        // 根部金色光晕脉动: 丰收的暖意; 徽章 LOD 的低噪声档全靠它指认
         const pulse = 0.5 + 0.5 * Math.sin(tNow * 2.2 + gx + gy);
-        const gl = ctx.createRadialGradient(c.x, c.y + th * 0.30, th * 0.05, c.x, c.y + th * 0.30, tw * 0.52);
-        gl.addColorStop(0, 'rgba(255,214,110,' + (0.28 + pulse * 0.22) + ')');
+        const gl = ctx.createRadialGradient(c.x, c.y + th * 0.30, th * 0.04, c.x, c.y + th * 0.30, tw * 0.38);
+        gl.addColorStop(0, 'rgba(255,214,110,' + (0.10 + pulse * 0.08) + ')');
         gl.addColorStop(1, 'rgba(255,214,110,0)');
         ctx.fillStyle = gl;
-        ctx.beginPath(); ctx.ellipse(c.x, c.y + th * 0.30, tw * 0.52, th * 0.42, 0, 0, 6.283); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(c.x, c.y + th * 0.30, tw * 0.38, th * 0.28, 0, 0, 6.283); ctx.fill();
       }
       let plantTopY = c.y - th * 1.3;   // fallback bubble anchor
-      if (ISO_CROPS[plot.crop]) {   // pure-plant 4-stage sprite — FIXED scale (260px base) → seedling small
+      if (ISO_CROPS[plot.crop]) {
         const im = this._lazyImg(ISO_CROPS[plot.crop] + '_' + fr);
-        if (im) { const s = (th * 1.5) / 260, w = im.width * s, h = im.height * s; const topY = (c.y + th * 0.34 - ripe) - h; ctx.drawImage(im, c.x - w / 2, topY, w, h); plantTopY = topY; }   // crop ref shrunk th*2.2→1.5 (Chris: 菜比房子大)
+        if (im) {
+          // 宣传图里菜把头铺满土床、根部埋进垄里，不要小贴纸飘在格子上
+          const s = (th * (0.92 + fr * 0.14)) / 260;
+          const w = im.width * s, h = im.height * s;
+          const topY = (c.y + th * 0.34 - ripe) - h;
+          ctx.drawImage(im, c.x - w / 2, topY, w, h);
+          plantTopY = topY;
+        }
         else { const def = Farm.crops.get(plot.crop); ctx.font = (th * 1.1) + 'px sans-serif'; ctx.fillText((def && def.icon) || '🌿', c.x, by); }
       } else if (mature) {
         const im = this._cropSprite(plot.crop);
