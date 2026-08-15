@@ -24,7 +24,9 @@ FarmVille）都是免费入门 + 内购逼氪 —— **你往游戏里掏钱**�
 二维码指向 `https://farm.easternmarket.ca/`，高容错等级（印刷上被挡一点也能扫）。
 
 重新生成游戏画面：`node scripts/promo_shots.mjs promo`（需先起本地服务器）。
-插画级 key art 走 Gemini：见 `docs/PROMO-KEY-ART-PROMPTS.md`。
+布局规矩：🔒 **水塘不许压在乡路上** —— 路是 `A(24,9.8) → 菜摊正前方 → 西南延伸`，
+摊在 (8,9) 时路带落在 `y≈11.3–12.7`；水塘放路**北侧**前景，构成「菜地 → 水塘 → 乡路」的层次。
+插画级 key art 走 **Grok**：提示词包见 `docs/PROMO-KEY-ART-PROMPTS.md`（5 组 + 出图不理想的对症表）。
 
 ---
 
