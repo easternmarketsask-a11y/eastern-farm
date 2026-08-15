@@ -1,0 +1,150 @@
+/**
+ * stall.js — 菜摊：路人溢价买菜（2026-08-14）
+ *
+ * 起因（Chris）：「种子店那个摊位看起来就是菜摊，干脆就作为菜摊用，
+ * 可以卖菜给路人。种子店不需要实体。」
+ *
+ * 玩法：菜摊隔一阵来一位路人，想买 1-3 棵指定的菜，出价比市价高
+ * 35%-60%。仓库里有货就能成交 —— 大宗卖超市（谷仓）、零售卖路人（菜摊），
+ * 两条卖菜路互补，路人还是一个「过会儿再回来看看」的回访钩子。
+ *
+ * 成本安全：只发农场币（零真实成本），不发超市积分。
+ * 溢价上限 1.6×、每单 ≤3 棵、间隔 ≥25 分钟 —— 收益是零花不是印钞。
+ *
+ * 存档：state.data.stall = { customer, nextAt, sold }（懒初始化，
+ * 老存档无此键照常工作）。所有时刻用绝对时间戳，离线也会自然到点。
+ */
+(function () {
+  const CUSTOMERS = [
+    { zh: '王阿姨', en: 'Auntie Wang', face: '👵' },
+    { zh: '李大爷', en: 'Grandpa Li', face: '👴' },
+    { zh: '放学的小豆', en: 'Little Dou', face: '🧒' },
+    { zh: '陈太太', en: 'Mrs. Chen', face: '👩' },
+    { zh: '大厨老周', en: 'Chef Zhou', face: '🧑‍🍳' },
+    { zh: '晨跑的邻居', en: 'Jogging neighbour', face: '🏃' },
+  ];
+  const WAIT_MS = 3 * 3600e3;          // 路人最多等 3 小时
+  const GAP_MIN = 25, GAP_MAX = 45;    // 成交后下一位的间隔（分钟）
+  const FIRST_DELAY_MS = 4 * 60e3;     // 新农场开张 4 分钟后来第一位
+
+  const stall = {
+    _st() {
+      const d = Farm.state.data;
+      if (!d.stall) d.stall = { nextAt: Date.now() + FIRST_DELAY_MS, sold: 0 };
+      return d.stall;
+    },
+
+    // 当前路人（顺带推进状态机：过期离开 / 到点来新客）。
+    customer() {
+      const st = this._st(), now = Date.now();
+      if (st.customer && now > st.customer.expireAt) {
+        st.customer = null;
+        st.nextAt = now + 60e3;        // 空档 1 分钟，别立刻刷脸
+        Farm.state.save();
+      }
+      if (!st.customer && now >= (st.nextAt || 0)) this._spawn();
+      return st.customer || null;
+    },
+
+    _spawn() {
+      const lvl = (Farm.state.data.level || 1);
+      const pool = (Farm.crops.available ? Farm.crops.available(lvl, null) : Farm.crops.all())
+        .filter((c) => c && c.sell_price > 0);
+      if (!pool.length) return;
+      const def = pool[Math.floor(Math.random() * pool.length)];
+      const qty = 1 + Math.floor(Math.random() * Math.min(3, 1 + Math.floor(lvl / 3)));
+      const mult = 1.35 + Math.random() * 0.25;
+      const unit = Farm.crops.sellPriceOf ? Farm.crops.sellPriceOf(def) : def.sell_price;
+      const who = CUSTOMERS[Math.floor(Math.random() * CUSTOMERS.length)];
+      const now = Date.now();
+      this._st().customer = {
+        crop: def.id, qty,
+        price: Math.ceil(unit * qty * mult),
+        pct: Math.round((mult - 1) * 100),
+        zh: who.zh, en: who.en, face: who.face,
+        bornAt: now, expireAt: now + WAIT_MS,
+      };
+      Farm.state.save();
+    },
+
+    stockOf(cropId) {
+      return (Farm.state.data.warehouse || []).filter((w) => w && w.cropId === cropId).length;
+    },
+
+    sell() {
+      const st = this._st(), c = st.customer;
+      const en = (Farm.state.data.language === 'en');
+      if (!c) return;
+      if (this.stockOf(c.crop) < c.qty) {
+        if (Farm.ui && Farm.ui.toast) Farm.ui.toast(en ? 'Not enough in the silo' : '仓库里的货不够');
+        return;
+      }
+      // 从仓库取走 qty 棵该作物
+      const wh = Farm.state.data.warehouse;
+      let left = c.qty;
+      for (let i = wh.length - 1; i >= 0 && left > 0; i--) {
+        if (wh[i] && wh[i].cropId === c.crop) { wh.splice(i, 1); left--; }
+      }
+      Farm.state.addCoins(c.price);
+      if (Farm.state.addXp) Farm.state.addXp(2 + c.qty);
+      st.sold = (st.sold || 0) + 1;
+      st.customer = null;
+      st.nextAt = Date.now() + (GAP_MIN + Math.random() * (GAP_MAX - GAP_MIN)) * 60e3;
+      Farm.state.save();
+      if (Farm.audio) Farm.audio.play('coin');
+      if (Farm.ui) {
+        if (Farm.ui.refreshHUD) Farm.ui.refreshHUD();
+        if (Farm.ui.toast) Farm.ui.toast((en
+          ? (c.face + ' ' + c.en + ' bought ' + c.qty + ' — +' + c.price + ' coins!')
+          : (c.face + ' ' + c.zh + '买走了 ' + c.qty + ' 棵 · +' + c.price + ' 农场币！')), 3200);
+      }
+      if (Farm.isoView && Farm.isoView.render) Farm.isoView.render();
+    },
+
+    open() {
+      if (!(Farm.ui && Farm.ui.showModal)) return;
+      const en = (Farm.state.data.language === 'en');
+      const c = this.customer();
+      let body;
+      if (!c) {
+        const st = this._st();
+        const mins = Math.max(1, Math.ceil(((st.nextAt || 0) - Date.now()) / 60e3));
+        body = '<div style="text-align:center;padding:16px 4px;">'
+          + '<div style="font-size:44px;">🥬</div>'
+          + '<div style="font-size:13.5px;color:var(--warm-text-soft);margin-top:8px;line-height:1.6;">'
+          + (en ? ('No customer right now — someone should stroll by in ~' + mins + ' min.')
+                : ('这会儿没有客人，大约 ' + mins + ' 分钟后会有路人逛过来。'))
+          + '</div></div>';
+      } else {
+        const def = Farm.crops.get(c.crop) || {};
+        const cropName = en ? (def.name_en || c.crop) : (def.name_zh || c.crop);
+        const stock = this.stockOf(c.crop);
+        const enough = stock >= c.qty;
+        body = '<div style="text-align:center;">'
+          + '<div style="font-size:46px;line-height:1;">' + c.face + '</div>'
+          + '<div style="font-family:var(--font-display);font-size:18px;margin-top:6px;">' + (en ? c.en : c.zh) + '</div>'
+          + '<div style="margin:12px 0;padding:12px;border:1.5px dashed var(--border-soft);border-radius:12px;font-size:14px;line-height:1.7;">'
+          + (en ? ('Wants <b>' + c.qty + ' × ' + (def.icon || '🥬') + ' ' + cropName + '</b><br>offering <b>' + c.price + '</b> <span class="coin-icon"></span> <span style="color:var(--leaf-dark);font-weight:600;">(+' + c.pct + '% vs market)</span>')
+                : ('想买 <b>' + c.qty + ' 棵 ' + (def.icon || '🥬') + ' ' + cropName + '</b><br>出价 <b>' + c.price + '</b> <span class="coin-icon"></span> <span style="color:var(--leaf-dark);font-weight:600;">（比市价高 ' + c.pct + '%）</span>'))
+          + '</div>'
+          + '<div style="font-size:12px;color:var(--warm-text-soft);margin-bottom:10px;">'
+          + (en ? ('In silo: ' + stock) : ('仓库现有：' + stock + ' 棵')) + '</div>'
+          + (enough
+            ? '<button class="btn" id="stallSellBtn" style="width:100%;">' + (en ? 'Sell' : '卖给TA') + ' · +' + c.price + ' <span class="coin-icon"></span></button>'
+            : '<button class="btn secondary" disabled style="width:100%;">' + (en ? 'Not enough stock — grow some!' : '货不够 · 先去种点吧') + '</button>')
+          + '</div>';
+      }
+      body += '<div style="font-size:11.5px;color:var(--warm-text-soft);text-align:center;margin-top:10px;">'
+        + (en ? 'Passersby pay above market price. Bulk sales still go via the barn.'
+              : '路人出价比超市高；大宗卖菜还是走谷仓。') + '</div>'
+        + '<div class="btn-row" style="margin-top:12px;"><button class="btn secondary" onclick="Farm.ui.hideModal()" style="width:100%;">'
+        + (en ? 'Close' : '关闭') + '</button></div>';
+      Farm.ui.showModal('<h2 class="modal-title">' + (en ? 'Veggie Stand' : '菜摊') + '</h2>' + body);
+      const btn = document.getElementById('stallSellBtn');
+      if (btn) btn.onclick = () => { Farm.ui.hideModal(); this.sell(); };
+    },
+  };
+
+  window.Farm = window.Farm || {};
+  window.Farm.stall = stall;
+})();

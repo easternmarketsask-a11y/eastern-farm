@@ -100,11 +100,11 @@
     // 花坛 → 暖窗灯+炊烟 → 彩旗 → 金色灯串, 尺寸也随级微涨。水塘同款手绘工艺。
     home: { img: 'house', w: 2, h: 2, sc: 2.3, zh: '我的家', en: 'My Home', tap: 'home', cost: 300, unique: true },
     barn: { img: 'barn', w: 2, h: 2, sc: 2.4, zh: '谷仓·仓库', en: 'Barn · Storage', tap: 'warehouse', cost: 350 },
-    // 种子店(类型名 house 是历史存档键, 不能改): 2026-08-14 换用摊位贴图 ——
-    // Chris:「种子店看起来像住房不像商店, 建筑要跟用途匹配利于识别」。
-    // 红白雨棚+菜筐一眼是店; 空白招牌由 _drawShopSign 画上「种子」。
-    // 房子贴图让给「我的家」专用, 从此一图一义。
-    house: { img: 'stall', w: 2, h: 2, sc: 2.8, zh: '种子铺', en: 'Seed Stand', tap: 'shop', cost: 400 },
+    // 菜摊(类型名 house 是历史存档键, 不能改): 2026-08-14 二次定位 ——
+    // Chris:「摊位看起来就是菜摊, 干脆作为菜摊用, 卖菜给路人; 种子店不需要实体」。
+    // 点摊 → Farm.stall(路人溢价买菜); 买种子走底部「商店」按钮, 无实体入口。
+    // 全场限一座(一位路人一处招呼)。招牌由 _drawShopSign 画「菜摊」。
+    house: { img: 'stall', w: 2, h: 2, sc: 2.8, zh: '菜摊', en: 'Veggie Stand', tap: 'stall_sale', cost: 400, unique: true },
     greenhouse: { img: 'greenhouse', w: 2, h: 2, sc: 2.4, zh: '温室', en: 'Greenhouse', cost: 600 },
     coop: { img: 'coop', w: 2, h: 2, sc: 2.3, zh: '鸡舍', en: 'Coop', cost: 450 },
     stall: { img: 'stall', w: 2, h: 2, sc: 2.8, zh: '超市摊位', en: 'Stall', cost: 320 },
@@ -707,7 +707,7 @@
       const hit = this._plotAtPoint(p.x, p.y);
       if (hit) { this._tapCell(hit.gx, hit.gy); return; }
       const bidx = this._buildingAtPoint(p.x, p.y);
-      if (bidx >= 0) { this._stickyEnd(); const o = Farm.state.data.map[bidx], b = BUILDINGS[o.type]; if (o.type === 'coop') { this._collectCoop(o, p); } else if (b.tap === 'home') { this._openHomePanel(bidx); } else if (b.tap === 'warehouse' && Farm.warehouse && Farm.warehouse.open) Farm.warehouse.open(); else if (b.tap === 'shop' && Farm.shop && Farm.shop.open) Farm.shop.open(); else if (Farm.ui && Farm.ui.toast) Farm.ui.toast(this._lang() === 'en' ? b.en : b.zh); return; }
+      if (bidx >= 0) { this._stickyEnd(); const o = Farm.state.data.map[bidx], b = BUILDINGS[o.type]; if (o.type === 'coop') { this._collectCoop(o, p); } else if (b.tap === 'home') { this._openHomePanel(bidx); } else if (b.tap === 'stall_sale' && Farm.stall) { Farm.stall.open(); } else if (b.tap === 'warehouse' && Farm.warehouse && Farm.warehouse.open) Farm.warehouse.open(); else if (b.tap === 'shop' && Farm.shop && Farm.shop.open) Farm.shop.open(); else if (Farm.ui && Farm.ui.toast) Farm.ui.toast(this._lang() === 'en' ? b.en : b.zh); return; }
       this._tapCell(c.gx, c.gy);
     },
     // Frontmost plot whose on-screen sprite box contains (px,py). Planted plots get
@@ -1023,7 +1023,7 @@
       if (fs < 7) return;   // 缩得太小就别画了, 糊成一团反而脏
       ctx.save();
       const en = this._lang() === 'en';
-      const txt = en ? 'SEEDS' : '种子';
+      const txt = en ? 'FRESH' : '菜摊';
       // 木牌底 + 字: 贴图上那块板离菜筐太近, 裸写字会压在菜叶花色上读不清 ——
       // 自己垫一块奶油底小木牌(截图校准过位置), 任何背景下都清楚。
       ctx.translate(cx - w * 0.075, by - h * 0.487);
@@ -1053,7 +1053,11 @@
       if (b.unique) {
         const map = Farm.state.data.map || [];
         const at = map.findIndex((m) => m && m.type === type);
-        if (at >= 0) { this._openHomePanel(at); return; }
+        if (at >= 0) {
+          if (type === 'home') this._openHomePanel(at);
+          else if (b.tap === 'stall_sale' && Farm.stall) Farm.stall.open();
+          return;
+        }
       }
       // must be able to afford it (农场币) — show the shortfall, nudge to earn more.
       if (cost > 0 && Farm.state.data.coins < cost) {
@@ -1902,7 +1906,29 @@
       const hz = o.type === 'home' ? (1 + 0.035 * (homeLv - 1)) : 1;
       if (!this._blit(this._img[b.img], cc.x, by, b.w * tw * 0.92 * BLD * pk * hz, b.sc * th * 2.2 * BLD * pk * hz)) { ctx.fillStyle = '#c0392b'; ctx.fillRect(cc.x - tw * 0.4, by - th, tw * 0.8, th); }
       if (o.type === 'home' && homeLv > 1 && !moving) this._drawHomeExtras(cc.x, by, b.w * tw * 0.92 * BLD * hz, b.sc * th * 2.2 * BLD * hz, homeLv);
-      if (o.type === 'house' && !moving) this._drawShopSign(cc.x, by, b.w * tw * 0.92 * BLD, b.sc * th * 2.2 * BLD);
+      if (o.type === 'house' && !moving) {
+        this._drawShopSign(cc.x, by, b.w * tw * 0.92 * BLD, b.sc * th * 2.2 * BLD);
+        // 路人在摊前等着买菜(想要的菜画在头顶泡泡里, 鸡舍鸡蛋泡同款样式)
+        if (!this._build && Farm.stall) {
+          const cu = Farm.stall.customer();
+          if (cu) {
+            const t2 = Date.now() / 1000, bob = Math.sin(t2 * 2) * th * 0.04;
+            // 站右前方空地(左边常是谷仓, 会把人挡住 —— 截图实证过)
+            const px2 = cc.x + tw * 0.78, py2 = by + th * 0.58;
+            ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+            ctx.font = (th * 1.15) + 'px sans-serif';
+            ctx.fillText(cu.face, px2, py2 + bob * 0.3);
+            const def2 = Farm.crops.get(cu.crop);
+            const r2 = th * 0.34, byy2 = py2 - th * 1.6 + bob;
+            ctx.beginPath(); ctx.arc(px2, byy2, r2, 0, 6.283);
+            ctx.fillStyle = 'rgba(255,255,255,0.96)'; ctx.fill();
+            ctx.strokeStyle = 'rgba(120,150,90,0.9)'; ctx.lineWidth = Math.max(1.1, th * 0.045); ctx.stroke();
+            ctx.font = (r2 * 1.15) + 'px sans-serif'; ctx.textBaseline = 'middle';
+            ctx.fillText((def2 && def2.icon) || '🥬', px2, byy2 + r2 * 0.06);
+            ctx.textBaseline = 'alphabetic';
+          }
+        }
+      }
       ctx.globalAlpha = 1;
       // coop ready-to-collect egg bubble (read the real map entry for eggAt)
       // coop ready-to-collect indicator: a SMALL egg bubble nestled just above the
