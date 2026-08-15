@@ -725,10 +725,10 @@
             <div style="font-weight:600;margin-bottom:6px;font-size:13px;">${lang === 'en' ? 'Story' : '小故事'}</div>
             <div style="font-size:13px;line-height:1.6;">${c[storyKey] || ''}</div>
           </div>
-          <div style="padding:12px;background:#fff3d6;border-radius:var(--radius-md);margin-bottom:12px;">
+          ${c[recipeKey] ? `<div style="padding:12px;background:#fff3d6;border-radius:var(--radius-md);margin-bottom:12px;">
             <div style="font-weight:600;margin-bottom:6px;font-size:13px;">${lang === 'en' ? '🍳 Try this recipe' : '🍳 推荐做法'}</div>
-            <div style="font-size:13px;line-height:1.6;">${c[recipeKey] || ''}</div>
-          </div>
+            <div style="font-size:13px;line-height:1.6;">${c[recipeKey]}</div>
+          </div>` : ''}
           <div class="btn-row">
             <button class="btn secondary" id="backToCollection">${Farm.i18n.t('btn_close')}</button>
           </div>

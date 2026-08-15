@@ -51,6 +51,8 @@
     try {
       const d = window.Farm && Farm.state && Farm.state.data;
       if (!d) return false;
+      // 新手聚光灯进行中不弹（第一次收获恰好发生在引导中段，横幅会压在「点谷仓」提示上）
+      if (Farm.ui && Farm.ui.isBusy && Farm.ui.isBusy()) return false;
       return (d.totalHarvests || 0) > 0 || d.firstHarvestCelebrated === true || (d.loginStreak || 0) >= 2;
     } catch (e) { return false; }
   }
