@@ -143,6 +143,7 @@
       // unavailable (offline, CDN blocked, etc.) — game continues as guest.
       if (Farm.fbAuth) Farm.fbAuth.init();
       if (Farm.fbQueue) Farm.fbQueue.install();
+      if (Farm.lifeStory) Farm.lifeStory.install();   // 农场人生: 章节信轮询
       // Firebase SDK 现在是动态加载的（见 index.html），此刻可能还没到，上面两行
       // 会因 Farm.fb.available=false 提前返回。打上标记，等 SDK 落地后
       // firebase-init.js 的 fbLateInit 负责补跑，避免登录静默失效。
@@ -452,6 +453,7 @@
       { a: 'tasks', icon: 'tasks', zh: '任务', en: 'Tasks' },
       { a: 'orders', icon: 'orders', zh: '小东订单', en: 'Orders' },
       { a: 'storeRewards', icon: 'receipt', zh: '领取到店奖励', en: 'Store Rewards' },
+      { a: 'story', icon: 'receipt', zh: '农场人生', en: 'My Story' },
       { a: 'kitchen', icon: 'kitchen', zh: '小东厨房', en: 'Kitchen' },
       { a: 'community', icon: 'community', zh: '社区', en: 'Community' },
       { a: 'store', icon: 'mall', zh: '农场商城', en: 'Mall' },
@@ -474,6 +476,7 @@
           case 'tasks': Farm.tasks.open(); break;
           case 'orders': if (Farm.orders) Farm.orders.open(); break;
           case 'storeRewards': if (Farm.storeRewards) Farm.storeRewards.open(); break;
+          case 'story': if (Farm.lifeStory) Farm.lifeStory.open(); break;
           case 'kitchen': if (Farm.kitchen) Farm.kitchen.open(); break;
           case 'community': if (Farm.neighbors) Farm.neighbors.open(); break;
           case 'store': if (Farm.epShop) Farm.epShop.open(); break;

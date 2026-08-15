@@ -1,0 +1,82 @@
+{
+  "_comment": "农场人生章节表(2026-08-14)。主线=安居乐业: 落脚→建家→拾掇院子→好日子→梦想庄园(Chris: 打造升级住房和生活劳作环境是重要目标)。from_lv 决定章节归属; goals.type 见 life-story.js CHECKERS; reward 只发农场币(零真实成本)。信是小东写的, 口吻=东方超市的热心店员。改文案/目标/奖励直接改这里, 不用动代码。",
+  "chapters": [
+    {
+      "id": "ch1",
+      "from_lv": 1,
+      "name_zh": "初来乍到",
+      "name_en": "New in Town",
+      "letter_zh": "欢迎来到萨斯卡通！听说你在城边安了家，后院还有块好地。\n\n我是东方超市的小东。冬天长，日子要自己种出滋味来——先把地翻了，种点青菜。收成了拿来店里，我按好价收！\n\n—— 小东",
+      "letter_en": "Welcome to Saskatoon! Heard you settled on the edge of town with a good patch of land.\n\nI'm Xiaodong from Eastern Market. Winters are long here — a garden makes the days taste better. Till the soil, plant some greens, and bring me your harvest. I pay fair!\n\n— Xiaodong",
+      "goals": [
+        { "id": "c1_harvest", "type": "harvests", "target": 5, "zh": "收获 5 棵菜", "en": "Harvest 5 crops", "reward": 100 },
+        { "id": "c1_deliver", "type": "deliveries", "target": 1, "zh": "第一次把菜卖给东方超市", "en": "First delivery to Eastern Market", "reward": 150 }
+      ]
+    },
+    {
+      "id": "ch2",
+      "from_lv": 3,
+      "name_zh": "安家落户",
+      "name_en": "Settling In",
+      "letter_zh": "你的菜比我进的货还新鲜！客人都问是谁家种的。\n\n地种顺了，该给自己安个真正的家了——去建一座「我的家」，再添置点花花草草。屋前有花，日子才算落了户。\n\n—— 小东",
+      "letter_en": "Your greens are fresher than my suppliers'! Customers keep asking who grows them.\n\nNow that the field runs smooth, it's time for a real home. Build your house, plant some flowers by the door — a home with blooms is a home that's settled.\n\n— Xiaodong",
+      "goals": [
+        { "id": "c2_home", "type": "home_built", "target": 1, "zh": "建起「我的家」", "en": "Build My Home", "reward": 200 },
+        { "id": "c2_deco", "type": "deco_count", "target": 2, "zh": "添置 2 件院子装饰", "en": "Place 2 decorations", "reward": 150 },
+        { "id": "c2_orders", "type": "deliveries", "target": 5, "zh": "累计交付 5 单", "en": "5 total deliveries", "reward": 200 }
+      ]
+    },
+    {
+      "id": "ch3",
+      "from_lv": 5,
+      "name_zh": "把院子拾掇起来",
+      "name_en": "Making It Pretty",
+      "letter_zh": "路过你家那条道的人都说，这院子越来越有样子了！\n\n王阿姨他们现在爱去你的菜摊——街坊的口碑就是最好的招牌。把家升一升，院子再拾掇拾掇，魅力上去了，来的人只会更多。\n\n—— 小东",
+      "letter_en": "Folks walking past your place say the yard is really coming together!\n\nAuntie Wang and the neighbours love your veggie stand now — word of mouth is the best signboard. Upgrade the house, dress up the yard, and even more will come.\n\n— Xiaodong",
+      "goals": [
+        { "id": "c3_home2", "type": "home_level", "target": 2, "zh": "家升级到「花园小屋」", "en": "Home to Garden Home", "reward": 300 },
+        { "id": "c3_charm", "type": "charm", "target": 200, "zh": "农场魅力达到 200", "en": "Farm charm 200", "reward": 250 },
+        { "id": "c3_stall", "type": "stall_sold", "target": 5, "zh": "菜摊接待 5 位路人", "en": "Serve 5 stand customers", "reward": 250 }
+      ]
+    },
+    {
+      "id": "ch4",
+      "from_lv": 7,
+      "name_zh": "好日子有模样",
+      "name_en": "The Good Life",
+      "letter_zh": "现在提起「东方农场路上那户人家」，谁都知道说的是你。\n\n地扩一扩，屋檐挂上彩旗，再养个小家伙陪你干活。日子不光要过，还要过得有模样。\n\n—— 小东",
+      "letter_en": "Say 'that family on Eastern Farm Road' and everyone knows it's you.\n\nExpand the land, hang bunting on the eaves, get a little companion for the chores. A good life should look the part.\n\n— Xiaodong",
+      "goals": [
+        { "id": "c4_home4", "type": "home_level", "target": 4, "zh": "家升级到「彩旗农舍」", "en": "Home to Festive House", "reward": 500 },
+        { "id": "c4_land", "type": "land_level", "target": 2, "zh": "农场扩建到第 2 阶", "en": "Land level 2", "reward": 400 },
+        { "id": "c4_pet", "type": "pet_count", "target": 1, "zh": "养一只小动物", "en": "Adopt a pet", "reward": 300 },
+        { "id": "c4_charm", "type": "charm", "target": 400, "zh": "农场魅力达到 400", "en": "Farm charm 400", "reward": 400 }
+      ]
+    },
+    {
+      "id": "ch5",
+      "from_lv": 9,
+      "name_zh": "梦想庄园",
+      "name_en": "Dream Estate",
+      "letter_zh": "还记得你刚来时后院那块荒地吗？\n\n现在灯串在屋檐下亮着，客人沿着路来了又走，谁看了不说一句「这就是我想过的日子」。把家升到满级吧——你配得上一座梦想庄园。\n\n—— 小东",
+      "letter_en": "Remember that bare patch behind your house when you first arrived?\n\nNow string lights glow under the eaves and visitors come and go along the road. Everyone who sees it says 'that's the life I want.' Take your home to the top — you've earned the dream estate.\n\n— Xiaodong",
+      "goals": [
+        { "id": "c5_home5", "type": "home_level", "target": 5, "zh": "家升到满级「梦想庄园」", "en": "Home to Dream Estate", "reward": 800 },
+        { "id": "c5_charm", "type": "charm", "target": 600, "zh": "农场魅力达到 600", "en": "Farm charm 600", "reward": 500 },
+        { "id": "c5_prestige", "type": "prestige", "target": 1, "zh": "拥有一件镇场之宝(拖拉机/小马/孔雀)", "en": "Own a prestige piece", "reward": 500 }
+      ]
+    },
+    {
+      "id": "ch6",
+      "from_lv": 11,
+      "name_zh": "东方农场路的传奇",
+      "name_en": "Legend of Eastern Farm Road",
+      "letter_zh": "你的农场，已经是这条路上的风景了。\n\n往后的故事没有剧本——把图鉴集全，帮帮新来的邻居，或者就在自家院子里晒晒太阳。这条路因为有你，才像个家。\n\n—— 小东",
+      "letter_en": "Your farm is the view everyone slows down for on this road.\n\nFrom here the story is yours to write — complete the collection, help the new neighbours, or just sit in your yard and soak up the sun. This road feels like home because you're on it.\n\n— Xiaodong",
+      "goals": [
+        { "id": "c6_harvest", "type": "harvests", "target": 500, "zh": "累计收获 500 棵", "en": "500 lifetime harvests", "reward": 1000 },
+        { "id": "c6_stall", "type": "stall_sold", "target": 50, "zh": "菜摊累计接待 50 位路人", "en": "Serve 50 stand customers", "reward": 800 }
+      ]
+    }
+  ]
+}

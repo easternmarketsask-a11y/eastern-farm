@@ -93,7 +93,7 @@ const PRECACHE = [
   '/src/js/firebase-push.js', '/src/js/ep-shop.js', '/src/js/ai-neighbors.js',
   '/src/js/social-steal.js', '/src/js/neighbors.js', '/src/js/home-report.js',
   '/src/js/daily.js', '/src/js/login-calendar.js', '/src/js/farm.js', '/src/js/tending.js',
-  '/src/js/seasons.js', '/src/js/harvest-status.js', '/src/js/warehouse.js', '/src/js/stall.js', '/src/js/orders.js',
+  '/src/js/seasons.js', '/src/js/harvest-status.js', '/src/js/warehouse.js', '/src/js/stall.js', '/src/js/life-story.js', '/src/js/orders.js',
   '/src/js/kitchen.js',
   '/src/js/shop.js', '/src/js/tasks.js', '/src/js/events.js', '/src/js/storekeeper.js',
   '/src/js/rewards.js', '/src/js/achievements.js', '/src/js/tutorial.js', '/src/js/guide.js',
@@ -101,7 +101,7 @@ const PRECACHE = [
   '/src/js/mapview-iso.js', '/src/js/main.js', '/src/js/pwa-install.js',
   '/data/achievements.json', '/data/ai-neighbors.json', '/data/coupons.json', '/data/crops.json',
   '/data/ep-shop.json', '/data/events.json', '/data/i18n.json', '/data/news.json', '/data/tasks.json',
-  '/data/recipes.json',
+  '/data/recipes.json', '/data/chapters.json',
 ];
 // 2026-08-11 世界杯退场：worldcup.html / worldcup.css / worldcup.js / wc2026.json
 // 一并移出预缓存。四个文件仍在仓库里、worldcup.html 直链仍可打开（联网时正常走
