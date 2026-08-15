@@ -40,12 +40,15 @@
   // footprint、菜地生长列(x1..3)之间至少隔 1 格草。**
   // 建筑占 (5..6, 2..5)，v2 最北的格是 y=7 → y=6 整排是草；x 最小 5 → 与
   // 菜地列隔着 x=4 一列草。
-  const DEFAULT_POND = { '6,7': 'water', '5,8': 'water', '6,8': 'water', '7,8': 'water', '6,9': 'water' };
+  // v3(2026-08-14): 十字形五格必然渲染成四瓣花 —— 改 2×2 实心块 + 东侧小湾,
+  // 融合后是一块圆润的不规则塘。
+  const DEFAULT_POND = { '5,7': 'water', '6,7': 'water', '5,8': 'water', '6,8': 'water', '7,8': 'water' };
   // 历代默认水塘形状 —— _migratePond 只认这些**精确形状**搬家（用户自己画的不动）：
   // v0 在菜地生长路径上（第13块地曾直接落进水里）；v1 贴着谷仓。
   const LEGACY_POND_SHAPES = [
     ['1,6', '2,6', '2,7', '3,7', '1,7'],             // v0
     ['6,6', '5,7', '6,7', '5,8', '6,8'],             // v1
+    ['6,7', '5,8', '6,8', '7,8', '6,9'],             // v2(十字→四瓣, 不真实)
   ];
   const USE_PAINTED_BG = false;   // 2026-08-14 程序化世界上线; true = 回滚旧照片背景
   const GRASS_A = '#8bbf5a', GRASS_B = '#83b653', GRASS_EDGE = 'rgba(60,90,40,0.18)';
@@ -304,8 +307,8 @@
        （pondMoveV1 是 v1 位置的旧 flag，已废弃不再读——v1 自己也成了要搬走的历史形状。） */
     _migratePond() {
       const d = Farm.state.data;
-      if (!d || d.pondMoveV2) return;
-      d.pondMoveV2 = true;   // 先落 flag：无论搬不搬，只判一次
+      if (!d || d.pondMoveV3) return;
+      d.pondMoveV3 = true;   // 先落 flag：无论搬不搬，只判一次
       const t = d.mapTerrain || {};
       const keys = Object.keys(t);
       const isLegacy = LEGACY_POND_SHAPES.some((shape) =>
@@ -705,6 +708,16 @@
       if (!p) return;
       // tap the land-unlock badge → expand the farm
       if (this._landBadge && Math.hypot(p.x - this._landBadge.x, p.y - this._landBadge.y) <= this._landBadge.r) { this._tryUnlockLand(); return; }
+      // 点远处邻居的小屋 → 去社区页拜访(小屋名牌是真实玩家, 2026-08-14)
+      if (!this._build && this._neighborHits) {
+        for (const nh of this._neighborHits) {
+          if (Math.hypot(p.x - nh.x, p.y - nh.y) <= nh.r) {
+            this._stickyEnd();
+            if (Farm.neighbors && Farm.neighbors.open) Farm.neighbors.open();
+            return;
+          }
+        }
+      }
       const c = this._screenToCell(p.x, p.y);
       if (this._build) { this._sel = this._buildingAt(c.gx, c.gy); this.render(); return; }
       const ps = this._petAt(p.x, p.y);   // tap a roaming pet → ❤️ + sound + hop
@@ -1471,10 +1484,11 @@
     _drawPond(cells) {
       if (!cells || !cells.length) return;
       const ctx = this._ctx, tw = this._tw(), th = this._th();
-      // 半径收敛（2026-08-13）：0.72/0.80 时波峰能伸进相邻格中心（归一化距离 0.93 < 1），
-      // 视觉上水漫过菜地。0.62/0.70 相邻水格仍能融成一团，但够不到邻格中心；
-      // 残余的轻微溢出由「水塘画在地块之下」兜底（见 render 里的调用处）。
-      const rx = tw * 0.62, ry = th * 0.70, oy = th * 0.12;   // per-cell blob; oy sinks it into the ground
+      // 形状调参(2026-08-14 Chris:「花瓣形水塘不真实」): 花瓣感来自相邻圆团
+      // 之间的凹陷 —— 半径加肥(0.62/0.70→0.80/0.88)让团与团融合处填满,
+      // 波动变浅(0.74+0.26→0.86+0.14)不再有深锯齿, 出来是圆润的不规则塘。
+      // 溢出邻格由「水塘画在地块之下」兜底(render 调用处), 不会漫过菜地。
+      const rx = tw * 0.80, ry = th * 0.88, oy = th * 0.12;   // per-cell blob; oy sinks it into the ground
       const t = Date.now() / 1000;
       // Build an IRREGULAR closed blob per cell (wobbly radius keyed on the cell's stable
       // seed → natural pond outline, not a uniform oval). Overlapping cell-blobs merge.
@@ -1484,7 +1498,7 @@
           const N = 16;
           for (let i = 0; i <= N; i++) {
             const a = (i / N) * 6.283;
-            const wob = 0.74 + 0.26 * (0.5 + 0.5 * Math.sin(a * 3 + c.s)) * (0.6 + 0.4 * Math.cos(a * 2 - c.s * 0.7));
+            const wob = 0.86 + 0.14 * (0.5 + 0.5 * Math.sin(a * 3 + c.s)) * (0.6 + 0.4 * Math.cos(a * 2 - c.s * 0.7));
             const x = c.x + Math.cos(a) * rx * sx * wob;
             const y = c.y + oy + Math.sin(a) * ry * sy * wob;
             if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
@@ -1709,13 +1723,62 @@
       ctx.fillRect(x + bw * 0.32, by2 - bh * 1.35, th * 0.09, th * 0.42);
       ctx.restore();
     },
-    // 远处两户邻居小屋(剪影 + 炊烟): 世界外缘锚定, 只落在明亮草甸上
+    /* 远处的邻居农场(2026-08-14 升级为真实玩家):
+       Chris:「能否各玩家的农场都有独立空间物理上不重叠, 从一个农场看到远处
+       其他农场?」—— 第一阶段: 把**真实邻居**(farm_players, 与社区页同一数据源)
+       摆在你世界的地平线上, 各占一个固定方位(uid 决定, 稳定不跳), 屋下挂
+       名牌+等级, 点小屋 → 打开社区页拜访。真正的共享世界坐标(物理不重叠的
+       区域地图)是第二阶段, 需要服务端坐标注册表, 见 roadmap。 */
+    NEIGHBOR_SPOTS: [{ gx: -2.6, gy: 1.4 }, { gx: 18.6, gy: 0.6 }, { gx: -4.2, gy: 7.5 }],
+    _loadDistantFarms() {
+      if (this._distantReq) return;
+      this._distantReq = true;
+      const tryFetch = () => {
+        if (!(Farm.neighbors && Farm.neighbors._fetchToday)) { setTimeout(tryFetch, 5000); return; }
+        Farm.neighbors._fetchToday().then((list) => {
+          this._distantFarms = (list || []).slice(0, this.NEIGHBOR_SPOTS.length)
+            .map((n) => ({ name: n.name, level: n.level || 1, emoji: n.emoji }));
+          this._bgKey = null;   // 名牌进相机缓存, 数据到了重画一次
+          if (this._on) this.render();
+        }).catch(() => {});
+      };
+      setTimeout(tryFetch, 4000);   // 等 Firebase 晚初始化完成
+    },
     _drawFarNeighbors(fit) {
-      const spots = [{ gx: -2.6, gy: 1.4 }, { gx: 18.6, gy: 0.6 }];
-      for (const sp of spots) {
+      this._loadDistantFarms();
+      const farms = this._distantFarms;
+      const th = this._th(), ctx = this._ctx;
+      this._neighborHits = [];
+      for (let i = 0; i < this.NEIGHBOR_SPOTS.length; i++) {
+        const sp = this.NEIGHBOR_SPOTS[i];
+        const nb = farms && farms[i];
+        if (!nb && i >= 2) continue;              // 没数据时保底只画前两户匿名小屋
         const c = this._cell(sp.gx, sp.gy);
-        if (fit && fit(c.x, c.y) < 0.5) continue;
         this._drawTinyCottage(c.x, c.y);
+        this._neighborHits.push({ x: c.x, y: c.y - th * 0.5, r: th * 1.5 });
+        if (nb && th > 10) {                       // 名牌: 太小就不挤了
+          const label = nb.emoji + ' ' + nb.name + ' · Lv' + nb.level;
+          const fs3 = Math.max(8, th * 0.42);
+          ctx.save();
+          ctx.font = '600 ' + fs3 + 'px "Noto Sans SC",sans-serif';
+          ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+          const wl = ctx.measureText(label).width + fs3 * 1.1;
+          const ly = c.y + th * 0.55;
+          ctx.globalAlpha = 0.88;
+          ctx.fillStyle = 'rgba(255,252,242,0.92)';
+          ctx.beginPath();
+          const rr3 = fs3 * 0.65;
+          ctx.moveTo(c.x - wl / 2 + rr3, ly - fs3 * 0.75);
+          ctx.arcTo(c.x + wl / 2, ly - fs3 * 0.75, c.x + wl / 2, ly + fs3 * 0.75, rr3);
+          ctx.arcTo(c.x + wl / 2, ly + fs3 * 0.75, c.x - wl / 2, ly + fs3 * 0.75, rr3);
+          ctx.arcTo(c.x - wl / 2, ly + fs3 * 0.75, c.x - wl / 2, ly - fs3 * 0.75, rr3);
+          ctx.arcTo(c.x - wl / 2, ly - fs3 * 0.75, c.x + wl / 2, ly - fs3 * 0.75, rr3);
+          ctx.closePath(); ctx.fill();
+          ctx.strokeStyle = 'rgba(150,130,95,0.55)'; ctx.lineWidth = 1; ctx.stroke();
+          ctx.fillStyle = '#5a4a34';
+          ctx.fillText(label, c.x, ly + fs3 * 0.03);
+          ctx.restore();
+        }
       }
     },
     _drawTinyCottage(x, y) {
@@ -2163,13 +2226,41 @@
             ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
             ctx.font = (th * 1.15) + 'px sans-serif';
             ctx.fillText(cu.face, px2, py2 + bob * 0.3);
+            /* 对话气泡(2026-08-14 Chris:「人头上那朵花什么意思?」——旧版白圈
+               和作物成熟徽章撞脸, 读不出「TA 想买菜」。改成带尾巴的奶油气泡:
+               菜 ×数量 + 小金币 = 一眼是「顾客想买」不是「地里熟了」)。 */
             const def2 = Farm.crops.get(cu.crop);
-            const r2 = th * 0.34, byy2 = py2 - th * 1.6 + bob;
-            ctx.beginPath(); ctx.arc(px2, byy2, r2, 0, 6.283);
-            ctx.fillStyle = 'rgba(255,255,255,0.96)'; ctx.fill();
-            ctx.strokeStyle = 'rgba(120,150,90,0.9)'; ctx.lineWidth = Math.max(1.1, th * 0.045); ctx.stroke();
-            ctx.font = (r2 * 1.15) + 'px sans-serif'; ctx.textBaseline = 'middle';
-            ctx.fillText((def2 && def2.icon) || '🥬', px2, byy2 + r2 * 0.06);
+            const fs2 = th * 0.52;
+            ctx.font = '600 ' + (fs2 * 0.72) + 'px "Plus Jakarta Sans","Noto Sans SC",sans-serif';
+            const label2 = '×' + cu.qty;
+            const wTxt = ctx.measureText(label2).width;
+            const bw2 = fs2 * 1.15 + wTxt + fs2 * 1.05, bh2 = fs2 * 1.35;
+            const bx2 = px2, byy2 = py2 - th * 1.62 + bob;
+            const rr2 = bh2 * 0.42;
+            ctx.beginPath();
+            ctx.moveTo(bx2 - bw2 / 2 + rr2, byy2 - bh2 / 2);
+            ctx.arcTo(bx2 + bw2 / 2, byy2 - bh2 / 2, bx2 + bw2 / 2, byy2 + bh2 / 2, rr2);
+            ctx.arcTo(bx2 + bw2 / 2, byy2 + bh2 / 2, bx2 - bw2 / 2, byy2 + bh2 / 2, rr2);
+            ctx.arcTo(bx2 - bw2 / 2, byy2 + bh2 / 2, bx2 - bw2 / 2, byy2 - bh2 / 2, rr2);
+            ctx.arcTo(bx2 - bw2 / 2, byy2 - bh2 / 2, bx2 + bw2 / 2, byy2 - bh2 / 2, rr2);
+            ctx.closePath();
+            ctx.fillStyle = 'rgba(255,252,240,0.97)'; ctx.fill();
+            ctx.strokeStyle = 'rgba(150,120,80,0.8)'; ctx.lineWidth = Math.max(1, th * 0.04); ctx.stroke();
+            // 气泡尾巴指向路人
+            ctx.beginPath();
+            ctx.moveTo(bx2 - fs2 * 0.3, byy2 + bh2 / 2 - 1);
+            ctx.lineTo(bx2, byy2 + bh2 / 2 + fs2 * 0.42);
+            ctx.lineTo(bx2 + fs2 * 0.3, byy2 + bh2 / 2 - 1);
+            ctx.closePath(); ctx.fillStyle = 'rgba(255,252,240,0.97)'; ctx.fill();
+            // 内容: 菜 ×N 💰
+            ctx.textBaseline = 'middle';
+            ctx.font = fs2 + 'px sans-serif';
+            ctx.fillText((def2 && def2.icon) || '🥬', bx2 - bw2 / 2 + fs2 * 0.62, byy2 + fs2 * 0.04);
+            ctx.font = '700 ' + (fs2 * 0.72) + 'px "Plus Jakarta Sans","Noto Sans SC",sans-serif';
+            ctx.fillStyle = '#6d4c28';
+            ctx.fillText(label2, bx2 - bw2 / 2 + fs2 * 1.2 + wTxt / 2, byy2 + fs2 * 0.05);
+            ctx.font = (fs2 * 0.66) + 'px sans-serif';
+            ctx.fillText('💰', bx2 + bw2 / 2 - fs2 * 0.5, byy2 + fs2 * 0.04);
             ctx.textBaseline = 'alphabetic';
           }
         }
