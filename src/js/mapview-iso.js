@@ -1202,8 +1202,13 @@
       const en = this._lang() === 'en';
       const bar = document.createElement('div');
       bar.id = 'visitBar';
+      /* 🔒 名字必须转义（2026-08-15 审阅第 5 条）：游戏内起名会剥 <>&"'，但登录用户
+         可以直接往自己的 farm_players.gameStats 写任意 nickname/displayName ——
+         别人一进他家，这段就会以 HTML 执行（存储型 XSS）。跨玩家字符串一律转义。 */
+      const nm = (Farm.ui && Farm.ui.escapeHtml) ? Farm.ui.escapeHtml(info.name || '')
+                                                 : String(info.name || '').replace(/[<>&"']/g, '');
       bar.innerHTML = '<span class="visit-face">' + (info.emoji || '🏡') + '</span>'
-        + '<span class="visit-name">' + (en ? (info.name + "'s Farm") : (info.name + ' 家')) + '</span>'
+        + '<span class="visit-name">' + (en ? (nm + "'s Farm") : (nm + ' 家')) + '</span>'
         + '<span class="visit-addr" id="visitAddr">Lv ' + (info.level || 1) + '</span>';
       document.body.appendChild(bar);
       // 永久门牌(东方农场路 N 号)异步补上
@@ -2351,14 +2356,23 @@
     _tryUnlockLand() {
       const next = this._nextLand();
       if (!next) { if (Farm.ui && Farm.ui.toast) Farm.ui.toast(this._lang() === 'en' ? '🏆 Your farm is already at max size' : '🏆 农场已是最大啦'); return; }
-      const en = this._lang() === 'en', haveC = Farm.state.data.coins, haveP = (Farm.state.data.totalPoints || 0);
+      /* 🔒 余额字段是 eastPoints（2026-08-15 审阅第 3 条）：存档里从来没有 totalPoints
+         这个字段（那是 members 文档上的服务端缓存名），读它恒为 0 →
+         L3(3000币+30点) / L4(6000币+50点) 永远提示「积分不够」，扩地后期整个是坏的。 */
+      const en = this._lang() === 'en', haveC = Farm.state.data.coins, haveP = (Farm.state.data.eastPoints || 0);
       if (haveC < next.coins || (next.points && haveP < next.points)) {
         if (Farm.ui && Farm.ui.toast) Farm.ui.toast(en ? 'Not enough to expand yet — keep farming!' : '钱/积分还不够，再攒攒！');
         return;
       }
       const go = () => {
         if (!Farm.state.spendCoins(next.coins)) return;
-        if (next.points) { if (!Farm.state.spendEastPoints(next.points, { source: 'land_expand', description: 'Farm land expansion' })) { Farm.state.addCoins(next.coins); return; } }
+        /* 🔒 来源必须在服务端白名单里（2026-08-15 审阅第 4 条）
+           StockWise 的 ALLOWED_GAME_SOURCES 没有 'land_expand' → 服务端 422 拒收，
+           而 spendEastPoints 不像 addEastPoints 那样回滚，于是「地解锁了、下次登录
+           积分又回来了」＝白拿一块地。白名单本来就留了 `ep_shop:` 前缀口子给这类
+           购买行为（见 ALLOWED_GAME_SOURCE_PREFIXES），扩地就是买地，走它最干净，
+           不用动店铺后端。 */
+        if (next.points) { if (!Farm.state.spendEastPoints(next.points, { source: 'ep_shop:land_expand', description: 'Farm land expansion' })) { Farm.state.addCoins(next.coins); return; } }
         Farm.state.data.landLevel = this._landLevel() + 1; Farm.state.save();
         this._bgKey = null; if (Farm.ui && Farm.ui.refreshHUD) Farm.ui.refreshHUD();
         if (Farm.audio) Farm.audio.play('levelUp'); if (Farm.ui && Farm.ui.showConfetti) Farm.ui.showConfetti(30, 1800);

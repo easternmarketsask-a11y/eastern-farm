@@ -31,6 +31,11 @@
       // completes on the same first-sell). Leave the flag UNset so the next sell
       // (after onboarding) triggers it cleanly.
       if (Farm.spotlight && Farm.spotlight._active) return;
+      /* 🔒 别在画面忙时把这一次转化窗吞掉（2026-08-15 审阅建议项）
+         这是**一次性**机会：标记一落就再也不弹了。原来只挡了聚光灯，没问
+         ui.isBusy() —— 首次卖货那一刻常常正开着谷仓/庆祝弹窗，2.6 秒后 _show()
+         被排队或盖住，而「已提示」已经写死。忙就直接不标记，等下次卖货再来。 */
+      if (Farm.ui && Farm.ui.isBusy && Farm.ui.isBusy()) return;
       d.guestLoginPromptShown = true;
       Farm.state.save();
       if (Farm.track) Farm.track('login_nudge_shown');

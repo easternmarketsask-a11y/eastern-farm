@@ -50,8 +50,10 @@
     },
     {
       icon: '🎫',
-      zh: { title: '积分换真优惠', body: '攒够<b>超市积分</b>，在积分页换成优惠券码，截图带到东方超市，到店就能用。玩游戏，真省钱。' },
-      en: { title: 'Real store rewards', body: 'Save up <b>Store Points</b>, redeem a coupon code, and use it at Eastern Market in store. Play the game, save for real.' },
+      // 2026-08-15：优惠券码那套 V1.1 就下线了（rewards.js 不再渲染券档），
+      // 这里却还在教玩家「换成券码、截图带到店里」——教的是一个已经不存在的流程。
+      zh: { title: '积分是真的', body: '游戏里赚的<b>超市积分</b>就是你会员卡上的积分，每天凌晨自动进账户，到店买菜直接用。玩游戏，真省钱。' },
+      en: { title: 'The points are real', body: 'The <b>Store Points</b> you earn here are your Eastern Market member points — they sync to your account daily and you spend them in store. Play the game, save for real.' },
     },
     {
       icon: '📅',

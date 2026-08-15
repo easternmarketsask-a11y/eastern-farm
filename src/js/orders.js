@@ -262,7 +262,12 @@
         epAwarded = Math.min(order.points, this._epRemainingToday());
         if (epAwarded > 0) {
           Farm.state.addEastPoints(epAwarded, {
-            source: 'order_fill',
+            /* 🔒 'order_fill' 不在 StockWise 的 ALLOWED_GAME_SOURCES 里（2026-08-15 审阅第 1 条）：
+               服务端 422 拒收 → addEastPoints 回滚，可玩家已经看到「+N 超市积分」的飘字。
+               约 25% 的订单带积分，等于长期在给一个到不了账的承诺。交订单本质就是完成
+               一件小东派的活，走已白名单的 task_completion（多次/天、无单独上限）。
+               若日后想把订单和每日任务在账目上分开，再去 StockWise 白名单加 'order_fill'。 */
+            source: 'task_completion',
             description: '完成小东订单 / Filled Xiaodong order ' + order.id,
           });
           this._epState().earned += epAwarded;

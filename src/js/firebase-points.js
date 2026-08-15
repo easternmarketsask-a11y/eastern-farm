@@ -269,7 +269,12 @@
       const today = Farm.state.getDateString();
       if (today > GAME_SIGNUP_BONUS_END) return;
 
-      const memberRef = Farm.fb.db.collection('members').doc(user.uid);
+      /* 🔒 必须用 memberDocId()，不是 Auth UID（2026-08-15 审阅第 7 条）
+         店内会员文档 id 常常是 ru_*，与 Auth UID 不同 —— 拿 uid 去取文档多半不存在，
+         事务直接返回 false，于是**真会员反而领不到**开屏承诺的 3000 农场币，
+         而没关联店内会员的人才可能领到。与其他游戏写入口径保持一致。 */
+      const memberDocId = (Farm.fbAuth && Farm.fbAuth.memberDocId) ? Farm.fbAuth.memberDocId() : user.uid;
+      const memberRef = Farm.fb.db.collection('members').doc(memberDocId);
       let granted = false;
       try {
         granted = await Farm.fb.db.runTransaction(async (tx) => {

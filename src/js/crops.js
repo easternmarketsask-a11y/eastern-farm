@@ -187,23 +187,29 @@
       // (otherwise a 100 EP jackpot on Sat = 200 EP, too easy a big drop)
       const weekMul = isWeekend ? 2 : 1;
 
+      /* 🔒 一次收获只打一枪 /me/earn（2026-08-15 审阅第 2 条，别改回逐层各发一次）
+         ------------------------------------------------------------------
+         服务端的最小间隔（GAME_MIN_EARN_INTERVAL_SEC = 3 秒）是**跨来源**的：
+         同一次收获里第二个 earn 必然撞上 429，客户端回滚，可飘字已经按全额显示了。
+         中秋作物（芋头/柚子/桂花）自带 east_points_bonus，那天的「当日首收」至少两枪，
+         必掉一枪 —— 正好会在 9/19–9/29 引流期上被玩家撞见。
+         所以：四层只负责**记账**，最后合并成一次 addEastPoints。
+         来源按「多次/天 优先」挑：jackpot > 节日 > 幸运 > 当日首收。
+         这样 first_harvest_of_day 单独出现时仍走它自己的来源（服务端 22 小时一次性
+         保护继续生效），与别的层同时出现时才让位给多次/天来源，避免整包被一次性闸吃掉。 */
+      const epLayers = [];
+
       // Layer 1: random lucky drop (3% chance × +5 base, ×2 weekend → +10 max)
       if (Math.random() < 0.03) {
         const amt = 5 * weekMul;
-        Farm.state.addEastPoints(amt, {
-          source: isWeekend ? 'harvest_weekend_lucky' : 'harvest_lucky',
-          description: 'Lucky drop on harvesting ' + cropId,
-        });
+        epLayers.push({ amount: amt, source: isWeekend ? 'harvest_weekend_lucky' : 'harvest_lucky' });
         bonusReasons.push({ kind: 'lucky', amount: amt });
       }
 
       // Layer 2: festival crop fixed bonus (small, ×2 on weekends)
       if (def.east_points_bonus) {
         const amt = def.east_points_bonus * weekMul;
-        Farm.state.addEastPoints(amt, {
-          source: isWeekend ? 'harvest_weekend_festival' : 'harvest_festival_bonus',
-          description: 'Festival crop ' + cropId + ' bonus',
-        });
+        epLayers.push({ amount: amt, source: isWeekend ? 'harvest_weekend_festival' : 'harvest_festival_bonus' });
         bonusReasons.push({ kind: 'festival', amount: amt });
       }
 
@@ -211,22 +217,27 @@
       // (weekend multiplier does NOT apply to jackpot, per design)
       if (Math.random() < 0.005) {
         const jackpot = 20 + Math.floor(Math.pow(Math.random(), 2) * 80);  // 20-100, weighted small
-        Farm.state.addEastPoints(jackpot, {
-          source: 'harvest_jackpot',
-          description: 'Golden nugget on ' + cropId,
-        });
+        epLayers.push({ amount: jackpot, source: 'harvest_jackpot' });
         bonusReasons.push({ kind: 'jackpot', amount: jackpot });
       }
 
       // Layer 4: first harvest of the day — NERFED from +10 → +5 (×2 weekend)
-      // (separate /me/earn call: server enforces "max once per 22h per user")
       if (Farm.state.markFirstHarvest()) {
         const amt = 5 * weekMul;
-        Farm.state.addEastPoints(amt, {
-          source: 'first_harvest_of_day',
-          description: 'First harvest of the day' + (isWeekend ? ' (weekend ×2)' : ''),
-        });
+        epLayers.push({ amount: amt, source: 'first_harvest_of_day' });
         bonusReasons.push({ kind: 'first_harvest', amount: amt });
+      }
+
+      // 合并发一枪
+      if (epLayers.length) {
+        const PRIORITY = ['harvest_jackpot', 'harvest_weekend_festival', 'harvest_festival_bonus',
+                          'harvest_weekend_lucky', 'harvest_lucky', 'first_harvest_of_day'];
+        const src = PRIORITY.find((p2) => epLayers.some((l) => l.source === p2)) || 'harvest_lucky';
+        const total = epLayers.reduce((sum, l) => sum + l.amount, 0);
+        Farm.state.addEastPoints(total, {
+          source: src,
+          description: 'Harvest ' + cropId + ' (' + epLayers.map((l) => l.source).join('+') + ')',
+        });
       }
 
       // Sum for the return value + toast rendering

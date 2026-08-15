@@ -888,6 +888,18 @@
               this.data.eastPoints = Math.max(0, this.data.eastPoints - n);
               this.save();
               if (window.Farm && Farm.ui && Farm.ui.refreshHUD) Farm.ui.refreshHUD();
+              /* 🔒 回滚了就得说一声（2026-08-15 审阅第 1/2 条的共同尾巴）
+                 之前是「飘字显示 +N，后台悄悄扣回去」—— 玩家看到的是一个不存在的到账。
+                 每次登录只提示一次，避免连续收获时刷屏。 */
+              if (!this._epRejectNoticed && window.Farm && Farm.ui && Farm.ui.toast) {
+                this._epRejectNoticed = true;
+                const en2 = this.data.language === 'en';
+                Farm.ui.toast(r.code === 429
+                  ? (en2 ? '⏳ Daily store-point limit reached — that bonus was not credited'
+                         : '⏳ 今日超市积分已达上限，这笔没能入账')
+                  : (en2 ? '⚠️ That point bonus could not be credited'
+                         : '⚠️ 这笔超市积分没能入账'), 3600);
+              }
             }
           });
         }

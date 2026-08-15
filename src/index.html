@@ -625,7 +625,12 @@
     s.src = BASE + FILES[i];
     s.async = true;                       // 不阻塞解析；顺序由 onload 链自己保证
     s.onload = function () { next(i + 1); };
-    s.onerror = function () { /* CDN 挂了/被墙 → 游客模式照常玩，不影响开局 */ };
+    /* 🔒 出错也必须往下走（2026-08-15 审阅第 8 条）
+       原来 onerror 是空函数 → 链子断在哪就停在哪，fbLateInit() 永不调用。
+       最后一个 firebase-messaging-compat.js 恰恰是最容易被广告拦截器挡掉的，
+       而那时 app/auth/firestore **早就加载好了** —— 结果是登录和云存档静默死掉，
+       游戏还能玩，玩家完全看不出为什么存档不同步。推送本来就是可选的。 */
+    s.onerror = function () { console.warn('[fb] script failed, continuing:', FILES[i]); next(i + 1); };
     (document.head || document.documentElement).appendChild(s);
   }
   next(0);
