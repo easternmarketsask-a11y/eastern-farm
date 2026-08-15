@@ -1603,12 +1603,25 @@
     },
     _tree(x, y, s) {
       const ctx = this._ctx;
-      ctx.fillStyle = '#6b4a2b'; ctx.fillRect(x - s * 0.09, y - s * 0.5, s * 0.18, s * 0.5);   // trunk
-      const blob = (dx, dy, r, col) => { ctx.fillStyle = col; ctx.beginPath(); ctx.arc(x + dx, y - s * 0.7 + dy, r, 0, Math.PI * 2); ctx.fill(); };
-      blob(-s * 0.28, s * 0.1, s * 0.34, '#4f8f44');
-      blob(s * 0.28, s * 0.1, s * 0.34, '#4f8f44');
-      blob(0, -s * 0.15, s * 0.42, '#5fa050');
-      blob(-s * 0.1, -s * 0.05, s * 0.3, '#6cb45a');   // highlight
+      ctx.fillStyle = '#5a3a22';
+      ctx.beginPath();
+      ctx.moveTo(x - s * 0.07, y + s * 0.04);
+      ctx.lineTo(x + s * 0.07, y + s * 0.04);
+      ctx.lineTo(x + s * 0.045, y - s * 0.48);
+      ctx.lineTo(x - s * 0.045, y - s * 0.48);
+      ctx.closePath();
+      ctx.fill();
+      const blob = (dx, dy, rx, ry, col) => {
+        ctx.fillStyle = col;
+        ctx.beginPath();
+        ctx.ellipse(x + dx, y - s * 0.72 + dy, rx, ry, 0, 0, Math.PI * 2);
+        ctx.fill();
+      };
+      blob(0, s * 0.10, s * 0.50, s * 0.44, '#3a7038');
+      blob(-s * 0.24, s * 0.04, s * 0.36, s * 0.34, '#4a8640');
+      blob(s * 0.24, s * 0.06, s * 0.34, s * 0.32, '#4a8640');
+      blob(-s * 0.04, -s * 0.16, s * 0.30, s * 0.28, '#5fa04c');
+      blob(s * 0.10, -s * 0.10, s * 0.16, s * 0.14, 'rgba(255,220,140,0.22)');
     },
     _tuft(x, y, s) {
       const ctx = this._ctx; ctx.fillStyle = '#74b252';
@@ -1621,6 +1634,20 @@
       ctx.fillStyle = '#ffd34d'; ctx.beginPath(); ctx.arc(x, y - s * 0.95, s * 0.13, 0, 6.283); ctx.fill();
     },
     // scattered grass tufts + flowers around the farm (NOT on the plot block), world-anchored
+    _drawMeadowTrees() {
+      const tw = this._tw(), th = this._th();
+      const spots = [
+        { gx: -1.6, gy: 4.8, s: 0.72 },
+        { gx: 15.2, gy: 2.4, s: 0.64 },
+        { gx: 17.2, gy: 8.6, s: 0.78 },
+        { gx: 13.6, gy: 13.4, s: 0.60 },
+      ];
+      for (const s of spots) {
+        const c = this._cell(s.gx, s.gy);
+        this._shadow(c.x + tw * 0.18, c.y + th * 0.12, tw * 0.7 * s.s, 0.16);
+        this._tree(c.x, c.y, tw * 1.2 * s.s);
+      }
+    },
     _drawMeadowDetail(cx, cy) {
       const tw = this._tw(), th = this._th();
       const P = [[-3.6, 2.5], [-3.1, 4.6], [-4.1, 0.8], [-2.2, 6.3], [-1.4, 7.4], [3.5, 1.8], [4.2, 3.6], [4.6, 0.4], [3.0, 6.0], [1.2, 7.3], [2.6, 7.6], [-3.0, 7.0]];
@@ -1718,12 +1745,26 @@
       // 1) deep-water base + soft ground shadow around the whole (irregular) outline
       ctx.save();
       ctx.shadowColor = 'rgba(25,60,80,0.32)'; ctx.shadowBlur = th * 0.5; ctx.shadowOffsetY = th * 0.16;
-      ctx.fillStyle = '#3f86a8'; blobs(1, 1); ctx.fill();
+      ctx.fillStyle = '#2f6d80'; blobs(1, 1); ctx.fill();
       ctx.restore();
-      // 2) surface water (inset → deep base shows as a rim), top-lit gradient
+      // 2) surface water — 黄昏暖倒影，不再是正午冰蓝
       const g = ctx.createLinearGradient(0, minY - ry + oy, 0, maxY + ry + oy);
-      g.addColorStop(0, '#b6e6f6'); g.addColorStop(0.5, '#7fc8ea'); g.addColorStop(1, '#54a6cf');
+      g.addColorStop(0, '#d8eef0');
+      g.addColorStop(0.28, '#f0d8a4');
+      g.addColorStop(0.62, '#6eb0b8');
+      g.addColorStop(1, '#3d8490');
       ctx.fillStyle = g; blobs(0.84, 0.82); ctx.fill();
+      // 左上受光的一抹金
+      let cxp = 0, cyp = 0;
+      for (const c of cells) { cxp += c.x; cyp += c.y; }
+      cxp /= cells.length; cyp /= cells.length;
+      ctx.save();
+      ctx.globalAlpha = 0.32;
+      ctx.fillStyle = '#ffe6b0';
+      ctx.beginPath();
+      ctx.ellipse(cxp - rx * 0.22, cyp + oy - ry * 0.12, rx * 0.55, ry * 0.28, -0.4, 0, 6.283);
+      ctx.fill();
+      ctx.restore();
       // 3) gentle animated ripples
       ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.lineWidth = Math.max(1, th * 0.05); ctx.lineCap = 'round';
       cells.forEach((c, i) => {
@@ -1773,10 +1814,15 @@
       ctx.fillStyle = base; ctx.fillRect(0, 0, W, H);
       // 左上太阳：柔光晕，不画硬边日轮（避免像贴纸）
       const sun = ctx.createRadialGradient(W * 0.16, H * 0.07, 0, W * 0.16, H * 0.07, Math.max(W, H) * 0.55);
-      sun.addColorStop(0, 'rgba(255,228,170,0.55)');
-      sun.addColorStop(0.22, 'rgba(255,196,120,0.22)');
+      sun.addColorStop(0, 'rgba(255,236,190,0.72)');
+      sun.addColorStop(0.18, 'rgba(255,206,130,0.28)');
       sun.addColorStop(1, 'rgba(255,180,90,0)');
       ctx.fillStyle = sun; ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = 'rgba(255,242,210,0.95)';
+      ctx.beginPath();
+      ctx.arc(W * 0.16, H * 0.075, Math.max(7, this._th() * 0.48), 0, 6.283);
+      ctx.fill();
+      this._drawSkyClouds(W, H);
 
       /* 🔒 程序化世界(2026-08-14 Chris:「怎样使地形真正跟农场物件融合,
          不受画面缩放影响, 大型游戏是怎么做到的」):
@@ -1813,6 +1859,7 @@
       // 16×16 可开发世界画成半透明草格(条带+色斑+草簇), 贴合是构造上
       // 保证的; 扩地解锁的远处土地也由它呈现(_bgKey 在解锁时已置空重画)。
       const fit = this._drawGroundPlane(W, H);
+      this._drawMeadowTrees();
       this._drawHorizonMist(W, H);
       /* 人烟三件套(2026-08-14 Chris:「农场看起来像荒山野岭, 路人的出现
          会有点奇怪」)—— 给路人一个来处, 给农场一个社区:
@@ -1861,8 +1908,9 @@
       const N = 46;
       // 三层叠出手绘土路: 宽的路基 → 亮的路面 → 两道车辙
       const passes = [
-        { w: tw * 0.56, col: 'rgba(160,126,82,0.55)', off: 0 },
-        { w: tw * 0.42, col: 'rgba(206,172,118,0.60)', off: 0 },
+        { w: tw * 0.78, col: 'rgba(86,122,48,0.40)', off: 0 },
+        { w: tw * 0.56, col: 'rgba(160,126,82,0.58)', off: 0 },
+        { w: tw * 0.40, col: 'rgba(214,178,122,0.68)', off: 0 },
         { w: tw * 0.045, col: 'rgba(120,92,56,0.45)', off: tw * 0.09 },
         { w: tw * 0.045, col: 'rgba(120,92,56,0.45)', off: -tw * 0.09 },
       ];
@@ -2117,10 +2165,11 @@
           const owned = inWorld && gx >= ob.x1 && gx <= ob.x2 && gy >= ob.y1 && gy <= ob.y2;
           // 基色: 农场内亮耕作绿(条带), 未拥有微降饱和, 世界外野草(偏黄+噪点强)
           let rr, gg, bb2;
-          // 农场基色(耕作绿 + 割草条带)
-          const stripe = ((gx + gy) & 1) ? -5 : 0;
-          const nzIn = (r1 - 0.5) * 5;
-          let fr = 138 + stripe + nzIn, fg = 174 + stripe + nzIn * 0.7, fb = 70 + stripe * 0.6 + nzIn * 0.5;
+          // 农场基色: 大块起伏取代奇偶棋盘，近看也不像铺瓷砖
+          const patch = Math.sin(gx * 0.52 + gy * 0.37) * 7 + Math.sin(gx * 0.19 - gy * 0.24) * 5;
+          const stripe = ((gx + gy) & 1) ? -1.2 : 0;
+          const nzIn = (r1 - 0.5) * 6;
+          let fr = 134 + patch + stripe + nzIn, fg = 170 + patch * 0.85 + stripe + nzIn * 0.7, fb = 66 + patch * 0.4 + stripe * 0.6 + nzIn * 0.5;
           if (inWorld && !owned) { fr = fr * 0.95 + 7; fg = fg * 0.95 + 4; fb = fb * 0.93 + 7; }
           // 野地基色(微偏黄, 噪点略强但收敛)
           const nzOut = (r1 - 0.5) * 8;
@@ -2144,11 +2193,11 @@
             bb2 = bb2 * (1 - fade) + midB * fade;
           }
           ctx.fillStyle = 'rgb(' + (rr | 0) + ',' + (gg | 0) + ',' + (bb2 | 0) + ')';
-          this._diamond(c.x, c.y, tw * 1.04, th * 1.04);   // 1.04: 盖住反锯齿细缝
+          this._diamond(c.x, c.y, tw * 1.08, th * 1.08);
           ctx.fill();
           // 点缀: 草簇(内外都有, 外面更密) / 小花(只在农场内)
-          const tuftP = inWorld ? 0.90 : 0.82;
-          if (r2 > tuftP && dHl > 0.7) {
+          const tuftP = inWorld ? 0.82 : 0.72;
+          if (r2 > tuftP && dHl > 0.55) {
             ctx.strokeStyle = inWorld ? '#5e8a38' : '#6d8840';
             ctx.lineWidth = Math.max(0.8, tw * 0.018); ctx.lineCap = 'round';
             const bx = c.x + (r1 - 0.5) * tw * 0.4, byy = c.y + (r2 - 0.5) * th * 0.4;
@@ -2158,7 +2207,7 @@
               ctx.quadraticCurveTo(bx + i * tw * 0.05, byy - th * 0.05, bx + i * tw * 0.075, byy - th * 0.13);
               ctx.stroke();
             }
-          } else if (inWorld && owned && r2 < 0.045) {
+          } else if (inWorld && owned && r2 < 0.085) {
             const fx = c.x + (r1 - 0.5) * tw * 0.5, fy = c.y + (r2 * 8 - 0.4) * th * 0.4;
             ctx.fillStyle = '#fdf6e8';
             for (let i = 0; i < 5; i++) { const an = i / 5 * 6.283; ctx.beginPath(); ctx.arc(fx + Math.cos(an) * tw * 0.022, fy + Math.sin(an) * th * 0.030, Math.max(0.8, tw * 0.014), 0, 6.283); ctx.fill(); }
@@ -2208,17 +2257,65 @@
     /* 程序化地平线: 一切以世界坐标锚定 —— 林线沿着世界北缘的等 gx+gy 对角线,
        跟着缩放/平移走(和农场同一套变换), 所以农场永远贴着自己的地平线。
        树冠鼓包用世界 x 相位取哈希, 平移时树是"世界里的树"而不是贴在屏幕上的。 */
+    _drawSkyClouds(W, H) {
+      const ctx = this._ctx, th = this._th();
+      const hl = this._cell(0, -3).y;
+      if (hl > H + th * 8) return;
+      ctx.save();
+      const clouds = [
+        { f: 0.16, lift: 5.1, s: 1.05 },
+        { f: 0.42, lift: 6.0, s: 0.72 },
+        { f: 0.68, lift: 4.7, s: 0.92 },
+        { f: 0.88, lift: 5.6, s: 0.58 },
+      ];
+      for (const cl of clouds) {
+        const x = ((cl.f * W - this._camX * 0.10) % (W + 120) + (W + 120)) % (W + 120) - 60;
+        const y = hl - th * cl.lift;
+        if (y < -th * 2 || y > H * 0.55) continue;
+        const s = th * 1.7 * cl.s;
+        ctx.fillStyle = 'rgba(255,246,228,0.48)';
+        ctx.beginPath();
+        ctx.ellipse(x, y, s * 1.65, s * 0.50, -0.08, 0, 6.283);
+        ctx.ellipse(x - s * 0.72, y + s * 0.06, s * 0.88, s * 0.38, 0.1, 0, 6.283);
+        ctx.ellipse(x + s * 0.78, y + s * 0.04, s * 1.02, s * 0.40, -0.12, 0, 6.283);
+        ctx.fill();
+      }
+      ctx.restore();
+    },
+    _drawSpruce(x, baseY, h) {
+      const ctx = this._ctx;
+      if (h < 6) return;
+      const tip = x + h * (Math.sin(x * 0.07) * 0.08);
+      ctx.fillStyle = '#2a3f2c';
+      ctx.beginPath();
+      ctx.moveTo(tip, baseY - h);
+      ctx.lineTo(x + h * 0.34, baseY - h * 0.06);
+      ctx.lineTo(x - h * 0.40, baseY - h * 0.10);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = '#3a5c42';
+      ctx.beginPath();
+      ctx.moveTo(tip, baseY - h * 0.80);
+      ctx.lineTo(x + h * 0.24, baseY - h * 0.26);
+      ctx.lineTo(x - h * 0.26, baseY - h * 0.30);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = 'rgba(255,214,150,0.16)';
+      ctx.beginPath();
+      ctx.moveTo(tip, baseY - h);
+      ctx.lineTo(tip - h * 0.12, baseY - h * 0.46);
+      ctx.lineTo(tip, baseY - h * 0.40);
+      ctx.closePath();
+      ctx.fill();
+    },
     _drawHorizon(W, H) {
       const ctx = this._ctx, tw = this._tw(), th = this._th();
-      // 林线走 gx+gy = -3 的对角线(世界北缘外一圈)。iso 里这是一条横线。
       const hl = this._cell(0, -3).y;
-      if (hl > H + th * 6) return;   // 地平线在屏外(深度放大看田里)就不画
-      // 远山两叠(越远越浅, 顶部融进天空)
-      // 缓丘: 双八度正弦逐点采样(24 段), 没有尖峰 —— 萨省草原的天际线是缓的
+      if (hl > H + th * 6) return;
       const hill = (yOff, amp, col, phase) => {
         ctx.fillStyle = col;
         ctx.beginPath();
-        const n = 24;
+        const n = 28;
         for (let i = 0; i <= n; i++) {
           const x = (i / n) * W;
           const wx = (x + this._camX * 0.35) / (W / 2.2);
@@ -2227,37 +2324,30 @@
         }
         ctx.lineTo(W, hl + th * 2); ctx.lineTo(0, hl + th * 2); ctx.closePath(); ctx.fill();
       };
-      hill(th * 5.0, th * 0.9, '#c8b98a', 0.8);
-      hill(th * 3.3, th * 1.1, '#8fa86a', 2.9);
-      // 云杉/阔叶混交林剪影: 沿林线一排确定性鼓包(世界 x 相位 → 平移一致)
-      ctx.fillStyle = '#3a5840';
+      hill(th * 6.2, th * 1.05, '#d2c4a0', 0.4);
+      hill(th * 4.6, th * 0.95, '#b8b07a', 1.6);
+      hill(th * 3.1, th * 1.15, '#7f9a58', 2.9);
+      ctx.fillStyle = '#2c4632';
       ctx.beginPath();
-      ctx.moveTo(-tw, hl + th * 1.2);
-      const step = tw * 0.52;
+      ctx.moveTo(-tw, hl + th * 1.15);
+      const band = 22;
+      for (let i = 0; i <= band; i++) {
+        const x = (i / band) * W;
+        const wx = (x + this._camX) / (tw * 1.4);
+        ctx.lineTo(x, hl - th * (0.15 + 0.22 * (0.5 + 0.5 * Math.sin(wx * 1.7))));
+      }
+      ctx.lineTo(W + tw, hl + th * 1.15);
+      ctx.closePath();
+      ctx.fill();
+      const step = tw * 0.44;
       const x0 = -((this._camX * 1.0) % step) - step * 2;
       for (let x = x0; x < W + step * 2; x += step) {
         const seed = Math.abs(Math.round((x + this._camX) / step));
         const hsh = ((seed * 2654435761) >>> 0) % 1000 / 1000;
-        const hgt = th * (1.6 + hsh * 1.5);
-        ctx.quadraticCurveTo(x + step * 0.25, hl - hgt, x + step * 0.5, hl - hgt * (0.55 + hsh * 0.3));
-        ctx.quadraticCurveTo(x + step * 0.75, hl - hgt * 0.85, x + step, hl - th * (0.2 + hsh * 0.5));
+        if (hsh < 0.10) continue;
+        const hgt = th * (1.15 + hsh * 2.15);
+        this._drawSpruce(x + (hsh - 0.5) * step * 0.7, hl + th * 0.52, hgt);
       }
-      ctx.lineTo(W + tw, hl + th * 1.4); ctx.lineTo(-tw, hl + th * 1.4); ctx.closePath(); ctx.fill();
-      // 树冠受光边：左上那侧一抹暖边，跟宣传图的逆光林线同一语言
-      ctx.save();
-      ctx.globalCompositeOperation = 'lighter';
-      ctx.strokeStyle = 'rgba(255,210,140,0.22)';
-      ctx.lineWidth = Math.max(1.2, th * 0.10);
-      ctx.beginPath();
-      ctx.moveTo(-tw, hl - th * 0.4);
-      for (let x = x0; x < W + step * 2; x += step) {
-        const seed = Math.abs(Math.round((x + this._camX) / step));
-        const hsh = ((seed * 2654435761) >>> 0) % 1000 / 1000;
-        const hgt = th * (1.6 + hsh * 1.5);
-        ctx.lineTo(x + step * 0.5, hl - hgt * 0.92);
-      }
-      ctx.stroke();
-      ctx.restore();
     },
     /* 地平薄雾: 必须画在**地面之后**(第一版画在 _drawHorizon 里, 随即被地面
        整面底色盖掉, 林脚剩一条生硬横线 —— 截图实证的顺序 bug)。 */
