@@ -272,6 +272,11 @@ See `docs/GAME-DESIGN.md` for full spec. TL;DR:
 
 - **Warm cozy color palette**: cream backgrounds, soft greens, earthy browns,
   warm accent reds (matching Eastern Market brand)
+- **程序化世界（2026-08-14 起）**：天空/远山/云杉林线/薄雾/草地/乡路全部
+  canvas 程序化绘制，与农场物件同一套世界坐标（`_cell()`）——任何缩放都
+  清晰、贴合是构造保证。旧照片背景 `hd_bg.webp` 已退役但资产保留，
+  `mapview-iso.js` 里 `USE_PAINTED_BG=true` 可一键回滚。别再往世界里
+  引入「不懂格子」的整幅位图
 - **Rounded everything**: chunky rounded buttons, soft shadows, no sharp lines
 - **Cute but not babyish**: crops have personality (smiling tomato, sleepy
   garlic) but aren't infantilized
