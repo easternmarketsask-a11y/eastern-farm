@@ -1756,8 +1756,11 @@
       const map = Farm.state.data.map || [];
       const st = map.find((m) => m && m.type === 'house');
       const B = st ? { x: st.gx + 0.7, y: st.gy + 2.5 } : { x: 5.7, y: 4.6 };
-      const A = { x: 19.0, y: 8.6 };
-      const C = { x: B.x - 4.0, y: B.y + 0.9 };
+      // 2026-08-15 Chris:「菜摊前的路应该一直延伸, 不能断了」——
+      // 两端都伸到世界之外(A 东端 24 格外, C 西端 B-15 格), 任何摊位位置/
+      // 缩放下路都是「从远方来、往远方去」的过路道, 不会断在草地里。
+      const A = { x: 24.0, y: 9.8 };
+      const C = { x: B.x - 15.0, y: B.y + 3.4 };
       return { A, B, C };
     },
     _roadPoint(t) {
@@ -1865,7 +1868,7 @@
       let p = (now - this._walker.start) / this._walker.dur;
       if (p >= 1) { this._walker = null; this._walkerNextAt = now + (120 + Math.random() * 180) * 1e3; return; }
       if (this._walker.dir < 0) p = 1 - p;
-      const pt = this._roadPoint(0.16 + p * 0.72);
+      const pt = this._roadPoint(0.30 + p * 0.50);
       const th = this._th(), bob = Math.abs(Math.sin(now / 160)) * th * 0.06;
       const ctx = this._ctx;
       ctx.save();
@@ -2446,13 +2449,22 @@
       if (o.type === 'home' && homeLv > 1 && !moving) this._drawHomeExtras(cc.x, by, b.w * tw * 0.92 * BLD * hz, b.sc * th * 2.2 * BLD * hz, homeLv);
       if (o.type === 'house' && !moving) {
         this._drawShopSign(cc.x, by, b.w * tw * 0.92 * BLD, b.sc * th * 2.2 * BLD);
-        // 摊位收到求购 → 雨棚旁挂一只求购气泡(2026-08-15 Chris:「不要放
-        // 一个人头, 瘆得慌」—— 人形整个去掉, 是谁想买点开面板看名字)
+        /* 摊前的路人(2026-08-15 两轮定稿): 瘆人的是悬空的**头**(emoji 脸),
+           站着的**全身**人影是对的 —— Chris:「有路人要买菜就放一个路人在
+           菜摊前不好吗?」。全身 🧍 站在摊前路边 + 接地影 + 头顶求购气泡。 */
         if (!this._build && Farm.stall) {
           const cu = Farm.stall.customer();
           if (cu) {
             const t2 = Date.now() / 1000, bob = Math.sin(t2 * 2) * th * 0.04;
-            const px2 = cc.x + tw * 0.95, py2 = by - th * 1.05;
+            // 站在**路上**(路正好从摊前过; 用格子锚点, 不会掉进水塘 —— 截图实证)
+            const rp2 = this._cell(o.gx + 0.7, o.gy + 2.15);
+            const sx2 = rp2.x, sy2 = rp2.y;
+            ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+            this._shadow(sx2, sy2 + th * 0.10, tw * 0.36, 0.18);
+            ctx.font = (th * 1.5) + 'px sans-serif';
+            ctx.fillText('🧍', sx2, sy2 + bob * 0.4);
+            // 气泡绘制内部还会再上抬 th*1.62(历史锚点), 这里只留一点余量 → 恰好悬在头顶
+            const px2 = sx2, py2 = sy2 - th * 0.15;
             ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
             /* 对话气泡(2026-08-14 Chris:「人头上那朵花什么意思?」——旧版白圈
                和作物成熟徽章撞脸, 读不出「TA 想买菜」。改成带尾巴的奶油气泡:
