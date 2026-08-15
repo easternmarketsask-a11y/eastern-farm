@@ -54,6 +54,11 @@ for f in src/js/*.js service-worker.js; do
   fi
 done
 echo "  ✓ $(ls src/js/*.js | wc -l | tr -d ' ') 个模块全部通过"
+# 1b. 预缓存清单必须覆盖 index.html 加载的全部模块（漏一个 = 那个模块永远走网络）
+if ! node scripts/verify/precache-check.mjs; then
+  echo "—— 部署中止(把缺的模块补进 service-worker.js 的 PRECACHE)"
+  exit 1
+fi
 
 # 2. 发布闸门 B: 无头 Chrome 冒烟启动(游戏能开、无未捕获异常)
 #    依赖: node + Chrome + python(起本地静态服务)。缺任一 → 跳过并大声警告。
