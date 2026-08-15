@@ -46,7 +46,16 @@
     levelEpoch: '2026-04-01',
     loaded: false,
 
+    /* ⛔ AI 假人已于 2026-08-14 全面退役(Chris:「删除所有虚假的称呼——
+       王阿姨、李大爷、大厨老周…一律用玩家真实用户名, 没有就没有」)。
+       退役方式 = 掐源头: loaded 永远 false + 名册永远为空 → 四处消费端
+       (邻居补位/排行榜混排/离线小偷帮手/小报/远景农场)的守卫自动短路,
+       全游戏只剩真实玩家。模块和数据文件保留(彻底删除牵动 social-steal
+       的关系结算路径, 风险高收益低), 但任何入口都取不到假人。 */
+    RETIRED: true,
+
     async load() {
+      if (this.RETIRED) { this.roster = []; this.loaded = false; return; }
       try {
         const res = await fetch('../data/ai-neighbors.json');
         const data = await res.json();
@@ -179,6 +188,7 @@
     // 今日确定性挑 n 个 AI（按日期 hash 洗牌），用于真会员不足时补位。
     // n 被 maxFill 封顶：即使真会员为零，也只补 maxFill 个，不满村假人。
     dailyPick(n, dateStr) {
+      if (this.RETIRED) return [];
       n = Math.min(n, this.maxFill);
       if (n <= 0) return [];
       const ids = this.ids().slice();   // enabled=false ⇒ [] ⇒ 不补位

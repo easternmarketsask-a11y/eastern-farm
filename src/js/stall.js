@@ -15,19 +15,40 @@
  * 老存档无此键照常工作）。所有时刻用绝对时间戳，离线也会自然到点。
  */
 (function () {
-  const CUSTOMERS = [
-    { zh: '王阿姨', en: 'Auntie Wang', face: '👵' },
-    { zh: '李大爷', en: 'Grandpa Li', face: '👴' },
-    { zh: '放学的小豆', en: 'Little Dou', face: '🧒' },
-    { zh: '陈太太', en: 'Mrs. Chen', face: '👩' },
-    { zh: '大厨老周', en: 'Chef Zhou', face: '🧑‍🍳' },
-    { zh: '晨跑的邻居', en: 'Jogging neighbour', face: '🏃' },
-  ];
+  /* 🔒 不用假人设(2026-08-14 Chris:「删除所有虚假的称呼, 一律用玩家真实
+     用户名, 没有就没有」)。顾客优先从 farm_players 取**真实玩家**(名字+
+     头像 emoji 按 uid 确定); 取不到(游客/离线/还没别的玩家)就是匿名「路人」
+     —— 路人是身份, 不是假名。 */
+  const AVATARS = ['🐰', '🦊', '🐻', '🐼', '🐨', '🐯', '🦁', '🐮', '🐷', '🐸', '🐥', '🦉'];
+  const ANON = { zh: '路人', en: 'A passerby', face: '🚶' };
   const WAIT_MS = 3 * 3600e3;          // 路人最多等 3 小时
   const GAP_MIN = 25, GAP_MAX = 45;    // 成交后下一位的间隔（分钟）
   const FIRST_DELAY_MS = 4 * 60e3;     // 新农场开张 4 分钟后来第一位
 
   const stall = {
+    _pool: null,
+    _poolAt: 0,
+    /* 真实玩家池: 与邻居列表同一数据源(fetchVisiblePool), 1 小时缓存。
+       拿不到(未登录/离线)返回 null → 顾客走匿名路人。 */
+    async _loadPool() {
+      const now = Date.now();
+      if (this._pool && now - this._poolAt < 3600e3) return this._pool;
+      try {
+        if (!(Farm.fbGameSync && Farm.fbGameSync.fetchVisiblePool)) return this._pool;
+        const raw = await Farm.fbGameSync.fetchVisiblePool(30);
+        const me = Farm.fbAuth && Farm.fbAuth.memberDocId ? Farm.fbAuth.memberDocId() : null;
+        this._pool = (raw || [])
+          .filter((m) => m && m.uid && m.uid !== me)
+          .map((m) => {
+            let h = 0; for (let i = 0; i < m.uid.length; i++) h = (h * 31 + m.uid.charCodeAt(i)) >>> 0;
+            return { name: Farm.fbGameSync.displayName(m.doc), face: AVATARS[h % AVATARS.length] };
+          })
+          .filter((m) => m.name);
+        this._poolAt = now;
+      } catch (e) { /* 保持旧池/空池 */ }
+      return this._pool;
+    },
+
     _st() {
       const d = Farm.state.data;
       if (!d.stall) d.stall = { nextAt: Date.now() + FIRST_DELAY_MS, sold: 0 };
@@ -36,6 +57,7 @@
 
     // 当前路人（顺带推进状态机：过期离开 / 到点来新客）。
     customer() {
+      if (!this._pool && !this._poolReq) { this._poolReq = true; this._loadPool(); }   // 预热真实玩家池
       const st = this._st(), now = Date.now();
       if (st.customer && now > st.customer.expireAt) {
         st.customer = null;
@@ -55,16 +77,23 @@
       const qty = 1 + Math.floor(Math.random() * Math.min(3, 1 + Math.floor(lvl / 3)));
       const mult = 1.35 + Math.random() * 0.25;
       const unit = Farm.crops.sellPriceOf ? Farm.crops.sellPriceOf(def) : def.sell_price;
-      const who = CUSTOMERS[Math.floor(Math.random() * CUSTOMERS.length)];
+      // 真实玩家优先, 没有就匿名路人(绝不造假名)
+      const ppl = this._pool;
+      const who = (ppl && ppl.length)
+        ? ppl[Math.floor(Math.random() * ppl.length)]
+        : null;
       const now = Date.now();
       this._st().customer = {
         crop: def.id, qty,
         price: Math.ceil(unit * qty * mult),
         pct: Math.round((mult - 1) * 100),
-        zh: who.zh, en: who.en, face: who.face,
+        zh: who ? who.name : ANON.zh, en: who ? who.name : ANON.en,
+        face: who ? who.face : ANON.face,
+        real: !!who,
         bornAt: now, expireAt: now + WAIT_MS,
       };
       Farm.state.save();
+      this._loadPool();   // 顺手为下一位预热真实玩家池(异步, 不阻塞)
     },
 
     stockOf(cropId) {
@@ -96,7 +125,7 @@
         if (Farm.ui.refreshHUD) Farm.ui.refreshHUD();
         if (Farm.ui.toast) Farm.ui.toast((en
           ? (c.face + ' ' + c.en + ' bought ' + c.qty + ' — +' + c.price + ' coins!')
-          : (c.face + ' ' + c.zh + '买走了 ' + c.qty + ' 棵 · +' + c.price + ' 农场币！')), 3200);
+          : (c.face + ' ' + c.zh + (c.real ? ' ' : '') + '买走了 ' + c.qty + ' 棵 · +' + c.price + ' 农场币！')), 3200);
       }
       if (Farm.isoView && Farm.isoView.render) Farm.isoView.render();
     },
