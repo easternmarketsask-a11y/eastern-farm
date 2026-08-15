@@ -266,14 +266,100 @@
           cloudH > 0 || (cloudState.level || 1) > 1 ||
           (cloudState.cropsEverGrown || []).length > 0 ||
           (cloudState.totalDeliveries || 0) > 0;
-        if (!localFresh) return { restored: false, reason: 'local_has_progress' };
         if (!cloudHasProgress) return { restored: false, reason: 'cloud_blank' };
-        const ok = Farm.state.applyCloudSave(cloudState);
-        return { restored: !!ok, cloudH: cloudH };
+        if (localFresh) {
+          const ok = Farm.state.applyCloudSave(cloudState);
+          return { restored: !!ok, cloudH: cloudH };
+        }
+        /* 🔒 多设备同帐号必须收敛到同一个农场(2026-08-15 Chris: 电脑和手机
+           打开的农场不一样)。旧规则「只恢复到全空设备」挡住了真农场 ——
+           电脑上留着几周前试玩的 Lv2 旧档就永远见不到手机上的 Lv7 本尊,
+           而且旧档还会反推云端覆盖备份。
+           新规则「富者胜出」:
+             云端明显更富(收获更多且等级不低) → 自动换成云端(旧档备份, 不丢)
+             本地明显更富 → 保留本地(随后的 push 自然把云端追平)
+             不相上下且云端明显更新(>10 分钟) → 换云端(在别的设备玩到刚才)
+             真正模棱两可 → 让玩家自己选(弹窗对比两边 Lv/收获/时间)
+           被换下的本地档永远先备份到 eastern_farm_save_replaced_v1。 */
+        const localH = local.totalHarvests || 0;
+        const localLvl = local.level || 1;
+        const cloudLvl = cloudState.level || 1;
+        const cloudAt = save.clientAt || 0;
+        const localAt = local.lastSavedAt || 0;
+        const backupLocal = () => {
+          try { localStorage.setItem('eastern_farm_save_replaced_v1', JSON.stringify(local)); } catch (e) {}
+        };
+        const applyCloud = (why) => {
+          backupLocal();
+          const ok = Farm.state.applyCloudSave(cloudState);
+          if (ok && Farm.ui && Farm.ui.toast) {
+            const en2 = (cloudState.language || local.language) === 'en';
+            Farm.ui.toast(en2
+              ? ('☁️ Synced your farm from the cloud (Lv' + cloudLvl + ')')
+              : ('☁️ 已同步你的云端农场（Lv' + cloudLvl + '）'), 4200);
+          }
+          return { restored: !!ok, cloudH: cloudH, reason: why };
+        };
+        if (cloudH > localH && cloudLvl >= localLvl) return applyCloud('cloud_richer');
+        if (localH > cloudH && localLvl >= cloudLvl) return { restored: false, reason: 'local_richer' };
+        if (cloudH === localH && cloudLvl === localLvl) {
+          // 同一份存档的两个快照: 谁新用谁(容忍 10 分钟时钟差)
+          if (cloudAt > localAt + 600e3) return applyCloud('cloud_newer');
+          return { restored: false, reason: 'local_current' };
+        }
+        // 模棱两可(各有所长): 玩家自己选, 每次登录最多问一次
+        this._offerSaveChoice(cloudState, save, { localH, localLvl, cloudH, cloudLvl, localAt, cloudAt });
+        return { restored: false, reason: 'ambiguous_choice_offered' };
       } catch (e) {
         console.warn('[gameSync] restoreFromCloud failed', e);
         return { restored: false, reason: e.message };
       }
+    },
+
+    /* 两份存档各有所长时的玩家选择弹窗(多设备收敛的最后一步)。
+       选云端 → 本地备份后替换; 选本地 → 什么都不动, 随后的 push 把云端追平。 */
+    _offerSaveChoice(cloudState, save, m) {
+      if (this._choiceOffered) return;   // 每次会话最多问一次
+      this._choiceOffered = true;
+      const tryShow = () => {
+        if (!(Farm.ui && Farm.ui.showModal)) { setTimeout(tryShow, 3000); return; }
+        const modal = document.getElementById('modal');
+        if (modal && !modal.classList.contains('hidden')) { setTimeout(tryShow, 5000); return; }
+        const en = (Farm.state.data.language) === 'en';
+        const fmt = (ts) => { if (!ts) return en ? 'unknown' : '未知'; const d2 = new Date(ts);
+          return (d2.getMonth() + 1) + '/' + d2.getDate(); };
+        const card = (title, lvl, h, at, id) =>
+          '<button class="btn secondary" data-savepick="' + id + '" style="width:100%;text-align:left;margin-top:8px;padding:12px 14px;">'
+          + '<div style="font-weight:700;">' + title + '</div>'
+          + '<div style="font-size:12px;color:var(--warm-text-soft);margin-top:2px;">Lv ' + lvl + ' · '
+          + (en ? (h + ' harvests · last played ' + fmt(at)) : ('收获 ' + h + ' 棵 · 最后游玩 ' + fmt(at)))
+          + '</div></button>';
+        Farm.ui.showModal(
+          '<h2 class="modal-title">' + (en ? 'Two farm saves found' : '发现两份农场存档') + '</h2>'
+          + '<div style="font-size:13px;color:var(--warm-text-soft);line-height:1.7;text-align:center;">'
+          + (en ? 'This device and the cloud each have progress. Which farm do you want to keep using?'
+                : '这台设备和云端各有一份进度。你想继续用哪一个农场？') + '</div>'
+          + card(en ? '☁️ Cloud farm (other device)' : '☁️ 云端农场（另一台设备）', m.cloudLvl, m.cloudH, m.cloudAt, 'cloud')
+          + card(en ? '💻 This device' : '💻 这台设备上的', m.localLvl, m.localH, m.localAt, 'local')
+          + '<div style="font-size:11px;color:var(--warm-text-soft);text-align:center;margin-top:10px;">'
+          + (en ? 'The other save is backed up — nothing is lost.' : '未选的那份会自动备份，不会丢。') + '</div>'
+        );
+        document.querySelectorAll('[data-savepick]').forEach((btn) => {
+          btn.onclick = () => {
+            const pick = btn.getAttribute('data-savepick');
+            Farm.ui.hideModal();
+            if (pick === 'cloud') {
+              try { localStorage.setItem('eastern_farm_save_replaced_v1', JSON.stringify(Farm.state.data)); } catch (e) {}
+              Farm.state.applyCloudSave(cloudState);
+              if (Farm.ui.toast) Farm.ui.toast(en ? '☁️ Cloud farm loaded' : '☁️ 已切换到云端农场', 3000);
+            } else {
+              Farm.state.save();
+              this.push();   // 本地为准 → 立刻把云端追平, 结束分叉
+            }
+          };
+        });
+      };
+      setTimeout(tryShow, 2500);
     },
 
     // Debounced — called frequently from state.save(). Skips if recently
