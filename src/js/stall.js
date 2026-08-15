@@ -30,7 +30,9 @@
     { at: 25, bonus: 0.15, zh: '挚友',   en: 'Best friend' },
   ];
   const tierOf = (n) => { let t = null; for (const x of TIERS) if (n >= x.at) t = x; return t; };
-  const WAIT_MS = 3 * 3600e3;          // 路人最多等 3 小时
+  // 等待时长: 40-90 分钟随机(2026-08-15 Chris:「等一段时间没有卖就应该离开」
+  // —— 旧的 3 小时太不真实, 而且看不见 TA 走)。到点离开会轻声告知。
+  const WAIT_MIN = 40, WAIT_MAX = 90;
   const GAP_MIN = 25, GAP_MAX = 45;    // 成交后下一位的间隔（分钟）
   const FIRST_DELAY_MS = 4 * 60e3;     // 新农场开张 4 分钟后来第一位
 
@@ -69,9 +71,17 @@
       if (!this._pool && !this._poolReq) { this._poolReq = true; this._loadPool(); }   // 预热真实玩家池
       const st = this._st(), now = Date.now();
       if (st.customer && now > st.customer.expireAt) {
+        const gone = st.customer;
         st.customer = null;
         st.nextAt = now + 60e3;        // 空档 1 分钟，别立刻刷脸
         Farm.state.save();
+        // 在线时轻声告知(拜访别人家时不打扰); 语气温和, 不责怪
+        if (!Farm.state._visitLock && Farm.ui && Farm.ui.toast) {
+          const en2 = Farm.state.data.language === 'en';
+          Farm.ui.toast(en2
+            ? ('🧺 ' + gone.en + ' waited a while and moved on.')
+            : ('🧺 ' + gone.zh + ' 等了一会儿，先走了。'), 3000);
+        }
       }
       if (!st.customer && now >= (st.nextAt || 0)) this._spawn();
       return st.customer || null;
@@ -114,7 +124,7 @@
         zh: who ? who.name : ANON.zh, en: who ? who.name : ANON.en,
         face: who ? who.face : ANON.face,
         real: !!who, uid: who ? who.uid : null, visits,
-        bornAt: now, expireAt: now + WAIT_MS,
+        bornAt: now, expireAt: now + (WAIT_MIN + Math.random() * (WAIT_MAX - WAIT_MIN)) * 60e3,
       };
       Farm.state.save();
       this._loadPool();   // 顺手为下一位预热真实玩家池(异步, 不阻塞)
@@ -233,7 +243,10 @@
                 : ('想买 <b>' + c.qty + ' 棵 ' + (def.icon || '🥬') + ' ' + cropName + '</b><br>出价 <b>' + c.price + '</b> <span class="coin-icon"></span> <span style="color:var(--leaf-dark);font-weight:600;">（比市价高 ' + c.pct + '%）</span>'))
           + '</div>'
           + '<div style="font-size:12px;color:var(--warm-text-soft);margin-bottom:10px;">'
-          + (en ? ('In silo: ' + stock) : ('仓库现有：' + stock + ' 棵')) + '</div>'
+          + (en ? ('In silo: ' + stock) : ('仓库现有：' + stock + ' 棵'))
+          + ' · ' + (function () { const m2 = Math.max(1, Math.ceil((c.expireAt - Date.now()) / 60e3));
+              return en ? ('waits ~' + m2 + ' min') : ('还会等约 ' + m2 + ' 分钟'); })()
+          + '</div>'
           + (enough
             ? '<button class="btn" id="stallSellBtn" style="width:100%;">' + (en ? 'Sell' : '卖给TA') + ' · +' + c.price + ' <span class="coin-icon"></span></button>'
             : '<button class="btn secondary" disabled style="width:100%;">' + (en ? 'Not enough stock — grow some!' : '货不够 · 先去种点吧') + '</button>')

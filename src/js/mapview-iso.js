@@ -2446,17 +2446,14 @@
       if (o.type === 'home' && homeLv > 1 && !moving) this._drawHomeExtras(cc.x, by, b.w * tw * 0.92 * BLD * hz, b.sc * th * 2.2 * BLD * hz, homeLv);
       if (o.type === 'house' && !moving) {
         this._drawShopSign(cc.x, by, b.w * tw * 0.92 * BLD, b.sc * th * 2.2 * BLD);
-        // 路人在摊前等着买菜(想要的菜画在头顶泡泡里, 鸡舍鸡蛋泡同款样式)
+        // 摊位收到求购 → 雨棚旁挂一只求购气泡(2026-08-15 Chris:「不要放
+        // 一个人头, 瘆得慌」—— 人形整个去掉, 是谁想买点开面板看名字)
         if (!this._build && Farm.stall) {
           const cu = Farm.stall.customer();
           if (cu) {
             const t2 = Date.now() / 1000, bob = Math.sin(t2 * 2) * th * 0.04;
-            // 站右前方空地(左边常是谷仓, 会把人挡住 —— 截图实证过)
-            const px2 = cc.x + tw * 0.78, py2 = by + th * 0.58;
+            const px2 = cc.x + tw * 0.95, py2 = by - th * 1.05;
             ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
-            ctx.font = (th * 1.15) + 'px sans-serif';
-            this._shadow(px2, py2 + th * 0.12, tw * 0.4, 0.18);
-            ctx.fillText(cu.face, px2, py2 + bob * 0.3);
             /* 对话气泡(2026-08-14 Chris:「人头上那朵花什么意思?」——旧版白圈
                和作物成熟徽章撞脸, 读不出「TA 想买菜」。改成带尾巴的奶油气泡:
                菜 ×数量 + 小金币 = 一眼是「顾客想买」不是「地里熟了」)。 */
