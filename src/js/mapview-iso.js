@@ -706,6 +706,8 @@
       const dragEnd = this._drag, wasTap = dragEnd && !dragEnd.moved && !this._pinch; this._drag = null;
       if (!wasTap) { if (dragEnd && !this._pinch) this._glideStart(dragEnd); return; }
       if (!p) return;
+      // 🔒 拜访模式: 点什么都只给轻反馈, 绝不触发种收/建造/商店(那些会动伪状态)
+      if (this._visit) { this._visitTapReact(p); return; }
       // tap the land-unlock badge → expand the farm
       if (this._landBadge && Math.hypot(p.x - this._landBadge.x, p.y - this._landBadge.y) <= this._landBadge.r) { this._tryUnlockLand(); return; }
       // 点远处邻居的小屋 → 去社区页拜访(小屋名牌是真实玩家, 2026-08-14)
@@ -713,7 +715,10 @@
         for (const nh of this._neighborHits) {
           if (Math.hypot(p.x - nh.x, p.y - nh.y) <= nh.r) {
             this._stickyEnd();
-            if (Farm.neighbors && Farm.neighbors.open) Farm.neighbors.open();
+            // 有本尊数据的邻居 → 直接走进 TA 家(viewFarm 内部决定实景或经典面板)
+            const df = this._distantFarms && this._distantFarms[this._neighborHits.indexOf(nh)];
+            if (df && df._n && Farm.neighbors && Farm.neighbors.viewFarm) Farm.neighbors.viewFarm(df._n);
+            else if (Farm.neighbors && Farm.neighbors.open) Farm.neighbors.open();
             return;
           }
         }
@@ -1067,6 +1072,141 @@
       ctx.fillStyle = '#6d4c28';
       ctx.fillText(txt, 0, fs * 0.05);
       ctx.restore();
+    },
+
+    /* ============ 拜访模式(2026-08-14 共享世界「门后是真实世界」) ============
+       Chris 定案:「外壳是传送门(保活力), 门后是真实世界(保沉浸), 地址是永久的
+       (保归属), 做到极致」。点邻居 → 整个渲染器切换到**TA 家的真实农场**:
+       TA 的菜地长势/建筑等级/水塘小路/装饰, 全部由 worldLayout 镜像重建。
+
+       实现是「换身术」: Farm.state.data 临时指向伪状态。三道硬闸保证真身安全:
+       state.save() / fbGameSync.push() / fbQueue.flush() 在 _visitLock 期间
+       全部冻结(否则邻居的农场会写进我的存档和云档)。需要以真身操作的动作
+       (点赞走每日上限)用 _withRealState 短暂换回。 */
+    enterVisitFarm(info) {
+      if (this._visit || !this._on || !info || !info.layout) return false;
+      try {
+        Farm.state.save();                       // 真身进度先落盘
+        if (Farm.fbGameSync && Farm.fbGameSync.recordVisit && info.uid) {
+          try { Farm.fbGameSync.recordVisit(info.uid); } catch (e) {}   // 足迹用真身状态记
+        }
+        const real = Farm.state.data, L = info.layout;
+        const vd = {
+          language: real.language, level: info.level || 1,
+          coins: real.coins, eastPoints: real.eastPoints,   // HUD 仍显示我的钱包
+          plots: (L.plots || []).map((pp) => ({ unlocked: true, crop: pp.c || null, plantedAt: pp.p || 0, gx: pp.x, gy: pp.y })),
+          map: (L.bld || []).map((bb) => { const ob = { type: bb.t, gx: bb.x, gy: bb.y }; if (bb.lv) ob.lv = bb.lv; return ob; }),
+          mapTerrain: {}, decorations: (L.deco || []).map((dd) => ({ itemId: dd.d, gx: dd.x, gy: dd.y, placedAt: 1 })),
+          landLevel: L.landLevel || 0,
+          activeEffects: {}, seeds: {}, warehouse: [],
+          dailyClaims: { date: '', visitFootprints: [], likesSentToday: [] },
+          sessionStats: { date: '' }, petsEnabled: false,
+          farmFwdUndoneV1: true, pondMoveV3: true, worldStamped: true,
+        };
+        (L.terr || []).forEach((e) => { if (e && e.k) vd.mapTerrain[e.k] = e.t; });
+        this._visit = { info, savedData: real, vd };
+        Farm.state._visitLock = true;
+        Farm.state.data = vd;
+        this._pcs = null; this._pcsN = -1;       // 地块格缓存按 plots.length 判断, 必须手动失效
+        this._bgKey = null;
+        this._buildLayout();
+        this._sel = -1; this._moving = null; this._blockedCell = null;
+        document.body.classList.add('visit-mode');
+        this._buildVisitUI(info);
+        this._autoFrame();
+        this.render();
+        if (Farm.audio) Farm.audio.play('tap');
+        return true;
+      } catch (err) {
+        console.error('[visit] enter failed, rolling back', err);
+        this.exitVisitFarm();
+        return false;
+      }
+    },
+
+    exitVisitFarm() {
+      if (!this._visit && !Farm.state._visitLock) return;
+      const v = this._visit;
+      this._visit = null;
+      if (v && v.savedData) Farm.state.data = v.savedData;
+      Farm.state._visitLock = false;
+      this._pcs = null; this._pcsN = -1;
+      this._bgKey = null;
+      this._buildLayout();
+      document.body.classList.remove('visit-mode');
+      const bar = document.getElementById('visitBar'); if (bar) bar.remove();
+      const act = document.getElementById('visitActions'); if (act) act.remove();
+      this._autoFrame();
+      this.render();
+    },
+
+    // 需要以真身执行的动作(每日上限/去重都记在真身 dailyClaims 里)
+    async _withRealState(fn) {
+      const v = this._visit;
+      if (!v) return fn();
+      Farm.state.data = v.savedData;
+      Farm.state._visitLock = false;
+      try { return await fn(); }
+      finally {
+        if (this._visit === v) {                 // 还在拜访 → 换回伪身
+          Farm.state.data = v.vd;
+          Farm.state._visitLock = true;
+        }
+      }
+    },
+
+    _buildVisitUI(info) {
+      const en = this._lang() === 'en';
+      const bar = document.createElement('div');
+      bar.id = 'visitBar';
+      bar.innerHTML = '<span class="visit-face">' + (info.emoji || '🏡') + '</span>'
+        + '<span class="visit-name">' + (en ? (info.name + "'s Farm") : (info.name + ' 家')) + '</span>'
+        + '<span class="visit-addr" id="visitAddr">Lv ' + (info.level || 1) + '</span>';
+      document.body.appendChild(bar);
+      // 永久门牌(东方农场路 N 号)异步补上
+      if (info.uid && Farm.fbGameSync && Farm.fbGameSync.fetchWorldAddress) {
+        Farm.fbGameSync.fetchWorldAddress(info.uid).then((n) => {
+          const el = document.getElementById('visitAddr');
+          if (el && n) el.textContent = (en ? ('No.' + n + ' Eastern Farm Rd · Lv' + (info.level || 1))
+                                            : ('东方农场路 ' + n + ' 号 · Lv' + (info.level || 1)));
+        }).catch(() => {});
+      }
+      const act = document.createElement('div');
+      act.id = 'visitActions';
+      act.innerHTML =
+        '<button class="visit-btn" id="visitLike">👍 ' + (en ? 'Like' : '点赞') + '</button>'
+        + '<button class="visit-btn" id="visitInteract">🥬 ' + (en ? 'Interact' : '互动·顺菜') + '</button>'
+        + '<button class="visit-btn visit-btn--home" id="visitHome">↩️ ' + (en ? 'Go home' : '回自家') + '</button>';
+      document.body.appendChild(act);
+      const info2 = this._visit.info;
+      document.getElementById('visitHome').onclick = () => { if (Farm.audio) Farm.audio.play('tap'); this.exitVisitFarm(); };
+      document.getElementById('visitLike').onclick = async () => {
+        if (Farm.audio) Farm.audio.play('tap');
+        const r = await this._withRealState(() => Farm.fbGameSync.sendLike(info2.uid));
+        if (Farm.ui && Farm.ui.toast) Farm.ui.toast(r && r.ok === false
+          ? (en ? 'Already liked today' : '今天已经赞过啦')
+          : (en ? 'Liked! ❤️' : '已点赞 ❤️'), 2200);
+      };
+      document.getElementById('visitInteract').onclick = () => {
+        // 顺菜/送礼走既有的经典互动面板(带看门狗/上限), 以真身打开
+        if (Farm.audio) Farm.audio.play('tap');
+        const target = info2._neighbor;
+        this.exitVisitFarm();
+        if (target && Farm.neighbors && Farm.neighbors.viewFarm) Farm.neighbors.viewFarm(target, { classic: true });
+        else if (Farm.neighbors && Farm.neighbors.open) Farm.neighbors.open();
+      };
+    },
+
+    // 拜访中点到 TA 家的东西 → 轻反馈, 绝不触发任何真操作
+    _visitTapReact(p) {
+      const en = this._lang() === 'en';
+      if (Farm.ui && Farm.ui.floatText) Farm.ui.floatText('✨', p.x, p.y - 8, '#e8a020');
+      if (!this._visitHintShown) {
+        this._visitHintShown = true;
+        if (Farm.ui && Farm.ui.toast) Farm.ui.toast(en
+          ? 'You are visiting — use the buttons below to interact'
+          : '正在别人家做客～想顺菜点下面「互动」', 3200);
+      }
     },
 
     _delChip(o) { const b = BUILDINGS[o.type], c = this._cell(o.gx + b.w - 1, o.gy), th = this._th(); return { x: c.x + this._tw() / 2 * 0.5, y: c.y - th * 0.2, r: Math.max(12, th * 0.5) }; },
@@ -1664,7 +1804,7 @@
        不落存档、不进缓存 —— 活的帧才画, 一个 emoji 的成本。
        它回答的是「路人从哪来」: 你先看见有人沿路走, 之后摊前才有人买菜。 */
     _drawRoadWalker() {
-      if (this._build) return;
+      if (this._build || this._visit) return;
       const now = Date.now();
       if (!this._walkerNextAt) this._walkerNextAt = now + 30e3;   // 进图 30 秒后来第一位
       if (!this._walker && now >= this._walkerNextAt) {
@@ -1737,7 +1877,7 @@
         if (!(Farm.neighbors && Farm.neighbors._fetchToday)) { setTimeout(tryFetch, 5000); return; }
         Farm.neighbors._fetchToday().then((list) => {
           this._distantFarms = (list || []).slice(0, this.NEIGHBOR_SPOTS.length)
-            .map((n) => ({ name: n.name, level: n.level || 1, emoji: n.emoji }));
+            .map((n) => ({ name: n.name, level: n.level || 1, emoji: n.emoji, _n: n }));
           this._bgKey = null;   // 名牌进相机缓存, 数据到了重画一次
           if (this._on) this.render();
         }).catch(() => {});
@@ -1745,6 +1885,7 @@
       setTimeout(tryFetch, 4000);   // 等 Firebase 晚初始化完成
     },
     _drawFarNeighbors(fit) {
+      if (this._visit) { this._neighborHits = []; return; }
       this._loadDistantFarms();
       const farms = this._distantFarms;
       const th = this._th(), ctx = this._ctx;

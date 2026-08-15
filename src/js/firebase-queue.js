@@ -87,6 +87,8 @@
     size() { return this.read().length; },
 
     async flush() {
+      // 拜访模式: 服务端回执会把积分余额写进当前 state(此刻是邻居的伪状态)→ 丢失。
+      if (Farm.state && Farm.state._visitLock) return;
       if (!navigator.onLine) return;
       if (!Farm.fb || !Farm.fb.available) return;
       if (!Farm.fbAuth || !Farm.fbAuth.isLoggedIn()) return;

@@ -146,6 +146,9 @@
 
     // Immediate push — used at boot or on explicit triggers.
     async push() {
+      // 🔒 拜访模式: state.data 指向邻居的伪状态 —— 此刻 push 会把**别人的农场
+      // 布局和 gameSave blob 覆盖进我的云档**。拜访期间云同步冻结。
+      if (Farm.state && Farm.state._visitLock) return { ok: false, reason: 'visiting' };
       if (!Farm.fb || !Farm.fb.available) return { ok: false, reason: 'offline' };
       if (!Farm.fbAuth || !Farm.fbAuth.isLoggedIn()) return { ok: false, reason: 'not_logged_in' };
       // Anti-orphan guard: never write gameStats until the REAL member doc has
@@ -386,6 +389,24 @@
     // earns +1 EP. Receiver gets an atomic counter increment + their
     // UID is added to the sender's `likedBy` array (so we can detect
     // mutual likes if they reciprocate later).
+    /* 永久门牌(2026-08-14 共享世界「地址是永久的」): 东方农场路 N 号。
+       N = 该玩家在 worldJoinedAt 升序里的位置+1 —— 新农场接在路末端,
+       老门牌永不漂移。列表缓存 10 分钟(门牌只增不改, 不用实时)。 */
+    async fetchWorldAddress(uid) {
+      try {
+        if (!Farm.fb || !Farm.fb.available || !uid) return null;
+        const now = Date.now();
+        if (!this._addrList || now - (this._addrAt || 0) > 600e3) {
+          const q = await Farm.fb.db.collection('farm_players')
+            .orderBy('worldJoinedAt', 'asc').limit(500).get();
+          this._addrList = q.docs.map((d) => d.id);
+          this._addrAt = now;
+        }
+        const i = this._addrList.indexOf(uid);
+        return i >= 0 ? i + 1 : null;
+      } catch (e) { return null; }
+    },
+
     async sendLike(toUid) {
       const lang = Farm.state.data.language || 'zh';
       const claims = Farm.state.data.dailyClaims;

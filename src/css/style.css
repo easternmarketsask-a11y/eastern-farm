@@ -4365,3 +4365,74 @@ body.modal-open .pwa-install-banner { display: none; }
 .nav-menu-icon { font-size: 24px; line-height: 1; }
 .nav-menu-label { text-align: center; }
 @media (max-width: 360px) { .nav-menu-grid { grid-template-columns: repeat(3, 1fr); } }
+
+
+/* =============== 拜访模式(2026-08-14 共享世界) =============== */
+/* 在别人家: 自家的 dock/建造钮/顶部提示条都收起来, 界面只留「看和互动」 */
+.visit-mode #bottombar,
+.visit-mode #isoBuildBtn,
+.visit-mode #harvestStatusBar,
+.visit-mode #storekeeper,
+.visit-mode .hamburger-fab { display: none !important; }
+
+#visitBar {
+  position: fixed;
+  top: calc(64px + env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 252, 242, 0.96);
+  border: 1.5px solid var(--border-soft);
+  border-radius: var(--radius-pill);
+  padding: 8px 16px;
+  box-shadow: var(--shadow-card);
+  max-width: 88vw;
+}
+#visitBar .visit-face { font-size: 20px; line-height: 1; }
+#visitBar .visit-name {
+  font-family: var(--font-display);
+  font-size: 16px;
+  color: var(--warm-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#visitBar .visit-addr {
+  font-size: 11.5px;
+  color: var(--warm-text-soft);
+  white-space: nowrap;
+}
+#visitActions {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(18px + env(safe-area-inset-bottom));
+  z-index: 60;
+  display: flex;
+  gap: 10px;
+}
+.visit-btn {
+  border: none;
+  border-radius: var(--radius-pill);
+  padding: 12px 18px;
+  min-height: 44px;
+  white-space: nowrap;   /* CJK 文字被压成竖排的元凶: flex 子项收缩 */
+  font-family: var(--font-zh);
+  font-weight: 600;
+  font-size: 14px;
+  background: #fffdf6;
+  color: var(--warm-text);
+  border: 1.5px solid var(--border-soft);
+  box-shadow: var(--shadow-card);
+  cursor: pointer;
+}
+.visit-btn:active { transform: scale(0.96); }
+.visit-btn--home {
+  background: linear-gradient(180deg, #4aa563, #3a8c50);
+  color: #fff;
+  border-color: transparent;
+  box-shadow: 0 3px 0 #2a6038;
+}

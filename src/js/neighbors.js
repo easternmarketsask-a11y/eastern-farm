@@ -407,9 +407,34 @@
     },
 
     // Visit a single neighbor's farm + offer the Like button
-    async viewFarm(neighbor) {
+    async viewFarm(neighbor, opts) {
       const lang = Farm.state.data.language;
       const isAI = !!neighbor.isAI;
+      /* 🏡 门后是真实世界(2026-08-14): 真会员且有 worldLayout 布局镜像 →
+         直接走进 TA 家的**实景农场**(渲染器拜访模式)。opts.classic 强制
+         经典卡片面板(顺菜/送礼在那边, 有完整的上限与看门狗)。
+         布局镜像是 Phase A 新数据, 老客户端玩家还没有 → 自动回落经典面板。 */
+      if (!isAI && !(opts && opts.classic) && neighbor.uid
+          && Farm.isoView && Farm.isoView.enterVisitFarm && Farm.isoView.active()) {
+        let wl = neighbor._doc && neighbor._doc.gameStats && neighbor._doc.gameStats.worldLayout;
+        if (!wl && Farm.fb && Farm.fb.available) {
+          try {
+            const snap = await Farm.fb.db.collection('farm_players').doc(neighbor.uid).get();
+            if (snap.exists) {
+              const gs = snap.data().gameStats || {};
+              if (gs.worldLayout) { wl = gs.worldLayout; neighbor._doc = Object.assign({}, neighbor._doc, { gameStats: gs }); }
+            }
+          } catch (_) {}
+        }
+        if (wl && Array.isArray(wl.plots)) {
+          if (Farm.ui && Farm.ui.hideModal) Farm.ui.hideModal();
+          const ok = Farm.isoView.enterVisitFarm({
+            uid: neighbor.uid, name: neighbor.name, emoji: neighbor.emoji,
+            level: neighbor.level || 1, layout: wl, _neighbor: neighbor,
+          });
+          if (ok) return;
+        }
+      }
       const myId = Farm.fbAuth && (Farm.fbAuth.memberDocId ? Farm.fbAuth.memberDocId() : Farm.fbAuth.uid && Farm.fbAuth.uid());
 
       // 农场数据源（spec 2026-06-11）：
