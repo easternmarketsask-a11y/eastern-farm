@@ -558,7 +558,7 @@
         <div class="neighbor-greeting">"${greeting}"</div>
         <div class="neighbor-farm">${plotsHtml}</div>
         ${(isAI || realStealable)
-          ? `<div class="neighbor-steal-tip">${lang === 'en' ? '🧺 Tap a ripe crop to grab one for your silo' : '🧺 点熟了的菜，顺一棵回家～'}</div>`
+          ? `<div class="neighbor-steal-tip">${lang === 'en' ? '🧺 Tap a ripe crop to grab one for your barn' : '🧺 点熟了的菜，顺一棵回家～'}</div>`
           : (!stealUnlocked && fd.plots.some(p => p.cropId && p.stage >= 2)
               ? `<div class="neighbor-steal-tip" style="opacity:.85;">${lang === 'en' ? `🔒 Reach Lv${cfg.STEAL_UNLOCK_LEVEL || 7} to unlock grabbing crops` : `🔒 农场到 Lv${cfg.STEAL_UNLOCK_LEVEL || 7} 解锁顺菜`}</div>`
               : '')}
@@ -609,7 +609,7 @@
           cell.innerHTML = '<span class="neighbor-steal-done">✓</span>';
           const rect = cell.getBoundingClientRect();
           if (Farm.ui.floatText) {
-            Farm.ui.floatText('🧺 +1 ' + (lang === 'en' ? 'silo' : '入库'),
+            Farm.ui.floatText('🧺 +1 ' + (lang === 'en' ? 'to barn' : '入库'),
               rect.left + rect.width / 2 - 18, rect.top, '#3a8c50');
           }
           if (Farm.audio) Farm.audio.play('coin');

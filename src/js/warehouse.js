@@ -93,7 +93,7 @@
           <div class="wh-list">${rows}</div>
           ${reservedCount > 0
             ? `<div style="font-size:12px;color:var(--warm-text-soft);padding:6px 4px 0;">🛒 ${lang === 'en'
-                ? `${reservedCount} item(s) reserved for Little East's orders — won't be sold`
+                ? `${reservedCount} item(s) reserved for Xiaodong's orders — won't be sold`
                 : `已为小东订单留 ${reservedCount} 件，一键卖货不会卖掉`}</div>`
             : ''}
           ${bonusLineHtml}
@@ -113,7 +113,7 @@
       const tier = Farm.state.warehouseExpansionTier();
       const expandBtn = tier.atMax
         ? ''
-        : `<button class="btn wh-expand-btn" id="whExpandBtn">🏗 ${lang === 'en' ? 'Expand silo to ' : '扩建到 '}${tier.nextCapacity} · ${coin}${tier.cost}</button>`;
+        : `<button class="btn wh-expand-btn" id="whExpandBtn">🏗 ${lang === 'en' ? 'Expand barn to ' : '扩建到 '}${tier.nextCapacity} · ${coin}${tier.cost}</button>`;
 
       const html = `
         <h2 class="modal-title">${lang === 'en' ? titleEn : titleZh}</h2>
@@ -148,18 +148,18 @@
       const sellBtn = `
         <button class="btn wh-full-choice wh-full-sell" id="whFullSell">
           <div class="wh-full-choice-title">🏪 ${lang === 'en' ? 'Sell to Eastern Market' : '卖给东方超市'}</div>
-          <div class="wh-full-choice-sub">${lang === 'en' ? 'Get' : '得到'} ${coin}${value}${lang === 'en' ? ' now + free silo space' : '，仓库立刻清空'}</div>
+          <div class="wh-full-choice-sub">${lang === 'en' ? 'Get' : '得到'} ${coin}${value}${lang === 'en' ? ' now + free barn space' : '，仓库立刻清空'}</div>
         </button>`;
 
       const expandBtn = tier.atMax
-        ? `<div class="wh-full-maxed">🏆 ${lang === 'en' ? 'Silo is already maxed out' : '仓库已是最大容量'}</div>`
+        ? `<div class="wh-full-maxed">🏆 ${lang === 'en' ? 'Barn is already maxed out' : '仓库已是最大容量'}</div>`
         : `<button class="btn wh-full-choice wh-full-expand" id="whFullExpand">
-            <div class="wh-full-choice-title">🏗 ${lang === 'en' ? 'Expand silo' : '扩建仓库'}</div>
+            <div class="wh-full-choice-title">🏗 ${lang === 'en' ? 'Expand barn' : '扩建仓库'}</div>
             <div class="wh-full-choice-sub">${cap} → ${tier.nextCapacity} ${lang === 'en' ? '· cost' : '· 花费'} ${coin}${tier.cost}</div>
           </button>`;
 
       const html = `
-        <h2 class="modal-title">${lang === 'en' ? 'Silo is full!' : '仓库满了！'}</h2>
+        <h2 class="modal-title">${lang === 'en' ? 'Barn is full!' : '仓库满了！'}</h2>
         <p class="modal-subtitle">${lang === 'en'
           ? 'Pick one to keep harvesting:'
           : '挑一个继续收割:'}</p>
@@ -183,7 +183,7 @@
         if (result.reason === 'insufficient_coins') {
           Farm.ui.toast(lang === 'en' ? '🪙 Not enough farm coins' : '🪙 农场币不够', 2200);
         } else if (result.reason === 'at_max') {
-          Farm.ui.toast(lang === 'en' ? '🏆 Silo is already max' : '🏆 已是最大容量', 2200);
+          Farm.ui.toast(lang === 'en' ? '🏆 Barn is already max' : '🏆 已是最大容量', 2200);
         }
         if (Farm.audio) Farm.audio.play('error');
         return;
@@ -194,7 +194,7 @@
       if (Farm.harvestStatus) Farm.harvestStatus.render();
       if (Farm.audio) Farm.audio.play('achievement');
       Farm.ui.toast(lang === 'en'
-        ? `🏗 Silo expanded to ${result.newCapacity}! -<span class="coin-icon"></span>${result.cost}`
+        ? `🏗 Barn expanded to ${result.newCapacity}! -<span class="coin-icon"></span>${result.cost}`
         : `🏗 仓库扩到 ${result.newCapacity} 件！-<span class="coin-icon"></span>${result.cost}`, 2800);
     },
 
@@ -207,7 +207,7 @@
           // 路标（audit P1）：光说「去交订单」玩家找不到入口——订单板入口是
           // 左下角无文字标签的小东头像，必须在 toast 里点明位置。
           Farm.ui.toast(lang === 'en'
-            ? '🛒 Everything in the silo is reserved for Little East\'s orders — tap Little East (bottom-left avatar) to deliver them for more coins!'
+            ? '🛒 Everything in the barn is reserved for Xiaodong\'s orders — tap Xiaodong (bottom-left avatar) to deliver them for more coins!'
             : '🛒 仓库里的菜都是给小东订单留的——点左下角小东头像交订单，更划算！', 4000);
         } else {
           Farm.ui.toast(lang === 'en' ? 'Warehouse is empty' : '仓库是空的');

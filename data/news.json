@@ -6,9 +6,9 @@
       "id": "tip_warehouse",
       "category": "tip",
       "title_zh": "📦 新功能：仓库 + 卖给东方超市",
-      "title_en": "📦 New: warehouse + sell to Eastern Market",
+      "title_en": "📦 New: barn + sell to Eastern Market",
       "body_zh": "收获的菜先进仓库，要点谷仓卖给东方超市才能换金币。今日首单 +20% 奖励！",
-      "body_en": "Harvested crops go to the silo. Tap the barn to sell to Eastern Market for coins — first sale of the day gets +20% bonus!"
+      "body_en": "Harvested crops go to the barn. Tap it to sell to Eastern Market for coins — first sale of the day gets +20% bonus!"
     },
     {
       "id": "tip_warehouse_cap",
@@ -16,7 +16,7 @@
       "title_zh": "💡 仓库装满了怎么办",
       "title_en": "💡 Silo full?",
       "body_zh": "仓库默认装 20 件，满了就不能再收。先点谷仓卖给东方超市清空，或者花农场币扩建仓库。",
-      "body_en": "Default capacity is 20. When full, harvest is blocked — sell to Eastern Market, or spend coins to expand the silo."
+      "body_en": "Default capacity is 20. When full, harvest is blocked — sell to Eastern Market, or spend coins to expand the barn."
     },
     {
       "id": "tip_chive",

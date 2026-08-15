@@ -21,11 +21,11 @@
     first_mature:   { zh: '🌟 有菜熟啦！点一下亮闪闪的地块就能收进仓库。',
                       en: '🌟 A crop is ripe! Tap the glowing plot to harvest it.' },
     first_warehouse:{ zh: '📦 收的菜先进仓库，攒一攒一次卖给东方超市更划算。',
-                      en: '📦 Harvests go to the silo — sell a batch to Eastern Market for more.' },
+                      en: '📦 Harvests go to the barn — sell a batch to Eastern Market for more.' },
     first_sell:     { zh: '🏪 卖菜赚农场币！每天第一笔还有 +20% 加成哦。',
                       en: '🏪 Selling earns coins — your first sale each day gets +20%!' },
     warehouse_full: { zh: '📦 仓库满了～卖给东方超市清空，或点仓库扩建。',
-                      en: '📦 Silo is full — sell to Eastern Market, or expand it.' },
+                      en: '📦 Barn is full — sell to Eastern Market, or expand it.' },
     // —— 货币 / 兑换 ——
     first_coins_exchange: { zh: '🪙 农场币攒到一些啦！点左上角金币卡，可换成超市积分。',
                             en: '🪙 Got some coins! Tap the coin card to swap them for store points.' },

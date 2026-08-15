@@ -175,7 +175,8 @@
     openPlotCare(plotIdx, plot, def) {
       const lang = Farm.state.data.language;
       const nameKey = lang === 'en' ? 'name_en' : 'name_zh';
-      const remaining = Farm.crops.formatTimeRemaining(Farm.crops.timeRemaining(plot));
+      const remainMs = Farm.crops.timeRemaining(plot);
+      const remaining = Farm.crops.formatTimeRemaining(remainMs);
       const eff = Farm.state.data.activeEffects || {};
       const charges = eff.accelerationCharges || 0;
       const canWater = Farm.tending && Farm.tending.canWater(plot);
@@ -205,7 +206,7 @@
       const html = `
         <h2 class="modal-title">${def[nameKey]}</h2>
         <p style="text-align:center;margin:10px 0 4px;color:var(--warm-text-soft);font-size:13px;">
-          ${lang === 'en' ? remaining + ' left' : '还剩 ' + remaining}
+          ${remainMs <= 0 ? (lang === 'en' ? '✅ Ripe — tap the plot to harvest' : '✅ 已成熟，点地块收获') : (lang === 'en' ? remaining + ' left' : '还剩 ' + remaining)}
         </p>
         <p style="text-align:center;margin:0 0 14px;color:var(--warm-text-soft);font-size:11px;opacity:.85;">
           ${lang === 'en' ? 'Optional boosts — crops grow & harvest fine without them.' : '都是可选加成，不打理也照常生长收获'}
@@ -270,7 +271,7 @@
           // （warehouse.openFullDialog）保留在状态胶囊「去卖货」入口。
           const lang = Farm.state.data.language;
           Farm.ui.toast(lang === 'en'
-            ? '📦 Silo full — tap the barn to sell & free up space'
+            ? '📦 Barn full — tap it to sell & free up space'
             : '📦 仓库满了，点谷仓卖货腾空间', 3000);
           if (Farm.harvestStatus) Farm.harvestStatus.render();   // 胶囊切到「去卖货」态
           if (Farm.warehouse && Farm.warehouse.refreshBadge) Farm.warehouse.refreshBadge();
@@ -328,7 +329,7 @@
         // 快满时有预期（数据与 state.isWarehouseFull 同口径）
         const whN = (Farm.state.data.warehouse || []).length;
         const whCap = Farm.state.data.warehouseCapacity || 20;
-        Farm.ui.floatText('📦 ' + (result.bumper ? '+2 ' : '+1 ') + (lang === 'en' ? 'silo ' : '入库 ')
+        Farm.ui.floatText('📦 ' + (result.bumper ? '+2 ' : '+1 ') + (lang === 'en' ? 'to barn ' : '入库 ')
           + whN + '/' + whCap,
           rect.left + rect.width/2 - 20, rect.top);
         if (result.bumper) {

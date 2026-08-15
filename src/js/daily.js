@@ -96,7 +96,7 @@
         <div class="daily-card daily-special">
           <div class="daily-card-title">🛒 ${lang === 'en' ? "Today's Special Seed" : '今日特价种子'}</div>
           <div class="daily-card-body" style="display:flex;align-items:center;gap:12px;">
-            <div style="font-size:38px;">${specialCrop.icon || '🌱'}</div>
+            <div style="font-size:38px;line-height:1;display:flex;align-items:center;">${(Farm.cropArt && Farm.cropArt.icon) ? Farm.cropArt.icon(specialId, 46) : (specialCrop.icon || '🌱')}</div>
             <div style="flex:1;">
               <div style="font-weight:700;">${specialCrop[nameKey]}</div>
               <div style="font-size:12px;color:var(--warm-text-soft);">

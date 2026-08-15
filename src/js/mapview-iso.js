@@ -436,11 +436,26 @@
       // nothing is cut off at the screen edges (Chris 2026-06-18: buildings were being
       // clipped because only the plot block was framed).
       let minx = Infinity, miny = Infinity, maxx = -Infinity, maxy = -Infinity;
-      const acc = (gx, gy) => { if (gx < minx) minx = gx; if (gy < miny) miny = gy; if (gx > maxx) maxx = gx; if (gy > maxy) maxy = gy; };
+      // 同时记屏幕轴（u=gx−gy 横向, v=gx+gy 纵向）的范围：镜头中心按 u/v 取，
+      // 而不是按 gx/gy 包围盒的中心 —— 后者是格子坐标里的轴对齐矩形，投影到屏幕
+      // 是个大菱形，物件只占其中一角时中心会整体偏到一边（2026-08-15 实测：
+      // 菜摊到谷仓横跨屏幕 63→248px，取景中心却落在 155，整片农场左偏 40px，
+      // 摊前路人被切在画外）。zoom 的算法不动。
+      let minU = Infinity, maxU = -Infinity, minV = Infinity, maxV = -Infinity;
+      const acc = (gx, gy) => {
+        if (gx < minx) minx = gx; if (gy < miny) miny = gy; if (gx > maxx) maxx = gx; if (gy > maxy) maxy = gy;
+        const u = gx - gy, v = gx + gy;
+        if (u < minU) minU = u; if (u > maxU) maxU = u; if (v < minV) minV = v; if (v > maxV) maxV = v;
+      };
       const plots = Farm.state.data.plots || [];
       for (let i = 0; i < plots.length; i++) acc(this._plotGX(i), this._plotGY(i));
       const map = Farm.state.data.map || [];
-      for (const o of map) { const b = BUILDINGS[o.type]; const w = b ? b.w : 1, h = b ? b.h : 1; acc(o.gx, o.gy); acc(o.gx + w - 1, o.gy + h - 1); }
+      for (const o of map) {
+        const b = BUILDINGS[o.type]; const w = b ? b.w : 1, h = b ? b.h : 1; acc(o.gx, o.gy); acc(o.gx + w - 1, o.gy + h - 1);
+        // 菜摊前站着等的路人（_drawBuilding 里画在 gy+2.15 的路上）也算进镜头，
+        // 否则摊子贴着屏幕左缘时，路人和「×2 💰」求购气泡被切在画外（2026-08-15 截图实证）
+        if (o.type === 'house') acc(o.gx + 1, o.gy + 2);
+      }
       const decos = Farm.state.data.decorations || [];
       for (const d of decos) { if (Number.isInteger(d.gx) && Number.isInteger(d.gy)) acc(d.gx, d.gy); }
       // 水塘也框进开局镜头（2026-08-13 换位后它在谷仓前方，不框会切出画面外）
@@ -449,7 +464,7 @@
         if (terr[k] !== 'water') continue;
         const a = k.split(','); acc(+a[0], +a[1]);
       }
-      if (minx === Infinity) { minx = miny = 0; maxx = maxy = 1; }
+      if (minx === Infinity) { minx = miny = 0; maxx = maxy = 1; minU = -1; maxU = 1; minV = 0; maxV = 2; }
 
       const span = (maxx - minx) + (maxy - miny);   // iso screen diagonal (du === dv === Δgx+Δgy)
       const screenW = (span * TW / 2 + TW) * FARM_SCALE;            // +1 tile side padding (× farm scale)
@@ -484,7 +499,7 @@
         const fitW = (W * 0.65) / screenW;
         this._zoom = Math.max(ZMIN, Math.min(ZMAX, Math.min(Math.max(fitW, minTap), fitH)));
       }
-      const ccx = (minx + maxx) / 2, ccy = (miny + maxy) / 2, u = ccx - ccy, v = ccx + ccy;
+      const u = (minU + maxU) / 2, v = (minV + maxV) / 2;
       this._camX = u * this._tw() / 2;
       // 农场（格心）落在画布高度的 FARM_SCREEN_Y（竖屏）/ 64%（横屏）处。
       this._camY = this._oy + v * this._th() / 2 - H * (portrait ? FARM_SCREEN_Y : 0.64);
@@ -940,7 +955,9 @@
       const perks = en
         ? ['A flower bed by the door', 'Warm window light & chimney smoke', 'Festive bunting on the eaves', 'Golden string lights at dusk']
         : ['门前多一畦花坛', '暖黄窗灯 + 袅袅炊烟', '屋檐挂上节日彩旗', '入夜亮起金色灯串'];
-      let body = '<div style="text-align:center;font-size:44px;line-height:1;">🏡</div>'
+      // 面板头图用真实的房子贴图（与地图上那栋同一张），别再用 🏡 emoji 代表它
+      let body = '<div style="text-align:center;line-height:1;"><img src="' + ASSET_DIR + ASSET_SRC.house
+        + '" alt="" style="width:88px;height:88px;object-fit:contain;filter:drop-shadow(0 3px 4px rgba(60,35,15,.25));"/></div>'
         + '<div style="text-align:center;font-family:var(--font-display);font-size:20px;margin-top:6px;">'
         + (en ? cur.en : cur.zh) + ' <span style="font-family:var(--font-num);font-size:14px;color:var(--warm-text-soft);">Lv ' + lv + '/' + HOME_LEVELS.length + '</span></div>'
         + '<div style="text-align:center;font-size:12.5px;color:var(--warm-text-soft);margin-top:4px;">'
@@ -1478,7 +1495,7 @@
       const screenW = span * TW / 2, screenH = span * TH / 2 + TH * 3;
       // reserve ~38% of height for the palette tray so content frames into the top area
       this._zoom = Math.max(ZMIN, Math.min(this._cssW() / (screenW * 1.08), (this._cssH() * 0.62) / (screenH * 1.0)));
-      const ccx = (minx + maxx) / 2, ccy = (miny + maxy) / 2, u = ccx - ccy, v = ccx + ccy;
+      const u = (minU + maxU) / 2, v = (minV + maxV) / 2;
       this._camX = u * this._tw() / 2;
       this._camY = this._oy + v * this._th() / 2 - this._cssH() * 0.34;   // push content up, above the palette
       this._clampCam();

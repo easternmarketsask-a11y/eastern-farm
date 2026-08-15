@@ -2228,6 +2228,19 @@ body.modal-open #bottombar { display: none; }
   #bottombar { padding: 4px 4px; gap: 0; }
   .action-label { font-size: 9.5px; letter-spacing: 0; }
   .action-icon { font-size: 20px; }
+  /* 顶栏在 360px 宽的手机上塞不下（2026-08-15 实测：右侧货币/账号/今日/菜单
+     一组把「Lv 8」徽章整个盖住只露一个 L）。整体紧一圈：内边距、间距、按钮 32px、
+     logo 28px；再不够时 logo 按比例缩（object-fit:contain）而不是被盖住。 */
+  #topbar { padding-left: 6px; padding-right: 6px; gap: 4px; }
+  #topbar .topbar-right { gap: 4px; }
+  .brand-cluster { gap: 4px; flex: 1 1 auto; }
+  .brandbar-logo-link { flex: 1 1 auto; min-width: 0; display: inline-flex; }
+  .brandbar-logo { height: 28px; max-width: 100%; object-fit: contain; object-position: left center; }
+  .topbar-level { font-size: 11px; padding: 3px 6px; }
+  .topbar-cur { padding: 3px 6px 3px 5px; font-size: 12px; gap: 2px; }
+  .hamburger-button { width: 32px; height: 32px; }
+  .today-button { padding: 5px 7px; }
+  .member-btn { padding: 5px 6px; }
 }
 
 /* =============== MODAL =============== */
@@ -4359,6 +4372,9 @@ body.modal-open .pwa-install-banner { display: none; }
   z-index: 9; background: none; padding: 0; width: 52px; height: 52px;
   border-radius: 50%; box-shadow: 0 3px 10px rgba(0,0,0,0.22);
 }
+/* 桌面/平板：#app 是居中的 480px 一栏，小东头像要贴这一栏的左下角，不是整个
+   浏览器窗口的左下角（2026-08-15 1280px 实测它孤零零挂在屏幕最左边） */
+@media (min-width: 481px) { .storekeeper { left: calc(50% - 240px + 10px); } }
 .storekeeper .storekeeper-avatar { width: 52px; height: 52px; }
 .storekeeper .storekeeper-bubble, .storekeeper .storekeeper-bubble::before { display: none !important; }
 .storekeeper .storekeeper-badge { left: auto; right: -2px; top: -2px; }

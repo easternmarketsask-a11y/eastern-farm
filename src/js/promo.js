@@ -76,7 +76,7 @@
           </div>
           <p style="font-size:12px;color:var(--warm-text-soft);line-height:1.6;margin-top:10px;">
             ${lang === 'en'
-              ? 'Spend it on seeds, decorations, a bigger silo — happy farming!'
+              ? 'Spend it on seeds, decorations, a bigger barn — happy farming!'
               : '拿去买种子、装饰、扩仓库吧，开心种菜！'}
           </p>
           <button class="btn" style="width:100%;margin-top:14px;" onclick="Farm.ui.hideModal()">${lang === 'en' ? 'Awesome!' : '太好了！'}</button>
