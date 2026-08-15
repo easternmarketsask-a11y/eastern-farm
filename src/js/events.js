@@ -40,8 +40,8 @@
     activeFestival: null,
 
     check() {
-      const today = new Date();
-      const todayStr = today.toISOString().slice(0, 10);
+      // 本地日期（萨省 UTC-6）：toISOString 是 UTC，傍晚 6 点后会提前一天进/出节日窗口
+      const todayStr = (Farm.state && Farm.state.getDateString) ? Farm.state.getDateString() : new Date().toISOString().slice(0, 10);
       this.activeFestival = null;
       for (const [id, def] of Object.entries(FESTIVALS)) {
         for (const w of def.windows) {
