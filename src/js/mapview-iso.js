@@ -182,6 +182,13 @@
   ];
   // EP-shop pets → painted iso animal sprites (replaces the emoji pet).
   const ANIMALS = { pet_chick: 'animal_chicken', pet_cat: 'animal_cat', pet_rabbit: 'animal_rabbit', decoration_dog: 'animal_dog', guard_dog: 'animal_dog' };
+  /* 小动物体型（2026-08-15 Chris：「宠物小鸡小狗比人都大不好吧」）：以摊前站着的路人
+     🧍（th*1.5 高）为尺子 —— 狗到人腰、猫到人膝、鸡兔到人脚踝。数值是「占路人身高的比例」，
+     _drawAnimal / _drawDeco 用它算最大高度；emoji 兜底宠物也走同一张表（没列的按 0.5）。 */
+  const PERSON_H = 1.5;                       // 路人 emoji 字号（th 的倍数），见 _drawBuilding 摊前路人
+  const ANIMAL_SCALE = { pet_chick: 0.42, pet_rabbit: 0.42, pet_cat: 0.52, decoration_dog: 0.62, guard_dog: 0.62,
+    pet_turtle: 0.32, pet_duck: 0.42, pet_squirrel: 0.36, pet_hedgehog: 0.34, pet_horse: 0.95, pet_peacock: 0.7, pet_goat: 0.75, pet_pig: 0.6, pet_sheep: 0.7, pet_cow: 0.9 };
+  const animalH = (itemId, th) => th * PERSON_H * (ANIMAL_SCALE[itemId] || 0.5);   // 最大高度（px）
   const BRUSHES = [
     { key: 'path', zh: '小路', en: 'Path', color: '#a8743a' },
     { key: 'water', zh: '水塘', en: 'Water', color: '#5aa0c8' },
@@ -2648,7 +2655,7 @@
           let cx = c.x, lift = 0;
           if (!moving) { const t = Date.now() / 1000; cx += Math.sin(t * 0.6 + d.seed) * tw * 0.06; lift = Math.abs(Math.sin(t * 1.3 + d.seed)) * th * 0.12; }
           ctx.globalAlpha = moving ? 0.85 : 1;
-          this._blit(im, cx, c.y + th * 0.5 - lift, tw * 0.58, th * 1.6);
+          this._blit(im, cx, c.y + th * 0.5 - lift, animalH(d.itemId, th) * 1.1, animalH(d.itemId, th));
           ctx.globalAlpha = 1; return;
         }
       }
@@ -2657,7 +2664,8 @@
       // non-animal decorations (static objects) + emoji fallback
       let cx = c.x, by = c.y + th * 0.25;
       if (d.pet && !moving) { const t = Date.now() / 1000; cx += Math.sin(t * 0.6 + d.seed) * tw * 0.06; by -= Math.abs(Math.sin(t * 1.3 + d.seed)) * th * 0.12; }
-      ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic'; ctx.globalAlpha = moving ? 0.85 : 1; ctx.font = (th * 1.4) + 'px sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic'; ctx.globalAlpha = moving ? 0.85 : 1;
+      ctx.font = (d.pet ? animalH(d.itemId, th) : th * 1.4) + 'px sans-serif';   // 宠物 emoji 按体型表，别跟人一样高
       ctx.fillText(d.emoji, cx, by); ctx.globalAlpha = 1;
     },
     // A pet may stand on grass/path — not on water, buildings, plots.
@@ -2734,7 +2742,7 @@
     _drawAnimal(d, fx, fy, face) {
       const ctx = this._ctx, tw = this._tw(), th = this._th(), c = this._cell(fx, fy), p = this._pets[d.seed];
       const im = this._lazyImg(ANIMALS[d.itemId]);
-      if (!im) { ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic'; ctx.font = (th * 1.4) + 'px sans-serif'; ctx.fillText(d.emoji, c.x, c.y + th * 0.3); return; }
+      if (!im) { ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic'; ctx.font = animalH(d.itemId, th) + 'px sans-serif'; ctx.fillText(d.emoji, c.x, c.y + th * 0.3); return; }
       const t = Date.now() / 1000, now = Date.now();
       const reacting = p && p.react && now < p.react;
       const nuzzling = p && p.pause > 0 && p.nuzzle && !reacting;
@@ -2750,9 +2758,8 @@
         sway = Math.sin(ph * 0.5) * tw * 0.028;           // waddle left/right
         tilt = Math.sin(ph * 0.5) * 0.045;                // ~2.5° gait tilt
       } else lift = (Math.sin(t * 1.3 + d.seed) * 0.5 + 0.5) * th * 0.025;              // idle breathing
-      // 体型：一格宽 0.58、高 ≤1.6 格（2026-08-15 从 0.9/2.4 收小 —— 原来一只小鸡和谷仓
-      // 一样高、比一畦菜还宽，读起来不像院子里的小动物）
-      const w = tw * 0.58, sc = Math.min(w / im.width, (th * 1.6) / im.height), dw = im.width * sc, dh = im.height * sc;
+      // 体型按 ANIMAL_SCALE（以摊前路人为尺子）：鸡兔到人脚踝、猫到膝、狗到腰
+      const hMax = animalH(d.itemId, th), w = hMax * 1.1, sc = Math.min(w / im.width, hMax / im.height), dw = im.width * sc, dh = im.height * sc;
       const bx = c.x + sway, by = c.y + th * 0.5 - lift;
       this._shadow(c.x, c.y + th * 0.5, dw * 0.62, 0.15);   // static ground shadow (motion reads against it)
       ctx.save(); ctx.translate(bx, by); if (tilt) ctx.rotate(tilt * (face < 0 ? -1 : 1)); ctx.scale(face < 0 ? -1 : 1, 1);
