@@ -1543,6 +1543,90 @@
         this._drawHills(pc.x, pc.y - th * 3, 20 * tw * 0.62);
         this._drawTreeRow(pc.x, pc.y - th * 1.5, 20 * tw * 0.59);
       }
+      // 🔒 矢量地面层(2026-08-14 Chris:「农场农地跟地图需要完美贴合适配」):
+      // 背景画是固定视角的手绘风景, 没有格子概念 —— 农地跟它贴合永远是
+      // 「差不多」。这一层用**与农地同一套 _cell()/_tw() 坐标**把整个
+      // 16×16 可开发世界画成半透明草格(条带+色斑+草簇), 贴合是构造上
+      // 保证的; 扩地解锁的远处土地也由它呈现(_bgKey 在解锁时已置空重画)。
+      this._drawGroundPlane(W, H);
+    },
+    /* 矢量地面层: 半透明叠在背景画的草甸上, 让画的笔触透出来、色调自动融合。
+       - 每格确定性色斑(哈希取 3 档草绿) + (gx+gy) 奇偶的斜向割草条带
+       - 世界边缘 2 格羽化(alpha 渐隐), 不出现生硬的绿色菱形岛边
+       - 已拥有的地亮、未解锁的地暗淡稀疏 → 「扩地 = 点亮远处的土地」看得见
+       - 零散草簇/小花(确定性哈希, 不闪烁), 手绘感与背景画统一 */
+    _drawGroundPlane(W, H) {
+      const ctx = this._ctx, tw = this._tw(), th = this._th();
+      const ob = this._ownedBounds();
+      const TONES = ['#8fc35e', '#87ba55', '#97cb66'];
+      /* 🔍 地形识别: 把刚画好的背景整帧缩采样成 96 px 宽的小图, 逐格读出该格
+         中心落在画面上的实际颜色 —— 只有「明亮且偏绿」的草甸才铺草格,
+         暗色前景坡/树影/水面自动避开(在暗底上叠半透明绿 = 脏棋盘, 实测过)。
+         采样每次相机缓存重建才做一次, 30fps 帧零成本。 */
+      let samp = null, sw = 0, sh = 0;
+      try {
+        if (!this._planeSamp) this._planeSamp = document.createElement('canvas');
+        const sc = this._planeSamp;
+        sw = 96; sh = Math.max(8, Math.round(96 * H / W));
+        if (sc.width !== sw || sc.height !== sh) { sc.width = sw; sc.height = sh; }
+        const sctx = sc.getContext('2d', { willReadFrequently: true });
+        sctx.drawImage(ctx.canvas, 0, 0, sw, sh);
+        samp = sctx.getImageData(0, 0, sw, sh).data;
+      } catch (e) { samp = null; }
+      const terrainFit = (x, y) => {
+        if (!samp) return 1;
+        const px = Math.max(0, Math.min(sw - 1, Math.round(x / W * sw)));
+        const py = Math.max(0, Math.min(sh - 1, Math.round(y / H * sh)));
+        const i = (py * sw + px) * 4, r = samp[i], g2 = samp[i + 1], bl = samp[i + 2];
+        const lum = 0.2126 * r + 0.7152 * g2 + 0.0722 * bl;
+        if (g2 < r * 0.92 || g2 < bl) return 0;          // 不是绿色系(天空/水/土) → 不铺
+        if (lum < 100) return 0;                          // 暗坡/树影 → 不铺
+        if (lum < 145) return (lum - 100) / 45;           // 过渡带渐隐
+        return 1;
+      };
+      ctx.save();
+      for (let gy = 0; gy < ROWS; gy++) {
+        for (let gx = 0; gx < COLS; gx++) {
+          const c = this._cell(gx, gy);
+          if (c.x + tw < -tw || c.x - tw > W + tw || c.y + th < -th || c.y - th > H + th) continue;
+          const hsh = ((gx * 73856093) ^ (gy * 19349663)) >>> 0;
+          const r1 = (hsh % 997) / 997, r2 = ((hsh >> 8) % 991) / 991;
+          const d = Math.min(gx, gy, COLS - 1 - gx, ROWS - 1 - gy);
+          const feather = d >= 2 ? 1 : (d + 0.45) / 2.45;
+          const owned = gx >= ob.x1 && gx <= ob.x2 && gy >= ob.y1 && gy <= ob.y2;
+          const fit = terrainFit(c.x, c.y);
+          if (fit <= 0) continue;
+          const a = 0.30 * feather * fit * (owned ? 1 : 0.45);
+          if (a < 0.02) continue;
+          ctx.globalAlpha = a;
+          // 斜向割草条带: 同一 (gx+gy) 奇偶取同档色, 形成 iso 对角条纹
+          const tone = TONES[((gx + gy) & 1) ? 1 : (r1 > 0.5 ? 0 : 2)];
+          this._diamond(c.x, c.y, tw * 1.03, th * 1.03);
+          ctx.fillStyle = tone; ctx.fill();
+          // 确定性点缀(只在拥有的地上): 草簇 / 小花
+          if (owned && feather === 1) {
+            if (r2 > 0.86) {   // 草簇: 三笔短弧
+              ctx.globalAlpha = 0.5;
+              ctx.strokeStyle = '#5f9440'; ctx.lineWidth = Math.max(0.8, tw * 0.018); ctx.lineCap = 'round';
+              const bx = c.x + (r1 - 0.5) * tw * 0.4, byy = c.y + (r2 - 0.5) * th * 0.4;
+              for (let i = -1; i <= 1; i++) {
+                ctx.beginPath();
+                ctx.moveTo(bx + i * tw * 0.03, byy + th * 0.06);
+                ctx.quadraticCurveTo(bx + i * tw * 0.05, byy - th * 0.05, bx + i * tw * 0.075, byy - th * 0.13);
+                ctx.stroke();
+              }
+            } else if (r2 < 0.045) {   // 小花: 白心黄蕊
+              ctx.globalAlpha = 0.75;
+              const fx = c.x + (r1 - 0.5) * tw * 0.5, fy = c.y + (r2 * 8 - 0.4) * th * 0.4;
+              ctx.fillStyle = '#fdf6e8';
+              for (let i = 0; i < 5; i++) { const an = i / 5 * 6.283; ctx.beginPath(); ctx.arc(fx + Math.cos(an) * tw * 0.022, fy + Math.sin(an) * th * 0.030, Math.max(0.8, tw * 0.014), 0, 6.283); ctx.fill(); }
+              ctx.fillStyle = '#f2c34a';
+              ctx.beginPath(); ctx.arc(fx, fy, Math.max(0.7, tw * 0.011), 0, 6.283); ctx.fill();
+            }
+          }
+        }
+      }
+      ctx.restore();
     },
     _blitBackdrop(ctx, W, H) {
       const key = Math.round(this._camX) + ',' + Math.round(this._camY) + ',' + this._zoom.toFixed(3) + ',' + W + ',' + H;
