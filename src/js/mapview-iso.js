@@ -10,7 +10,7 @@
  * upright sprites placed on cells, depth-sorted back-to-front (gx+gy).
  */
 (function () {
-  const COLS = 16, ROWS = 16;      // big world — room to expand the farm across the hills
+  const COLS = 20, ROWS = 16;      // 2026-08-14 向东+4列: 沿乡路的新扩建区(L4), 地图纵深是核心吸引力
   // Start zone origin. (The 2026-06-18 "forward move" to (6,6) was cancelled — Chris
   // preferred adapting via the new full-scene background instead. _undoForwardOnce()
   // shifts any save that got forwarded back to here.)
@@ -32,6 +32,7 @@
     { x1: 0, y1: 0, x2: 12, y2: 10, coins: 800, points: 0 },     // L1 → right strip
     { x1: 0, y1: 0, x2: 12, y2: 13, coins: 1500, points: 0 },    // L2 → bottom
     { x1: 0, y1: 0, x2: 15, y2: 15, coins: 3000, points: 30 },   // L3 → far corner (coins + points)
+    { x1: 0, y1: 0, x2: 19, y2: 15, coins: 6000, points: 50 },   // L4 沿乡路向东的临路地带(2026-08-14)
   ];
   // 🔒 默认水塘 v2（2026-08-13 二次修正）：谷仓正前方**隔一整排草**。
   // v1 的 (6,6) 与谷仓底座 (6,5) 是相邻格——有机水塘的波浪轮廓一溢出就贴着
@@ -1552,7 +1553,147 @@
       // 「差不多」。这一层用**与农地同一套 _cell()/_tw() 坐标**把整个
       // 16×16 可开发世界画成半透明草格(条带+色斑+草簇), 贴合是构造上
       // 保证的; 扩地解锁的远处土地也由它呈现(_bgKey 在解锁时已置空重画)。
-      this._drawGroundPlane(W, H);
+      const fit = this._drawGroundPlane(W, H);
+      /* 人烟三件套(2026-08-14 Chris:「农场看起来像荒山野岭, 路人的出现
+         会有点奇怪」)—— 给路人一个来处, 给农场一个社区:
+         ① 乡间土路: 从世界东南边缘蜿蜒通到农场路口(路人就是沿它走来的)
+         ② 路口道具: 木指路牌 + 红邮箱(有地址 = 有人住)
+         ③ 远处邻居: 两户带炊烟的小屋剪影(不是独居荒野)
+         全部画进相机缓存, 30fps 帧零成本; 位置世界锚定, 跟地形采样联动。 */
+      this._drawCountryRoad(fit);
+      this._drawFarNeighbors(fit);
+    },
+    // 乡路的三个贝塞尔控制点(格子坐标, 世界锚定): 东南场外 → 缓弯 → 农场路口
+    _roadPoint(t) {
+      const P0 = { x: 19.0, y: 8.6 }, P1 = { x: 11.5, y: 7.2 }, P2 = { x: 7.0, y: 3.6 };
+      const u = 1 - t;
+      const gx = u * u * P0.x + 2 * u * t * P1.x + t * t * P2.x;
+      const gy = u * u * P0.y + 2 * u * t * P1.y + t * t * P2.y;
+      return this._cell(gx, gy);
+    },
+    _drawCountryRoad(fit) {
+      const ctx = this._ctx, tw = this._tw(), th = this._th();
+      const N = 46;
+      // 三层叠出手绘土路: 宽的路基 → 亮的路面 → 两道车辙
+      const passes = [
+        { w: tw * 0.56, col: 'rgba(160,126,82,0.55)', off: 0 },
+        { w: tw * 0.42, col: 'rgba(206,172,118,0.60)', off: 0 },
+        { w: tw * 0.045, col: 'rgba(120,92,56,0.45)', off: tw * 0.09 },
+        { w: tw * 0.045, col: 'rgba(120,92,56,0.45)', off: -tw * 0.09 },
+      ];
+      for (const ps of passes) {
+        ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+        ctx.strokeStyle = ps.col; ctx.lineWidth = ps.w;
+        let prev = null;
+        for (let i = 0; i <= N; i++) {
+          const t = i / N, pt = this._roadPoint(t);
+          const a = Math.min(1, t / 0.10) * (fit ? Math.max(0, Math.min(1, fit(pt.x, pt.y) * 1.6)) : 1);
+          const p2 = { x: pt.x, y: pt.y + ps.off };
+          if (prev && a > 0.04) {
+            ctx.globalAlpha = a;
+            ctx.beginPath(); ctx.moveTo(prev.x, prev.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
+          }
+          prev = p2;
+        }
+      }
+      ctx.globalAlpha = 1;
+      // 路口道具: 指路牌立在路中段的路边(路尽头会被菜摊挡住——截图实证);
+      // 红邮箱留在摊旁(有地址=有人住)。
+      const mid = this._roadPoint(0.62), end = this._roadPoint(0.965);
+      this._drawSignpost(mid.x + tw * 0.42, mid.y - th * 0.10);
+      this._drawMailbox(end.x + tw * 1.05, end.y - th * 0.12);
+    },
+    /* 沿路散步的邻居: 每 2-5 分钟一位, 花约 26 秒沿乡路走完(方向随机)。
+       不落存档、不进缓存 —— 活的帧才画, 一个 emoji 的成本。
+       它回答的是「路人从哪来」: 你先看见有人沿路走, 之后摊前才有人买菜。 */
+    _drawRoadWalker() {
+      if (this._build) return;
+      const now = Date.now();
+      if (!this._walkerNextAt) this._walkerNextAt = now + 30e3;   // 进图 30 秒后来第一位
+      if (!this._walker && now >= this._walkerNextAt) {
+        const faces = ['🚶', '🚶‍♀️', '🚴', '🧑‍🌾', '🐕'];
+        this._walker = { start: now, dur: 26e3, dir: Math.random() < 0.5 ? 1 : -1,
+                         face: faces[Math.floor(Math.random() * faces.length)] };
+      }
+      if (!this._walker) return;
+      let p = (now - this._walker.start) / this._walker.dur;
+      if (p >= 1) { this._walker = null; this._walkerNextAt = now + (120 + Math.random() * 180) * 1e3; return; }
+      if (this._walker.dir < 0) p = 1 - p;
+      const pt = this._roadPoint(0.16 + p * 0.72);
+      const th = this._th(), bob = Math.abs(Math.sin(now / 160)) * th * 0.06;
+      const ctx = this._ctx;
+      ctx.save();
+      ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+      ctx.font = (th * 0.95) + 'px sans-serif';
+      ctx.globalAlpha = Math.min(1, Math.min(p, 1 - p) * 12 + 0.15);   // 两端淡入淡出
+      ctx.fillText(this._walker.face, pt.x, pt.y + th * 0.18 - bob);
+      ctx.restore();
+    },
+
+    _drawSignpost(x, y) {
+      const ctx = this._ctx, th = this._th(), h = th * 1.7;
+      if (h < 12) return;
+      ctx.save();
+      ctx.strokeStyle = '#7a5a34'; ctx.lineWidth = Math.max(1.4, th * 0.09); ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y - h); ctx.stroke();
+      const bw = th * 1.15, bh = th * 0.34;
+      const board = (yy, col) => {
+        ctx.fillStyle = col;
+        ctx.beginPath();
+        ctx.moveTo(x - bw * 0.62, yy - bh / 2); ctx.lineTo(x + bw * 0.30, yy - bh / 2);
+        ctx.lineTo(x + bw * 0.30, yy + bh / 2); ctx.lineTo(x - bw * 0.62, yy + bh / 2);
+        ctx.lineTo(x - bw * 0.80, yy); ctx.closePath(); ctx.fill();
+        ctx.strokeStyle = 'rgba(90,64,34,0.75)'; ctx.lineWidth = Math.max(0.8, th * 0.035); ctx.stroke();
+      };
+      board(y - h * 0.82, '#5f9e50');
+      board(y - h * 0.52, '#c9a76b');
+      ctx.restore();
+    },
+    _drawMailbox(x, y) {
+      const ctx = this._ctx, th = this._th();
+      if (th < 9) return;
+      ctx.save();
+      ctx.strokeStyle = '#7a5a34'; ctx.lineWidth = Math.max(1.2, th * 0.075); ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y - th * 0.85); ctx.stroke();
+      const bw = th * 0.62, bh = th * 0.42, by2 = y - th * 0.85;
+      ctx.fillStyle = '#c44536';
+      ctx.beginPath();
+      ctx.moveTo(x - bw / 2, by2); ctx.lineTo(x - bw / 2, by2 - bh * 0.55);
+      ctx.arc(x - bw / 2 + bw * 0.5, by2 - bh * 0.55, bw / 2, Math.PI, 0);
+      ctx.lineTo(x + bw / 2, by2); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = 'rgba(90,40,30,0.7)'; ctx.lineWidth = Math.max(0.7, th * 0.03); ctx.stroke();
+      ctx.fillStyle = '#f2c34a';
+      ctx.fillRect(x + bw * 0.32, by2 - bh * 1.35, th * 0.09, th * 0.42);
+      ctx.restore();
+    },
+    // 远处两户邻居小屋(剪影 + 炊烟): 世界外缘锚定, 只落在明亮草甸上
+    _drawFarNeighbors(fit) {
+      const spots = [{ gx: -2.6, gy: 1.4 }, { gx: 18.6, gy: 0.6 }];
+      for (const sp of spots) {
+        const c = this._cell(sp.gx, sp.gy);
+        if (fit && fit(c.x, c.y) < 0.5) continue;
+        this._drawTinyCottage(c.x, c.y);
+      }
+    },
+    _drawTinyCottage(x, y) {
+      const ctx = this._ctx, th = this._th(), sc2 = th * 1.05;
+      if (sc2 < 8) return;
+      ctx.save();
+      ctx.globalAlpha = 0.62;
+      ctx.fillStyle = '#e8dcc0';
+      ctx.fillRect(x - sc2 * 0.55, y - sc2 * 0.52, sc2 * 1.1, sc2 * 0.52);
+      ctx.fillStyle = '#b06a42';
+      ctx.beginPath();
+      ctx.moveTo(x - sc2 * 0.68, y - sc2 * 0.50); ctx.lineTo(x, y - sc2 * 1.0);
+      ctx.lineTo(x + sc2 * 0.68, y - sc2 * 0.50); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#8a6a44';
+      ctx.fillRect(x - sc2 * 0.12, y - sc2 * 0.34, sc2 * 0.24, sc2 * 0.34);
+      ctx.fillStyle = '#9c7a52';
+      ctx.fillRect(x + sc2 * 0.28, y - sc2 * 1.02, sc2 * 0.16, sc2 * 0.34);
+      ctx.fillStyle = 'rgba(245,245,240,0.6)';
+      ctx.beginPath(); ctx.arc(x + sc2 * 0.40, y - sc2 * 1.18, sc2 * 0.10, 0, 6.283); ctx.fill();
+      ctx.beginPath(); ctx.arc(x + sc2 * 0.50, y - sc2 * 1.34, sc2 * 0.14, 0, 6.283); ctx.fill();
+      ctx.restore();
     },
     /* 矢量地面层: 半透明叠在背景画的草甸上, 让画的笔触透出来、色调自动融合。
        - 每格确定性色斑(哈希取 3 档草绿) + (gx+gy) 奇偶的斜向割草条带
@@ -1684,6 +1825,7 @@
       // 水沿被土床盖住 = 岸线自然贴着田边，绝不会出现「水漫到菜地上」。
       this._drawPond(waterCells);
       for (const tI of groundTiles) this._tileImg(tI.key, tI.c);
+      this._drawRoadWalker();
 
       // 水笔刷刷到占用格 → 那一格显红叉（0.9 秒后自动消失，不留残影）
       if (this._blockedCell) {
