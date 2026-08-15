@@ -219,6 +219,8 @@
           return;
         }
         Farm.state.addSeed(specialId, 1);
+        Farm.state.data.dailyClaims.specialSeedBought = true;   // 今日红点：买过就不再计
+        Farm.state.save();
         Farm.ui.refreshHUD();
         Farm.ui.toast('🌱 +1 ' + specialCrop[nameKey]);
         if (Farm.audio) Farm.audio.play('buy');

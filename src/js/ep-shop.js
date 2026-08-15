@@ -224,6 +224,14 @@
       return t ? { text: lang === 'en' ? t.en : t.zh, color: t.c } : null;
     },
 
+    /* 卡片图标：有手绘走动贴图的宠物直接用贴图（买到手在农场里就是这个样子，
+       别让 emoji 小鸡变成画出来的母鸡）；其余仍用 emoji。表与 mapview-iso.ANIMALS 同源。 */
+    _iconHtml(it) {
+      const SPR = { pet_chick: 'animal_chicken', pet_cat: 'animal_cat', pet_rabbit: 'animal_rabbit', decoration_dog: 'animal_dog', guard_dog: 'animal_dog' };
+      const f = SPR[it.id];
+      if (!f) return it.icon;
+      return '<img src="assets/images/map/' + f + '.webp" alt="" style="width:46px;height:46px;object-fit:contain;display:block;margin:0 auto;"/>';
+    },
     _ownedCount(it) {
       if (it.kind === 'extra_plot') return Farm.state.data.extraPlots || 0;
       if (it.stock_key) return Farm.state.data.activeEffects[it.stock_key] || 0;
@@ -260,7 +268,7 @@
       return `
         <div class="ep-shop-card cat-${cat} ${affordable ? '' : 'disabled'}" data-id="${it.id}">
           ${tagBadge}${ownedBadge}
-          <div class="ep-shop-icon cat-${cat}">${it.icon}</div>
+          <div class="ep-shop-icon cat-${cat}">${this._iconHtml(it)}</div>
           <div class="ep-shop-name">${it[nameKey]}</div>
           <div class="ep-shop-desc">${it[descKey]}</div>
           ${capNote}

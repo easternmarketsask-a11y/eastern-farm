@@ -2606,6 +2606,20 @@
         const colOrder = []; const c0 = Math.floor(COLS / 2);
         for (let dd = 0; colOrder.length < COLS; dd++) { if (c0 - dd >= 0) colOrder.push(c0 - dd); if (dd > 0 && c0 + dd < COLS) colOrder.push(c0 + dd); }
         const free = []; for (let gy = ROWS - 1; gy >= 0; gy--) for (const gx of colOrder) { const k = gx + ',' + gy; if (!occ[k] && !taken[k]) free.push(k); }
+        // 2026-08-15：新装饰/宠物落在**菜地旁边**而不是最前排的空地 —— 地扩过几阶后前排
+        // 离菜地十几格，刚买的小鸡孤零零站在荒地上，还只在自己家附近转，永远走不到菜地。
+        // 只在自家地界内挑（_ownedCell），按到菜地几何中心的距离排序（原顺序作次序稳定兜底）。
+        const plots2 = Farm.state.data.plots || [];
+        if (plots2.length) {
+          let sx = 0, sy = 0, n = 0;
+          for (let i = 0; i < plots2.length; i++) { if (plots2[i] && plots2[i].unlocked) { sx += this._plotGX(i); sy += this._plotGY(i); n++; } }
+          if (n) {
+            const cx2 = sx / n, cy2 = sy / n;
+            const own = (k) => { const a = k.split(','); return this._ownedCell ? this._ownedCell(+a[0], +a[1]) : true; };
+            const dist = (k) => { const a = k.split(','); return Math.abs(+a[0] - cx2) + Math.abs(+a[1] - cy2); };
+            free.sort((a, b2) => (own(b2) - own(a)) || (dist(a) - dist(b2)));
+          }
+        }
         let fi = 0, ch = false;
         decos.forEach((d) => { const it = this._shopItem(d.itemId); if (!it || !it.decoration_emoji) return; if (hp(d) && !occ[d.gx + ',' + d.gy]) return; while (fi < free.length && taken[free[fi]]) fi++; if (fi < free.length) { const k = free[fi++].split(','); d.gx = +k[0]; d.gy = +k[1]; taken[k[0] + ',' + k[1]] = 1; ch = true; } });
         if (ch) Farm.state.save();
@@ -2634,7 +2648,7 @@
           let cx = c.x, lift = 0;
           if (!moving) { const t = Date.now() / 1000; cx += Math.sin(t * 0.6 + d.seed) * tw * 0.06; lift = Math.abs(Math.sin(t * 1.3 + d.seed)) * th * 0.12; }
           ctx.globalAlpha = moving ? 0.85 : 1;
-          this._blit(im, cx, c.y + th * 0.5 - lift, tw * 0.9, th * 2.4);
+          this._blit(im, cx, c.y + th * 0.5 - lift, tw * 0.58, th * 1.6);
           ctx.globalAlpha = 1; return;
         }
       }
@@ -2736,7 +2750,9 @@
         sway = Math.sin(ph * 0.5) * tw * 0.028;           // waddle left/right
         tilt = Math.sin(ph * 0.5) * 0.045;                // ~2.5° gait tilt
       } else lift = (Math.sin(t * 1.3 + d.seed) * 0.5 + 0.5) * th * 0.025;              // idle breathing
-      const w = tw * 0.9, sc = Math.min(w / im.width, (th * 2.4) / im.height), dw = im.width * sc, dh = im.height * sc;
+      // 体型：一格宽 0.58、高 ≤1.6 格（2026-08-15 从 0.9/2.4 收小 —— 原来一只小鸡和谷仓
+      // 一样高、比一畦菜还宽，读起来不像院子里的小动物）
+      const w = tw * 0.58, sc = Math.min(w / im.width, (th * 1.6) / im.height), dw = im.width * sc, dh = im.height * sc;
       const bx = c.x + sway, by = c.y + th * 0.5 - lift;
       this._shadow(c.x, c.y + th * 0.5, dw * 0.62, 0.15);   // static ground shadow (motion reads against it)
       ctx.save(); ctx.translate(bx, by); if (tilt) ctx.rotate(tilt * (face < 0 ? -1 : 1)); ctx.scale(face < 0 ? -1 : 1, 1);
