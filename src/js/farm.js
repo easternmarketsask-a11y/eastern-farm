@@ -272,7 +272,7 @@
           const lang = Farm.state.data.language;
           Farm.ui.toast(lang === 'en'
             ? '📦 Barn full — tap it to sell & free up space'
-            : '📦 仓库满了，点谷仓卖货腾空间', 3000);
+            : '📦 谷仓满了，点谷仓卖货腾空间', 3000);
           if (Farm.harvestStatus) Farm.harvestStatus.render();   // 胶囊切到「去卖货」态
           if (Farm.warehouse && Farm.warehouse.refreshBadge) Farm.warehouse.refreshBadge();
         }

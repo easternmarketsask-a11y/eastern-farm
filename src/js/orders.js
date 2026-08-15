@@ -213,7 +213,7 @@
         ? `<p class="modal-subtitle">${lang === 'en' ? 'Grow some crops first, then Eastern Market will start ordering.' : '先种点菜，东方超市就会开始下单啦。'}</p>`
         : `<p class="modal-subtitle">${lang === 'en'
             ? 'Deliver crops from your barn — orders pay more than bulk selling.'
-            : '从仓库交付东超要的菜——比直接卖更划算。'}</p>`;
+            : '从谷仓交付东超要的菜——比直接卖更划算。'}</p>`;
 
       const html = `
         <h2 class="modal-title">${lang === 'en' ? 'Eastern Market Orders' : '小东订单'}</h2>
@@ -242,7 +242,7 @@
       if (idx < 0) return;
       const order = d.orders[idx];
       if (!this._canFill(order)) {
-        Farm.ui.toast(lang === 'en' ? 'Not enough crops yet' : '仓库里的菜还不够', 2000);
+        Farm.ui.toast(lang === 'en' ? 'Not enough crops yet' : '谷仓里的菜还不够', 2000);
         if (Farm.audio) Farm.audio.play('error');
         return;
       }

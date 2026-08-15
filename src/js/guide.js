@@ -20,7 +20,7 @@
   const SECTIONS = [
     {
       icon: '🌱',
-      zh: { title: '三步上手', body: '点空地<b>种</b>菜 → 菜熟了点一下<b>收</b>进仓库 → 把仓库的菜<b>卖</b>给东方超市换农场币。就这么简单。' },
+      zh: { title: '三步上手', body: '点空地<b>种</b>菜 → 菜熟了点一下<b>收</b>进谷仓 → 把谷仓的菜<b>卖</b>给东方超市换农场币。就这么简单。' },
       en: { title: 'Start in 3 steps', body: 'Tap soil to <b>plant</b> → tap ripe crops to <b>harvest</b> → <b>sell</b> from your barn for coins. That\'s the whole loop.' },
     },
     {

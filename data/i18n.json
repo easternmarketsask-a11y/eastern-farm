@@ -40,7 +40,7 @@
     "steal_done": { "zh": "🧺 从 {name} 家顺了一棵，已入库", "en": "🧺 Grabbed one from {name}'s farm!" },
     "steal_daily_cap": { "zh": "今天顺得够多啦，明天再来～", "en": "You've grabbed plenty today — back tomorrow!" },
     "steal_target_cap": { "zh": "在这家就顺这么多啦，去别家逛逛～", "en": "Enough from this neighbor — visit others!" },
-    "steal_warehouse_full": { "zh": "仓库满了，先去卖菜再来顺～", "en": "Barn's full — sell some crops first!" },
+    "steal_warehouse_full": { "zh": "谷仓满了，先去卖菜再来顺～", "en": "Barn's full — sell some crops first!" },
 
     "report_title": { "zh": "回家小报", "en": "While you were away" },
     "report_bad_header": { "zh": "小馋嘴来过", "en": "Little nibblers" },
@@ -121,7 +121,7 @@
     "tutorial_step2_title": { "zh": "2. 等一会儿", "en": "2. Wait a bit" },
     "tutorial_step2_body": { "zh": "种子会自己长大（最快约 5 分钟）。等的时候先逛逛任务和商店，回来正好收。", "en": "Crops grow on their own (fastest ~5 min). Browse the tasks & shop while you wait." },
     "tutorial_step3_title": { "zh": "3. 卖给东方超市", "en": "3. Sell to Eastern Market" },
-    "tutorial_step3_body": { "zh": "收的菜先进仓库，攒一批后送到东方超市，换农场币和超市积分。", "en": "Harvested crops go to the barn. Deliver to Eastern Market for coins + Store Points." },
+    "tutorial_step3_body": { "zh": "收的菜先进谷仓，攒一批后送到东方超市，换农场币和超市积分。", "en": "Harvested crops go to the barn. Deliver to Eastern Market for coins + Store Points." },
     "tutorial_btn_start": { "zh": "开始种菜 →", "en": "Start farming →" },
 
     "toast_first_plant": { "zh": "🌱 种下第一棵菜！开张大吉 +10 农场币", "en": "🌱 Your first seed! +10 coins to start" },
@@ -135,13 +135,13 @@
 
   "_storekeeper_pool_default_zh": [
     "新手提示：点棕色地块种第一粒种子。",
-    "作物成熟会发绿光，点一下就收到仓库。",
+    "作物成熟会发绿光，点一下就收到谷仓。",
     "上海苗只要 5 分钟，新手最快上手。",
     "韭菜种一次能割 3 次，性价比高。",
     "莲藕要长 5 小时，但卖价 C400，长线投资。",
-    "收获后菜进仓库，点谷仓卖给东方超市才能换金币。",
+    "收获后菜进谷仓，点谷仓卖给东方超市才能换金币。",
     "今日首单卖给东方超市有 +20% 奖励，记得早卖。",
-    "仓库装满 20 件就不能再收，先卖给东方超市或花钱扩建。",
+    "谷仓装满 20 件就不能再收，先卖给东方超市或花钱扩建。",
     "看种植弹窗的「市场收购价」就知道这棵菜值多少。",
     "完成每天 3 个任务，奖励积分自动到账。",
     "走访 3 户邻居 → 送 5 积分。",

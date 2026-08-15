@@ -51,7 +51,7 @@
           // Silo full → tapping the pill opens the sell/expand dialog.
           textEl.textContent = (lang === 'en'
             ? '📦 Barn full · ' + matureCount + ' waiting · sell'
-            : '📦 仓库满了 · ' + matureCount + ' 棵 · 去卖货');
+            : '📦 谷仓满了 · ' + matureCount + ' 棵 · 去卖货');
           setAction(() => {
             if (Farm.warehouse && Farm.warehouse.openFullDialog) Farm.warehouse.openFullDialog();
           }, 'warning');
@@ -144,7 +144,7 @@
         setTimeout(() => {
           Farm.ui.toast(langFull === 'en'
             ? '📦 Barn full — tap it to sell & free up space'
-            : '📦 仓库满了，点谷仓卖货腾空间', 3000);
+            : '📦 谷仓满了，点谷仓卖货腾空间', 3000);
         }, picked >= 1 ? 600 : 0);
       }
       // Bumper-harvest celebration: summary float + golden coin rain + sound,

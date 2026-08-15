@@ -148,18 +148,18 @@
       const sellBtn = `
         <button class="btn wh-full-choice wh-full-sell" id="whFullSell">
           <div class="wh-full-choice-title">🏪 ${lang === 'en' ? 'Sell to Eastern Market' : '卖给东方超市'}</div>
-          <div class="wh-full-choice-sub">${lang === 'en' ? 'Get' : '得到'} ${coin}${value}${lang === 'en' ? ' now + free barn space' : '，仓库立刻清空'}</div>
+          <div class="wh-full-choice-sub">${lang === 'en' ? 'Get' : '得到'} ${coin}${value}${lang === 'en' ? ' now + free barn space' : '，谷仓立刻清空'}</div>
         </button>`;
 
       const expandBtn = tier.atMax
-        ? `<div class="wh-full-maxed">🏆 ${lang === 'en' ? 'Barn is already maxed out' : '仓库已是最大容量'}</div>`
+        ? `<div class="wh-full-maxed">🏆 ${lang === 'en' ? 'Barn is already maxed out' : '谷仓已是最大容量'}</div>`
         : `<button class="btn wh-full-choice wh-full-expand" id="whFullExpand">
-            <div class="wh-full-choice-title">🏗 ${lang === 'en' ? 'Expand barn' : '扩建仓库'}</div>
+            <div class="wh-full-choice-title">🏗 ${lang === 'en' ? 'Expand barn' : '扩建谷仓'}</div>
             <div class="wh-full-choice-sub">${cap} → ${tier.nextCapacity} ${lang === 'en' ? '· cost' : '· 花费'} ${coin}${tier.cost}</div>
           </button>`;
 
       const html = `
-        <h2 class="modal-title">${lang === 'en' ? 'Barn is full!' : '仓库满了！'}</h2>
+        <h2 class="modal-title">${lang === 'en' ? 'Barn is full!' : '谷仓满了！'}</h2>
         <p class="modal-subtitle">${lang === 'en'
           ? 'Pick one to keep harvesting:'
           : '挑一个继续收割:'}</p>
@@ -195,7 +195,7 @@
       if (Farm.audio) Farm.audio.play('achievement');
       Farm.ui.toast(lang === 'en'
         ? `🏗 Barn expanded to ${result.newCapacity}! -<span class="coin-icon"></span>${result.cost}`
-        : `🏗 仓库扩到 ${result.newCapacity} 件！-<span class="coin-icon"></span>${result.cost}`, 2800);
+        : `🏗 谷仓扩到 ${result.newCapacity} 件！-<span class="coin-icon"></span>${result.cost}`, 2800);
     },
 
     // Execute the delivery: credit coins + animate + close modal.
@@ -208,9 +208,9 @@
           // 左下角无文字标签的小东头像，必须在 toast 里点明位置。
           Farm.ui.toast(lang === 'en'
             ? '🛒 Everything in the barn is reserved for Xiaodong\'s orders — tap Xiaodong (bottom-left avatar) to deliver them for more coins!'
-            : '🛒 仓库里的菜都是给小东订单留的——点左下角小东头像交订单，更划算！', 4000);
+            : '🛒 谷仓里的菜都是给小东订单留的——点左下角小东头像交订单，更划算！', 4000);
         } else {
-          Farm.ui.toast(lang === 'en' ? 'Warehouse is empty' : '仓库是空的');
+          Farm.ui.toast(lang === 'en' ? 'Warehouse is empty' : '谷仓是空的');
         }
         return;
       }
@@ -296,7 +296,7 @@
       // 草地上像一座真建筑，配 CSS 地面椭圆影自然融入农场。
       btn.innerHTML = `
         <img class="warehouse-img" src="assets/images/warehouse-barn.webp" alt="" loading="lazy">
-        <span class="warehouse-label">仓库 / Warehouse</span>
+        <span class="warehouse-label">谷仓 / Barn</span>
         <span class="warehouse-badge">0/20</span>
       `;
       btn.onclick = () => {

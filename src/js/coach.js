@@ -18,13 +18,13 @@
     // —— 核心循环 ——
     first_plant:    { zh: '🌱 种下啦！耐心等一会儿，熟了的地会发光，点一下就能收。',
                       en: '🌱 Planted! Give it time — ripe plots glow, just tap to harvest.' },
-    first_mature:   { zh: '🌟 有菜熟啦！点一下亮闪闪的地块就能收进仓库。',
+    first_mature:   { zh: '🌟 有菜熟啦！点一下亮闪闪的地块就能收进谷仓。',
                       en: '🌟 A crop is ripe! Tap the glowing plot to harvest it.' },
-    first_warehouse:{ zh: '📦 收的菜先进仓库，攒一攒一次卖给东方超市更划算。',
+    first_warehouse:{ zh: '📦 收的菜先进谷仓，攒一攒一次卖给东方超市更划算。',
                       en: '📦 Harvests go to the barn — sell a batch to Eastern Market for more.' },
     first_sell:     { zh: '🏪 卖菜赚农场币！每天第一笔还有 +20% 加成哦。',
                       en: '🏪 Selling earns coins — your first sale each day gets +20%!' },
-    warehouse_full: { zh: '📦 仓库满了～卖给东方超市清空，或点仓库扩建。',
+    warehouse_full: { zh: '📦 谷仓满了～卖给东方超市清空，或点谷仓扩建。',
                       en: '📦 Barn is full — sell to Eastern Market, or expand it.' },
     // —— 货币 / 兑换 ——
     first_coins_exchange: { zh: '🪙 农场币攒到一些啦！点左上角金币卡，可换成超市积分。',
@@ -36,7 +36,7 @@
     first_neighbor: { zh: '🏘 去社区给邻居点赞、串门，还能赚农场币，热闹起来吧！',
                       en: '🏘 Visit neighbors to like & drop by — earns coins too!' },
     // —— 解锁（配合等级门槛）——
-    steal_unlocked: { zh: '🧺 解锁顺菜啦！去邻居家点熟了的菜，顺一棵回自己仓库～',
+    steal_unlocked: { zh: '🧺 解锁顺菜啦！去邻居家点熟了的菜，顺一棵回自己谷仓～',
                       en: '🧺 Grabbing unlocked! Tap a ripe crop at a neighbor’s to take one home.' },
   };
 

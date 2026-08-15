@@ -139,7 +139,7 @@
       const en = (Farm.state.data.language === 'en');
       if (!c) return;
       if (this.stockOf(c.crop) < c.qty) {
-        if (Farm.ui && Farm.ui.toast) Farm.ui.toast(en ? 'Not enough in the barn' : '仓库里的货不够');
+        if (Farm.ui && Farm.ui.toast) Farm.ui.toast(en ? 'Not enough in the barn' : '谷仓里的货不够');
         return;
       }
       // 从仓库取走 qty 棵该作物
@@ -243,7 +243,7 @@
                 : ('想买 <b>' + c.qty + ' 棵 ' + (def.icon || '🥬') + ' ' + cropName + '</b><br>出价 <b>' + c.price + '</b> <span class="coin-icon"></span> <span style="color:var(--leaf-dark);font-weight:600;">（比市价高 ' + c.pct + '%）</span>'))
           + '</div>'
           + '<div style="font-size:12px;color:var(--warm-text-soft);margin-bottom:10px;">'
-          + (en ? ('In barn: ' + stock) : ('仓库现有：' + stock + ' 棵'))
+          + (en ? ('In barn: ' + stock) : ('谷仓现有：' + stock + ' 棵'))
           + ' · ' + (function () { const m2 = Math.max(1, Math.ceil((c.expireAt - Date.now()) / 60e3));
               return en ? ('waits ~' + m2 + ' min') : ('还会等约 ' + m2 + ' 分钟'); })()
           + '</div>'

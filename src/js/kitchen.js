@@ -179,7 +179,7 @@
         <h2 class="modal-title">${lang === 'en' ? "Xiaodong's Kitchen" : '小东厨房'}</h2>
         <p class="modal-subtitle">${lang === 'en'
           ? 'Turn barn crops into real Chinese dishes — Eastern Market pays extra for cooked food!'
-          : '用仓库里的菜做真·中餐，卖给东方超市比散卖赚更多！'}</p>
+          : '用谷仓里的菜做真·中餐，卖给东方超市比散卖赚更多！'}</p>
         <div style="display:flex;gap:8px;margin-bottom:12px;">${slotsHtml.join('')}</div>
         ${speedRow}
         ${this.recipes.length === 0
@@ -246,7 +246,7 @@
       const need = r.ingredients;
       const short = Object.keys(need).find(cid => Farm.state.warehouseCount(cid) < need[cid]);
       if (short) {
-        Farm.ui.toast(lang === 'en' ? 'Not enough ingredients in the barn' : '仓库里的原料还不够', 2200);
+        Farm.ui.toast(lang === 'en' ? 'Not enough ingredients in the barn' : '谷仓里的原料还不够', 2200);
         if (Farm.audio) Farm.audio.play('error');
         return;
       }

@@ -345,6 +345,19 @@ Read `docs/TASKS.md` for the full prioritized list. Summary:
 
 ---
 
+## 🔒 自动弹窗与叫法约定（2026-08-15）
+
+- **任何自动弹出的东西**（章节来信、回家小报、催登录、促销……）出手前先问
+  `Farm.ui.isBusy()`：它统一判定 `#modal` 开着 / 开屏还在 / 新手聚光灯进行中。
+  别再各自只查 `#modal` —— 聚光灯与开屏都不走 modal，漏了就会盖在新手引导上（实测过）。
+- **玩家可见叫法一律**：游戏名「快乐农场 / Happy Farm」（「东方农场路」是世界里的地址，
+  不是游戏名）；存储建筑「谷仓 / barn」（别再写 仓库 / silo / warehouse）；
+  NPC 英文名 **Xiaodong**（不是 Little East）。
+- 宠物显示语义：`state.petsEnabled === false` 才藏，`undefined` 视为开；买宠物自动置 true。
+  开关只在「设置 → 农场显示」。
+- 部署闸门 `scripts/verify/smoke-flows.js` 走 23 个入口，任一步抛异常即中止；
+  新增大入口时**顺手加一行**。
+
 ## 验收守则（Chris 的硬规矩 — 2026-07-05 从历史会话审计沉淀）
 
 这些是 Chris 在开发过程中反复纠正过的点，headless / loop 运行时同样生效：
