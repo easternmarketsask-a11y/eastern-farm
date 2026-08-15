@@ -731,7 +731,25 @@
           if (healed === live) return;                        // 已为此版刷过一次 → 防循环
           try { sessionStorage.setItem('ef_heal_ver', live); } catch (e) {}
           try { if (window.Farm && window.Farm.state && window.Farm.state.data) window.Farm.state.save(); } catch (e) {}
-          location.reload();
+          /* 🔒 只 reload 救不了（2026-08-15，Chris「刷新了页面还是旧的」）
+             陈旧的东西在 Cache Storage 里面 —— 刷新只是再从同一份脏缓存拿一遍，
+             而上面那道一次性防循环闸随即永久压住自愈。所以先让 SW 用
+             cache:'reload' 把整包重抓一遍（绕开 HTTP 缓存），抓完再刷。
+             拿不到 SW（未接管/不支持）就退回原来的直接刷新。 */
+          var __reload = function () { try { location.reload(); } catch (e) {} };
+          var ctl = navigator.serviceWorker.controller;
+          if (ctl && ctl.postMessage) {
+            var done = false;
+            var onMsg = function (ev) {
+              if (!ev.data || ev.data.type !== 'precache-refreshed' || done) return;
+              done = true; __reload();
+            };
+            navigator.serviceWorker.addEventListener('message', onMsg);
+            try { ctl.postMessage({ type: 'refresh-precache' }); } catch (e) {}
+            setTimeout(function () { if (!done) { done = true; __reload(); } }, 8000);   // 兜底：SW 没回话也要刷
+          } else {
+            __reload();
+          }
         })
         .catch(function () {});
     }

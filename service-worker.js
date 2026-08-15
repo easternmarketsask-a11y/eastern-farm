@@ -128,14 +128,45 @@ function fetchBounded(req, ms) {
   );
 }
 
+/* 🔒 预缓存必须绕开浏览器 HTTP 缓存（2026-08-15 根因修复，别改回 cache.add(u)）
+   ---------------------------------------------------------------------------
+   Chris 2026-08-15：「刷新了页面宠物还是巨大」。线上文件明明是新的、SW 版本号也
+   是新的，他刷新多少次都是旧代码。
+
+   根因：`cache.add(url)` **走浏览器的 HTTP 缓存**。GitHub Pages 对所有静态文件发
+   `Cache-Control: max-age=600`，于是新版 SW 安装时拿到的是**上一版的文件**，把它们
+   装进了**新版本号的缓存**里，然后缓存优先地一直发下去。
+     缓存名 eastern-farm-ef-2608150722 ← 新
+     里面的 mapview-iso.js            ← 旧
+   刷新完全救不了：陈旧的东西就在缓存里面，刷新只是再从同一份缓存拿一遍。
+   而版本信标看到「线上版本 ≠ 本页版本」只会 reload，reload 又回到同一份脏缓存，
+   一次性防循环闸随即永久压住自愈 → 玩家被钉死在旧代码上，直到下一次部署。
+
+   `cache: 'reload'` 让每一项都真的走网络。回归测试
+   `scripts/verify/sw-update-test.mjs` 用一台发 max-age=600 的本地服务器复现了
+   整个场景（改之前必红、改之后转绿）。 */
+function precacheAll() {
+  return caches.open(CACHE).then((cache) => Promise.all(PRECACHE.map((u) => {
+    let req;
+    try { req = new Request(u, { cache: 'reload' }); } catch (e) { req = u; }   // 老浏览器兜底
+    // 逐项 catch：某一个文件缺失/失败不该让整包预缓存夭折
+    return cache.add(req).catch(() => cache.add(u).catch(() => {}));
+  }))).catch(() => {});
+}
+
 self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE)
-      // cache each individually so one missing/failed file doesn't abort the whole precache
-      .then((cache) => Promise.all(PRECACHE.map((u) => cache.add(u).catch(() => {}))))
-      .catch(() => {})
-      .then(() => self.skipWaiting())
-  );
+  event.waitUntil(precacheAll().then(() => self.skipWaiting()));
+});
+
+/* 页面发现「本页版本 ≠ 线上版本」时的自愈通道（见 index.html 新鲜度守卫）。
+   只 reload 救不了脏缓存 —— 必须让 SW 用 cache:'reload' 重新抓一遍，
+   否则页面重新加载时那些子资源仍可能命中同一份陈旧的 HTTP 缓存。 */
+self.addEventListener('message', (event) => {
+  const data = event.data;
+  if (!data || data.type !== 'refresh-precache') return;
+  event.waitUntil(precacheAll().then(() => {
+    try { if (event.source && event.source.postMessage) event.source.postMessage({ type: 'precache-refreshed' }); } catch (e) {}
+  }));
 });
 
 self.addEventListener('activate', (event) => {

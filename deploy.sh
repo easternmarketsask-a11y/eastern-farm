@@ -112,6 +112,16 @@ else
     echo "—— 部署中止。修好后重跑;确认是误报可 SKIP_SMOKE=1 bash deploy.sh 跳过"
     exit 1
   fi
+
+  # 闸门 C: 部署后玩家刷新能不能真的拿到新代码(约 5 秒)
+  # 2026-08-15 加：SW 预缓存曾走浏览器 HTTP 缓存(GitHub Pages max-age=600)，把上一版
+  # 的文件装进新版本号的缓存里，玩家刷多少次都是旧代码。这一类 bug 静默且每次部署都犯，
+  # 所以钉成闸门 —— 它自己起服务器复现 max-age=600 的场景。
+  echo "▶ 闸门 C: SW 更新链回归测试(约 5 秒)…"
+  if ! node scripts/verify/sw-update-test.mjs; then
+    echo "—— 部署中止：部署后玩家刷新拿不到新代码(见上)。别绕过它，这会让所有人卡在旧版本。"
+    exit 1
+  fi
 fi
 
 # 3. 提交未保存的改动(如果有;SW 版本注入保证至少有它)
