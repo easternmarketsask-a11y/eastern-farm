@@ -225,7 +225,8 @@
       const sc = document.querySelector('.farm-scene'); if (sc) sc.style.display = 'none';
 
       if (!Array.isArray(Farm.state.data.map)) {   // tidy starter layout: house + barn flank the plot block on the right
-        Farm.state.data.map = [{ type: 'house', gx: 5, gy: 2 }, { type: 'barn', gx: 5, gy: 4 }];
+        // 菜摊默认在左前方、临着乡路(Chris 2026-08-14 定方位); 谷仓在右
+        Farm.state.data.map = [{ type: 'house', gx: 1, gy: 7 }, { type: 'barn', gx: 5, gy: 4 }];
         Farm.state.save();
       }
       // Default decorative pond for brand-new players (mapTerrain untouched = null).
@@ -388,7 +389,7 @@
           // 撞了就沿列继续往下找空格，别把菜地种进水塘里。
           const terr = this._terrain();
           let guard = 0;
-          while (guard++ < COLS * ROWS && (terr[gx + ',' + gy] === 'water' || this._cellToPlot[gx + ',' + gy] != null)) {
+          while (guard++ < COLS * ROWS && (terr[gx + ',' + gy] === 'water' || this._cellToPlot[gx + ',' + gy] != null || this._buildingAt(gx, gy) >= 0)) {
             gx += 1;
             if (gx >= PLOT_OX + PLOT_COLS) { gx = PLOT_OX; gy += 1; }
           }
@@ -1563,13 +1564,35 @@
       this._drawCountryRoad(fit);
       this._drawFarNeighbors(fit);
     },
-    // 乡路的三个贝塞尔控制点(格子坐标, 世界锚定): 东南场外 → 缓弯 → 农场路口
+    /* 乡路锚点(格子坐标, 世界锚定) —— 2026-08-14 动态化:
+       Chris:「土路要从菜摊前面过; 我移动物件后你根据我的摆放来布置设施」。
+       A = 东南场外入口(固定) → B = **菜摊正前方**(跟着摊走) → C = 向左前
+       延伸收尾。玩家在建造模式把摊拖到哪, 路/邮箱/指路牌/行人就跟到哪
+       (_blitBackdrop 缓存键含摊位坐标, 挪完即重画)。 */
+    _roadAnchors() {
+      const map = Farm.state.data.map || [];
+      const st = map.find((m) => m && m.type === 'house');
+      const B = st ? { x: st.gx + 0.7, y: st.gy + 2.5 } : { x: 5.7, y: 4.6 };
+      const A = { x: 19.0, y: 8.6 };
+      const C = { x: B.x - 4.0, y: B.y + 0.9 };
+      return { A, B, C };
+    },
     _roadPoint(t) {
-      const P0 = { x: 19.0, y: 8.6 }, P1 = { x: 11.5, y: 7.2 }, P2 = { x: 7.0, y: 3.6 };
-      const u = 1 - t;
-      const gx = u * u * P0.x + 2 * u * t * P1.x + t * t * P2.x;
-      const gy = u * u * P0.y + 2 * u * t * P1.y + t * t * P2.y;
-      return this._cell(gx, gy);
+      const { A, B, C } = this._roadAnchors();
+      const q = (P, Q, ctl, tt) => {
+        const u = 1 - tt;
+        return { gx: u * u * P.x + 2 * u * tt * ctl.x + tt * tt * Q.x,
+                 gy: u * u * P.y + 2 * u * tt * ctl.y + tt * tt * Q.y };
+      };
+      let g;
+      if (t < 0.72) {   // A→B 主段: 控制点向南压出一道缓弯
+        const ctl = { x: (A.x + B.x) / 2 + 0.8, y: Math.max(A.y, B.y) + 1.0 };
+        g = q(A, B, ctl, t / 0.72);
+      } else {          // B→C 收尾段: 从摊前继续向左前
+        const ctl = { x: (B.x + C.x) / 2, y: B.y + 0.7 };
+        g = q(B, C, ctl, (t - 0.72) / 0.28);
+      }
+      return this._cell(g.gx, g.gy);
     },
     _drawCountryRoad(fit) {
       const ctx = this._ctx, tw = this._tw(), th = this._th();
@@ -1598,10 +1621,15 @@
       }
       ctx.globalAlpha = 1;
       // 路口道具: 指路牌立在路中段的路边(路尽头会被菜摊挡住——截图实证);
-      // 红邮箱留在摊旁(有地址=有人住)。
-      const mid = this._roadPoint(0.62), end = this._roadPoint(0.965);
+      // 红邮箱挂在摊正前偏右(跟着摊走)。
+      const mid = this._roadPoint(0.50);
       this._drawSignpost(mid.x + tw * 0.42, mid.y - th * 0.10);
-      this._drawMailbox(end.x + tw * 1.05, end.y - th * 0.12);
+      const map2 = Farm.state.data.map || [];
+      const st2 = map2.find((m) => m && m.type === 'house');
+      if (st2) {
+        const mb = this._cell(st2.gx + 2.35, st2.gy + 1.7);
+        this._drawMailbox(mb.x, mb.y);
+      }
     },
     /* 沿路散步的邻居: 每 2-5 分钟一位, 花约 26 秒沿乡路走完(方向随机)。
        不落存档、不进缓存 —— 活的帧才画, 一个 emoji 的成本。
@@ -1774,7 +1802,9 @@
       ctx.restore();
     },
     _blitBackdrop(ctx, W, H) {
-      const key = Math.round(this._camX) + ',' + Math.round(this._camY) + ',' + this._zoom.toFixed(3) + ',' + W + ',' + H;
+      const stl = (Farm.state.data.map || []).find((m) => m && m.type === 'house');
+      const key = Math.round(this._camX) + ',' + Math.round(this._camY) + ',' + this._zoom.toFixed(3) + ',' + W + ',' + H
+        + ',' + (stl ? stl.gx + '_' + stl.gy : '-');   // 摊位坐标: 乡路终段跟着摊走
       if (this._bgKey !== key || !this._bgCache) {
         if (!this._bgCache) this._bgCache = document.createElement('canvas');
         const cv = this._bgCache, dpr = this._dpr, pw = Math.round(W * dpr), ph = Math.round(H * dpr);
