@@ -178,7 +178,7 @@
           const ok = have >= it.qty;
           return `
             <div class="order-item ${ok ? 'ok' : 'short'}">
-              <span class="order-item-icon">${def.icon || '🌱'}</span>
+              <span class="order-item-icon">${(Farm.cropArt && Farm.cropArt.icon) ? Farm.cropArt.icon(it.cropId, 20) : (def.icon || '🌱')}</span>
               <span class="order-item-name">${def[nameKey]}</span>
               <span class="order-item-qty">${Math.min(have, it.qty)}/${it.qty}${ok ? ' ✓' : ''}</span>
             </div>`;

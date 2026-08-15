@@ -453,7 +453,7 @@
       { a: 'tasks', icon: 'tasks', zh: '任务', en: 'Tasks' },
       { a: 'orders', icon: 'orders', zh: '小东订单', en: 'Orders' },
       { a: 'storeRewards', icon: 'receipt', zh: '领取到店奖励', en: 'Store Rewards' },
-      { a: 'story', icon: 'receipt', zh: '农场人生', en: 'My Story' },
+      { a: 'story', icon: 'story', zh: '农场人生', en: 'My Story' },
       { a: 'kitchen', icon: 'kitchen', zh: '小东厨房', en: 'Kitchen' },
       { a: 'community', icon: 'community', zh: '社区', en: 'Community' },
       { a: 'store', icon: 'mall', zh: '农场商城', en: 'Mall' },
@@ -672,15 +672,17 @@
       <div class="seed-list" style="grid-template-columns:repeat(2,1fr);">
         ${all.map(c => {
           const unlocked = grown.includes(c.id);
-          const art = unlocked
-            ? Farm.cropArt.icon(c.id, 48)
-            : '<div style="font-size:36px;line-height:48px;height:48px;">❔</div>';
+          const art = unlocked ? Farm.cropArt.icon(c.id, 32) : '<span style="font-size:22px;">❔</span>';
+          // .seed-card 是「38px 图标列 + 信息列」的两列网格 —— 图标与文字必须各占一列，
+          // 否则第三个子元素会掉进 38px 窄列，把「种植解锁」折成「种植解 / 锁」（2026-08-15 修）
           return `
             <div class="seed-card" data-crop="${c.id}" style="${unlocked ? '' : 'opacity:0.55;'}">
-              <div style="display:flex;justify-content:center;height:48px;">${art}</div>
-              <div class="seed-name" style="margin-top:6px;">${unlocked ? c[nameKey] : Farm.i18n.t('collection_locked')}</div>
-              <div style="font-size:10px;color:var(--warm-text-soft);margin-top:4px;">
-                ${unlocked ? (lang === 'en' ? 'Tap for info' : '点击看详情') : (lang === 'en' ? 'Plant to unlock' : '种植解锁')}
+              <div class="seed-icon">${art}</div>
+              <div style="min-width:0;">
+                <div class="seed-name" ${unlocked ? '' : 'style="color:var(--warm-text-soft);"'}>${c[nameKey]}</div>
+                <div style="font-size:10.5px;color:var(--warm-text-soft);margin-top:3px;white-space:nowrap;">
+                  ${unlocked ? (lang === 'en' ? 'Tap for info' : '点击看详情') : (lang === 'en' ? 'Plant to unlock' : '种植解锁')}
+                </div>
               </div>
             </div>
           `;
@@ -740,7 +742,7 @@
 
       <div style="margin:16px 0;padding:12px;background:var(--cream-bg);border-radius:var(--radius-md);">
         <div style="font-weight:600;margin-bottom:8px;">${Farm.i18n.t('settings_sound')}</div>
-        <div style="display:flex;gap:8px;">
+        <div style="display:flex;gap:8px;" class="settings-sound-row">
           <button class="btn ${tier === 'normal' ? '' : 'secondary'}" id="soundNormal" style="flex:1;">${lang === 'en' ? '🔊 Normal' : '🔊 正常'}</button>
           <button class="btn ${tier === 'low' ? '' : 'secondary'}" id="soundLow" style="flex:1;">${lang === 'en' ? '🔉 Low' : '🔉 小声'}</button>
           <button class="btn ${tier === 'off' ? '' : 'secondary'}" id="soundOff" style="flex:1;">${lang === 'en' ? '🔇 Off' : '🔇 关'}</button>
@@ -755,11 +757,11 @@
       <div style="margin:16px 0;padding:12px;background:var(--cream-bg);border-radius:var(--radius-md);">
         <div style="font-weight:600;margin-bottom:8px;">🌻 ${lang === 'en' ? 'Farm display' : '农场显示'}</div>
         <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;">
-          <input id="decoToggle" type="checkbox" ${Farm.state.data.decorationsHidden ? '' : 'checked'}
+          <input id="petsToggle" type="checkbox" ${Farm.state.data.petsEnabled === false ? '' : 'checked'}
                  style="width:16px;height:16px;cursor:pointer;"/>
           <span>${lang === 'en'
-            ? 'Show pets + decorations on the farm'
-            : '在农场上显示宠物 + 装饰品（小狗、气球等）'}</span>
+            ? '🐾 Pets roam the yard (bought in the Mall)'
+            : '🐾 小动物在院子里走动（农场商城买的宠物）'}</span>
         </label>
       </div>
 
@@ -841,13 +843,16 @@
         if (Farm.audio && Farm.audio.setAmbientEnabled) Farm.audio.setAmbientEnabled(ambientEl.checked);
       };
     }
-    // Farm display: decoration visibility toggle
-    const decoEl = document.getElementById('decoToggle');
-    if (decoEl) {
-      decoEl.onchange = () => {
-        Farm.state.data.decorationsHidden = !decoEl.checked;
+    // 农场显示：走动小动物开关（2026-08-15 从「怎么玩」搬来，那里放设置太怪；
+    // 旧的「显示宠物+装饰品」勾选只作用于已被 iso 盖住的 DOM 网格，是个死开关，删了）。
+    // 语义：只有 === false 才藏；买宠物时 ep-shop 会自动置 true。
+    const petsEl = document.getElementById('petsToggle');
+    if (petsEl) {
+      petsEl.onchange = () => {
+        Farm.state.data.petsEnabled = !!petsEl.checked;
         Farm.state.save();
-        if (Farm.farm && Farm.farm.renderDecorations) Farm.farm.renderDecorations();
+        if (Farm.audio) Farm.audio.play('tap');
+        if (Farm.isoView && Farm.isoView.render) Farm.isoView.render();
       };
     }
     // Neighbor settings: save nickname on blur, visibility on change

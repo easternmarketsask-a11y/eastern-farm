@@ -88,7 +88,7 @@
     if (isStandalone() || dismissed() || !deferredPrompt) return;
     showBanner(
       '<span class="pwa-install-text">' +
-        (en() ? '🌱 Add Eastern Farm to your home screen' : '🌱 把东方农场加到主屏幕，每天玩更方便') +
+        (en() ? '🌱 Add Happy Farm to your home screen' : '🌱 把快乐农场加到主屏幕，每天玩更方便') +
       '</span>' +
       '<button class="pwa-install-action">' + (en() ? 'Install' : '添加') + '</button>' +
       '<button class="pwa-install-close" aria-label="close">✕</button>',

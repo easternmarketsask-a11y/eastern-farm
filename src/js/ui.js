@@ -217,6 +217,19 @@
       }
     },
 
+    /* 「画面正忙」统一判定（2026-08-15）：任何**自动**弹出的东西（章节来信、
+       回家小报、催登录……）出手前都该问一句。以前各处只查 #modal 有没有开，
+       漏了两个不走 modal 的覆盖层：开屏 + 新手聚光灯 —— 实测全新玩家点完欢迎窗
+       8 秒后，「初来乍到」的信直接盖在「点这块发光的地」的聚光灯上。 */
+    isBusy() {
+      const modal = document.getElementById('modal');
+      if (modal && !modal.classList.contains('hidden')) return true;
+      if (document.getElementById('splash')) return true;
+      if (window.Farm && Farm.spotlight && Farm.spotlight._active) return true;
+      if (document.getElementById('spotlightOverlay')) return true;
+      return false;
+    },
+
     // Small toast stack (B7): up to 2 toasts stacked vertically, each with its
     // own fade timer. A 3rd toast evicts the oldest (FIFO) instead of the old
     // single-slot overwrite that truncated the previous message — so the

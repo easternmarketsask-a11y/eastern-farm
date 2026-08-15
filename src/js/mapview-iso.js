@@ -104,7 +104,7 @@
     // 只有一张房子贴图 → 分级视觉走「贴图 + 逐级手绘加装」(_drawHomeExtras):
     // 花坛 → 暖窗灯+炊烟 → 彩旗 → 金色灯串, 尺寸也随级微涨。水塘同款手绘工艺。
     home: { img: 'house', w: 2, h: 2, sc: 2.3, zh: '我的家', en: 'My Home', tap: 'home', cost: 300, unique: true },
-    barn: { img: 'barn', w: 2, h: 2, sc: 2.4, zh: '谷仓·仓库', en: 'Barn · Storage', tap: 'warehouse', cost: 350 },
+    barn: { img: 'barn', w: 2, h: 2, sc: 2.4, zh: '谷仓', en: 'Barn', tap: 'warehouse', cost: 350 },
     // 菜摊(类型名 house 是历史存档键, 不能改): 2026-08-14 二次定位 ——
     // Chris:「摊位看起来就是菜摊, 干脆作为菜摊用, 卖菜给路人; 种子店不需要实体」。
     // 点摊 → Farm.stall(路人溢价买菜); 买种子走底部「商店」按钮, 无实体入口。
@@ -1100,10 +1100,13 @@
           landLevel: L.landLevel || 0,
           activeEffects: {}, seeds: {}, warehouse: [],
           dailyClaims: { date: '', visitFootprints: [], likesSentToday: [] },
-          sessionStats: { date: '' }, petsEnabled: false,
+          sessionStats: { date: '' },
+          // 邻居的小动物也照画（门后是真实世界）；走动状态按 seed 缓存，进出都清掉，
+          // 别让我家的鸡在邻居院子里当隐形靶子（_petAt 会命中没画出来的鬼影）
           farmFwdUndoneV1: true, pondMoveV3: true, worldStamped: true,
         };
         (L.terr || []).forEach((e) => { if (e && e.k) vd.mapTerrain[e.k] = e.t; });
+        this._pets = {};
         this._visit = { info, savedData: real, vd };
         Farm.state._visitLock = true;
         Farm.state.data = vd;
@@ -1130,6 +1133,7 @@
       this._visit = null;
       if (v && v.savedData) Farm.state.data = v.savedData;
       Farm.state._visitLock = false;
+      this._pets = {};
       this._pcs = null; this._pcsN = -1;
       this._bgKey = null;
       this._buildLayout();
@@ -2562,7 +2566,11 @@
         decos.forEach((d) => { const it = this._shopItem(d.itemId); if (!it || !it.decoration_emoji) return; if (hp(d) && !occ[d.gx + ',' + d.gy]) return; while (fi < free.length && taken[free[fi]]) fi++; if (fi < free.length) { const k = free[fi++].split(','); d.gx = +k[0]; d.gy = +k[1]; taken[k[0] + ',' + k[1]] = 1; ch = true; } });
         if (ch) Farm.state.save();
       }
-      const out = [], petsOn = !!(Farm.state.data && Farm.state.data.petsEnabled);   // walking pets default OFF
+      // 走动小动物：只有玩家在「怎么玩」里**明确关掉**（=== false）才藏。
+      // 2026-06-18 Chris 定的「默认关闭」针对的是当时白送的两只走路小动物；
+      // 现在小动物全是玩家花钱买的（且第四章目标就是「养一只小动物」），
+      // 买了看不见比「默认多两只」糟得多（2026-08-15）。买宠物时 ep-shop 也会把开关置 true。
+      const out = [], petsOn = !(Farm.state.data && Farm.state.data.petsEnabled === false);
       decos.forEach((d, i) => { if (!hp(d)) return; const it = this._shopItem(d.itemId); if (!it || !it.decoration_emoji) return; const isPet = it.category === 'pet'; if (isPet && !petsOn) return; out.push({ emoji: it.decoration_emoji, itemId: d.itemId, gx: d.gx, gy: d.gy, pet: isPet, seed: i }); });
       return out;
     },

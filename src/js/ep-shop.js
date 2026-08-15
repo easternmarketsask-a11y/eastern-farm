@@ -138,6 +138,9 @@
 
         case 'decoration':
           Farm.state.addDecoration(item.id);
+          // 买的是小动物 → 走动小动物开关自动打开（2026-08-15）。商城文案承诺
+          //「在农场里蹦蹦跳跳」，付了钱却因为默认关闭什么都看不到，等于白买。
+          if (item.category === 'pet') Farm.state.data.petsEnabled = true;
           // Re-render the decoration layer so the new item shows on the farm
           // immediately (otherwise it only appears after the next renderGrid).
           if (Farm.farm && Farm.farm.renderDecorations) Farm.farm.renderDecorations();

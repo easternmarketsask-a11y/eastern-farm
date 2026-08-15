@@ -244,8 +244,8 @@
         <h2 class="modal-title">${title}</h2>
         ${tabBarHtml}
         <div id="neighborBody">${body}</div>
-        <div class="btn-row" style="margin-top:12px;gap:8px;">
-          <button class="btn" style="flex:1.2;" onclick="Farm.fbGameSync && Farm.fbGameSync.shareInvite()">📨 ${lang === 'en' ? 'Invite' : '邀请好友'}</button>
+        <div class="btn-row nb-footer" style="margin-top:12px;gap:8px;">
+          <button class="btn" id="nbFooterInvite" style="flex:1.2;" onclick="Farm.fbGameSync && Farm.fbGameSync.shareInvite()">📨 ${lang === 'en' ? 'Invite' : '邀请好友'}</button>
           <button class="btn secondary" style="flex:1;" onclick="Farm.share && Farm.share.open()">📸 ${lang === 'en' ? 'Share' : '晒农场'}</button>
           <button class="btn secondary" style="flex:0.8;" onclick="Farm.ui.hideModal()">${Farm.i18n.t('btn_close')}</button>
         </div>
@@ -282,6 +282,9 @@
           `;
           const invBtn = document.getElementById('emptyInviteBtn');
           if (invBtn) invBtn.onclick = () => { if (Farm.fbGameSync) Farm.fbGameSync.shareInvite(); };
+          // 空状态正文已经有一颗带奖励说明的大「邀请好友」，底栏那颗同名按钮就藏起来，别一屏两个
+          const footInv = document.getElementById('nbFooterInvite');
+          if (footInv) footInv.style.display = 'none';
           const addBtn = document.getElementById('emptyAddFriendBtn');
           if (addBtn) addBtn.onclick = () => { this._currentTab = 'friends'; this._render(); };
           return;

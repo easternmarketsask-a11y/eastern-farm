@@ -159,21 +159,29 @@
           </button>
         </div>`;
 
+      // 「怎么玩」卡：新手排第一，老玩家（卖过货）沉到最底 —— 玩了三个月的人
+      // 每天打开「今日」第一眼不该是「第一次玩？」（2026-08-15）。菜单里也有入口。
+      const isNewbie = (Farm.state.data.totalDeliveries || 0) < 3;
+      const guideHTML = `
+          <div class="daily-card daily-guide">
+            <div class="daily-card-title">📖 ${lang === 'en' ? 'How to Play' : '怎么玩'}</div>
+            <div class="daily-card-body">${isNewbie
+              ? (lang === 'en' ? 'New here? See everything you can do on the farm.' : '第一次玩？一页看懂农场能做的事。')
+              : (lang === 'en' ? 'A one-page refresher of everything on the farm.' : '农场里能做的事，一页回顾。')}</div>
+            <button class="daily-claim" id="dailyOpenGuide">📖 ${lang === 'en' ? 'View guide' : '看玩法'}</button>
+          </div>`;
       const html = `
         <h2 class="modal-title">${lang === 'en' ? 'Today' : '今日'}</h2>
         <div class="daily-list">
           ${(Farm.promo && Farm.promo.bannerHtml) ? Farm.promo.bannerHtml() : ''}
-          <div class="daily-card daily-guide">
-            <div class="daily-card-title">📖 ${lang === 'en' ? 'How to Play' : '怎么玩'}</div>
-            <div class="daily-card-body">${lang === 'en' ? 'New here? See everything you can do on the farm.' : '第一次玩？一页看懂农场能做的事。'}</div>
-            <button class="daily-claim" id="dailyOpenGuide">📖 ${lang === 'en' ? 'View guide' : '看玩法'}</button>
-          </div>
+          ${isNewbie ? guideHTML : ''}
           ${signinHTML}
           ${ordersHTML}
           ${newsHTML}
           ${specialHTML}
           ${lotteryHTML}
           ${neighborHTML}
+          ${isNewbie ? '' : guideHTML}
         </div>
         <div class="btn-row">
           <button class="btn secondary" onclick="Farm.ui.hideModal()">${Farm.i18n.t('btn_close')}</button>

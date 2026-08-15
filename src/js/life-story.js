@@ -161,9 +161,10 @@
     /* 新章节的信：到点了且没看过 → 弹（无别的弹窗时才弹，绝不抢戏）。 */
     async maybeDeliverLetter() {
       if (Farm.state._visitLock) return;                      // 别人家里不收信
-      const modal = document.getElementById('modal');
-      if (modal && !modal.classList.contains('hidden')) return;
-      if (document.getElementById('splash')) return;          // 开屏期不弹
+      // 开屏 / 别的弹窗 / 新手聚光灯进行中 → 信晚点再送（ui.isBusy 统一判定）
+      if (Farm.ui && Farm.ui.isBusy ? Farm.ui.isBusy() : document.getElementById('splash')) return;
+      // 欢迎窗还没确认过的全新玩家：先让他把第一棵菜种下去，信随后就到
+      if (!Farm.state.data.tutorialV1Done) return;
       await this._load();
       const ch = this._chapterFor(Farm.state.data.level || 1);
       if (!ch || this._st().seen[ch.id]) return;
@@ -193,16 +194,30 @@
       if (Farm.audio) Farm.audio.play('achievement');
     },
 
-    async open(tab) {
+    /* 某章还有「已达成但没领」的目标吗 —— 时间线上给旧章节挂「可领」角标用 */
+    _claimableIn(ch) {
+      const st = this._st();
+      return ch.goals.filter((g) => !st.claimed[g.id] && this._progress(g) >= g.target).length;
+    },
+
+    /* open(tab, viewIdx)：viewIdx 是要翻看的章节下标（默认当前章）。
+       2026-08-15：升级过章后旧章目标不再消失 —— 点时间线里走过的章节能翻回去，
+       没领的奖励照领（只发农场币，零真实成本）；下一章可以先看目标（有盼头），
+       但上锁不给领。再往后的章节保持神秘。 */
+    async open(tab, viewIdx) {
       this._tab = tab || this._tab || 'chapter';
       if (this._tab === 'diary') return this.openDiary();
       await this._load();
       if (!(Farm.ui && Farm.ui.showModal) || !CHAPTERS.length) return;
       const en = Farm.state.data.language === 'en';
       const lvl = Farm.state.data.level || 1;
-      const cur = this._chapterFor(lvl);
+      const nowCh = this._chapterFor(lvl);
       const st = this._st();
-      const idx = CHAPTERS.indexOf(cur);
+      const nowIdx = CHAPTERS.indexOf(nowCh);
+      const idx = (typeof viewIdx === 'number' && viewIdx >= 0 && viewIdx <= Math.min(nowIdx + 1, CHAPTERS.length - 1))
+        ? viewIdx : nowIdx;
+      const cur = CHAPTERS[idx];
+      const isPast = idx < nowIdx, isFuture = idx > nowIdx;
 
       const goalRow = (g) => {
         const have = this._progress(g);
@@ -210,33 +225,43 @@
         const claimed = !!st.claimed[g.id];
         const pct = Math.min(100, Math.round(have / g.target * 100));
         let right;
-        if (claimed) right = '<span class="ls-claimed">✓</span>';
+        if (isFuture) right = '<span class="ls-count">🔒 +' + g.reward + ' <span class="coin-icon"></span></span>';
+        else if (claimed) right = '<span class="ls-claimed">✓</span>';
         else if (done) right = '<button class="btn ls-claim" data-claim="' + g.id + '">'
           + (en ? 'Claim' : '领取') + ' +' + g.reward + ' <span class="coin-icon"></span></button>';
         else if (GOAL_ACTIONS[g.type]) right = '<button class="btn ls-claim ls-act" data-goact="' + g.type + '">'
           + (en ? GOAL_ACTIONS[g.type].en : GOAL_ACTIONS[g.type].zh) + '</button>';
         else right = '<span class="ls-count">' + Math.min(have, g.target) + '/' + g.target + '</span>';
-        return '<div class="ls-goal ' + (claimed ? 'is-claimed' : done ? 'is-done' : '') + '">'
+        return '<div class="ls-goal ' + (claimed ? 'is-claimed' : done && !isFuture ? 'is-done' : '') + (isFuture ? ' is-locked' : '') + '">'
           + '<div class="ls-goal-main"><div class="ls-goal-name">' + (en ? g.en : g.zh) + '</div>'
-          + '<div class="ls-goal-bar"><div class="ls-goal-fill" style="width:' + pct + '%"></div></div></div>'
+          + '<div class="ls-goal-bar"><div class="ls-goal-fill" style="width:' + (isFuture ? 0 : pct) + '%"></div></div></div>'
           + right + '</div>';
       };
 
-      // 章节时间线: 已过的章节打勾, 当前高亮, 未来的上锁
+      // 章节时间线: 已过的章节打勾(可点回看, 有没领的奖励挂角标), 当前高亮, 下一章可预览, 更远的上锁
       const timeline = CHAPTERS.map((c, i) => {
-        const cls = i < idx ? 'past' : i === idx ? 'now' : 'future';
-        return '<div class="ls-tl ' + cls + '">'
-          + '<span class="ls-tl-dot">' + (i < idx ? '✓' : (i === idx ? '📖' : '🔒')) + '</span>'
-          + '<span class="ls-tl-name">' + (en ? c.name_en : c.name_zh) + '</span></div>';
+        const cls = (i < nowIdx ? 'past' : i === nowIdx ? 'now' : 'future') + (i === idx ? ' viewing' : '');
+        const clickable = i <= nowIdx + 1;
+        const pend = i < nowIdx ? this._claimableIn(c) : 0;
+        const badge = pend ? '<span class="ls-tl-badge">' + (en ? 'Claim' : '可领') + '</span>'
+          : (i === nowIdx + 1 ? '<span class="ls-tl-hint">Lv ' + c.from_lv + '</span>' : '');
+        return '<div class="ls-tl ' + cls + '"' + (clickable ? ' data-tl="' + i + '" role="button" tabindex="0"' : '') + '>'
+          + '<span class="ls-tl-dot">' + (i < nowIdx ? '✓' : (i === nowIdx ? '📖' : '🔒')) + '</span>'
+          + '<span class="ls-tl-name">' + (en ? c.name_en : c.name_zh) + '</span>' + badge + '</div>';
       }).join('');
+
+      const eyebrow = en
+        ? ('Chapter ' + (idx + 1) + (isPast ? ' · Completed' : isFuture ? (' · Unlocks at Lv ' + cur.from_lv) : ''))
+        : ('第' + '一二三四五六七八九'[idx] + '章' + (isPast ? ' · 走过的路' : isFuture ? (' · Lv ' + cur.from_lv + ' 解锁') : ''));
 
       Farm.ui.showModal(
         '<h2 class="modal-title">' + (en ? 'My Farm Story' : '我的农场人生') + '</h2>'
         + this._tabsHtml(en, 'chapter')
         + '<div class="ls-chapter-head">'
-        + '<div class="ls-ch-eyebrow">' + (en ? ('Chapter ' + (idx + 1)) : ('第' + '一二三四五六七八九'[idx] + '章')) + '</div>'
+        + '<div class="ls-ch-eyebrow">' + eyebrow + '</div>'
         + '<div class="ls-ch-name">' + (en ? cur.name_en : cur.name_zh) + '</div>'
-        + '<button class="ls-reread" data-reread="1">📬 ' + (en ? 'Re-read the letter' : '重读来信') + '</button>'
+        + (isFuture ? '' : '<button class="ls-reread" data-reread="1">📬 ' + (en ? 'Re-read the letter' : '重读来信') + '</button>')
+        + (idx !== nowIdx ? '<button class="ls-reread" data-tl="' + nowIdx + '">↩ ' + (en ? 'Back to current chapter' : '回到当前章') + '</button>' : '')
         + '</div>'
         + '<div class="ls-goals">' + cur.goals.map(goalRow).join('') + '</div>'
         + '<div class="ls-tl-wrap">' + timeline + '</div>'
@@ -255,13 +280,18 @@
           Farm.state.save();
           if (Farm.audio) Farm.audio.play('coin');
           if (Farm.ui.refreshHUD) Farm.ui.refreshHUD();
-          this.open();   // 原地刷新
+          this.open('chapter', idx);   // 原地刷新（留在正在看的这一章）
         };
       });
       const rr = document.querySelector('[data-reread]');
       if (rr) rr.onclick = () => this._showLetter(cur);
       document.querySelectorAll('[data-goact]').forEach((b) => {
         b.onclick = () => { const a = GOAL_ACTIONS[b.getAttribute('data-goact')]; if (a) a.run(); };
+      });
+      document.querySelectorAll('[data-tl]').forEach((el) => {
+        const go = () => { const i = parseInt(el.getAttribute('data-tl'), 10); if (i !== idx) this.open('chapter', i); };
+        el.onclick = go;
+        el.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } };
       });
       this._wireTabs();
     },

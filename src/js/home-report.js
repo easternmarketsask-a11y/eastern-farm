@@ -94,8 +94,10 @@
     // 自排队：若当前有别的弹窗开着（签到/教程），稍后再试，避免撞窗。
     maybeShow() {
       if (!_pending) return;
-      const modal = document.getElementById('modal');
-      if (modal && !modal.classList.contains('hidden')) {
+      const busy = (Farm.ui && Farm.ui.isBusy)
+        ? Farm.ui.isBusy()
+        : (() => { const m = document.getElementById('modal'); return m && !m.classList.contains('hidden'); })();
+      if (busy) {
         setTimeout(() => this.maybeShow(), 1500);
         return;
       }

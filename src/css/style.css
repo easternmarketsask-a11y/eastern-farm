@@ -1804,7 +1804,8 @@ body.mapmode #warehouseBtn { display: none !important; }
   border-radius: 10px;
   padding: 6px 10px;
 }
-.wh-row .wh-icon { font-size: 22px; line-height: 1; text-align: center; }
+.wh-row .wh-icon { font-size: 22px; line-height: 1; text-align: center; display: inline-flex; align-items: center; justify-content: center; }
+.wh-row .wh-icon svg, .wh-row .wh-icon img.crop-sprite { width: 30px; height: 30px; }
 .wh-row .wh-name { font-size: 13px; font-weight: 600; color: var(--warm-text); }
 .wh-row .wh-sub { font-size: 10.5px; color: var(--warm-text-soft); margin-top: 1px; display: inline-flex; align-items: center; gap: 3px; }
 .wh-row .wh-line-value {
@@ -3207,9 +3208,8 @@ body.modal-open #bottombar { display: none; }
   flex-direction: column;
   gap: 10px;
   margin-top: 8px;
-  max-height: 60vh;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
+  /* 2026-08-15：去掉自己的 60vh 内滚 —— 弹窗本身已经能滚（.modal-content 80vh），
+     两层滚动条在手机上要么滚不动列表要么够不着底部按钮。 */
   padding-right: 2px;
 }
 .guide-card {
@@ -3967,10 +3967,11 @@ body.modal-open #bottombar { display: none; }
 }
 /* 种植选择器的时长分组标题（⚡马上好 / 🍚饭后好 / 🌙睡一觉好） */
 .seed-group-title {
+  grid-column: 1 / -1;   /* 分组标题独占一整行，别当成一张卡挤进两列网格留个空洞（2026-08-15） */
   font-size: 12px;
   font-weight: 700;
   color: var(--warm-text-soft);
-  padding: 10px 4px 4px;
+  padding: 10px 4px 0;
   letter-spacing: 0.3px;
 }
 .seed-group-title:first-child { padding-top: 2px; }
@@ -4261,7 +4262,8 @@ body.modal-open .pwa-install-banner { display: none; }
 }
 .order-item.ok { background: #e4f5e0; color: #2a6b3c; }
 .order-item.short { background: #fbeee6; }
-.order-item-icon { font-size: 16px; line-height: 1; }
+.order-item-icon { font-size: 16px; line-height: 1; display: inline-flex; align-items: center; }
+.order-item-icon svg, .order-item-icon img.crop-sprite { width: 20px; height: 20px; }
 .order-item-name { font-weight: 600; }
 .order-item-qty { font-weight: 700; font-variant-numeric: tabular-nums; }
 .order-reward {
@@ -4542,7 +4544,25 @@ body.modal-open .pwa-install-banner { display: none; }
 .ls-tl.past { color: var(--warm-text-soft); }
 .ls-tl.now .ls-tl-name { font-weight: 700; color: var(--deep-green, #2a5c34); }
 .ls-tl.future { color: #b6ab99; }
+/* 时间线可翻章（2026-08-15）：走过的章 + 下一章可点，正在看的那一章描个底 */
+.ls-reread + .ls-reread { margin-left: 16px; }
+.ls-tl[data-tl] { cursor: pointer; border-radius: 8px; padding: 3px 6px; margin: 0 -6px; }
+.ls-tl[data-tl]:hover { background: rgba(60, 45, 25, 0.05); }
+.ls-tl.viewing { background: rgba(123, 192, 67, 0.14); }
+.ls-tl-badge {
+  margin-left: auto; font-size: 10.5px; font-weight: 700; color: #fff;
+  background: var(--barn-red, #c94b3a); border-radius: 999px; padding: 1px 7px; line-height: 1.5;
+}
+.ls-tl-hint { margin-left: auto; font-size: 10.5px; color: #b6ab99; font-family: var(--font-num); }
+.ls-goal.is-locked { opacity: 0.72; }
+.ls-goal.is-locked .ls-goal-name { color: var(--warm-text-soft); }
 
+
+/* 设置页声音三档：别折成「正/常」两行 */
+.settings-sound-row .btn { white-space: nowrap; padding-left: 8px; padding-right: 8px; font-size: 13px; }
+
+/* 邻居广场底栏：三颗并排别折行 */
+.nb-footer .btn { white-space: nowrap; padding-left: 10px; padding-right: 10px; }
 
 /* 农场人生: 页签 + 日记 */
 .ls-tabs { display: flex; gap: 8px; justify-content: center; margin-bottom: 12px; }

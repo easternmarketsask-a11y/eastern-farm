@@ -41,10 +41,10 @@
       const total = sellValue + bonus;
       const coin = '<span class="coin-icon"></span>';
 
-      const titleZh = '我的仓库';
-      const titleEn = 'My Warehouse';
-      const emptyZh = '仓库空空如也<br><span style="font-size:12px;color:var(--warm-text-soft);">先去地里种点东西收获吧</span>';
-      const emptyEn = 'Your warehouse is empty<br><span style="font-size:12px;color:var(--warm-text-soft);">Plant + harvest some crops first</span>';
+      const titleZh = '我的谷仓';   // 与底部 dock「谷仓」同名（2026-08-15 统一叫法）
+      const titleEn = 'My Barn';
+      const emptyZh = '谷仓空空如也<br><span style="font-size:12px;color:var(--warm-text-soft);">先去地里种点东西收获吧</span>';
+      const emptyEn = 'Your barn is empty<br><span style="font-size:12px;color:var(--warm-text-soft);">Plant + harvest some crops first</span>';
 
       let body;
       if (count === 0) {
@@ -68,7 +68,7 @@
             : '';
           return `
             <div class="wh-row">
-              <span class="wh-icon">${def.icon}</span>
+              <span class="wh-icon">${(Farm.cropArt && Farm.cropArt.icon) ? Farm.cropArt.icon(cropId, 30) : def.icon}</span>
               <div class="wh-info">
                 <div class="wh-name">${def[nameKey]}${seasonTag}</div>
                 <div class="wh-sub">${qty} × ${coin}${unit}${keptNote}</div>

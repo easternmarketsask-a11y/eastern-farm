@@ -84,7 +84,6 @@
             ? 'Everything you can do on the farm — at a glance.'
             : '在农场里能做的事，一页看明白。'}</p>
           <div class="guide-list">${cards}</div>
-          ${this._settingsHtml(EN)}
           <div class="btn-row" style="margin-top:14px;">
             <button class="btn" id="guideStartBtn" style="flex:1;font-size:15px;padding:14px;">
               🌱 ${EN ? "Let's farm!" : '开始种菜'}
@@ -93,7 +92,6 @@
         </div>
       `;
       Farm.ui.showModal(html);
-      this._wireSettings();
 
       const btn = document.getElementById('guideStartBtn');
       if (btn) btn.onclick = () => {
@@ -102,28 +100,8 @@
       };
     },
 
-    // 指南底部的小设置区。
-    // 2026-08-11：原来这里还有「🎨 农场画风」三选一（Hay Day 等距 / 俯视像素 /
-    // 经典竖排），切换会 location.reload() 换渲染器。三套渲染器已收编成 iso 一套
-    // （见 state.farmStyle()），切换器随之移除，只留走动小动物开关。
-    _settingsHtml(EN) {
-      const petsOn = !!(Farm.state && Farm.state.data && Farm.state.data.petsEnabled);
-      return '<div style="margin-top:14px;"><div style="font:600 13px/1 system-ui,sans-serif;color:#555;margin-bottom:7px;">🐾 ' +
-        (EN ? 'Walking pets' : '走动小动物') + '</div><button id="guidePetsToggle" style="padding:9px 16px;border-radius:12px;cursor:pointer;font:600 12px/1.2 system-ui,sans-serif;border:2px solid ' +
-        (petsOn ? '#FF9800' : '#e0e0e0') + ';background:' + (petsOn ? '#FFF3E0' : '#fff') + ';color:' + (petsOn ? '#E8522A' : '#666') + ';">' +
-        (petsOn ? (EN ? '✓ On' : '✓ 开启') : (EN ? 'Off' : '已关闭')) + '</button></div>';
-    },
-    _wireSettings() {
-      const pt = document.getElementById('guidePetsToggle');
-      if (pt) pt.onclick = () => {
-        Farm.state.data.petsEnabled = !Farm.state.data.petsEnabled; Farm.state.save();
-        if (Farm.audio) Farm.audio.play('tap');
-        const on = Farm.state.data.petsEnabled, EN = Farm.state.data.language === 'en';
-        pt.textContent = on ? (EN ? '✓ On' : '✓ 开启') : (EN ? 'Off' : '已关闭');
-        pt.style.border = '2px solid ' + (on ? '#FF9800' : '#e0e0e0'); pt.style.background = on ? '#FFF3E0' : '#fff'; pt.style.color = on ? '#E8522A' : '#666';
-        if (Farm.isoView && Farm.isoView.render) Farm.isoView.render();
-      };
-    },
+    // （2026-08-15：原来这里挂着「🐾 走动小动物」开关 —— 设置项放进「怎么玩」
+    //   不合适，且与设置页的显示开关重复。已统一搬到「设置 → 农场显示」。）
   };
 
   window.Farm = window.Farm || {};
