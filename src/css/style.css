@@ -541,6 +541,9 @@ body {
   color: var(--warm-text);
   padding: 3px 0;
 }
+.lvup-crops { display: inline-flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 4px 8px; }
+.lvup-crop { display: inline-flex; align-items: center; gap: 3px; color: var(--leaf-dark); }
+.lvup-crop svg, .lvup-crop img.crop-sprite { width: 22px; height: 22px; }
 .lvup-next {
   background: var(--cream-bg);
   border: 1.5px dashed var(--border-soft);

@@ -452,8 +452,22 @@
       const span = Math.max(1, nextLevelXp - curLevelXp);
       const pct = Math.min(100, intoNext / span * 100);
 
+      // 新解锁作物（2026-08-15）：升级最强的「盼头」是新菜，原弹窗只提地块/积分/币，
+      // 成长之路里的作物里程碑在这里一句都没提。同时算出下一个作物解锁等级
+      const allCrops = (Farm.crops && Farm.crops.all) ? Farm.crops.all() : [];
+      const nameKey = lang === 'en' ? 'name_en' : 'name_zh';
+      const cropIcon = (c) => (Farm.cropArt && Farm.cropArt.icon) ? Farm.cropArt.icon(c.id, 22) : (c.icon || '🥬');
+      const justUnlocked = allCrops.filter((c) => (c.unlock_level || 1) > oldLevel && (c.unlock_level || 1) <= newLevel);
+      let nextCropLv = null;
+      allCrops.forEach((c) => { const lv = c.unlock_level || 1; if (lv > newLevel && (nextCropLv === null || lv < nextCropLv)) nextCropLv = lv; });
+      const nextCrops = nextCropLv ? allCrops.filter((c) => (c.unlock_level || 1) === nextCropLv) : [];
+
       // Build "unlocked" list
       const unlockedItems = [];
+      if (justUnlocked.length) {
+        unlockedItems.push('<span class="lvup-crops">' + (lang === 'en' ? '🌱 New crops: ' : '🌱 解锁新菜：')
+          + justUnlocked.map((c) => '<span class="lvup-crop">' + cropIcon(c) + c[nameKey] + '</span>').join(' ') + '</span>');
+      }
       if (plotsUnlocked > 0) {
         unlockedItems.push((lang === 'en'
           ? '🏞 +' + plotsUnlocked + ' new plot' + (plotsUnlocked > 1 ? 's' : '')
@@ -475,9 +489,15 @@
           '</div>'
         : '<div class="lvup-title-stay">' + titleZhEn(newTitle) + '</div>';
 
-      const nextHTML = nextTitle || nextPlotLv ? (
+      const nextHTML = nextTitle || nextPlotLv || nextCropLv ? (
         '<div class="lvup-next">' +
           '<div class="lvup-next-label">' + (lang === 'en' ? 'Next milestone' : '下个里程碑') + '</div>' +
+          (nextCropLv ? (
+            '<div class="lvup-next-row">' +
+              '<span>🌱 ' + (lang === 'en' ? 'New crop' : '新菜') + '</span>' +
+              '<span>' + nextCrops.slice(0, 2).map((c) => c[nameKey]).join(' · ') + (nextCrops.length > 2 ? ' …' : '') + ' · Lv ' + nextCropLv + '</span>' +
+            '</div>'
+          ) : '') +
           (nextTitle ? (
             '<div class="lvup-next-row">' +
               '<span>🏷 ' + (lang === 'en' ? 'Title' : '称号') + '</span>' +
