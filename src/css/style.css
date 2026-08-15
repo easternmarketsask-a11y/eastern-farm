@@ -9,6 +9,18 @@
    style.css first, THEN discover and fetch this second stylesheet, delaying
    first paint ~2.3s on slow networks (B4 perf audit). Do NOT re-add @import. */
 
+/* 🔒 ZCOOL XiaoWei 补丁(2026-08-15): 该字体里「回」(U+56DE)是坏字形 —— 字体
+   *有*这个字所以浏览器不回退, 结果 20,902 个汉字里唯独它渲染成豆腐块
+   (「返回」「欢迎回来」「回家小报」全中招, 逐字扫描确认只此一字)。
+   用 unicode-range 把这一个字优先交给系统中文字体: iOS/mac PingFang,
+   Windows 微软雅黑, Android Noto CJK。local() 全落空时自然跳到下一个字体。 */
+@font-face {
+  font-family: 'EF XiaoWei Patch';
+  src: local('PingFang SC'), local('PingFangSC-Regular'), local('Microsoft YaHei'),
+       local('Noto Sans CJK SC'), local('Noto Sans SC'), local('Source Han Sans SC'), local('Hiragino Sans GB');
+  unicode-range: U+56DE;
+}
+
 :root {
   --cream-bg:       #fdf8ee;
   --cream-card:     #fffdf6;
@@ -44,7 +56,7 @@
        这是「质感」最便宜也最有效的一处（XiaoWei 的数字纤细，撑不起 HUD）。 */
   --font-zh: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
   --font-en: 'Plus Jakarta Sans', 'Noto Sans SC', sans-serif;
-  --font-display: 'ZCOOL XiaoWei', 'Noto Sans SC', 'PingFang SC', sans-serif;
+  --font-display: 'EF XiaoWei Patch', 'ZCOOL XiaoWei', 'Noto Sans SC', 'PingFang SC', sans-serif;
   --font-num: 'Plus Jakarta Sans', 'Noto Sans SC', sans-serif;
 
   /* Kawaii accent palette (Chris's refs): leaf green / pumpkin orange / amber. */
@@ -4496,6 +4508,7 @@ body.modal-open .pwa-install-banner { display: none; }
 }
 .ls-goal.is-done { border-color: #b7ddc3; background: #f2faf4; }
 .ls-goal.is-claimed { opacity: 0.6; }
+.ls-goal .ls-act { background: #fff; color: var(--leaf-dark); border: 1.5px solid #b7ddc3; box-shadow: none; }
 .ls-goal-main { flex: 1; min-width: 0; }
 .ls-goal-name { font-size: 13.5px; font-weight: 600; color: var(--warm-text); }
 .ls-goal-bar {

@@ -856,6 +856,10 @@
       nickEl.onblur = () => {
         // Strip HTML-significant chars at the write boundary (defense-in-depth
         // with render-time escaping): a nickname is plain text, never markup.
+        if (Farm.lifeStory && Farm.lifeStory.saveNickname) {
+          nickEl.value = Farm.lifeStory.saveNickname(nickEl.value);   // 统一入口(清洗+推云+日记)
+          return;
+        }
         const v = nickEl.value.replace(/[<>&"']/g, '').trim().slice(0, 12);
         nickEl.value = v;
         Farm.state.data.nickname = v || null;

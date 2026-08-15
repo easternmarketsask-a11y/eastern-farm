@@ -32,9 +32,17 @@
       "from_lv": 3,
       "name_zh": "安家落户",
       "name_en": "Settling In",
-      "letter_zh": "你的菜比我进的货还新鲜！客人都问是谁家种的。\n\n地种顺了，该给自己安个真正的家了——去建一座「我的家」，再添置点花花草草。屋前有花，日子才算落了户。\n\n—— 小东",
-      "letter_en": "Your greens are fresher than my suppliers'! Customers keep asking who grows them.\n\nNow that the field runs smooth, it's time for a real home. Build your house, plant some flowers by the door — a home with blooms is a home that's settled.\n\n— Xiaodong",
+      "letter_zh": "你的菜比我进的货还新鲜！客人都问是谁家种的。\n\n地种顺了，该给自己安个真正的家了——先给农场起个名字挂在路边，再去建一座「我的家」，添置点花花草草。屋前有花、门口有名，日子才算落了户。\n\n—— 小东",
+      "letter_en": "Your greens are fresher than my suppliers'! Customers keep asking who grows them.\n\nNow that the field runs smooth, it's time for a real home. Put a name on the roadside sign, build your house, plant some flowers by the door — a home with a name and blooms is a home that's settled.\n\n— Xiaodong",
       "goals": [
+        {
+          "id": "c2_name",
+          "type": "nickname_set",
+          "target": 1,
+          "zh": "给农场起个名字（挂在路边名牌上）",
+          "en": "Name your farm (goes on the roadside sign)",
+          "reward": 150
+        },
         {
           "id": "c2_home",
           "type": "home_built",

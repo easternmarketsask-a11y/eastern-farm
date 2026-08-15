@@ -291,6 +291,10 @@ See `docs/GAME-DESIGN.md` for full spec. TL;DR:
   - Numbers（金币/积分/倒计时）: `--font-num` = Plus Jakarta Sans 700 +
     `font-variant-numeric: tabular-nums` —— HUD 数字要稳不要雅，跳动时位宽不抖
   - ❌ 卡通体（ZCOOL KuaiLe / Fredoka）已于 2026-08-13 移除，别加回来
+  - 🔒 **ZCOOL XiaoWei 里「回」是坏字形**（字体自带豆腐块，浏览器不回退；
+    2026-08-15 逐字扫 20,902 个汉字确认只此一字）。`style.css` 顶部
+    `@font-face 'EF XiaoWei Patch'` 用 `unicode-range: U+56DE` 把它交给系统字体，
+    排在 `--font-display` 栈首。**别删这个补丁、别把它从栈首挪走**
   - 正文不用衬线体；display 的笔锋对比是刻意保留的例外
 
 ---

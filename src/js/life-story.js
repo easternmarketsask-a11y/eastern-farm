@@ -34,7 +34,11 @@
       return (s.decorations || []).some((d) => d && P.has(d.itemId)) ? 1 : 0;
     },
     level: (s) => s.level || 1,
+    // 给农场起名(2026-08-15): 远景名牌只挂玩家自起的昵称, 没起就是匿名小屋
+    nickname_set: (s) => (s.nickname && String(s.nickname).trim()) ? 1 : 0,
   };
+  // 有「去做」入口的目标类型 → 目标行右侧给一个按钮直达
+  const GOAL_ACTIONS = { nickname_set: { zh: '起名 ✏️', en: 'Name it ✏️', run: () => Farm.lifeStory.promptNickname() } };
 
   /* ============ 农场日记(2026-08-14, 人生故事第二支柱) ============
      带日期的人生大事记:「第一次收获菠菜」「家升成了梦想庄园」「菜摊第 50 位
@@ -209,6 +213,8 @@
         if (claimed) right = '<span class="ls-claimed">✓</span>';
         else if (done) right = '<button class="btn ls-claim" data-claim="' + g.id + '">'
           + (en ? 'Claim' : '领取') + ' +' + g.reward + ' <span class="coin-icon"></span></button>';
+        else if (GOAL_ACTIONS[g.type]) right = '<button class="btn ls-claim ls-act" data-goact="' + g.type + '">'
+          + (en ? GOAL_ACTIONS[g.type].en : GOAL_ACTIONS[g.type].zh) + '</button>';
         else right = '<span class="ls-count">' + Math.min(have, g.target) + '/' + g.target + '</span>';
         return '<div class="ls-goal ' + (claimed ? 'is-claimed' : done ? 'is-done' : '') + '">'
           + '<div class="ls-goal-main"><div class="ls-goal-name">' + (en ? g.en : g.zh) + '</div>'
@@ -254,7 +260,55 @@
       });
       const rr = document.querySelector('[data-reread]');
       if (rr) rr.onclick = () => this._showLetter(cur);
+      document.querySelectorAll('[data-goact]').forEach((b) => {
+        b.onclick = () => { const a = GOAL_ACTIONS[b.getAttribute('data-goact')]; if (a) a.run(); };
+      });
       this._wireTabs();
+    },
+
+    /* 昵称的唯一保存入口(设置页 + 章节目标共用): 清洗 → 存 → 推云 → 记日记。
+       名字是玩家在这条路上的身份 —— 远景名牌 / 邻居列表 / 菜摊顾客名都读它。 */
+    saveNickname(raw) {
+      const v = String(raw || '').replace(/[<>&"']/g, '').trim().slice(0, 12);
+      const before = Farm.state.data.nickname || null;
+      Farm.state.data.nickname = v || null;
+      Farm.state.save();
+      if (Farm.fbGameSync) Farm.fbGameSync.push();
+      if (v && v !== before) {
+        this.record('farm_named_' + v, '给农场起了名字：「' + v + '」。', 'Named the farm "' + v + '".');
+      }
+      return v;
+    },
+    promptNickname() {
+      const en = Farm.state.data.language === 'en';
+      const cur = Farm.state.data.nickname || '';
+      Farm.ui.showModal(
+        '<h2 class="modal-title">' + (en ? 'Name your farm' : '给农场起个名字') + '</h2>'
+        + '<div style="font-size:13px;color:var(--warm-text-soft);line-height:1.7;text-align:center;margin-bottom:12px;">'
+        + (en ? 'It goes on the roadside sign — neighbours will know whose farm this is. Up to 12 characters.'
+              : '它会挂在路边的名牌上，邻居一看就知道这是谁家。最多 12 个字。') + '</div>'
+        + '<input id="lsNickInput" type="text" maxlength="12" value="' + cur.replace(/"/g, '&quot;') + '" '
+        + 'placeholder="' + (en ? 'e.g., Sask Mom' : '例如：萨城宝妈') + '" '
+        + 'style="width:100%;padding:12px 14px;font-size:16px;border:1.5px solid var(--border-soft);border-radius:10px;background:#fff;box-sizing:border-box;text-align:center;"/>'
+        + '<div class="btn-row" style="margin-top:14px;">'
+        + '<button class="btn" id="lsNickSave" style="width:100%;">' + (en ? 'Save name' : '就叫这个') + '</button></div>'
+        + '<div class="btn-row" style="margin-top:8px;"><button class="btn secondary" style="width:100%;" id="lsNickBack">'
+        + (en ? 'Back' : '返回') + '</button></div>'
+      );
+      const inp = document.getElementById('lsNickInput');
+      if (inp) setTimeout(() => { try { inp.focus(); } catch (e) {} }, 50);
+      const back = () => { Farm.ui.hideModal(); this.open('chapter'); };
+      const save = () => {
+        const v = this.saveNickname(inp ? inp.value : '');
+        if (!v) { if (Farm.ui.toast) Farm.ui.toast(en ? 'Type a name first' : '先写个名字吧', 2200); return; }
+        Farm.ui.hideModal();
+        if (Farm.ui.toast) Farm.ui.toast(en ? ('🪧 Your farm is now "' + v + '"') : ('🪧 农场名牌挂好了：「' + v + '」'), 3200);
+        if (Farm.audio) Farm.audio.play('achievement');
+        this.open('chapter');
+      };
+      const sb = document.getElementById('lsNickSave'); if (sb) sb.onclick = save;
+      const bb = document.getElementById('lsNickBack'); if (bb) bb.onclick = back;
+      if (inp) inp.onkeydown = (e) => { if (e.key === 'Enter') save(); };
     },
 
     _tabsHtml(en, active) {
