@@ -1930,7 +1930,14 @@
         if (!(Farm.neighbors && Farm.neighbors._fetchToday)) { setTimeout(tryFetch, 5000); return; }
         Farm.neighbors._fetchToday().then((list) => {
           this._distantFarms = (list || []).slice(0, this.NEIGHBOR_SPOTS.length)
-            .map((n) => ({ name: n.name, level: n.level || 1, emoji: n.emoji, _n: n }));
+            .map((n) => ({
+              /* 名牌只挂玩家**自己起的**农场昵称(2026-08-15 Chris 看到「X邻居/
+                 S邻居」以为又是假人 —— 那是没起昵称的真实玩家被隐私打码成
+                 「姓氏首字母+邻居」, 看着像占位符)。没起昵称 = 匿名小屋不挂牌,
+                 与「没有就没有」同一原则; 点小屋照样能进社区/拜访。 */
+              name: (n._doc && n._doc.gameStats && n._doc.gameStats.nickname) ? n.name : null,
+              level: n.level || 1, emoji: n.emoji, _n: n,
+            }));
           this._bgKey = null;   // 名牌进相机缓存, 数据到了重画一次
           if (this._on) this.render();
         }).catch(() => {});
@@ -1950,7 +1957,7 @@
         const c = this._cell(sp.gx, sp.gy);
         this._drawTinyCottage(c.x, c.y);
         this._neighborHits.push({ x: c.x, y: c.y - th * 0.5, r: th * 1.5 });
-        if (nb && th > 10) {                       // 名牌: 太小就不挤了
+        if (nb && nb.name && th > 10) {            // 名牌: 只挂有昵称的; 太小不挤
           const label = nb.emoji + ' ' + nb.name + ' · Lv' + nb.level;
           const fs3 = Math.max(8, th * 0.42);
           ctx.save();
