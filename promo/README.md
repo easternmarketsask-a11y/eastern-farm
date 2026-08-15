@@ -19,6 +19,11 @@ FarmVille）都是免费入门 + 内购逼氪 —— **你往游戏里掏钱**�
 | `hero-square.jpg` | 方版 1200×1200 | 微信分享缩略图 / `og:image` |
 | `hero-landscape.jpg` | 横版 1920×1080 | 网站横幅、店内电视 |
 | `hero-wide.jpg` | 超宽 2400×1000 | 网页顶部长横幅 |
+| `keyart-farm-portrait.jpg` | 插画竖版 9:16 | 朋友圈 / 小红书头图（比游戏截图更靓，天空可叠标题） |
+| `keyart-farm-landscape.jpg` | 插画横版 16:9 | 网站横幅、店内电视 |
+| `keyart-farm-square.jpg` | 插画方版 1:1 | 微信分享图（无 UI / 无对话框） |
+| `keyart-farm-poster.jpg` | 插画海报 3:4 | 店内 A4 海报底图（风格更「画」，别用开屏） |
+| `keyart-points-flow.jpg` | 概念图 16:9 | **主轴图**：手机农场 → 金色积分流进会员卡 |
 
 `poster.html` 是**单文件**（图片和二维码全内嵌），断网也能打开打印。
 二维码指向 `https://farm.easternmarket.ca/`，高容错等级（印刷上被挡一点也能扫）。

@@ -141,6 +141,18 @@ COMPOSITION: clean sky in the upper third for a headline. Aspect ratio 3:4.
    `promo/poster.html`、网站横幅、`og:image`。
 3. 定稿的图存进 `promo/`，在这里记一笔用在哪、哪条提示词出的。
 
+## 已出图（2026-08-15）
+
+| 文件 | 提示词 | 用途 |
+|---|---|---|
+| `promo/keyart-farm-portrait.jpg` | #1 全景，从 `hero-portrait.jpg` 精修 | 朋友圈头图 |
+| `promo/keyart-farm-landscape.jpg` | #1 全景 16:9，从 `hero-landscape.jpg` 精修 | 网站横幅 |
+| `promo/keyart-farm-square.jpg` | #1 全景，从 `hero-square.jpg` 精修并去掉 UI | 微信分享 |
+| `promo/keyart-farm-poster.jpg` | #1 全景 3:4 新画 | 店内海报底图（更插画，别当开屏） |
+| `promo/keyart-points-flow.jpg` | #4 积分回卡 | 主轴概念图 |
+
+未做：#2 母子同玩（不画小孩）、#3 单菜特写、#5 节日版。周末朋友圈用竖版 + 概念图即可。
+
 ## 出图不理想时的对症下药
 
 | 症状 | 加这句 |
