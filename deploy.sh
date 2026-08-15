@@ -74,7 +74,10 @@ else
   trap 'kill $SRV_PID 2>/dev/null || true' EXIT
   sleep 1
   SMOKE_OUT="$(mktemp)"
-  node scripts/verify/cdp.mjs "http://127.0.0.1:8137/src/" "" 6000 >"$SMOKE_OUT" 2>/dev/null || true
+  # 2026-08-15 起注入 smoke-flows.js：不只看开屏，把商店/任务/建造模式/切语言等
+  # 二十来个入口各走一遍，任何一步抛异常都算未通过（一次取景改动曾让建造模式
+  # 进去就 ReferenceError，旧闸门照样放行上线）
+  node scripts/verify/cdp.mjs "http://127.0.0.1:8137/src/" "scripts/verify/smoke-flows.js" 9000 >"$SMOKE_OUT" 2>/dev/null || true
   kill $SRV_PID 2>/dev/null || true
   trap - EXIT
   if ! node -e '
@@ -84,6 +87,17 @@ else
       o.exceptions.slice(0, 6).forEach(e => console.error("  - " + String(e).split("\n")[0]));
       process.exit(1);
     }
+    const flows = o.evalResult || {};
+    if (!flows.ran || !flows.ran.length) {
+      console.error("✗ 冒烟流程一个都没跑起来(evalResult=" + JSON.stringify(o.evalResult) + ")");
+      process.exit(1);
+    }
+    if (flows.failures && flows.failures.length) {
+      console.error("✗ 冒烟流程抛异常 " + flows.failures.length + " 步:");
+      flows.failures.forEach(f => console.error("  - " + f));
+      process.exit(1);
+    }
+    console.log("  ✓ 冒烟流程 " + flows.ran.length + " 步全部无异常");
     if (o.consoleErrors.length) {
       console.log("⚠ console 报错/警告 " + o.consoleErrors.length + " 条(不阻断,供参考):");
       o.consoleErrors.slice(0, 4).forEach(e => console.log("  - " + e.text));
