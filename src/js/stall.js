@@ -221,7 +221,12 @@
           + '<div style="font-size:13.5px;color:var(--warm-text-soft);margin-top:8px;line-height:1.6;">'
           + (en ? ('No customer right now — someone should stroll by in ~' + mins + ' min.')
                 : ('这会儿没有客人，大约 ' + mins + ' 分钟后会有路人逛过来。'))
-          + '</div></div>' + regHtml;
+          + '</div>'
+          + ((st.sold || 0) > 0
+            ? '<div style="font-size:12px;color:var(--leaf-dark);margin-top:8px;font-family:var(--font-num);">'
+              + (en ? ('Customers served: ' + st.sold) : ('已接待 ' + st.sold + ' 位客人')) + '</div>'
+            : '')
+          + '</div>' + regHtml;
       } else {
         const def = Farm.crops.get(c.crop) || {};
         const cropName = en ? (def.name_en || c.crop) : (def.name_zh || c.crop);

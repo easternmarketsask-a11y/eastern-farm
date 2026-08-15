@@ -29,6 +29,21 @@
       en: { title: 'Speed things up', body: 'Tap a growing crop to <b>water</b> it (faster) or <b>fertilize</b> (big boost). Crops never wilt if you forget — this farm is cozy, no pressure.' },
     },
     {
+      icon: '💰',
+      zh: { title: '卖得更贵的三条路', body: '直接卖谷仓最省事，但<b>小东订单</b>（点左下角小东）、<b>小东厨房</b>（把菜做成菜）、<b>菜摊</b>（路人溢价来买）都比散卖赚得多。' },
+      en: { title: 'Three ways to earn more', body: 'Bulk-selling from the barn is easiest, but <b>Xiaodong\'s orders</b> (tap him bottom-left), the <b>Kitchen</b> (cook dishes) and the <b>veggie stand</b> (passers-by pay extra) all pay better.' },
+    },
+    {
+      icon: '🏡',
+      zh: { title: '建造你的家', body: '点右下角<b>建造</b>：摆建筑、挖水塘、放装饰，都能拖动。<b>我的家</b>可以一级级升上去，院子的<b>魅力</b>越高，邻居来了越有面子。' },
+      en: { title: 'Build your home', body: 'Tap <b>Build</b> (bottom-right): place buildings, dig a pond, add décor — everything drags. Upgrade <b>My Home</b> level by level; higher <b>charm</b> makes your yard the pride of the road.' },
+    },
+    {
+      icon: '📬',
+      zh: { title: '农场人生', body: '升级会收到小东的来信，每一章有几个小目标，完成领农场币。<b>农场日记</b>会自动记下你的大事记——第一次收获、家升级、菜摊第 50 位客人。' },
+      en: { title: 'Your farm story', body: 'Leveling up brings letters from Xiaodong; each chapter has a few goals worth coins. The <b>Farm Diary</b> quietly records your milestones — first harvest, home upgrades, customer #50 at the stand.' },
+    },
+    {
       icon: '🪙',
       zh: { title: '两种货币', body: '<b>农场币</b>天天用：买种子、扩建农场、买装饰。<b>超市积分</b>很珍贵，是能换真东西的。' },
       en: { title: 'Two currencies', body: '<b>Coins</b> are for everyday play — seeds, expansions, décor. <b>Store Points</b> are rare and worth real things.' },
