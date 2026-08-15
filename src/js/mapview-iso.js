@@ -1663,6 +1663,20 @@
         const wob = Math.sin(t * 1.4 + i * 1.3) * th * 0.05;
         ctx.beginPath(); ctx.moveTo(c.x - rx * 0.32, c.y + oy + wob); ctx.quadraticCurveTo(c.x, c.y + oy - th * 0.07 + wob, c.x + rx * 0.32, c.y + oy + wob); ctx.stroke();
       });
+      // 3.5) 水面波光: 两粒错相位的小闪(丰收田旁的一点灵动)
+      for (let i = 0; i < Math.min(2, cells.length); i++) {
+        const cc3 = cells[(i * 2) % cells.length];
+        const tw3 = 0.5 + 0.5 * Math.sin(t * 1.8 + i * 2.6 + cc3.s);
+        if (tw3 > 0.55) {
+          ctx.save();
+          ctx.globalAlpha = (tw3 - 0.55) / 0.45 * 0.85;
+          ctx.fillStyle = '#ffffff';
+          const sx3 = cc3.x + Math.cos(cc3.s) * rx * 0.35, sy3 = cc3.y + oy + Math.sin(cc3.s * 1.3) * ry * 0.3;
+          ctx.beginPath(); ctx.ellipse(sx3, sy3, tw * 0.045, th * 0.03, 0.5, 0, 6.283); ctx.fill();
+          ctx.beginPath(); ctx.ellipse(sx3 + tw * 0.03, sy3 - th * 0.02, tw * 0.018, th * 0.014, 0.5, 0, 6.283); ctx.fill();
+          ctx.restore();
+        }
+      }
       // 4) a small lily pad + flower for charm
       const lp = cells[0];
       ctx.fillStyle = '#5fae5a'; ctx.beginPath(); ctx.ellipse(lp.x - rx * 0.26, lp.y + oy + th * 0.18, rx * 0.24, ry * 0.22, 0, 0, 6.283); ctx.fill();
@@ -1800,6 +1814,41 @@
         this._drawMailbox(mb.x, mb.y);
       }
     },
+    /* 天上偶尔飞过一对鸟(2026-08-14 打磨): 每 1.5-4 分钟一对, 约 18 秒横穿
+       天际线上方。两道小弧线 + 翅膀扑闪(scaleY 振荡), 纯手绘, 活帧才画。 */
+    _drawBirds() {
+      if (this._build || this._visit) return;
+      const now = Date.now();
+      if (!this._birdsNextAt) this._birdsNextAt = now + 45e3;
+      if (!this._birds && now >= this._birdsNextAt) {
+        this._birds = { start: now, dur: 18e3, dir: Math.random() < 0.5 ? 1 : -1,
+                        yFrac: 0.10 + Math.random() * 0.14 };
+      }
+      if (!this._birds) return;
+      const p = (now - this._birds.start) / this._birds.dur;
+      if (p >= 1) { this._birds = null; this._birdsNextAt = now + (90 + Math.random() * 150) * 1e3; return; }
+      const W = this._cssW(), H = this._cssH(), th = this._th(), ctx = this._ctx;
+      const x0 = this._birds.dir > 0 ? -30 : W + 30;
+      const x1 = this._birds.dir > 0 ? W + 30 : -30;
+      const bx = x0 + (x1 - x0) * p;
+      const byy = H * this._birds.yFrac + Math.sin(p * 6.28 * 2) * th * 0.5;
+      const flap = Math.sin(now / 110) * 0.55 + 0.75;   // 0.2..1.3 翅膀开合
+      ctx.save();
+      ctx.strokeStyle = 'rgba(70,90,75,0.75)';
+      ctx.lineWidth = Math.max(1, th * 0.06);
+      ctx.lineCap = 'round';
+      const bird = (cx, cy, sc) => {
+        ctx.beginPath();
+        ctx.moveTo(cx - th * 0.28 * sc, cy - th * 0.16 * sc * flap);
+        ctx.quadraticCurveTo(cx - th * 0.10 * sc, cy + th * 0.06 * sc, cx, cy);
+        ctx.quadraticCurveTo(cx + th * 0.10 * sc, cy + th * 0.06 * sc, cx + th * 0.28 * sc, cy - th * 0.16 * sc * flap);
+        ctx.stroke();
+      };
+      bird(bx, byy, 1);
+      bird(bx - th * 0.9 * this._birds.dir, byy + th * 0.35, 0.75);
+      ctx.restore();
+    },
+
     /* 沿路散步的邻居: 每 2-5 分钟一位, 花约 26 秒沿乡路走完(方向随机)。
        不落存档、不进缓存 —— 活的帧才画, 一个 emoji 的成本。
        它回答的是「路人从哪来」: 你先看见有人沿路走, 之后摊前才有人买菜。 */
@@ -1823,6 +1872,7 @@
       ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
       ctx.font = (th * 0.95) + 'px sans-serif';
       ctx.globalAlpha = Math.min(1, Math.min(p, 1 - p) * 12 + 0.15);   // 两端淡入淡出
+      this._shadow(pt.x, pt.y + th * 0.22, this._tw() * 0.30, 0.15);
       ctx.fillText(this._walker.face, pt.x, pt.y + th * 0.18 - bob);
       ctx.restore();
     },
@@ -2105,6 +2155,12 @@
       // Soil beds (plots) + terrain tiles, back-to-front. Grass cells draw nothing
       // (the base shows through). Plot cells use the raised soil bed.
       const plotCells = this._plotCellSet();
+      // 成熟数预统计: 徽章 LOD 用(<=3 块熟画白圈气泡, 多了改光晕+弹跳, 见 _drawPlot)
+      this._matureCount = 0;
+      try {
+        const ps = Farm.state.data.plots || [];
+        for (const pl of ps) if (pl && pl.unlocked && pl.crop && Farm.crops.isMature(pl)) this._matureCount++;
+      } catch (e) { this._matureCount = 0; }
       const waterCells = [], groundTiles = [];
       for (let s = 0; s <= (COLS - 1) + (ROWS - 1); s++) {
         for (let gx = 0; gx < COLS; gx++) {
@@ -2133,6 +2189,7 @@
       this._drawPond(waterCells);
       for (const tI of groundTiles) this._tileImg(tI.key, tI.c);
       this._drawRoadWalker();
+      this._drawBirds();
 
       // 水笔刷刷到占用格 → 那一格显红叉（0.9 秒后自动消失，不留残影）
       if (this._blockedCell) {
@@ -2305,34 +2362,66 @@
         ctx.fillText('+', c.x, c.y); return;
       }
       const p = Farm.crops.getProgress ? Farm.crops.getProgress(plot) : 1, mature = Farm.crops.isMature(plot);
-      const by = c.y + th * 0.2;   // sprite stands on the diamond
+      const tNow = Date.now() / 1000;
+      /* 成熟的菜自己会「跃跃欲收」: 本体轻弹跳(旧版只有气泡动, 菜是死的)。
+         相位按 gx+gy 错开, 整片田是波浪不是齐步走。 */
+      const ripe = mature ? Math.abs(Math.sin(tNow * 2.2 + (gx * 1.7 + gy) * 0.9)) * th * 0.10 : 0;
+      const by = c.y + th * 0.2 - ripe;   // sprite stands on the diamond
       ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
       const fr = p >= 1 ? 3 : p >= 0.6 ? 2 : p >= 0.25 ? 1 : 0;
       // soft contact shadow so the plant sits IN the bed (not floating)
       this._shadow(c.x, c.y + th * 0.42, tw * (0.4 + fr * 0.12));
+      if (mature) {
+        // 根部金色光晕脉动: 丰收的暖意; 徽章 LOD 的低噪声档全靠它指认
+        const pulse = 0.5 + 0.5 * Math.sin(tNow * 2.2 + gx + gy);
+        const gl = ctx.createRadialGradient(c.x, c.y + th * 0.30, th * 0.05, c.x, c.y + th * 0.30, tw * 0.52);
+        gl.addColorStop(0, 'rgba(255,214,110,' + (0.28 + pulse * 0.22) + ')');
+        gl.addColorStop(1, 'rgba(255,214,110,0)');
+        ctx.fillStyle = gl;
+        ctx.beginPath(); ctx.ellipse(c.x, c.y + th * 0.30, tw * 0.52, th * 0.42, 0, 0, 6.283); ctx.fill();
+      }
       let plantTopY = c.y - th * 1.3;   // fallback bubble anchor
       if (ISO_CROPS[plot.crop]) {   // pure-plant 4-stage sprite — FIXED scale (260px base) → seedling small
         const im = this._lazyImg(ISO_CROPS[plot.crop] + '_' + fr);
-        if (im) { const s = (th * 1.5) / 260, w = im.width * s, h = im.height * s; const topY = (c.y + th * 0.34) - h; ctx.drawImage(im, c.x - w / 2, topY, w, h); plantTopY = topY; }   // crop ref shrunk th*2.2→1.5 (Chris: 菜比房子大)
+        if (im) { const s = (th * 1.5) / 260, w = im.width * s, h = im.height * s; const topY = (c.y + th * 0.34 - ripe) - h; ctx.drawImage(im, c.x - w / 2, topY, w, h); plantTopY = topY; }   // crop ref shrunk th*2.2→1.5 (Chris: 菜比房子大)
         else { const def = Farm.crops.get(plot.crop); ctx.font = (th * 1.1) + 'px sans-serif'; ctx.fillText((def && def.icon) || '🌿', c.x, by); }
       } else if (mature) {
         const im = this._cropSprite(plot.crop);
         if (!this._blit(im, c.x, by, tw * 0.72, th * 1.7)) { const def = Farm.crops.get(plot.crop); ctx.font = (th * 1.1) + 'px sans-serif'; ctx.fillText((def && def.icon) || '🥬', c.x, by); }
       } else { ctx.font = (th * (p >= 0.4 ? 0.9 : 0.7)) + 'px sans-serif'; ctx.fillText(p >= 0.4 ? '🌿' : '🌱', c.x, by); }
       if (mature) {
-        // clear "ready to harvest" bubble: a white pill with the crop icon, gently
-        // bobbing above the plant — much clearer than the old faint yellow glow.
-        const def = Farm.crops.get(plot.crop), t = Date.now() / 1000, bob = Math.sin(t * 2.5 + gx + gy) * th * 0.12;
-        const r = th * 0.5, bx = c.x, byy = plantTopY - th * 0.5 + bob;
-        ctx.beginPath(); ctx.arc(bx, byy, r, 0, Math.PI * 2); ctx.fillStyle = 'rgba(255,255,255,0.95)'; ctx.fill();
-        ctx.strokeStyle = 'rgba(120,160,70,0.9)'; ctx.lineWidth = Math.max(1.5, th * 0.06); ctx.stroke();
-        ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = (r * 1.25) + 'px sans-serif';
-        ctx.fillText((def && def.icon) || '✅', bx, byy + r * 0.05);
-        ctx.textBaseline = 'alphabetic';
-      } else {   // progress bar
-        const bw = tw * 0.5, bx = c.x - bw / 2, ybar = c.y + th * 0.34, bh = Math.max(3, th * 0.1);
-        ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.fillRect(bx, ybar, bw, bh);
-        ctx.fillStyle = '#7bc043'; ctx.fillRect(bx, ybar, bw * Math.max(0.04, p), bh);
+        /* 徽章 LOD(2026-08-14 打磨): <=3 块熟 → 白圈气泡(新手期指认清晰);
+           更多 → 不画气泡 —— 12 个白圈叠成墙是全场最丑的画面(截图实证),
+           改由本体弹跳+金色光晕承担指认, 顶部「N 棵已熟可收」负责总量。 */
+        if ((this._matureCount || 0) <= 3) {
+          const def = Farm.crops.get(plot.crop), bob = Math.sin(tNow * 2.5 + gx + gy) * th * 0.12;
+          const r = th * 0.5, bx = c.x, byy = plantTopY - th * 0.5 + bob;
+          ctx.beginPath(); ctx.arc(bx, byy, r, 0, Math.PI * 2); ctx.fillStyle = 'rgba(255,255,255,0.95)'; ctx.fill();
+          ctx.strokeStyle = 'rgba(120,160,70,0.9)'; ctx.lineWidth = Math.max(1.5, th * 0.06); ctx.stroke();
+          ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = (r * 1.25) + 'px sans-serif';
+          ctx.fillText((def && def.icon) || '✅', bx, byy + r * 0.05);
+          ctx.textBaseline = 'alphabetic';
+        } else {
+          // 偶发闪光: 每块地按自己的相位隔几秒闪一下, 全田任意时刻只有零星几颗
+          const ph = (tNow * 0.4 + (gx * 7 + gy * 13) * 0.37) % 1;
+          if (ph < 0.12) {
+            ctx.globalAlpha = Math.sin(ph / 0.12 * Math.PI);
+            ctx.font = (th * 0.55) + 'px sans-serif'; ctx.textBaseline = 'middle';
+            ctx.fillText('✨', c.x + tw * 0.22, plantTopY + th * 0.2);
+            ctx.globalAlpha = 1; ctx.textBaseline = 'alphabetic';
+          }
+        }
+      } else {   // progress bar(圆角药丸: 方黑条与整体圆润风格不符)
+        const bw = tw * 0.5, bx = c.x - bw / 2, ybar = c.y + th * 0.34, bh = Math.max(3, th * 0.11), r2 = bh / 2;
+        const bar = (x, w, col) => {
+          ctx.fillStyle = col;
+          ctx.beginPath();
+          if (ctx.roundRect) ctx.roundRect(x, ybar, Math.max(w, bh), bh, r2);
+          else ctx.rect(x, ybar, Math.max(w, bh), bh);
+          ctx.fill();
+        };
+        bar(bx, bw, 'rgba(60,45,25,0.30)');
+        bar(bx, bw * Math.max(0.06, p), '#7bc043');
       }
     },
     _drawBuilding(o, b, moving, idx) {
@@ -2366,6 +2455,7 @@
             const px2 = cc.x + tw * 0.78, py2 = by + th * 0.58;
             ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
             ctx.font = (th * 1.15) + 'px sans-serif';
+            this._shadow(px2, py2 + th * 0.12, tw * 0.4, 0.18);
             ctx.fillText(cu.face, px2, py2 + bob * 0.3);
             /* 对话气泡(2026-08-14 Chris:「人头上那朵花什么意思?」——旧版白圈
                和作物成熟徽章撞脸, 读不出「TA 想买菜」。改成带尾巴的奶油气泡:
@@ -2480,6 +2570,8 @@
           ctx.globalAlpha = 1; return;
         }
       }
+      // 接地阴影: emoji 装饰以前悬浮在草地上(万物落影, 2026-08-14 打磨)
+      this._shadow(c.x, c.y + th * 0.30, tw * 0.42, 0.16);
       // non-animal decorations (static objects) + emoji fallback
       let cx = c.x, by = c.y + th * 0.25;
       if (d.pet && !moving) { const t = Date.now() / 1000; cx += Math.sin(t * 0.6 + d.seed) * tw * 0.06; by -= Math.abs(Math.sin(t * 1.3 + d.seed)) * th * 0.12; }
