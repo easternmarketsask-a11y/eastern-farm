@@ -10,14 +10,13 @@
  * upright sprites placed on cells, depth-sorted back-to-front (gx+gy).
  */
 (function () {
-  const COLS = 20, ROWS = 22;      // 2026-08-15 +6 行前景草甸：新农场开局落在镜头前空地
-  const FRONT_MEADOW_Y0 = 16;      // y=16..21 = 截图里林子前面那片空草地（老世界止于 y=15）
+  const COLS = 20, ROWS = 16;      // 前景不再加空行：空地放山后头并种满树
   // Start zone origin. (The 2026-06-18 "forward move" to (6,6) was cancelled — Chris
   // preferred adapting via the new full-scene background instead. _undoForwardOnce()
   // shifts any save that got forwarded back to here.)
   const PLOT_COLS = 3;
   const PLOT_ORIGIN_BACK = { ox: 1, oy: 2 };   // 旧开局：靠山（y 小）
-  const PLOT_ORIGIN_FRONT = { ox: 1, oy: 16 }; // 新开局：前景草甸（截图最前空地）
+  const PLOT_ORIGIN_FRONT = { ox: 1, oy: 10 }; // 新开局：贴世界前缘（y 大）
   const TW = 46, TH = 23;          // diamond width/height at zoom 1 (2:1 iso) — halved 2026-06-18 (Chris: shrink whole farm 50% so it's a small cluster in the meadow centre; bg is canvas-based so the farm gets relatively smaller)
   // ZMIN === BG_ZOOM_REF (0.70): at the most-zoomed-out point the painted backdrop's
   // FULL HEIGHT exactly fills the viewport (Chris 2026-06-18: "高度一旦达到背景图全高则不可
@@ -37,11 +36,11 @@
     { x1: 0, y1: 0, x2: 19, y2: 15, coins: 6000, points: 50 },
   ];
   const LAND_LEVELS_FRONT = [
-    { x1: 0, y1: 16, x2: 8, y2: 21, coins: 0, points: 0 },      // L0 前景空草地 9×6
-    { x1: 0, y1: 11, x2: 8, y2: 21, coins: 800, points: 0 },    // L1 往山上开林
-    { x1: 0, y1: 6, x2: 12, y2: 21, coins: 1500, points: 0 },   // L2 再往山 + 往东
-    { x1: 0, y1: 2, x2: 15, y2: 21, coins: 3000, points: 30 },  // L3
-    { x1: 0, y1: 0, x2: 19, y2: 21, coins: 6000, points: 50 },  // L4 全图
+    { x1: 0, y1: 9, x2: 8, y2: 15, coins: 0, points: 0 },       // L0 世界前缘
+    { x1: 0, y1: 5, x2: 8, y2: 15, coins: 800, points: 0 },     // L1 往山上开林
+    { x1: 0, y1: 2, x2: 12, y2: 15, coins: 1500, points: 0 },   // L2
+    { x1: 0, y1: 0, x2: 15, y2: 15, coins: 3000, points: 30 },  // L3
+    { x1: 0, y1: 0, x2: 19, y2: 15, coins: 6000, points: 50 },  // L4
   ];
   // 🔒 默认水塘 v2（2026-08-13 二次修正）：谷仓正前方**隔一整排草**。
   // v1 的 (6,6) 与谷仓底座 (6,5) 是相邻格——有机水塘的波浪轮廓一溢出就贴着
@@ -53,7 +52,7 @@
   // 融合后是一块圆润的不规则塘。
   const DEFAULT_POND = { '5,7': 'water', '6,7': 'water', '5,8': 'water', '6,8': 'water', '7,8': 'water' };
   // 新开局水塘：跟菜地/摊/谷仓一起前移 +5y，仍隔一排草
-  const DEFAULT_POND_FRONT = { '5,19': 'water', '6,19': 'water', '5,20': 'water', '6,20': 'water', '7,20': 'water' };
+  const DEFAULT_POND_FRONT = { '5,13': 'water', '6,13': 'water', '5,14': 'water', '6,14': 'water', '7,14': 'water' };
   // 历代默认水塘形状 —— _migratePond 只认这些**精确形状**搬家（用户自己画的不动）：
   // v0 在菜地生长路径上（第13块地曾直接落进水里）；v1 贴着谷仓。
   const LEGACY_POND_SHAPES = [
@@ -257,7 +256,7 @@
       if (!Array.isArray(Farm.state.data.map)) {
         // 菜摊默认在左前方、临着乡路; 谷仓在右。front 开局整体 +5y。
         Farm.state.data.map = this._isFrontLand()
-          ? [{ type: 'house', gx: 1, gy: 20 }, { type: 'barn', gx: 5, gy: 16 }]
+          ? [{ type: 'house', gx: 1, gy: 14 }, { type: 'barn', gx: 5, gy: 10 }]
           : [{ type: 'house', gx: 1, gy: 7 }, { type: 'barn', gx: 5, gy: 4 }];
         Farm.state.save();
       }
@@ -1709,9 +1708,8 @@
           const inWorld = gx >= 0 && gy >= 0 && gx < COLS && gy < ROWS;
           const owned = inWorld && gx >= ob.x1 && gx <= ob.x2 && gy >= ob.y1 && gy <= ob.y2;
           if (owned) continue;
-          // front 开局：镜头这一侧留草地；老农场的新前景行也不种树（那片空草地留给新号）
+          // 新农场：路前留一线草。老农场：未开发地（含镜头前）全部种树，空地只留山后林里。
           if (this._isFrontLand() && gy > ob.y2) continue;
-          if (!this._isFrontLand() && gy >= FRONT_MEADOW_Y0) continue;
           const k = gx + ',' + gy;
           if (terr[k] === 'water' || terr[k] === 'path' || road[k]) continue;
           let nearNb = false;
@@ -1727,8 +1725,9 @@
           const hsh = ((gx * 73856093) ^ (gy * 19349663)) >>> 0;
           const r1 = (hsh % 997) / 997, r2 = ((hsh >> 8) % 991) / 991;
           const clump = ((Math.floor(gx / 2) * 2654435761) ^ (Math.floor(gy / 2) * 1597334677)) >>> 0;
-          if ((clump % 5) === 0) continue;          // 约 1/5 的 2×2 空成林窗
-          const dens = inWorld ? 0.52 : 0.70;
+          const fillFront = !this._isFrontLand() && gy > ob.y2; // 老农场镜头前的空地改成密林
+          if (!fillFront && (clump % 5) === 0) continue;
+          const dens = fillFront ? 0.88 : (inWorld ? 0.55 : 0.78);
           if (r1 > dens) continue;
           list.push({ gx: gx, gy: gy, r1: r1, r2: r2, flip: (hsh & 1) === 0 });
         }
