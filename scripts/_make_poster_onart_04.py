@@ -95,14 +95,24 @@ def variant_b():
 
 def variant_c():
     """只上移店名：东方农场上天；胶囊+对联仍贴扫码栏。"""
-    canvas, draw, W, H, f = base(380, 620)
-    draw_name(draw, 200, W, f)
+    canvas, draw, W, H, f = base(400, 580)
+    # 天头：店名 88 → 空一截 → 更大的 Eastern Farm，不贴中文
+    name_y = 180
+    spaced(draw, '东方农场', name_y, f['name'], CREAM, 16, W, shadow=(0, 3, (0, 0, 0, 150)))
+    en_name = ImageFont.truetype(GEORGIA, 42)
+    center(draw, 'Eastern Farm', name_y + 136, en_name, (255, 244, 214), W,
+           shadow=(0, 3, (0, 0, 0, 170)))
+
+    # 下区收成一组靠向英文。对联内 ~28px 气口，对联到英文 ~44px，不贴死
     bar_top = H - 390
-    by = kicker_pill(draw, bar_top - 350, W, f['kick_zh'], f['kick_en'])
-    # 下区字阶：胶囊 → 空 → 对联两行拉开 → 再空一截 → 英文贴扫码栏上沿
-    spaced(draw, '玩农场游戏', by + 28, f['title'], CREAM, 8, W, shadow=(0, 2, (0, 0, 0, 140)))
-    spaced(draw, '赚超市积分', by + 104, f['title'], CREAM, 8, W, shadow=(0, 2, (0, 0, 0, 140)))
-    center(draw, 'PLAY THE FARM  ·  EARN STORE POINTS', bar_top - 58, f['en_line'],
+    en_y = bar_top - 50
+    zh2_y = en_y - 102
+    zh1_y = zh2_y - 84
+    kick_y = zh1_y - 72
+    kicker_pill(draw, kick_y, W, f['kick_zh'], f['kick_en'])
+    spaced(draw, '玩农场游戏', zh1_y, f['title'], CREAM, 8, W, shadow=(0, 2, (0, 0, 0, 140)))
+    spaced(draw, '赚超市积分', zh2_y, f['title'], CREAM, 8, W, shadow=(0, 2, (0, 0, 0, 140)))
+    center(draw, 'PLAY THE FARM  ·  EARN STORE POINTS', en_y, f['en_line'],
            (243, 224, 176), W, shadow=(0, 2, (0, 0, 0, 150)))
     save(scan_bar(canvas, W, H), 'poster-phone-onart-04c')
 
