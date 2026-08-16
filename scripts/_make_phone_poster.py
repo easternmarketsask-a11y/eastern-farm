@@ -115,11 +115,13 @@ def phone():
     meta = vf(SANS, 24, 500, SANS_BD)
     urlf = vf(SANS, 28, 620, SANS_BD)
 
-    y0 = H - 520
-    spaced(draw, '玩农场游戏', y0, title, CREAM, 12, W, shadow=(0, 3, (0, 0, 0, 110)))
-    spaced(draw, '赚超市积分', y0 + 94, title, CREAM, 12, W, shadow=(0, 3, (0, 0, 0, 110)))
-    hairline(draw, W // 2, y0 + 206, 48, GOLD, 2)
-    spaced(draw, 'PLAY THE FARM   ·   EARN STORE POINTS', y0 + 226, en, GOLD_SOFT, 2, W)
+    y0 = H - 548
+    kick = vf(SANS, 22, 520, SANS_BD)
+    spaced(draw, '东方超市会员专属', y0, kick, GOLD_SOFT, 8, W)
+    spaced(draw, '玩农场游戏', y0 + 48, title, CREAM, 12, W, shadow=(0, 3, (0, 0, 0, 110)))
+    spaced(draw, '赚超市积分', y0 + 142, title, CREAM, 12, W, shadow=(0, 3, (0, 0, 0, 110)))
+    hairline(draw, W // 2, y0 + 252, 48, GOLD, 2)
+    spaced(draw, 'PLAY THE FARM   ·   EARN STORE POINTS', y0 + 272, en, GOLD_SOFT, 2, W)
 
     qr = make_qr(168)
     qx, qy = 88, H - 268
@@ -142,7 +144,7 @@ def phone():
 def a4():
     # ~190 dpi A4, matches the previous print size
     W, H = 1587, 2245
-    art_h = int(H * 0.50)
+    art_h = int(H * 0.47)
     canvas = Image.new('RGB', (W, H), (247, 241, 228))
     art = cover(Image.open(ART).convert('RGB'), W, art_h + 80, bias_y=40)
     canvas.paste(art, (0, 0))
@@ -162,22 +164,24 @@ def a4():
     body = vf(SANS, 30, 450, SANS_BD)
     urlf = vf(SANS, 34, 650, SANS_BD)
 
-    y = art_h + 8
-    spaced(draw, '玩农场游戏', y, title, INK, 12, W)
-    spaced(draw, '赚超市积分', y + 136, title, INK, 12, W)
-    hairline(draw, W // 2, y + 292, 56, GOLD, 3)
-    spaced(draw, 'PLAY THE FARM   ·   EARN STORE POINTS', y + 316, en, (154, 118, 48), 2, W)
-    spaced(draw, '手机打开就能种，不用下载', y + 390, body, (72, 64, 52), 1, W)
-    spaced(draw, '积分每天进入会员卡，到店买菜能用', y + 436, body, (72, 64, 52), 1, W)
+    y = art_h + 150
+    kick = vf(SANS, 28, 520, SANS_BD)
+    spaced(draw, '东方超市会员专属', y, kick, (154, 118, 48), 10, W)
+    spaced(draw, '玩农场游戏', y + 52, title, INK, 12, W)
+    spaced(draw, '赚超市积分', y + 180, title, INK, 12, W)
+    hairline(draw, W // 2, y + 328, 56, GOLD, 3)
+    spaced(draw, 'PLAY THE FARM   ·   EARN STORE POINTS', y + 352, en, (154, 118, 48), 2, W)
+    spaced(draw, '手机打开就能种，不用下载', y + 414, body, (72, 64, 52), 1, W)
+    spaced(draw, '积分每天进入会员卡，到店买菜能用', y + 458, body, (72, 64, 52), 1, W)
 
-    qr = make_qr(220, dark='#1c261a', light='#f7f1e4')
-    qx = (W - 220) // 2
-    qy = y + 520
+    qr = make_qr(190, dark='#1c261a', light='#f7f1e4')
+    qx = (W - 190) // 2
+    qy = y + 528
     draw.rounded_rectangle([qx - 14, qy - 14, qx + 220 + 14, qy + 220 + 14],
                            radius=16, fill=(255, 255, 255), outline=GOLD, width=3)
     canvas.paste(qr, (qx, qy), qr)
-    spaced(draw, 'farm.easternmarket.ca', qy + 250, urlf, INK, 1, W)
-    spaced(draw, '扫码开始玩', qy + 300, body, (110, 96, 72), 2, W)
+    spaced(draw, 'farm.easternmarket.ca', qy + 228, urlf, INK, 1, W)
+    spaced(draw, '扫码开始玩', qy + 276, body, (110, 96, 72), 2, W)
 
     rgb = canvas.convert('RGB')
     rgb.save(OUT_A4, 'PNG', optimize=True)
