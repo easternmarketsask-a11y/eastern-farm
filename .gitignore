@@ -22,3 +22,12 @@ __pycache__/
 venv/
 _incoming/
 src/assets/images/map/_pre_keyart/
+
+# Local art/verify scratch (never ship)
+promo/_bld/
+promo/_veg/
+promo/_field-crop.jpg
+promo/_verify-*.png
+scripts/_fix_*.py
+scripts/_shot_enter.js
+scripts/_shot_once.mjs
