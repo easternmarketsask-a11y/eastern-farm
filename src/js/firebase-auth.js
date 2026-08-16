@@ -420,9 +420,11 @@
       const en = lang === 'en';
       this._showError('');
       const el = document.getElementById('authPhone');
-      const digits = ((el && el.value) || '').replace(/\D/g, '');
+      const digits = this._phoneDigits(el && el.value);
       if (digits.length !== 10) {
-        this._showError(en ? 'Please enter a 10-digit phone number.' : '请输入 10 位手机号码。');
+        this._showError(en
+          ? 'Please enter your 10-digit Canadian number (area code + number).'
+          : '请输入店里登记的 10 位手机号（区号+号码，例如 3061234567）。');
         return;
       }
       const btn = document.getElementById('authNextBtn');
@@ -472,6 +474,9 @@
                    inputmode="numeric" autocomplete="tel-national" maxlength="14"
                    value="${remembered}" placeholder="(306) 123-4567"/>
           </div>
+          <p class="auth-hint">${en
+            ? '10 digits with area code. Don’t type +1 — it’s already there.'
+            : '请填区号+号码共 10 位。左边已有 +1，不用再输入 1。'}</p>
         </div>
         <button class="btn auth-primary" id="authNextBtn">${en ? 'Continue' : '继续'}</button>
         <button class="auth-ghost" data-auth-go="login">${en ? 'Back to sign in' : '返回登录'}</button>
@@ -765,11 +770,19 @@
       tick();
     },
 
+    // 从输入里抽出加拿大 10 位：全角数字、粘贴的 +1 / 1-xxx、空格横杠都能认。
+    _phoneDigits(v) {
+      let s = String(v || '').replace(/[０-９]/g, (ch) =>
+        String.fromCharCode(ch.charCodeAt(0) - 0xFEE0));
+      let d = s.replace(/\D/g, '');
+      if (d.length === 11 && d.charAt(0) === '1') d = d.slice(1);
+      return d.slice(0, 10);
+    },
     _formatPhone(v) {
-      const d = v.replace(/\D/g, '').slice(0, 10);
+      const d = this._phoneDigits(v);
       if (d.length <= 3) return d;
-      if (d.length <= 6) return `(${d.slice(0, 3)}) ${d.slice(3)}`;
-      return `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6, 10)}`;
+      if (d.length <= 6) return '(' + d.slice(0, 3) + ') ' + d.slice(3);
+      return '(' + d.slice(0, 3) + ') ' + d.slice(3, 6) + '-' + d.slice(6, 10);
     },
 
     _showError(msg) {
@@ -790,9 +803,11 @@
       this._showError('');
       const phoneEl = document.getElementById('authPhone');
       const phoneRaw = (phoneEl && phoneEl.value) || '';
-      const digits = phoneRaw.replace(/\D/g, '');
+      const digits = this._phoneDigits(phoneRaw);
       if (digits.length !== 10) {
-        this._showError(lang === 'en' ? 'Please enter a 10-digit phone number.' : '请输入 10 位手机号码。');
+        this._showError(lang === 'en'
+          ? 'Please enter your 10-digit Canadian number (area code + number).'
+          : '请输入店里登记的 10 位手机号（区号+号码，例如 3061234567）。');
         return;
       }
       if (!this._recaptcha) {
