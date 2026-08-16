@@ -16,7 +16,7 @@
   // shifts any save that got forwarded back to here.)
   const PLOT_COLS = 3;
   const PLOT_ORIGIN_BACK = { ox: 1, oy: 2 };   // 旧开局：靠山（y 小）
-  const PLOT_ORIGIN_FRONT = { ox: 1, oy: 7 };  // 新开局：镜头前（y 大），往后往山上扩
+  const PLOT_ORIGIN_FRONT = { ox: 1, oy: 10 }; // 新开局：尽量贴镜头（y 大），往后往山上扩
   const TW = 46, TH = 23;          // diamond width/height at zoom 1 (2:1 iso) — halved 2026-06-18 (Chris: shrink whole farm 50% so it's a small cluster in the meadow centre; bg is canvas-based so the farm gets relatively smaller)
   // ZMIN === BG_ZOOM_REF (0.70): at the most-zoomed-out point the painted backdrop's
   // FULL HEIGHT exactly fills the viewport (Chris 2026-06-18: "高度一旦达到背景图全高则不可
@@ -36,10 +36,10 @@
     { x1: 0, y1: 0, x2: 19, y2: 15, coins: 6000, points: 50 },
   ];
   const LAND_LEVELS_FRONT = [
-    { x1: 0, y1: 5, x2: 8, y2: 15, coins: 0, points: 0 },        // L0 镜头前 9×11
-    { x1: 0, y1: 2, x2: 8, y2: 15, coins: 800, points: 0 },     // L1 往山上 3 行
-    { x1: 0, y1: 0, x2: 12, y2: 15, coins: 1500, points: 0 },   // L2 到林线 + 往东
-    { x1: 0, y1: 0, x2: 15, y2: 15, coins: 3000, points: 30 },  // L3
+    { x1: 0, y1: 9, x2: 8, y2: 15, coins: 0, points: 0 },        // L0 贴镜头前缘 9×7
+    { x1: 0, y1: 5, x2: 8, y2: 15, coins: 800, points: 0 },     // L1 往山上 4 行
+    { x1: 0, y1: 2, x2: 12, y2: 15, coins: 1500, points: 0 },   // L2 再往山 + 往东
+    { x1: 0, y1: 0, x2: 15, y2: 15, coins: 3000, points: 30 },  // L3 到林线
     { x1: 0, y1: 0, x2: 19, y2: 15, coins: 6000, points: 50 },  // L4 全图
   ];
   // 🔒 默认水塘 v2（2026-08-13 二次修正）：谷仓正前方**隔一整排草**。
@@ -52,7 +52,7 @@
   // 融合后是一块圆润的不规则塘。
   const DEFAULT_POND = { '5,7': 'water', '6,7': 'water', '5,8': 'water', '6,8': 'water', '7,8': 'water' };
   // 新开局水塘：跟菜地/摊/谷仓一起前移 +5y，仍隔一排草
-  const DEFAULT_POND_FRONT = { '5,12': 'water', '6,12': 'water', '5,13': 'water', '6,13': 'water', '7,13': 'water' };
+  const DEFAULT_POND_FRONT = { '5,13': 'water', '6,13': 'water', '5,14': 'water', '6,14': 'water', '7,14': 'water' };
   // 历代默认水塘形状 —— _migratePond 只认这些**精确形状**搬家（用户自己画的不动）：
   // v0 在菜地生长路径上（第13块地曾直接落进水里）；v1 贴着谷仓。
   const LEGACY_POND_SHAPES = [
@@ -164,7 +164,8 @@
   const BG_TOP_TARGET = 0.42;   // 视口顶端要看到背景图的哪个纵向分数（0.42≈树线带）
   // 0.60 是截图对比选出来的：0.55 会把树线顶出视口顶端（上方退回成一片糊的远山），
   // 0.60 刚好让森林轮廓留在画面里、下方还剩一段前景草地。改这个值前先跑一遍截图。
-  const FARM_SCREEN_Y = 0.60;   // 农场（背景焦点）落在画布高度的哪个位置
+  const FARM_SCREEN_Y = 0.60;   // 旧开局：农场落点
+  const FARM_SCREEN_Y_FRONT = 0.72; // 新开局：整场再往镜头推一截
   const BG_ZOOM_REF = 0.70;   // zoom at which the bg exactly covers the canvas; >this = covers w/ margin, <this (zoomed out) = shrinks w/ farm, base shows around (no float)
   // ===== TUNABLE: farm position + size (independent of the background) — Chris 2026-06-18 =====
   // FARM_SCALE multiplies ONLY the farm (grid/plots/crops/buildings); the background is
@@ -255,7 +256,7 @@
       if (!Array.isArray(Farm.state.data.map)) {
         // 菜摊默认在左前方、临着乡路; 谷仓在右。front 开局整体 +5y。
         Farm.state.data.map = this._isFrontLand()
-          ? [{ type: 'house', gx: 1, gy: 12 }, { type: 'barn', gx: 5, gy: 9 }]
+          ? [{ type: 'house', gx: 1, gy: 14 }, { type: 'barn', gx: 5, gy: 10 }]
           : [{ type: 'house', gx: 1, gy: 7 }, { type: 'barn', gx: 5, gy: 4 }];
         Farm.state.save();
       }
@@ -524,7 +525,8 @@
         const bg = this._img.hd_bg;
         const bw = (bg && bg.width) || BG_IMG_W, bh = (bg && bg.height) || BG_IMG_H;
         const cover = Math.max(W / bw, H / bh);
-        const zComp = (FARM_SCREEN_Y * H * BG_ZOOM_REF) / ((BG_FY - BG_TOP_TARGET) * bh * cover);
+        const screenY = this._isFrontLand() ? FARM_SCREEN_Y_FRONT : FARM_SCREEN_Y;
+        const zComp = (screenY * H * BG_ZOOM_REF) / ((BG_FY - BG_TOP_TARGET) * bh * cover);
         // 农场再小也不能小到点不动：minTap 是硬底线，构图让位于可玩性。
         // 同时不允许比「包围盒吃满视口宽」更大 —— 否则地块被顶出屏幕两侧。
         const fitWMax = (W * 1.05) / screenW;
@@ -537,7 +539,7 @@
       const u = (minU + maxU) / 2, v = (minV + maxV) / 2;
       this._camX = u * this._tw() / 2;
       // 农场（格心）落在画布高度的 FARM_SCREEN_Y（竖屏）/ 64%（横屏）处。
-      this._camY = this._oy + v * this._th() / 2 - H * (portrait ? FARM_SCREEN_Y : 0.64);
+      this._camY = this._oy + v * this._th() / 2 - H * (portrait ? (this._isFrontLand() ? FARM_SCREEN_Y_FRONT : FARM_SCREEN_Y) : 0.64);
       this._clampCam();
     },
 
