@@ -2,17 +2,18 @@
  * feedback.js — 意见反馈（Farm.feedback）
  *
  * 菜单入口。提交到 StockWise /api/public/farm-feedback：
- *   当天第一次成功提交 → 服务器允许后本地 +500 农场币
+ *   当天第一次成功提交 → 服务器允许后按后台规则发农场币
  *   当天再交仍送到店主，不再发币
- * 服务器没收下就不发币（避免「领了币、店主看不见」）。
+ * 赠送数字以后台「游戏管理 → 赠送规则」为准；服务器没收下就不发币。
  */
 (function () {
   const STOCKWISE_BASE = 'https://stockwise-app-873982544406.us-central1.run.app';
-  const COIN_REWARD = 500;
   const MIN_CHARS = 8;
   const MAX_CHARS = 800;
   const DEVICE_KEY = 'ef_feedback_device';
   const LOCAL_REWARD_DAY_KEY = 'ef_feedback_rewarded_day';
+
+  let cachedCfg = { coinReward: 500, adoptEp: 500 };
 
   function lang() {
     return (Farm.state && Farm.state.data && Farm.state.data.language) || 'zh';
@@ -59,25 +60,68 @@
     return (meta && meta.getAttribute('content')) || '';
   }
 
+  function nCoins() { return Math.max(0, parseInt(cachedCfg.coinReward, 10) || 0); }
+  function nEp() { return Math.max(0, parseInt(cachedCfg.adoptEp, 10) || 0); }
+
+  async function loadCfg() {
+    try {
+      const res = await fetch(STOCKWISE_BASE + '/api/public/farm-feedback-config');
+      const d = await res.json();
+      if (d && d.ok) {
+        cachedCfg = {
+          coinReward: Math.max(0, parseInt(d.coinReward, 10) || 0),
+          adoptEp: Math.max(0, parseInt(d.adoptEp, 10) || 0),
+        };
+      }
+    } catch (_) { /* 用上次缓存或缺省，不挡开窗 */ }
+    return cachedCfg;
+  }
+
+  function blurb(rewarded) {
+    const c = nCoins();
+    const p = nEp();
+    if (rewarded) {
+      if (en()) return c > 0
+        ? 'You already collected today\'s ' + c + ' coins. Send another note anyway — Chris still reads it.'
+        : 'You already sent one today. Another note still reaches Chris.';
+      return c > 0
+        ? '今天的 ' + c + ' 农场币已经领过了。还可以再写，店主照样会看到。'
+        : '今天交过了。还可以再写，店主照样会看到。';
+    }
+    const bits = [];
+    if (c > 0) bits.push(en()
+      ? 'First note today gets <b>' + c + ' farm coins</b> right away.'
+      : '今天第一次提交立刻送 <b>' + c + ' 农场币</b>。');
+    if (p > 0) bits.push(en()
+      ? 'If Chris adopts it, you also get <b>' + p + ' store points</b>.'
+      : '写得有用、店主采纳后，再奖 <b>' + p + ' 超市积分</b>。');
+    if (!bits.length) {
+      return en()
+        ? 'A bug, a wish, or anything that felt off — Chris reads every note.'
+        : '哪里卡、看不懂、不好玩，写下来。店主每条都会看。';
+    }
+    return bits.join(en() ? ' ' : '');
+  }
+
+  function submitLabel(rewarded) {
+    const c = nCoins();
+    if (rewarded || c <= 0) return en() ? 'Send to the store' : '提交给店主';
+    return en() ? ('Send and get ' + c + ' coins') : ('提交并领取 ' + c + ' 农场币');
+  }
+
   function open() {
+    loadCfg().then(function () { render(); }).catch(function () { render(); });
+  }
+
+  function render() {
     const rewarded = alreadyRewardedLocally();
     const title = en() ? 'Send feedback' : '意见反馈';
-    const blurb = rewarded
-      ? (en()
-        ? 'You already collected today\'s 500 coins. Send another note anyway — Chris still reads it.'
-        : '今天的 500 农场币已经领过了。还可以再写，店主照样会看到。')
-      : (en()
-        ? 'First note today gets <b>500 farm coins</b> right away. If Chris adopts it, you also get <b>500 store points</b>.'
-        : '今天第一次提交立刻送 <b>500 农场币</b>。写得有用、店主采纳后，再奖 <b>500 超市积分</b>。');
     const ph = en()
       ? 'A bug, a wish, or anything that felt off…'
       : '遇到的问题、想要的功能、哪里不好玩……随便写';
-    const submitLabel = rewarded
-      ? (en() ? 'Send to the store' : '提交给店主')
-      : (en() ? 'Send and get 500 coins' : '提交并领取 500 农场币');
     const html =
       '<h2 class="modal-title">' + title + '</h2>' +
-      '<p class="modal-subtitle">' + blurb + '</p>' +
+      '<p class="modal-subtitle">' + blurb(rewarded) + '</p>' +
       '<div class="fbk-cats" role="tablist">' +
         '<button type="button" class="fbk-cat active" data-cat="bug">' + (en() ? 'A problem' : '遇到问题') + '</button>' +
         '<button type="button" class="fbk-cat" data-cat="idea">' + (en() ? 'An idea' : '我有想法') + '</button>' +
@@ -85,7 +129,7 @@
       '</div>' +
       '<textarea id="fbkText" class="fbk-text" maxlength="' + MAX_CHARS + '" rows="5" placeholder="' + escapeHtml(ph) + '"></textarea>' +
       '<div class="fbk-meta"><span id="fbkCount">0 / ' + MAX_CHARS + '</span><span id="fbkHint"></span></div>' +
-      '<div class="btn-row"><button class="btn" id="fbkSubmit">' + submitLabel + '</button></div>';
+      '<div class="btn-row"><button class="btn" id="fbkSubmit">' + submitLabel(rewarded) + '</button></div>';
 
     Farm.ui.showModal(html, {
       onShow: function () {
@@ -162,9 +206,7 @@
         }
         if (submit) {
           submit.disabled = false;
-          submit.textContent = alreadyRewardedLocally()
-            ? (en() ? 'Send to the store' : '提交给店主')
-            : (en() ? 'Send and get 500 coins' : '提交并领取 500 农场币');
+          submit.textContent = submitLabel(alreadyRewardedLocally());
         }
         return;
       }
@@ -174,20 +216,19 @@
         : '没送到店主那边，请稍后再试。', 2800);
       if (submit) {
         submit.disabled = false;
-        submit.textContent = alreadyRewardedLocally()
-          ? (en() ? 'Send to the store' : '提交给店主')
-          : (en() ? 'Send and get 500 coins' : '提交并领取 500 农场币');
+        submit.textContent = submitLabel(alreadyRewardedLocally());
       }
       return;
     }
 
-    if (data.rewarded && Farm.state && Farm.state.addCoins) {
-      Farm.state.addCoins(COIN_REWARD);
+    const coins = Math.max(0, parseInt(data.coins, 10) || 0);
+    if (data.rewarded && coins > 0 && Farm.state && Farm.state.addCoins) {
+      Farm.state.addCoins(coins);
       markRewardedLocally();
       if (Farm.ui && Farm.ui.refreshHUD) Farm.ui.refreshHUD();
       if (Farm.ui) Farm.ui.toast(en()
-        ? 'Thanks! +' + COIN_REWARD + ' farm coins. More notes today still reach Chris.'
-        : '收到了！+' + COIN_REWARD + ' 农场币。今天再写也会送到，只是不再发币。', 3200);
+        ? 'Thanks! +' + coins + ' farm coins. More notes today still reach Chris.'
+        : '收到了！+' + coins + ' 农场币。今天再写也会送到，只是不再发币。', 3200);
     } else {
       if (Farm.ui) Farm.ui.toast(en()
         ? 'Got it — Chris will read this.'
@@ -198,5 +239,6 @@
   }
 
   window.Farm = window.Farm || {};
-  Farm.feedback = { open: open, COIN_REWARD: COIN_REWARD };
+  Farm.feedback = { open: open };
+  loadCfg();
 })();
