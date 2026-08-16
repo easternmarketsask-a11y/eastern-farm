@@ -728,9 +728,9 @@ body {
    highlight for depth, a small chevron to signal it's tappable, press-scale. */
 .harvest-status-center.is-actionable {
   cursor: pointer;
-  background: linear-gradient(180deg, #f1fbe7 0%, #cdebac 100%);
-  border: 1.5px solid #a6d178;
-  box-shadow: 0 1px 3px rgba(106, 176, 76, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.65);
+  background: linear-gradient(180deg, rgba(241,251,231,0.72) 0%, rgba(205,235,172,0.58) 100%);
+  border: 1px solid rgba(166,209,120,0.7);
+  box-shadow: 0 1px 4px rgba(60,80,30,0.14), inset 0 1px 0 rgba(255, 255, 255, 0.45);
   color: var(--leaf-dark);
   font-weight: 600;
   transition: transform .12s ease, box-shadow .12s ease, filter .12s ease;

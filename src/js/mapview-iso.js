@@ -104,10 +104,14 @@
   const ISO_CROPS = {
     eggplant: 'crop_eggplant', cilantro: 'crop_cilantro', jiucai: 'crop_chives',
     niu_jiao_jiao: 'crop_chili', suan_tai: 'crop_garlic', tomato: 'crop_tomato', cucumber: 'crop_cucumber',
-    // 上海青: the refreshed crop_qingcai sprites now include their OWN soil cube, so
-    // it must go through the ISO_CROPS path (ground stays grass) — otherwise the
-    // ground also draws a soil tile and the two cubes stack → bok choy floats.
     shanghai_miao: 'crop_qingcai',
+    // 未单独重绘的叶菜/葱蒜走最近的油画贴图，避免成熟后飘 emoji
+    qingcai: 'crop_qingcai', cai_xin: 'crop_qingcai', bo_cai: 'crop_qingcai',
+    you_mai_cai: 'crop_qingcai', wa_wa_cai: 'crop_qingcai', da_bai_cai: 'crop_qingcai',
+    ji_mao_cai: 'crop_qingcai', tong_hao: 'crop_qingcai', xian_cai: 'crop_qingcai',
+    xi_lan_hua: 'crop_qingcai',
+    jing_cong: 'crop_chives', xiao_cong: 'crop_chives', jiu_huang: 'crop_chives',
+    ku_gua: 'crop_cucumber', fo_shou_gua: 'crop_cucumber',
   };
   // cost = 农场币 to place (coins; East Points stay scarce for real rewards). charm =
   // 农场魅力 gained (derived ≈ cost/8) — a vanity progression to drive the build impulse.
@@ -126,7 +130,7 @@
     greenhouse: { img: 'greenhouse', w: 2, h: 2, sc: 2.4, zh: '温室', en: 'Greenhouse', cost: 600 },
     coop: { img: 'coop', w: 2, h: 2, sc: 2.3, zh: '鸡舍', en: 'Coop', cost: 450 },
     stall: { img: 'stall', w: 2, h: 2, sc: 2.8, zh: '超市摊位', en: 'Stall', cost: 320 },
-    well: { img: 'well', w: 1, h: 1, sc: 2.4, zh: '水井', en: 'Well', cost: 180 },
+    well: { img: 'well', w: 1, h: 1, sc: 2.85, zh: '水井', en: 'Well', cost: 180 },
     tree: { img: 'tree', w: 1, h: 1, sc: 2.2, zh: '树', en: 'Tree', cost: 90 },
     bush: { img: 'deco_bush', w: 1, h: 1, sc: 1.7, zh: '花丛', en: 'Flowers', cost: 40 },
     lantern: { img: 'deco_lantern', w: 1, h: 1, sc: 2.6, zh: '灯笼', en: 'Lantern', cost: 70 },
@@ -1652,7 +1656,7 @@
       const zwrap = document.createElement('div'); zwrap.id = 'isoZoom';
       zwrap.style.cssText = 'position:fixed;z-index:20;display:flex;flex-direction:column;gap:10px;';
       // 44×44 触控热区（was 32，低于可用性底线；2026-07-05 UX 第 1 批 #8）
-      const mkZ = (label, f) => { const z = document.createElement('button'); z.textContent = label; z.style.cssText = 'width:44px;height:44px;border:none;border-radius:50%;background:rgba(255,255,255,.88);color:#3a8c50;font:600 19px/1 system-ui,sans-serif;box-shadow:0 1px 5px rgba(0,0,0,.18);cursor:pointer;touch-action:manipulation;'; z.onclick = (e) => { e.preventDefault(); this._zoomBy(f); }; return z; };
+      const mkZ = (label, f) => { const z = document.createElement('button'); z.textContent = label; z.setAttribute('aria-label', label === '＋' ? 'zoom in' : 'zoom out'); z.style.cssText = 'width:36px;height:36px;border:1px solid rgba(255,255,255,0.42);border-radius:50%;background:rgba(255,248,230,0.34);color:rgba(48,72,36,0.72);font:600 17px/1 system-ui,sans-serif;box-shadow:0 1px 4px rgba(40,32,16,.10);cursor:pointer;touch-action:manipulation;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);'; z.onclick = (e) => { e.preventDefault(); this._zoomBy(f); }; return z; };
       zwrap.appendChild(mkZ('＋', 1.3)); zwrap.appendChild(mkZ('－', 0.77));
       document.body.appendChild(zwrap); this._zoomUI = zwrap;
 
@@ -1681,7 +1685,7 @@
         // visible even in fullscreen build mode) so it never overlaps the coins.
         const tb = document.getElementById('topbar');
         const tbBottom = tb ? tb.getBoundingClientRect().bottom : 0;
-        this._zoomUI.style.left = (r.left + r.width - 54) + 'px';   // 44px 钮 + 10px 右边距
+        this._zoomUI.style.left = (r.left + r.width - 46) + 'px';   // 36px 玻璃钮 + 10px 右边距
         this._zoomUI.style.top = Math.max(r.top + 10, tbBottom + 8) + 'px';
       }
       if (this._palette) { this._palette.style.display = this._build ? 'flex' : 'none'; this._palette.style.left = r.left + 'px'; this._palette.style.right = Math.max(0, window.innerWidth - (r.left + r.width)) + 'px'; this._palette.style.bottom = fromBottom + 'px'; }
@@ -1770,7 +1774,32 @@
       im.src = ASSET_DIR + name + '.webp';
       return null;
     },
-    _diamond(x, y, tw, th) { const c = this._ctx; c.beginPath(); c.moveTo(x, y - th / 2); c.lineTo(x + tw / 2, y); c.lineTo(x, y + th / 2); c.lineTo(x - tw / 2, y); c.closePath(); },
+    _diamond(x, y, tw, th) { const c = this._ctx; c.beginPath(); this._diamondPath(x, y, tw, th); },
+    _diamondPath(x, y, tw, th) { const c = this._ctx; c.moveTo(x, y - th / 2); c.lineTo(x + tw / 2, y); c.lineTo(x, y + th / 2); c.lineTo(x - tw / 2, y); c.closePath(); },
+    // 宣传图里摊前站着的人：手绘小人，不用 emoji 头
+    _drawVillager(x, y, th, opts) {
+      const ctx = this._ctx, s = th * ((opts && opts.scale) || 1);
+      const shirt = (opts && opts.shirt) || '#e07030';
+      const pants = (opts && opts.pants) || '#3d4a6a';
+      ctx.save();
+      this._shadow(x, y + s * 0.06, s * 0.62, 0.16);
+      ctx.fillStyle = pants;
+      ctx.fillRect(x - s * 0.14, y - s * 0.40, s * 0.11, s * 0.40);
+      ctx.fillRect(x + s * 0.03, y - s * 0.40, s * 0.11, s * 0.40);
+      ctx.fillStyle = '#4a3420';
+      ctx.beginPath(); ctx.ellipse(x - s * 0.09, y + s * 0.02, s * 0.09, s * 0.035, 0, 0, 6.283); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(x + s * 0.09, y + s * 0.02, s * 0.09, s * 0.035, 0, 0, 6.283); ctx.fill();
+      ctx.fillStyle = shirt;
+      ctx.beginPath();
+      if (ctx.roundRect) ctx.roundRect(x - s * 0.19, y - s * 0.86, s * 0.38, s * 0.50, s * 0.08);
+      else ctx.rect(x - s * 0.19, y - s * 0.86, s * 0.38, s * 0.50);
+      ctx.fill();
+      ctx.fillStyle = '#f0c4a0';
+      ctx.beginPath(); ctx.arc(x, y - s * 1.02, s * 0.155, 0, 6.283); ctx.fill();
+      ctx.fillStyle = '#3a2a1c';
+      ctx.beginPath(); ctx.arc(x, y - s * 1.10, s * 0.155, Math.PI, 0); ctx.fill();
+      ctx.restore();
+    },
     // soft contact shadow under an object → grounds it (Hay-Day depth)
     _shadow(cx, cy, w, alpha) {
       const ctx = this._ctx; ctx.save(); ctx.beginPath();
@@ -1926,8 +1955,13 @@
         { gx: 15.2, gy: 2.4, s: 0.64 },
         { gx: 17.2, gy: 8.6, s: 0.78 },
         { gx: 13.6, gy: 13.4, s: 0.60 },
+        { gx: 8.4, gy: -0.6, s: 0.50 },
+        { gx: 2.2, gy: -1.1, s: 0.44 },
+        { gx: 11.6, gy: 0.4, s: 0.42 },
       ];
       for (const s of spots) {
+        const igx = Math.round(s.gx), igy = Math.round(s.gy);
+        if (igx >= 0 && igy >= 0 && this._ownedCell(igx, igy)) continue;
         const c = this._cell(s.gx, s.gy);
         this._shadow(c.x + tw * 0.18, c.y + th * 0.12, tw * 0.7 * s.s, 0.16);
         this._tree(c.x, c.y, tw * 1.2 * s.s);
@@ -1986,6 +2020,68 @@
       }
       ctx.restore();
     },
+    // 宣传图是一整块垄沟田：所有菜地格合成一块土，垄线跨格连续
+    _drawUnifiedField() {
+      const plots = Farm.state.data.plots || [];
+      if (!plots.length) return;
+      const ctx = this._ctx, tw = this._tw(), th = this._th();
+      const w = tw * 1.08, h = th * 1.08;
+      const cells = [];
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      for (let i = 0; i < plots.length; i++) {
+        if (!plots[i]) continue;
+        const c = this._cell(this._plotGX(i), this._plotGY(i));
+        const cy = c.y + th * 0.06;
+        cells.push({ x: c.x, y: cy });
+        if (c.x < minX) minX = c.x; if (c.x > maxX) maxX = c.x;
+        if (cy < minY) minY = cy; if (cy > maxY) maxY = cy;
+      }
+      if (!cells.length) return;
+      ctx.save();
+      ctx.beginPath();
+      for (const c of cells) this._diamondPath(c.x + tw * 0.05, c.y + th * 0.08, w, h);
+      ctx.fillStyle = 'rgba(42,28,12,0.20)';
+      ctx.fill();
+      ctx.restore();
+      ctx.save();
+      ctx.beginPath();
+      for (const c of cells) this._diamondPath(c.x, c.y, w, h);
+      const g = ctx.createLinearGradient(minX - tw, minY - th * 0.4, maxX + tw * 0.3, maxY + th);
+      g.addColorStop(0, '#8f5e30');
+      g.addColorStop(0.45, '#6a421c');
+      g.addColorStop(1, '#452410');
+      ctx.fillStyle = g;
+      ctx.fill();
+      ctx.clip();
+      // 软垄：淡、略弯，不要一整排木板
+      ctx.strokeStyle = 'rgba(38,18,8,0.14)';
+      ctx.lineWidth = Math.max(0.7, th * 0.045);
+      ctx.lineCap = 'round';
+      const slope = th / tw;
+      const spacing = th * 0.24;
+      const cx0 = (minX + maxX) / 2, cy0 = (minY + maxY) / 2;
+      const b0 = Math.round((cy0 - slope * cx0) / spacing) * spacing;
+      for (let k = -16; k <= 16; k++) {
+        const b = b0 + k * spacing;
+        const x1 = minX - tw * 1.4, x2 = maxX + tw * 1.4;
+        const mid = (x1 + x2) / 2;
+        const wob = Math.sin(k * 1.7) * th * 0.035;
+        ctx.beginPath();
+        ctx.moveTo(x1, slope * x1 + b);
+        ctx.quadraticCurveTo(mid, slope * mid + b + wob, x2, slope * x2 + b);
+        ctx.stroke();
+      }
+      ctx.fillStyle = 'rgba(32,16,6,0.10)';
+      for (const c of cells) {
+        for (let i = 0; i < 3; i++) {
+          const a = (c.x * 0.13 + c.y * 0.09 + i * 2.1);
+          ctx.beginPath();
+          ctx.ellipse(c.x + Math.cos(a) * tw * 0.18, c.y + Math.sin(a * 1.3) * th * 0.16, tw * 0.035, th * 0.02, a, 0, 6.283);
+          ctx.fill();
+        }
+      }
+      ctx.restore();
+    },
     _tilledDiamond(cx, cy) {
       const im = this._img.plot_bed, ctx = this._ctx, tw = this._tw(), th = this._th();
       if (im && im.width) { const w = tw * 1.04, s = w / im.width, hh = im.height * s; ctx.drawImage(im, cx - w / 2, cy + th * 0.6 - hh, w, hh); return; }
@@ -2023,89 +2119,88 @@
       this._diamond(c.x, c.y, tw, th);
       ctx.fillStyle = GRASS_A; ctx.fill();
     },
-    // Draw all water cells as ONE realistic pond — overlapping soft ellipses merge into an
-    // organic blob (single cell = a clean oval), with a deep-water rim, surface gradient,
-    // gentle animated ripples and a little lily pad. Replaces the per-tile diamond grid.
+    // 所有水格合成一汪溪/塘。只 fill 重叠椭圆，绝不 stroke 每格轮廓
+    // （描边会在融合处画出白线圈，截图实证）。
     _drawPond(cells) {
       if (!cells || !cells.length) return;
       const ctx = this._ctx, tw = this._tw(), th = this._th();
-      // 形状调参(2026-08-14 Chris:「花瓣形水塘不真实」): 花瓣感来自相邻圆团
-      // 之间的凹陷 —— 半径加肥(0.62/0.70→0.80/0.88)让团与团融合处填满,
-      // 波动变浅(0.74+0.26→0.86+0.14)不再有深锯齿, 出来是圆润的不规则塘。
-      // 溢出邻格由「水塘画在地块之下」兜底(render 调用处), 不会漫过菜地。
-      const rx = tw * 0.80, ry = th * 0.88, oy = th * 0.12;   // per-cell blob; oy sinks it into the ground
-      const t = Date.now() / 1000;
-      // Build an IRREGULAR closed blob per cell (wobbly radius keyed on the cell's stable
-      // seed → natural pond outline, not a uniform oval). Overlapping cell-blobs merge.
-      const blobs = (sx, sy) => {
+      const oy = th * 0.10, t = Date.now() / 1000;
+      let cxp = 0, cyp = 0, minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+      let minGx = Infinity;
+      for (const c of cells) {
+        cxp += c.x; cyp += c.y;
+        if (c.x < minX) minX = c.x; if (c.x > maxX) maxX = c.x;
+        if (c.y < minY) minY = c.y; if (c.y > maxY) maxY = c.y;
+        if (c.gx != null && c.gx < minGx) minGx = c.gx;
+      }
+      cxp /= cells.length; cyp /= cells.length;
+      const leftCreek = minGx <= 1;
+      const body = (sx, sy) => {
         ctx.beginPath();
-        for (const c of cells) {
-          const N = 16;
+        if (leftCreek) {
+          for (const c of cells) {
+            ctx.ellipse(c.x, c.y + oy, tw * 0.92 * sx, th * 0.76 * sy, -0.38, 0, 6.283);
+          }
+          ctx.ellipse(minX - tw * 0.50, cyp + oy + th * 0.16, tw * 1.08 * sx, th * 0.66 * sy, -0.5, 0, 6.283);
+        } else {
+          // 场中塘：一块微起伏的湖，避免五格叠成三叶草、漫到谷仓
+          const rx = ((maxX - minX) / 2 + tw * 0.62) * sx;
+          const ry = ((maxY - minY) / 2 + th * 0.42) * sy;
+          const cyb = cyp + oy + th * 0.08;
+          const N = 20;
           for (let i = 0; i <= N; i++) {
-            const a = (i / N) * 6.283;
-            const wob = 0.86 + 0.14 * (0.5 + 0.5 * Math.sin(a * 3 + c.s)) * (0.6 + 0.4 * Math.cos(a * 2 - c.s * 0.7));
-            const x = c.x + Math.cos(a) * rx * sx * wob;
-            const y = c.y + oy + Math.sin(a) * ry * sy * wob;
+            const a = (i / N) * 6.283 - 0.32;
+            const wob = 0.94 + 0.06 * Math.sin(a * 2.4 + 0.8);
+            const x = cxp + Math.cos(a) * rx * wob;
+            const y = cyb + Math.sin(a) * ry * wob;
             if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
           }
           ctx.closePath();
         }
       };
-      let minY = Infinity, maxY = -Infinity; for (const c of cells) { if (c.y < minY) minY = c.y; if (c.y > maxY) maxY = c.y; }
       ctx.save();
-      // 1) deep-water base + soft ground shadow around the whole (irregular) outline
+      // 暖土岸：比水面略大的填色，不描边
       ctx.save();
-      ctx.shadowColor = 'rgba(25,60,80,0.32)'; ctx.shadowBlur = th * 0.5; ctx.shadowOffsetY = th * 0.16;
-      ctx.fillStyle = '#2f6d80'; blobs(1, 1); ctx.fill();
+      ctx.shadowColor = 'rgba(40,52,22,0.28)'; ctx.shadowBlur = th * 0.45; ctx.shadowOffsetY = th * 0.12;
+      ctx.fillStyle = '#6e7a3c';
+      body(1.08, 1.12); ctx.fill();
       ctx.restore();
-      // 2) 溪水色：青蓝倒映暖天，不要奶油白云顶
-      const g = ctx.createLinearGradient(0, minY - ry + oy, 0, maxY + ry + oy);
-      g.addColorStop(0, '#b7d6c8');
-      g.addColorStop(0.28, '#7eb8c4');
-      g.addColorStop(0.62, '#4a8fa0');
-      g.addColorStop(1, '#2d6570');
-      ctx.fillStyle = g; blobs(0.88, 0.84); ctx.fill();
-      let cxp = 0, cyp = 0;
-      for (const c of cells) { cxp += c.x; cyp += c.y; }
-      cxp /= cells.length; cyp /= cells.length;
+      ctx.fillStyle = '#8a7a48';
+      ctx.globalAlpha = 0.28;
+      body(1.04, 1.06); ctx.fill();
+      ctx.globalAlpha = 1;
+      // 青蓝水面（整汪同一渐变，倒映暖天）
       ctx.save();
-      ctx.globalAlpha = 0.22;
-      ctx.fillStyle = '#d8f0e8';
+      body(1, 1); ctx.clip();
+      const g = ctx.createLinearGradient(0, minY - th, 0, maxY + th);
+      g.addColorStop(0, '#c5ddd0');
+      g.addColorStop(0.28, '#6eafb8');
+      g.addColorStop(0.68, '#3a7e8c');
+      g.addColorStop(1, '#245860');
+      ctx.fillStyle = g;
+      ctx.fillRect(minX - tw * 1.4, minY - th * 1.4, (maxX - minX) + tw * 2.8, (maxY - minY) + th * 2.8);
+      ctx.globalAlpha = 0.16;
+      ctx.fillStyle = '#e8f4dc';
       ctx.beginPath();
-      ctx.ellipse(cxp - rx * 0.22, cyp + oy - ry * 0.12, rx * 0.42, ry * 0.20, -0.4, 0, 6.283);
+      ctx.ellipse(cxp - tw * 0.12, cyp + oy - th * 0.06, tw * 0.38, th * 0.12, -0.45, 0, 6.283);
       ctx.fill();
-      ctx.restore();
-      // 3) gentle animated ripples
-      ctx.strokeStyle = 'rgba(230,248,240,0.22)'; ctx.lineWidth = Math.max(1, th * 0.045); ctx.lineCap = 'round';
-      cells.forEach((c, i) => {
-        if (i % 2) return;
-        const wob = Math.sin(t * 1.4 + i * 1.3) * th * 0.04;
-        ctx.beginPath(); ctx.moveTo(c.x - rx * 0.26, c.y + oy + wob); ctx.quadraticCurveTo(c.x, c.y + oy - th * 0.05 + wob, c.x + rx * 0.26, c.y + oy + wob); ctx.stroke();
-      });
-      // 3.5) 水面波光: 两粒错相位的小闪(丰收田旁的一点灵动)
-      for (let i = 0; i < Math.min(2, cells.length); i++) {
-        const cc3 = cells[(i * 2) % cells.length];
-        const tw3 = 0.5 + 0.5 * Math.sin(t * 1.8 + i * 2.6 + cc3.s);
-        if (tw3 > 0.55) {
-          ctx.save();
-          ctx.globalAlpha = (tw3 - 0.55) / 0.45 * 0.85;
-          ctx.fillStyle = '#ffffff';
-          const sx3 = cc3.x + Math.cos(cc3.s) * rx * 0.35, sy3 = cc3.y + oy + Math.sin(cc3.s * 1.3) * ry * 0.3;
-          ctx.beginPath(); ctx.ellipse(sx3, sy3, tw * 0.045, th * 0.03, 0.5, 0, 6.283); ctx.fill();
-          ctx.beginPath(); ctx.ellipse(sx3 + tw * 0.03, sy3 - th * 0.02, tw * 0.018, th * 0.014, 0.5, 0, 6.283); ctx.fill();
-          ctx.restore();
-        }
+      ctx.globalAlpha = 0.16;
+      ctx.strokeStyle = '#eef8f2';
+      ctx.lineWidth = Math.max(1, th * 0.035);
+      ctx.lineCap = 'round';
+      const wob = Math.sin(t * 1.3) * th * 0.03;
+      ctx.beginPath();
+      ctx.moveTo(cxp - tw * 0.28, cyp + oy + wob);
+      ctx.quadraticCurveTo(cxp, cyp + oy - th * 0.06 + wob, cxp + tw * 0.26, cyp + oy + wob * 0.5);
+      ctx.stroke();
+      const spark = 0.5 + 0.5 * Math.sin(t * 1.7);
+      if (spark > 0.72) {
+        ctx.globalAlpha = (spark - 0.72) / 0.28 * 0.45;
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.ellipse(cxp + tw * 0.08, cyp + oy - th * 0.03, tw * 0.028, th * 0.016, 0.4, 0, 6.283);
+        ctx.fill();
       }
-      // 4) 暖色草岸，不要粉花睡莲（宣传图是一条溪，不是卡通塘）
-      ctx.save();
-      ctx.globalAlpha = 0.35;
-      ctx.strokeStyle = '#7a6a38';
-      ctx.lineWidth = Math.max(2.2, th * 0.16);
-      blobs(1.02, 1.04); ctx.stroke();
-      ctx.globalAlpha = 0.22;
-      ctx.strokeStyle = '#c4a86a';
-      ctx.lineWidth = Math.max(1.4, th * 0.08);
-      blobs(1.05, 1.08); ctx.stroke();
       ctx.restore();
       ctx.restore();
     },
@@ -2326,9 +2421,9 @@
       const now = Date.now();
       if (!this._walkerNextAt) this._walkerNextAt = now + 30e3;   // 进图 30 秒后来第一位
       if (!this._walker && now >= this._walkerNextAt) {
-        const faces = ['🚶', '🚶‍♀️', '🚴', '🧑‍🌾', '🐕'];
+        const shirts = ['#e07030', '#4a8c5c', '#c45a4a', '#d4a04a'];
         this._walker = { start: now, dur: 26e3, dir: Math.random() < 0.5 ? 1 : -1,
-                         face: faces[Math.floor(Math.random() * faces.length)] };
+                         shirt: shirts[Math.floor(Math.random() * shirts.length)] };
       }
       if (!this._walker) return;
       let p = (now - this._walker.start) / this._walker.dur;
@@ -2338,11 +2433,8 @@
       const th = this._th(), bob = Math.abs(Math.sin(now / 160)) * th * 0.06;
       const ctx = this._ctx;
       ctx.save();
-      ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
-      ctx.font = (th * 0.95) + 'px sans-serif';
-      ctx.globalAlpha = Math.min(1, Math.min(p, 1 - p) * 12 + 0.15);   // 两端淡入淡出
-      this._shadow(pt.x, pt.y + th * 0.22, this._tw() * 0.30, 0.15);
-      ctx.fillText(this._walker.face, pt.x, pt.y + th * 0.18 - bob);
+      ctx.globalAlpha = Math.min(1, Math.min(p, 1 - p) * 12 + 0.15);
+      this._drawVillager(pt.x, pt.y + th * 0.08 - bob, th, { scale: 0.82, shirt: this._walker.shirt });
       ctx.restore();
     },
 
@@ -2495,9 +2587,9 @@
       // 从林脚以下起铺(hl+0.8th), 树脚由菱形格自然探上去咬合, 不再一刀切。
       const gTop = Math.max(0, hl + th * 2.4);
       const meadow = ctx.createLinearGradient(0, gTop, 0, H);
-      meadow.addColorStop(0, 'rgb(168,176,78)');
-      meadow.addColorStop(0.38, 'rgb(148,168,64)');
-      meadow.addColorStop(1, 'rgb(118,148,52)');
+      meadow.addColorStop(0, 'rgb(178,180,72)');
+      meadow.addColorStop(0.38, 'rgb(156,170,60)');
+      meadow.addColorStop(1, 'rgb(124,150,50)');
       ctx.fillStyle = meadow;
       ctx.fillRect(0, gTop, W, H - gTop);
       const shade = ctx.createLinearGradient(0, gTop, W * 0.85, H);
@@ -2521,7 +2613,7 @@
           const patch = Math.sin(gx * 0.52 + gy * 0.37) * 7 + Math.sin(gx * 0.19 - gy * 0.24) * 5;
           const stripe = ((gx + gy) & 1) ? -0.35 : 0;
           const nzIn = (r1 - 0.5) * 6;
-          let fr = 162 + patch + stripe + nzIn, fg = 170 + patch * 0.7 + stripe + nzIn * 0.6, fb = 58 + patch * 0.3 + stripe * 0.45 + nzIn * 0.35;
+          let fr = 170 + patch + stripe + nzIn, fg = 172 + patch * 0.7 + stripe + nzIn * 0.6, fb = 54 + patch * 0.3 + stripe * 0.45 + nzIn * 0.35;
           if (inWorld && !owned && !apron) { fr = 96 + nzIn; fg = 122 + nzIn * 0.6; fb = 52 + nzIn * 0.3; }
           // 场外林下：更深的荫地，不是亮黄野草
           const nzOut = (r1 - 0.5) * 8;
@@ -2561,16 +2653,18 @@
               ctx.quadraticCurveTo(bx + i * tw * 0.05, byy - th * 0.05, bx + i * tw * 0.075, byy - th * 0.13);
               ctx.stroke();
             }
-          } else if ((owned || apron) && r2 < 0.10) {
+          } else if ((owned || apron) && r2 < 0.22) {
             const fx = c.x + (r1 - 0.5) * tw * 0.5, fy = c.y + (r2 * 8 - 0.4) * th * 0.4;
             ctx.fillStyle = '#fdf6e8';
-            for (let i = 0; i < 5; i++) { const an = i / 5 * 6.283; ctx.beginPath(); ctx.arc(fx + Math.cos(an) * tw * 0.022, fy + Math.sin(an) * th * 0.030, Math.max(0.8, tw * 0.014), 0, 6.283); ctx.fill(); }
+            for (let i = 0; i < 5; i++) { const an = i / 5 * 6.283; ctx.beginPath(); ctx.arc(fx + Math.cos(an) * tw * 0.032, fy + Math.sin(an) * th * 0.042, Math.max(1.0, tw * 0.020), 0, 6.283); ctx.fill(); }
             ctx.fillStyle = '#f2c34a';
-            ctx.beginPath(); ctx.arc(fx, fy, Math.max(0.7, tw * 0.011), 0, 6.283); ctx.fill();
+            ctx.beginPath(); ctx.arc(fx, fy, Math.max(0.9, tw * 0.015), 0, 6.283); ctx.fill();
           }
         }
       }
       this._drawTreeShadows(W, H, hl);
+      const mid = this._cell((ob.x1 + ob.x2) / 2, ob.y2 + 0.4);
+      this._drawMeadowDetail(mid.x, mid.y);
       // 程序化世界没有照片可采样 —— 地面到处都是草, 乡路/小屋永远可画
       return () => 1;
     },
@@ -2583,9 +2677,9 @@
     _drawGoldenHour(W, H) {
       const ctx = this._ctx;
       const g = ctx.createRadialGradient(W * 0.14, H * 0.06, 0, W * 0.14, H * 0.06, Math.max(W, H) * 1.15);
-      g.addColorStop(0, 'rgba(255,208,130,0.28)');
-      g.addColorStop(0.34, 'rgba(255,176,96,0.12)');
-      g.addColorStop(1, 'rgba(48,42,22,0.07)');
+      g.addColorStop(0, 'rgba(255,208,130,0.32)');
+      g.addColorStop(0.34, 'rgba(255,176,96,0.14)');
+      g.addColorStop(1, 'rgba(48,42,22,0.08)');
       ctx.fillStyle = g;
       ctx.fillRect(0, 0, W, H);
     },
@@ -2717,9 +2811,6 @@
       // on the ~30fps animation frames (pets/bubbles). Saves CPU/battery on phones.
       this._blitBackdrop(ctx, W, H);
 
-      // Soil beds (plots) + terrain tiles, back-to-front. Grass cells draw nothing
-      // (the base shows through). Plot cells use the raised soil bed.
-      const plotCells = this._plotCellSet();
       // 成熟数预统计: 徽章 LOD 用(<=3 块熟画白圈气泡, 多了改光晕+弹跳, 见 _drawPlot)
       this._matureCount = 0;
       try {
@@ -2736,22 +2827,15 @@
           // Water cells are collected and drawn as ONE merged organic pond (below) rather
           // than per-tile diamonds (Chris 2026-06-19: looked like a grid). Water overrides
           // soil/path on a cell.
-          if (terrain[k] === 'water') { waterCells.push({ x: c.x, y: c.y, s: gx * 7.3 + gy * 13.7 }); continue; }   // s = stable per-cell seed for the irregular outline (NOT screen coords → no flicker on pan)
-          let key = 'grass';
-          if (plotCells[k]) {
-            const pl = Farm.state.data.plots[this._cellToPlot[k]];
-            // every UNLOCKED plot (empty or planted) gets the soil bed → a uniform
-            // tilled field; pure-plant crops sit on top. Locked plots stay grass.
-            if (pl && pl.unlocked) key = 'soil';
-          }
-          if (terrain[k] === 'path') key = 'path';
-          if (key !== 'grass') groundTiles.push({ key, c });
+          if (terrain[k] === 'water') { waterCells.push({ x: c.x, y: c.y, s: gx * 7.3 + gy * 13.7, gx: gx, gy: gy }); continue; }
+          if (terrain[k] === 'path') groundTiles.push({ key: 'path', c });
         }
       }
       // 🔒 水塘画在田土/小路**之下**（2026-08-13 Chris:「水塘跟菜地分开」）。
       // 有机水塘的波浪轮廓天然会溢出水格边界一点；先画水塘再画地块，溢出的
       // 水沿被土床盖住 = 岸线自然贴着田边，绝不会出现「水漫到菜地上」。
       this._drawPond(waterCells);
+      this._drawUnifiedField();
       for (const tI of groundTiles) this._tileImg(tI.key, tI.c);
       this._drawRoadWalker();
       this._drawBirds();
@@ -2931,30 +3015,13 @@
     },
     _drawPlot(plot, gx, gy, idx) {
       const ctx = this._ctx, tw = this._tw(), th = this._th(), c = this._cell(gx, gy);
-      if (!plot.unlocked) {   // locked → a DIMMED tilled bed (consistent with the field) + lock badge
-        ctx.save(); ctx.globalAlpha = 0.45; this._drawFurrowBed(c); ctx.restore();
-        this._diamond(c.x, c.y, tw * 0.96, th * 0.96); ctx.fillStyle = 'rgba(55,65,50,0.3)'; ctx.fill();
-        // 徽章 LOD（audit B2 P1）：只有「下一档可解锁」等级的地块画完整 🔒+Lv
-        // 徽章（同档 ≤2 块，互不相邻遮挡）；更远档的锁定格只画一枚半透明小锁点，
-        // 视觉上退为「远处还有地」的暗示，不再 9 枚徽章叠成一团。
+      if (!plot.unlocked) {
+        // 田已由 _drawUnifiedField 画成一块；只在「下一档」留一枚淡锁
         const reqLv = REQUIRED_LV[idx] || 2;
-        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        if (reqLv === this._nextLockLv) {
-          this._drawLock(c.x, c.y + th * 0.02, th * 0.36, 0.85);
-        } else {
-          this._drawLock(c.x, c.y + th * 0.06, th * 0.22, 0.28);
-        }
+        if (reqLv === this._nextLockLv) this._drawLock(c.x, c.y + th * 0.02, th * 0.24, 0.40);
         return;
       }
-      // ground already drew the clean tilled bed for this cell; add a small, soft
-      // pulsing "+" hint that you can plant here (subtle — the bed itself reads).
-      if (!plot.crop) {
-        const t = Date.now() / 1000, pulse = 0.5 + 0.5 * Math.sin(t * 2 + gx + gy);
-        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.fillStyle = 'rgba(255,248,232,' + (0.34 + pulse * 0.22) + ')';
-        ctx.font = '700 ' + (th * 0.42) + 'px "Plus Jakarta Sans","Noto Sans SC",sans-serif';
-        ctx.fillText('+', c.x, c.y); return;
-      }
+      if (!plot.crop) return;
       const p = Farm.crops.getProgress ? Farm.crops.getProgress(plot) : 1, mature = Farm.crops.isMature(plot);
       const tNow = Date.now() / 1000;
       /* 成熟的菜自己会「跃跃欲收」: 本体轻弹跳(旧版只有气泡动, 菜是死的)。
@@ -2978,7 +3045,7 @@
         const im = this._lazyImg(ISO_CROPS[plot.crop] + '_' + fr);
         if (im) {
           // 宣传图里菜把头铺满土床、根部埋进垄里，不要小贴纸飘在格子上
-          const s = (th * (0.92 + fr * 0.14)) / 260;
+          const s = (th * (1.04 + fr * 0.16)) / 260;
           const w = im.width * s, h = im.height * s;
           const topY = (c.y + th * 0.34 - ripe) - h;
           ctx.drawImage(im, c.x - w / 2, topY, w, h);
@@ -3011,8 +3078,8 @@
             ctx.globalAlpha = 1; ctx.textBaseline = 'alphabetic';
           }
         }
-      } else {   // progress bar(圆角药丸: 方黑条与整体圆润风格不符)
-        const bw = tw * 0.5, bx = c.x - bw / 2, ybar = c.y + th * 0.34, bh = Math.max(3, th * 0.11), r2 = bh / 2;
+      } else {
+        const bw = tw * 0.40, bx = c.x - bw / 2, ybar = c.y + th * 0.34, bh = Math.max(2, th * 0.07), r2 = bh / 2;
         const bar = (x, w, col) => {
           ctx.fillStyle = col;
           ctx.beginPath();
@@ -3020,8 +3087,8 @@
           else ctx.rect(x, ybar, Math.max(w, bh), bh);
           ctx.fill();
         };
-        bar(bx, bw, 'rgba(60,45,25,0.30)');
-        bar(bx, bw * Math.max(0.06, p), '#7bc043');
+        bar(bx, bw, 'rgba(40,30,16,0.20)');
+        bar(bx, bw * Math.max(0.06, p), 'rgba(123,192,67,0.78)');
       }
     },
     _drawBuilding(o, b, moving, idx) {
@@ -3035,12 +3102,12 @@
       const front = this._cell(o.gx + (b.w - 1), o.gy + (b.h - 1));
       const by = front.y + th / 2 + th * 0.18;
       if (!moving) {
-        this._shadow(cc.x + tw * 0.22, by - th * 0.18, b.w * tw * 0.82, 0.16);
+        this._shadow(cc.x + tw * 0.28, by - th * 0.14, b.w * tw * 0.88, 0.20);
         const ctxS = this._ctx;
         ctxS.save();
-        ctxS.fillStyle = 'rgba(40,52,18,0.10)';
+        ctxS.fillStyle = 'rgba(40,52,18,0.14)';
         ctxS.beginPath();
-        ctxS.ellipse(cc.x + tw * 0.55, by + th * 0.06, b.w * tw * 0.62, th * 0.42, 0.55, 0, 6.283);
+        ctxS.ellipse(cc.x + tw * 0.62, by + th * 0.08, b.w * tw * 0.68, th * 0.38, 0.55, 0, 6.283);
         ctxS.fill();
         ctxS.restore();
       }
@@ -3065,10 +3132,7 @@
             // 站在**路上**(路正好从摊前过; 用格子锚点, 不会掉进水塘 —— 截图实证)
             const rp2 = this._cell(o.gx + 0.7, o.gy + 2.15);
             const sx2 = rp2.x, sy2 = rp2.y;
-            ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
-            this._shadow(sx2, sy2 + th * 0.10, tw * 0.36, 0.18);
-            ctx.font = (th * 1.5) + 'px sans-serif';
-            ctx.fillText('🧍', sx2, sy2 + bob * 0.4);
+            this._drawVillager(sx2, sy2 + bob * 0.4, th, { scale: 1.05, shirt: '#e07030' });
             // 气泡绘制内部还会再上抬 th*1.62(历史锚点), 这里只留一点余量 → 恰好悬在头顶
             const px2 = sx2, py2 = sy2 - th * 0.15;
             ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
