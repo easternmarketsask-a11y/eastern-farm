@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""Editorial phone + A4 posters. Exact copy, painted on the keyart."""
-from PIL import Image, ImageDraw, ImageFont, ImageFilter
+"""Bilingual posters: Chinese and English as designed partners, not stacked subtitles."""
+from PIL import Image, ImageDraw, ImageFont
 import io
 import os
 import segno
@@ -17,11 +17,11 @@ SANS_BD = r'C:\Windows\Fonts\msyhbd.ttc'
 GEORGIA = r'C:\Windows\Fonts\georgiab.ttf'
 GEORGIA_R = r'C:\Windows\Fonts\georgia.ttf'
 
-CREAM = (246, 239, 224)
+CREAM = (247, 241, 228)
 INK = (28, 38, 26)
-GOLD = (201, 162, 74)
-GOLD_SOFT = (212, 184, 122)
-DUSK = (22, 28, 18)
+GOLD = (176, 132, 52)
+FOREST = (42, 74, 40)
+MUTED = (92, 80, 62)
 
 
 def vf(path, size, weight=500, fallback=None):
@@ -46,53 +46,31 @@ def cover(im, tw, th, bias_y=0):
     return im.crop((x, y, x + tw, y + th))
 
 
-def spaced(draw, text, y, font, fill, tracking, canvas_w, shadow=None):
-    widths = []
-    for ch in text:
-        b = draw.textbbox((0, 0), ch, font=font)
-        widths.append(b[2] - b[0])
+def tw(draw, text, font):
+    b = draw.textbbox((0, 0), text, font=font)
+    return b[2] - b[0], b[3] - b[1]
+
+
+def center(draw, text, y, font, fill, canvas_w):
+    w, _ = tw(draw, text, font)
+    draw.text(((canvas_w - w) / 2, y), text, font=font, fill=fill)
+
+
+def spaced_center(draw, text, y, font, fill, tracking, canvas_w):
+    widths = [tw(draw, ch, font)[0] for ch in text]
     total = sum(widths) + tracking * max(0, len(text) - 1)
     x = (canvas_w - total) / 2
     for ch, w in zip(text, widths):
-        if shadow:
-            draw.text((x + shadow[0], y + shadow[1]), ch, font=font, fill=shadow[2])
         draw.text((x, y), ch, font=font, fill=fill)
         x += w + tracking
-    return total
 
 
-def hairline(draw, cx, y, half, color, width=2):
-    draw.line([(cx - half, y), (cx + half, y)], fill=color, width=width)
-
-
-def badge(draw, zh, en, y, zh_font, en_font, canvas_w, fg, bg, tracking=6, pad_x=28, pad_y=8):
-    """Two-line (zh + en) high-contrast pill. Returns y just below it."""
-    widths = []
-    for ch in zh:
-        b = draw.textbbox((0, 0), ch, font=zh_font)
-        widths.append(b[2] - b[0])
-    tw_zh = sum(widths) + tracking * max(0, len(zh) - 1)
-    eb = draw.textbbox((0, 0), en, font=en_font)
-    tw_en = eb[2] - eb[0]
-    zb = draw.textbbox((0, 0), zh[0], font=zh_font)
-    th_zh = zb[3] - zb[1]
-    th_en = eb[3] - eb[1]
-    w = max(tw_zh, tw_en) + pad_x * 2
-    h = th_zh + th_en + pad_y * 2 + 4
-    x = (canvas_w - w) / 2
-    draw.rounded_rectangle([x, y, x + w, y + h], radius=h / 2, fill=bg)
-    spaced(draw, zh, y + pad_y - 2, zh_font, fg, tracking, canvas_w)
-    draw.text(((canvas_w - tw_en) / 2, y + pad_y + th_zh + 2), en, font=en_font, fill=fg)
-    return y + h
-
-
-def make_qr(px, dark='#1c261a', light='#f6efe0'):
+def make_qr(px, dark='#1c261a', light='#f7f1e4'):
     buf = io.BytesIO()
     segno.make('https://farm.easternmarket.ca/', error='h').save(
         buf, kind='png', scale=10, border=1, dark=dark, light=light)
     buf.seek(0)
-    qr = Image.open(buf).convert('RGBA')
-    return qr.resize((px, px), Image.Resampling.LANCZOS)
+    return Image.open(buf).convert('RGBA').resize((px, px), Image.Resampling.LANCZOS)
 
 
 def paste_logo(canvas, w, top, max_w):
@@ -100,66 +78,79 @@ def paste_logo(canvas, w, top, max_w):
     lw = max_w
     lh = int(logo.height * lw / logo.width)
     logo = logo.resize((lw, lh), Image.Resampling.LANCZOS)
-    # soft plate so the mark reads on any sky, without a chunky white card
-    plate = Image.new('RGBA', (lw + 48, lh + 28), (0, 0, 0, 0))
+    plate = Image.new('RGBA', (lw + 44, lh + 24), (0, 0, 0, 0))
     pd = ImageDraw.Draw(plate)
     pd.rounded_rectangle([0, 0, plate.width - 1, plate.height - 1],
-                         radius=18, fill=(246, 239, 224, 210))
-    blurred = plate.filter(ImageFilter.GaussianBlur(0.4))
+                         radius=16, fill=(247, 241, 228, 230))
     px = (w - plate.width) // 2
-    canvas.paste(blurred, (px, top), blurred)
-    canvas.paste(logo, (px + 24, top + 14), logo)
+    canvas.paste(plate, (px, top), plate)
+    canvas.paste(logo, (px + 22, top + 12), logo)
     return top + plate.height
 
 
 def phone():
     W, H = 1080, 1920
-    art = cover(Image.open(ART).convert('RGB'), W, H, bias_y=20).convert('RGBA')
-
-    wash = Image.new('RGBA', (W, H), (0, 0, 0, 0))
-    d = ImageDraw.Draw(wash)
-    for i in range(260):
-        a = int(80 * (1 - i / 260) ** 1.4)
-        d.line([(0, i), (W, i)], fill=(255, 232, 200, a))
-    # 字落在独立的暮色带上，不跟路牌抢
-    band = 840
-    for i in range(band):
-        t = i / (band - 1)
-        a = int(10 + 250 * (t ** 1.15))
-        d.line([(0, H - band + i), (W, H - band + i)], fill=(16, 22, 12, a))
-    canvas = Image.alpha_composite(art, wash)
-    paste_logo(canvas, W, 42, 248)
+    art_h = 1360
+    canvas = Image.new('RGB', (W, H), CREAM)
+    art = cover(Image.open(ART).convert('RGB'), W, art_h + 90, bias_y=30)
+    canvas.paste(art, (0, 0))
+    fade = Image.new('RGBA', (W, H), (0, 0, 0, 0))
+    d = ImageDraw.Draw(fade)
+    for i in range(160):
+        a = int(255 * (i / 159) ** 1.15)
+        d.line([(0, art_h - 70 + i), (W, art_h - 70 + i)], fill=CREAM + (a,))
+    canvas = Image.alpha_composite(canvas.convert('RGBA'), fade)
+    paste_logo(canvas, W, 40, 236)
 
     draw = ImageDraw.Draw(canvas)
-    name = vf(SERIF, 86, 650)
-    title = vf(SERIF, 46, 560)
-    kick_f = vf(SANS, 22, 620, SANS_BD)
-    en = ImageFont.truetype(GEORGIA, 16)
-    en_sm = ImageFont.truetype(GEORGIA_R, 14)
-    meta = vf(SANS, 22, 500, SANS_BD)
-    meta_en = ImageFont.truetype(GEORGIA_R, 15)
-    urlf = vf(SANS, 26, 620, SANS_BD)
+    name = vf(SERIF, 78, 660)
+    line = vf(SERIF, 36, 540)
+    kick_zh = vf(SANS, 22, 650, SANS_BD)
+    kick_en = ImageFont.truetype(GEORGIA, 15)
+    en = ImageFont.truetype(GEORGIA, 18)
+    en_i = ImageFont.truetype(GEORGIA_R, 16)
+    meta = vf(SANS, 24, 560, SANS_BD)
+    urlf = vf(SANS, 24, 650, SANS_BD)
 
-    by = badge(draw, '东方超市会员专属', 'MEMBERS EXCLUSIVE', H - 728, kick_f, en_sm, W, INK, CREAM, tracking=5)
-    spaced(draw, '东方农场', by + 14, name, CREAM, 14, W, shadow=(0, 3, (0, 0, 0, 120)))
-    spaced(draw, 'EASTERN FARM', by + 108, en, GOLD_SOFT, 3, W)
-    spaced(draw, '玩农场游戏', by + 144, title, CREAM, 6, W)
-    spaced(draw, '赚超市积分', by + 200, title, CREAM, 6, W)
-    hairline(draw, W // 2, by + 262, 40, GOLD, 2)
-    spaced(draw, 'PLAY THE FARM   ·   EARN STORE POINTS', by + 278, en, GOLD_SOFT, 2, W)
+    y = art_h + 8
+    # one bilingual kicker, zh · en on one pill
+    kicker = '东方超市会员专属   ·   Members Exclusive'
+    kw, kh = tw(draw, kicker, kick_zh)
+    # measure with mixed fonts roughly via zh font width
+    pad_x, pad_y = 22, 10
+    kw, _ = tw(draw, '东方超市会员专属   ·   Members Exclusive', kick_zh)
+    # tighter: draw as two parts
+    zh_w, zh_h = tw(draw, '东方超市会员专属', kick_zh)
+    mid_w, _ = tw(draw, '  ·  ', kick_zh)
+    en_w, en_h = tw(draw, 'Members Exclusive', kick_en)
+    bw = zh_w + mid_w + en_w + pad_x * 2
+    bh = max(zh_h, en_h) + pad_y * 2
+    bx = (W - bw) / 2
+    draw.rounded_rectangle([bx, y, bx + bw, y + bh], radius=bh / 2, fill=FOREST)
+    cx = bx + pad_x
+    cy = y + pad_y - 2
+    draw.text((cx, cy), '东方超市会员专属', font=kick_zh, fill=CREAM)
+    draw.text((cx + zh_w, cy), '  ·  ', font=kick_zh, fill=GOLD)
+    draw.text((cx + zh_w + mid_w, cy + 3), 'Members Exclusive', font=kick_en, fill=CREAM)
 
-    qr = make_qr(148)
-    qx, qy = 88, H - 236
-    draw.rounded_rectangle([qx - 10, qy - 10, qx + 148 + 10, qy + 148 + 10],
-                           radius=16, fill=CREAM)
+    y = y + bh + 22
+    spaced_center(draw, '东方农场', y, name, INK, 14, W)
+    center(draw, 'Eastern Farm', y + 92, en, GOLD, W)
+    draw.line([(W / 2 - 36, y + 128), (W / 2 + 36, y + 128)], fill=GOLD, width=2)
+    spaced_center(draw, '玩农场游戏，赚超市积分', y + 148, line, INK, 4, W)
+    center(draw, 'Play the farm. Earn store points.', y + 200, en_i, MUTED, W)
+
+    qr = make_qr(132)
+    qy = y + 248
+    qx = 88
+    draw.rounded_rectangle([qx - 8, qy - 8, qx + 132 + 8, qy + 132 + 8],
+                           radius=12, fill=(255, 255, 255), outline=GOLD, width=2)
     canvas.paste(qr, (qx, qy), qr)
-
-    tx = 272
-    draw.text((tx, H - 228), '扫码即玩', font=meta, fill=CREAM)
-    draw.text((tx, H - 200), 'Scan to play', font=meta_en, fill=GOLD_SOFT)
-    draw.text((tx, H - 168), 'farm.easternmarket.ca', font=urlf, fill=GOLD_SOFT)
-    draw.text((tx, H - 128), '积分每天进会员卡，到店可用', font=meta, fill=(214, 206, 188))
-    draw.text((tx, H - 100), 'Points go to your member card daily', font=meta_en, fill=(190, 178, 158))
+    tx = 250
+    draw.text((tx, qy + 6), '扫码即玩  ·  Scan to play', font=meta, fill=INK)
+    draw.text((tx, qy + 44), 'farm.easternmarket.ca', font=urlf, fill=FOREST)
+    draw.text((tx, qy + 82), '积分进会员卡，到店可用', font=meta, fill=MUTED)
+    draw.text((tx, qy + 112), 'Points on your member card', font=en_i, fill=MUTED)
 
     rgb = canvas.convert('RGB')
     rgb.save(OUT_PHONE, 'PNG', optimize=True)
@@ -169,52 +160,70 @@ def phone():
 
 
 def a4():
-    # ~190 dpi A4, matches the previous print size
     W, H = 1587, 2245
-    art_h = int(H * 0.44)
-    canvas = Image.new('RGB', (W, H), (247, 241, 228))
-    art = cover(Image.open(ART).convert('RGB'), W, art_h + 80, bias_y=40)
+    art_h = int(H * 0.46)
+    canvas = Image.new('RGB', (W, H), CREAM)
+    art = cover(Image.open(ART).convert('RGB'), W, art_h + 80, bias_y=36)
     canvas.paste(art, (0, 0))
-
     fade = Image.new('RGBA', (W, H), (0, 0, 0, 0))
     d = ImageDraw.Draw(fade)
-    for i in range(200):
-        a = int(255 * (i / 199) ** 1.1)
-        yy = art_h - 70 + i
-        d.line([(0, yy), (W, yy)], fill=(247, 241, 228, a))
+    for i in range(180):
+        a = int(255 * (i / 179) ** 1.1)
+        d.line([(0, art_h - 70 + i), (W, art_h - 70 + i)], fill=CREAM + (a,))
     canvas = Image.alpha_composite(canvas.convert('RGBA'), fade)
-    paste_logo(canvas, W, 48, 280)
+    paste_logo(canvas, W, 44, 260)
 
     draw = ImageDraw.Draw(canvas)
-    name = vf(SERIF, 112, 660)
-    title = vf(SERIF, 56, 560)
-    kick_f = vf(SANS, 26, 650, SANS_BD)
-    en = ImageFont.truetype(GEORGIA, 20)
-    en_sm = ImageFont.truetype(GEORGIA_R, 16)
-    body = vf(SANS, 26, 450, SANS_BD)
+    name_zh = vf(SERIF, 72, 660)
+    name_en = ImageFont.truetype(GEORGIA, 36)
+    body_zh = vf(SERIF, 36, 540)
+    body_en = ImageFont.truetype(GEORGIA_R, 28)
+    kick_zh = vf(SANS, 26, 650, SANS_BD)
+    kick_en = ImageFont.truetype(GEORGIA, 16)
+    small = vf(SANS, 26, 500, SANS_BD)
     urlf = vf(SANS, 30, 650, SANS_BD)
 
-    y = art_h + 72
-    by = badge(draw, '东方超市会员专属', 'MEMBERS EXCLUSIVE', y, kick_f, en_sm, W, CREAM, (42, 74, 40), tracking=6, pad_x=30, pad_y=9)
-    spaced(draw, '东方农场', by + 16, name, INK, 16, W)
-    spaced(draw, 'EASTERN FARM', by + 138, en, (154, 118, 48), 4, W)
-    spaced(draw, '玩农场游戏', by + 178, title, INK, 8, W)
-    spaced(draw, '赚超市积分', by + 246, title, INK, 8, W)
-    hairline(draw, W // 2, by + 318, 48, GOLD, 3)
-    spaced(draw, 'PLAY THE FARM   ·   EARN STORE POINTS', by + 338, en, (154, 118, 48), 2, W)
-    spaced(draw, '手机打开就能种，不用下载', by + 388, body, (72, 64, 52), 1, W)
-    spaced(draw, 'Open on your phone — no app to install', by + 422, en_sm, (120, 104, 80), 1, W)
-    spaced(draw, '积分每天进入会员卡，到店买菜能用', by + 456, body, (72, 64, 52), 1, W)
-    spaced(draw, 'Points go to your member card — use in store', by + 490, en_sm, (120, 104, 80), 1, W)
+    y = art_h + 56
+    zh_w, zh_h = tw(draw, '东方超市会员专属', kick_zh)
+    mid_w, _ = tw(draw, '   ·   ', kick_zh)
+    en_w, en_h = tw(draw, 'Members Exclusive', kick_en)
+    pad_x, pad_y = 28, 11
+    bw = zh_w + mid_w + en_w + pad_x * 2
+    bh = max(zh_h, en_h) + pad_y * 2
+    bx = (W - bw) / 2
+    draw.rounded_rectangle([bx, y, bx + bw, y + bh], radius=bh / 2, fill=FOREST)
+    draw.text((bx + pad_x, y + pad_y - 2), '东方超市会员专属', font=kick_zh, fill=CREAM)
+    draw.text((bx + pad_x + zh_w, y + pad_y - 2), '   ·   ', font=kick_zh, fill=GOLD)
+    draw.text((bx + pad_x + zh_w + mid_w, y + pad_y + 2), 'Members Exclusive', font=kick_en, fill=CREAM)
 
-    qr = make_qr(156, dark='#1c261a', light='#f7f1e4')
-    qx = (W - 156) // 2
-    qy = by + 536
-    draw.rounded_rectangle([qx - 12, qy - 12, qx + 156 + 12, qy + 156 + 12],
+    # two equal columns — ZH left, EN right
+    mid = W / 2
+    left = 120
+    right = mid + 48
+    col_top = y + bh + 36
+    draw.line([(mid, col_top + 8), (mid, col_top + 340)], fill=(210, 190, 150), width=2)
+
+    draw.text((left, col_top), '东方农场', font=name_zh, fill=INK)
+    draw.text((right, col_top + 18), 'Eastern Farm', font=name_en, fill=FOREST)
+
+    draw.text((left, col_top + 110), '玩农场游戏', font=body_zh, fill=INK)
+    draw.text((left, col_top + 164), '赚超市积分', font=body_zh, fill=INK)
+    draw.text((right, col_top + 116), 'Play the farm', font=body_en, fill=MUTED)
+    draw.text((right, col_top + 170), 'Earn store points', font=body_en, fill=MUTED)
+
+    draw.text((left, col_top + 250), '手机打开就能种', font=small, fill=MUTED)
+    draw.text((left, col_top + 290), '积分进会员卡，到店能用', font=small, fill=MUTED)
+    draw.text((right, col_top + 250), 'Open on your phone — no app', font=en_i if False else ImageFont.truetype(GEORGIA_R, 22), fill=MUTED)
+    draw.text((right, col_top + 290), 'Points on your member card', font=ImageFont.truetype(GEORGIA_R, 22), fill=MUTED)
+
+    qr = make_qr(168)
+    qx = int((W - 168) / 2)
+    qy = col_top + 370
+    draw.rounded_rectangle([qx - 12, qy - 12, qx + 168 + 12, qy + 168 + 12],
                            radius=14, fill=(255, 255, 255), outline=GOLD, width=3)
     canvas.paste(qr, (qx, qy), qr)
-    spaced(draw, 'farm.easternmarket.ca', qy + 180, urlf, INK, 1, W)
-    spaced(draw, '扫码开始玩  ·  Scan to start', qy + 220, body, (110, 96, 72), 1, W)
+    center(draw, 'farm.easternmarket.ca', qy + 192, urlf, INK, W)
+    center(draw, '扫码开始玩  ·  Scan to start', qy + 234, small, MUTED, W)
 
     rgb = canvas.convert('RGB')
     rgb.save(OUT_A4, 'PNG', optimize=True)
