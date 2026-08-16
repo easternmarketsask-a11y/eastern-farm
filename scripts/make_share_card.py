@@ -54,44 +54,52 @@ try:
 except Exception as e:
     print(f"logo load failed: {e}", file=sys.stderr)
 
-# ---- Game title "快乐农场" + "Happy Farm" ----
-def load_font(size, bold=False):
-    # Try Windows Chinese fonts in order of preference
+def load_font(size, bold=False, serif=False):
+    if serif:
+        for f in ['C:/Windows/Fonts/NotoSerifSC-VF.ttf', 'C:/Windows/Fonts/msyhbd.ttc']:
+            try:
+                font = ImageFont.truetype(f, size)
+                if hasattr(font, 'set_variation_by_axes'):
+                    try:
+                        font.set_variation_by_axes([700 if bold else 560])
+                    except Exception:
+                        pass
+                return font
+            except Exception:
+                continue
     candidates = [
+        'C:/Windows/Fonts/georgiab.ttf' if (not serif and bold) else None,
+        'C:/Windows/Fonts/georgia.ttf' if not serif else None,
         'C:/Windows/Fonts/msyhbd.ttc' if bold else 'C:/Windows/Fonts/msyh.ttc',
         'C:/Windows/Fonts/simhei.ttf',
-        'C:/Windows/Fonts/simsun.ttc',
-        'arial.ttf',
     ]
     for f in candidates:
+        if not f:
+            continue
         try:
             return ImageFont.truetype(f, size)
         except Exception:
             continue
     return ImageFont.load_default()
 
-title_font = load_font(60, bold=True)
-en_font = load_font(26, bold=False)
-tag_font = load_font(22, bold=True)
-url_font = load_font(18, bold=False)
+title_font = load_font(56, bold=True, serif=True)
+en_font = load_font(28, bold=True)
+tag_font = load_font(20, bold=True, serif=True)
+url_font = load_font(16, bold=False)
 
-# Centered title with subtle shadow
-title_zh = '快乐农场'
+title_zh = '东方农场'
 bbox = draw.textbbox((0, 0), title_zh, font=title_font)
 tw = bbox[2] - bbox[0]
 th = bbox[3] - bbox[1]
 title_x = (W - tw) // 2
-title_y = 130
-# Shadow
+title_y = 124
 draw.text((title_x + 2, title_y + 3), title_zh, font=title_font, fill=(0, 0, 0, 80))
-# Main
 draw.text((title_x, title_y), title_zh, font=title_font, fill='#2a5c34')
 
-# English subtitle
-en_text = 'HAPPY FARM'
+en_text = 'Eastern Farm'
 bbox2 = draw.textbbox((0, 0), en_text, font=en_font)
 ew = bbox2[2] - bbox2[0]
-draw.text(((W - ew) // 2, title_y + th + 12), en_text, font=en_font, fill='#3a8c50')
+draw.text(((W - ew) // 2, title_y + th + 18), en_text, font=en_font, fill='#3a8c50')
 
 # ---- Crop sprout illustrations ----
 # Just a simple sprout shape in green, repeated
@@ -119,7 +127,7 @@ draw_sprout(370, 470, scale=1.4)
 draw_sprout(450, 450, scale=0.9)
 
 # ---- Bottom tagline ----
-tagline = '种菜 · 收获 · 来店换奖'
+tagline = '玩农场游戏 · 赚超市积分'
 bbox3 = draw.textbbox((0, 0), tagline, font=tag_font)
 tgw = bbox3[2] - bbox3[0]
 # Background pill for readability

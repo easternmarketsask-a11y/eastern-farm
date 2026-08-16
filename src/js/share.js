@@ -124,7 +124,7 @@
 
       // ---- Wooden sign over the illustration sky: GAME NAME hero ----
       const signCX = W / 2;
-      const sgW = 320, sgH = 96, sgX = signCX - sgW / 2, sgY = 96;
+      const sgW = 328, sgH = 118, sgX = signCX - sgW / 2, sgY = 96;
       // hanging ropes
       ctx.strokeStyle = '#6b4a2a'; ctx.lineWidth = 5; ctx.lineCap = 'round';
       ctx.beginPath(); ctx.moveTo(sgX + 44, sgY - 14); ctx.lineTo(sgX + 60, sgY + 10);
@@ -147,19 +147,11 @@
       ctx.save();
       ctx.shadowColor = 'rgba(60,38,18,0.6)'; ctx.shadowOffsetY = 2;
       ctx.fillStyle = '#fff3dd'; ctx.font = '700 40px ' + FD;
-      ctx.fillText('东方农场', signCX, sgY + 52);
+      ctx.fillText('东方农场', signCX, sgY + 50);
       ctx.restore();
-      // HAPPY FARM — letter-spaced
-      (function () {
-        const txt = 'EASTERN FARM', ls = 2.2;
-        ctx.font = '700 13px ' + EN; ctx.fillStyle = '#ffd9a0';
-        let total = -ls;
-        for (const ch of txt) total += ctx.measureText(ch).width + ls;
-        let x = signCX - total / 2;
-        ctx.textAlign = 'left';
-        for (const ch of txt) { ctx.fillText(ch, x, sgY + 74); x += ctx.measureText(ch).width + ls; }
-        ctx.textAlign = 'center';
-      })();
+      ctx.font = '700 18px ' + EN;
+      ctx.fillStyle = '#ffe7b8';
+      ctx.fillText('Eastern Farm', signCX, sgY + 86);
 
       // ================= Cream content panel =================
       const md = (Farm.fbAuth && Farm.fbAuth.memberDoc) || {};
