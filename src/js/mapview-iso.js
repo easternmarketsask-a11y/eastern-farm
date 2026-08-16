@@ -16,7 +16,7 @@
   // shifts any save that got forwarded back to here.)
   const PLOT_COLS = 3;
   const PLOT_ORIGIN_BACK = { ox: 1, oy: 2 };   // 旧开局：靠山（y 小）
-  const PLOT_ORIGIN_FRONT = { ox: 1, oy: 10 }; // 新开局：贴世界前缘（y 大）
+  const PLOT_ORIGIN_FRONT = { ox: 3, oy: 10 }; // 田居中偏右，左侧让给溪+水车+鸡舍
   const TW = 46, TH = 23;          // diamond width/height at zoom 1 (2:1 iso) — halved 2026-06-18 (Chris: shrink whole farm 50% so it's a small cluster in the meadow centre; bg is canvas-based so the farm gets relatively smaller)
   // ZMIN === BG_ZOOM_REF (0.70): at the most-zoomed-out point the painted backdrop's
   // FULL HEIGHT exactly fills the viewport (Chris 2026-06-18: "高度一旦达到背景图全高则不可
@@ -52,7 +52,8 @@
   // 融合后是一块圆润的不规则塘。
   const DEFAULT_POND = { '5,7': 'water', '6,7': 'water', '5,8': 'water', '6,8': 'water', '7,8': 'water' };
   // 新开局水塘：跟菜地/摊/谷仓一起前移 +5y，仍隔一排草
-  const DEFAULT_POND_FRONT = { '5,13': 'water', '6,13': 'water', '5,14': 'water', '6,14': 'water', '7,14': 'water' };
+  // 新号左侧小溪（老号已写入的 mapTerrain 不改）。贴着水车南沿，长条不是花瓣塘。
+  const DEFAULT_POND_FRONT = { '0,13': 'water', '1,13': 'water', '0,14': 'water', '1,14': 'water', '0,15': 'water' };
   // 历代默认水塘形状 —— _migratePond 只认这些**精确形状**搬家（用户自己画的不动）：
   // v0 在菜地生长路径上（第13块地曾直接落进水里）；v1 贴着谷仓。
   const LEGACY_POND_SHAPES = [
@@ -253,18 +254,7 @@
       const sc = document.querySelector('.farm-scene'); if (sc) sc.style.display = 'none';
 
       this._ensureLandOrigin();
-      if (!Array.isArray(Farm.state.data.map)) {
-        // 菜摊默认在左前方、临着乡路; 谷仓在右。front 开局整体 +5y。
-        Farm.state.data.map = this._isFrontLand()
-          ? [{ type: 'house', gx: 1, gy: 14 }, { type: 'barn', gx: 5, gy: 10 }]
-          : [{ type: 'house', gx: 1, gy: 7 }, { type: 'barn', gx: 5, gy: 4 }];
-        Farm.state.save();
-      }
-      // Default decorative pond for brand-new players (mapTerrain untouched = null).
-      if (Farm.state.data.mapTerrain == null) {
-        Farm.state.data.mapTerrain = Object.assign({}, this._isFrontLand() ? DEFAULT_POND_FRONT : DEFAULT_POND);
-        Farm.state.save();
-      }
+      this._stampDefaultWorld();
 
       const cv = document.createElement('canvas');
       cv.id = 'isoCanvas';
@@ -440,6 +430,36 @@
         && !(d.plots || []).some((p) => p && Number.isInteger(p.gx));
       d.landOrigin = brandNew ? 'front' : 'back';
       if (Farm.state.save) Farm.state.save();
+    },
+    // 只在 map / mapTerrain 还是空的时候盖默认世界。老号已经有数组/对象 → 一格不碰。
+    _stampDefaultWorld() {
+      const d = Farm.state.data;
+      if (!d) return;
+      if (!Array.isArray(d.map)) {
+        d.map = this._isFrontLand() ? this._defaultMapFront()
+          : [{ type: 'house', gx: 1, gy: 7 }, { type: 'barn', gx: 5, gy: 4 }];
+        if (Farm.state.save) Farm.state.save();
+      }
+      if (d.mapTerrain == null) {
+        d.mapTerrain = Object.assign({}, this._isFrontLand() ? DEFAULT_POND_FRONT : DEFAULT_POND);
+        if (Farm.state.save) Farm.state.save();
+      }
+    },
+    _defaultMapFront() {
+      const now = Date.now();
+      // 油画摆场（L0 地界 0,9–8,15；田在 3–5,10–13）：
+      // 鸡舍左后、水车贴溪、摊贴路、仓/温室在田右、井和灯笼在田沿。
+      return [
+        { type: 'house', gx: 3, gy: 14 },
+        { type: 'barn', gx: 6, gy: 10 },
+        { type: 'coop', gx: 0, gy: 9, eggAt: now },
+        { type: 'wheel', gx: 0, gy: 11 },
+        { type: 'greenhouse', gx: 6, gy: 13 },
+        { type: 'well', gx: 5, gy: 14 },
+        { type: 'lantern', gx: 2, gy: 13 },
+        { type: 'bush', gx: 6, gy: 9 },
+        { type: 'bush', gx: 7, gy: 12 },
+      ];
     },
 
     _farmRect() {
@@ -1941,9 +1961,9 @@
       const cy = c.y + th * 0.06;
       this._diamond(c.x, cy, w, h);
       const g = ctx.createLinearGradient(c.x - w * 0.45, cy - h * 0.35, c.x + w * 0.3, cy + h * 0.4);
-      g.addColorStop(0, '#c8965c');
-      g.addColorStop(0.42, '#a56a38');
-      g.addColorStop(1, '#6a3f20');
+      g.addColorStop(0, '#b07a42');
+      g.addColorStop(0.42, '#8a5428');
+      g.addColorStop(1, '#5a3016');
       ctx.fillStyle = g;
       ctx.fill();
       ctx.save();
@@ -2920,11 +2940,9 @@
         const reqLv = REQUIRED_LV[idx] || 2;
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         if (reqLv === this._nextLockLv) {
-          this._drawLock(c.x, c.y - th * 0.1, th * 0.55, 1);
-          ctx.fillStyle = '#fff';
-          ctx.font = '700 ' + (th * 0.4) + 'px "Plus Jakarta Sans","Noto Sans SC",sans-serif'; ctx.fillText('Lv' + reqLv, c.x, c.y + th * 0.4);
+          this._drawLock(c.x, c.y + th * 0.02, th * 0.36, 0.85);
         } else {
-          this._drawLock(c.x, c.y + th * 0.05, th * 0.3, 0.45);
+          this._drawLock(c.x, c.y + th * 0.06, th * 0.22, 0.28);
         }
         return;
       }

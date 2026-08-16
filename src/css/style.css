@@ -230,9 +230,11 @@ body {
   padding: 6px 10px;
   padding-top: calc(6px + env(safe-area-inset-top));
   background:
-    radial-gradient(circle at 12% 150%, rgba(106, 176, 76, 0.10), transparent 55%),
-    linear-gradient(180deg, #fffaeb 0%, #faf0d8 100%);
-  border-bottom: 2px solid var(--border-soft);
+    radial-gradient(circle at 12% 150%, rgba(106, 176, 76, 0.08), transparent 55%),
+    linear-gradient(180deg, rgba(255,250,235,0.62) 0%, rgba(250,240,216,0.42) 100%);
+  border-bottom: 1px solid rgba(200,180,140,0.35);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 /* Right-hand group: currencies + member + today, kept together so the brand
    cluster sits flush left and this group flush right. */
@@ -4360,8 +4362,9 @@ body.modal-open .pwa-install-banner { display: none; }
 .harvest-status-bar {
   position: fixed; left: 50%; transform: translateX(-50%);
   top: calc(50px + env(safe-area-inset-top));
-  z-index: 8; background: rgba(255,255,255,0.86); backdrop-filter: blur(3px);
-  border: 1px solid var(--border-soft, #e9e1cd); border-radius: 999px;
+  z-index: 8; background: rgba(255,252,240,0.62); backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(200,180,140,0.4); border-radius: 999px;
   padding: 3px 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.12);
   max-width: 80%; pointer-events: none;
 }
