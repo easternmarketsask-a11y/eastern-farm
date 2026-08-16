@@ -459,7 +459,7 @@
       { a: 'kitchen', icon: 'kitchen', zh: '小东厨房', en: 'Kitchen' },
       { a: 'community', icon: 'community', zh: '社区', en: 'Community' },
       { a: 'store', icon: 'mall', zh: '农场商城', en: 'Mall' },
-      { a: 'expand', icon: 'expand', zh: '扩建农场', en: 'Expand' },
+      { a: 'expand', icon: 'expand', zh: '开垦农田', en: 'Clear land' },
       { a: 'collection', icon: 'collection', zh: '图鉴', en: 'Collection' },
       { a: 'guide', icon: 'guide', zh: '怎么玩', en: 'How to' },
       { a: 'settings', icon: 'settings', zh: '设置', en: 'Settings' },
@@ -482,7 +482,11 @@
           case 'kitchen': if (Farm.kitchen) Farm.kitchen.open(); break;
           case 'community': if (Farm.neighbors) Farm.neighbors.open(); break;
           case 'store': if (Farm.epShop) Farm.epShop.open(); break;
-          case 'expand': if (Farm.isoView && Farm.isoView._tryUnlockLand) Farm.isoView._tryUnlockLand(); else if (Farm.ui) Farm.ui.toast(lang === 'en' ? 'Expand is only available in farm view' : '扩建仅在农场视图可用'); break;
+          case 'expand':
+            if (Farm.ui) Farm.ui.hideModal();
+            if (Farm.isoView && Farm.isoView._enterClearMode) Farm.isoView._enterClearMode();
+            else if (Farm.ui) Farm.ui.toast(lang === 'en' ? 'Clear land in farm view' : '请在农场里开垦');
+            break;
           case 'collection': openCollection(); break;
           case 'guide': if (Farm.guide) Farm.guide.open(); break;
           case 'settings': openSettings(); break;

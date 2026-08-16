@@ -227,6 +227,7 @@
       if (document.getElementById('splash')) return true;
       if (window.Farm && Farm.spotlight && Farm.spotlight._active) return true;
       if (document.getElementById('spotlightOverlay')) return true;
+      if (window.Farm && Farm.isoView && Farm.isoView._clearMode) return true;
       return false;
     },
 

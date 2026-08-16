@@ -230,7 +230,7 @@
     _pointers: {}, _drag: null, _pinch: null, _pressCell: null, _pressBuilding: -1, _glideRaf: null, _justHarvested: null,
     _tick: null, _raf: null, _lastFrame: 0,
     _cellToPlotN: -1,
-    _build: false, _editMode: 'build', _brush: 'path', _painting: false,
+    _build: false, _editMode: 'build', _brush: 'path', _painting: false, _clearMode: false,
     _sel: -1, _moving: null,
     _pets: {},          // seed -> {fx,fy,tx,ty,pause,face,hx,hy} live walk state (not persisted)
     _lastWalkT: 0,
@@ -760,6 +760,14 @@
       if (!p) return;
       // 🔒 拜访模式: 点什么都只给轻反馈, 绝不触发种收/建造/商店(那些会动伪状态)
       if (this._visit) { this._visitTapReact(p); return; }
+      if (this._clearMode) {
+        const cc = this._screenToCell(p.x, p.y);
+        if (this._canClear(cc.gx, cc.gy)) { this._tryClear(cc.gx, cc.gy); return; }
+        const hitPlot = this._plotAtPoint(p.x, p.y);
+        if (hitPlot) { this._exitClearMode(); this._tapCell(hitPlot.gx, hitPlot.gy); return; }
+        if (Farm.ui && Farm.ui.toast) Farm.ui.toast(this._lang() === 'en' ? 'Tap a glowing tile' : '点发亮的那一格开垦');
+        return;
+      }
       // tap the land-unlock badge → expand the farm
       if (this._landBadge && Math.hypot(p.x - this._landBadge.x, p.y - this._landBadge.y) <= this._landBadge.r) { this._tryUnlockLand(); return; }
       // 点远处邻居的小屋 → 去社区页拜访(小屋名牌是真实玩家, 2026-08-14)
@@ -912,7 +920,11 @@
     _inBounds(gx, gy) { return gx >= 0 && gy >= 0 && gx < COLS && gy < ROWS; },
     _landLevel() { const t = this._landTable(); return Math.max(0, Math.min(t.length - 1, (Farm.state.data && Farm.state.data.landLevel) | 0)); },
     _ownedBounds() { return this._landTable()[this._landLevel()]; },
-    _ownedCell(gx, gy) { const o = this._ownedBounds(); return gx >= o.x1 && gx <= o.x2 && gy >= o.y1 && gy <= o.y2; },
+    _ownedCell(gx, gy) {
+      const o = this._ownedBounds();
+      if (gx >= o.x1 && gx <= o.x2 && gy >= o.y1 && gy <= o.y2) return true;
+      return !!(Farm.state.data && Farm.state.data.clearedCells && Farm.state.data.clearedCells[gx + ',' + gy]);
+    },
     _nextLand() { const t = this._landTable(), lv = this._landLevel(); return lv + 1 < t.length ? t[lv + 1] : null; },
     _footprintFree(gx, gy, type, exceptIdx) {
       const b = BUILDINGS[type];
@@ -1151,6 +1163,7 @@
     enterVisitFarm(info) {
       if (this._visit || !this._on || !info || !info.layout) return false;
       try {
+        this._exitClearMode();
         Farm.state.save();                       // 真身进度先落盘
         if (Farm.fbGameSync && Farm.fbGameSync.recordVisit && info.uid) {
           try { Farm.fbGameSync.recordVisit(info.uid); } catch (e) {}   // 足迹用真身状态记
@@ -1164,6 +1177,7 @@
           mapTerrain: {}, decorations: (L.deco || []).map((dd) => ({ itemId: dd.d, gx: dd.x, gy: dd.y, placedAt: 1 })),
           landLevel: L.landLevel || 0,
           landOrigin: L.o === 'front' ? 'front' : 'back',
+          clearedCells: {},
           activeEffects: {}, seeds: {}, warehouse: [],
           dailyClaims: { date: '', visitFootprints: [], likesSentToday: [] },
           sessionStats: { date: '' },
@@ -1172,6 +1186,7 @@
           farmFwdUndoneV1: true, pondMoveV3: true, worldStamped: true,
         };
         (L.terr || []).forEach((e) => { if (e && e.k) vd.mapTerrain[e.k] = e.t; });
+        (L.cl || []).forEach((k) => { if (k) vd.clearedCells[k] = 1; });
         this._pets = {};
         this._visit = { info, savedData: real, vd };
         Farm.state._visitLock = true;
@@ -1371,6 +1386,145 @@
       }
       if (Farm.ui && Farm.ui.toast) Farm.ui.toast(en ? 'No room on your land — expand first' : '地里没空位了，先扩地吧');
     },
+    _adjacentOwned(gx, gy) {
+      const dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+      for (let i = 0; i < dirs.length; i++) {
+        if (this._ownedCell(gx + dirs[i][0], gy + dirs[i][1])) return true;
+      }
+      return false;
+    },
+    _canClear(gx, gy, road) {
+      if (!this._inBounds(gx, gy)) return false;
+      const k = gx + ',' + gy;
+      const t = this._terrain()[k];
+      if (t === 'water' || t === 'path') return false;
+      if (this._cellToPlot[k] != null) return false;
+      if (this._buildingAt(gx, gy) >= 0) return false;
+      if (this._decoAt(gx, gy) >= 0) return false;
+      // 只挡路心，不挡路旁一格（那条缓冲是给树留的）。否则乡路正好贴着
+      // 地界南沿，开垦目标全被挤到镜头外的后山。
+      if ((road || this._roadCenterSet())[k]) return false;
+      if (this._ownedCell(gx, gy)) return true;
+      return this._adjacentOwned(gx, gy);
+    },
+    _eachClearTarget(fn) {
+      const ob = this._ownedBounds();
+      const road = this._roadCenterSet();
+      const seen = {};
+      const consider = (gx, gy) => {
+        const k = gx + ',' + gy;
+        if (seen[k]) return;
+        seen[k] = 1;
+        if (this._canClear(gx, gy, road)) fn(gx, gy);
+      };
+      for (let gy = ob.y1 - 1; gy <= ob.y2 + 1; gy++) {
+        for (let gx = ob.x1 - 1; gx <= ob.x2 + 1; gx++) consider(gx, gy);
+      }
+      const extra = Farm.state.data.clearedCells || {};
+      const dirs = [[1, 0], [-1, 0], [0, 1], [0, -1], [0, 0]];
+      Object.keys(extra).forEach((k) => {
+        const a = k.split(','), gx = +a[0], gy = +a[1];
+        for (let i = 0; i < dirs.length; i++) consider(gx + dirs[i][0], gy + dirs[i][1]);
+      });
+    },
+    _enterClearMode() {
+      const en = this._lang() === 'en';
+      if (this._visit || (Farm.state && Farm.state._visitLock)) return;
+      if (Farm.state.extraPlotCapReached && Farm.state.extraPlotCapReached()) {
+        if (Farm.ui && Farm.ui.toast) Farm.ui.toast(en ? 'Plot limit reached for now' : '开垦已达上限，升级后再来');
+        return;
+      }
+      if (Farm.ui && Farm.ui.hideModal) Farm.ui.hideModal();
+      this._clearMode = true;
+      this._showClearHint();
+      this._frameClearTargets();
+      this.render();
+    },
+    _frameClearTargets() {
+      const W = this._cssW(), H = this._cssH();
+      let visible = 0, nearest = null, nd = Infinity;
+      this._eachClearTarget((gx, gy) => {
+        if (this._ownedCell(gx, gy)) return;
+        const c = this._cell(gx, gy);
+        if (c.x > 48 && c.x < W - 48 && c.y > 90 && c.y < H - 160) visible++;
+        const d = Math.hypot(c.x - W * 0.55, c.y - H * 0.62);
+        if (d < nd) { nd = d; nearest = c; }
+      });
+      if (visible > 0 || !nearest) return;
+      this._camX += nearest.x - W * 0.55;
+      this._camY += nearest.y - H * 0.62;
+      this._clampCam();
+      this._bgKey = null;
+    },
+    _exitClearMode() {
+      if (!this._clearMode) return;
+      this._clearMode = false;
+      if (this._clearHint) this._clearHint.style.display = 'none';
+      this.render();
+    },
+    _showClearHint() {
+      const en = this._lang() === 'en';
+      let el = this._clearHint;
+      if (!el) {
+        el = document.createElement('div');
+        el.id = 'isoClearHint';
+        el.style.cssText = 'position:fixed;left:50%;transform:translateX(-50%);bottom:88px;z-index:22;display:flex;align-items:center;gap:10px;background:rgba(42,92,52,.94);color:#fff;padding:8px 12px 8px 14px;border-radius:18px;font:500 13px/1.35 "Noto Sans SC",system-ui,sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.18);';
+        document.body.appendChild(el);
+        this._clearHint = el;
+      }
+      const cost = this._plotCost();
+      el.innerHTML = '<span>🪓 ' + (en ? 'Tap a glowing tile to clear a field' : '点发亮的林子或草地，开成农田') +
+        ' · <span class="coin-icon"></span>' + cost + '</span>' +
+        '<button type="button" style="border:none;background:rgba(255,255,255,.2);color:#fff;border-radius:12px;padding:4px 9px;cursor:pointer;font:600 13px sans-serif">✕</button>';
+      el.style.display = 'flex';
+      el.lastChild.onclick = (ev) => { ev.stopPropagation(); this._exitClearMode(); };
+    },
+    _tryClear(gx, gy) {
+      const en = this._lang() === 'en';
+      if (this._visit || (Farm.state && Farm.state._visitLock)) return;
+      if (!this._canClear(gx, gy)) {
+        if (Farm.ui && Farm.ui.toast) Farm.ui.toast(en ? 'Clear a tile next to your farm' : '要贴着自家地开垦');
+        return;
+      }
+      if (Farm.state.extraPlotCapReached && Farm.state.extraPlotCapReached()) {
+        if (Farm.ui && Farm.ui.toast) Farm.ui.toast(en ? 'Plot limit reached for now' : '开垦已达上限，升级后再来');
+        this._exitClearMode();
+        return;
+      }
+      const cost = this._plotCost();
+      if (Farm.state.data.coins < cost) {
+        if (Farm.ui && Farm.ui.toast) Farm.ui.toast(en ? ('Need ' + (cost - Farm.state.data.coins) + ' more coins') : ('还差 ' + (cost - Farm.state.data.coins) + ' 农场币'));
+        return;
+      }
+      const wasOwned = this._ownedCell(gx, gy);
+      if (!Farm.state.spendCoins(cost)) return;
+      if (!wasOwned) {
+        const cc = Farm.state.data.clearedCells = Farm.state.data.clearedCells || {};
+        cc[gx + ',' + gy] = 1;
+      }
+      if (!Farm.state.addExtraPlot({ gx: gx, gy: gy })) {
+        Farm.state.addCoins(cost);
+        if (!wasOwned && Farm.state.data.clearedCells) delete Farm.state.data.clearedCells[gx + ',' + gy];
+        return;
+      }
+      this._buildLayout();
+      this._pcs = null;
+      this._bgKey = null;
+      Farm.state.save();
+      this._showClearHint();
+      this.render();
+      if (Farm.ui && Farm.ui.refreshHUD) Farm.ui.refreshHUD();
+      let c = this._cell(gx, gy);
+      const W = this._cssW(), H = this._cssH(), m = this._tw();
+      if (c.x < m || c.x > W - m || c.y < m * 1.5 || c.y > H - m) {
+        this._camX += c.x - W / 2; this._camY += c.y - H * 0.55; this._clampCam(); this.render();
+        c = this._cell(gx, gy);
+      }
+      const r = this._cv.getBoundingClientRect();
+      if (Farm.ui && Farm.ui.floatText) Farm.ui.floatText('🪓 -' + cost, r.left + c.x - 16, r.top + c.y - this._th(), '#3a8c50');
+      if (Farm.audio) Farm.audio.play('coin');
+      if (Farm.ui && Farm.ui.toast) Farm.ui.toast(en ? 'Land cleared — tap to plant!' : '开垦好了，点它种菜！');
+    },
     _coopReady(o) { return Date.now() - (o && o.eggAt || 0) >= COOP_INTERVAL; },
     _collectCoop(o, p) {
       const en = this._lang() === 'en';
@@ -1458,9 +1612,9 @@
       // 菜地 (new farmable plot) — first item so it's front-and-centre
       const pit = document.createElement('button'); pit.dataset.type = '__plot';
       pit.style.cssText = 'border:1px solid #cdebc9;border-radius:14px;background:#f3fbef;padding:8px 10px 6px;min-width:64px;flex:0 0 auto;cursor:pointer;font:500 12px/1.3 "Noto Sans SC",system-ui,sans-serif;color:#444;';
-      pit.innerHTML = '<div style="font-size:11px;color:#3a8c50;margin-top:4px;font-weight:600">🌱 ' + (en ? 'Plot' : '菜地') + '</div><div class="palCost" style="font-size:12px;font-weight:600;color:#3a8c50;margin-top:1px"><span class="coin-icon"></span> ' + this._plotCost() + '</div>';
+      pit.innerHTML = '<div style="font-size:11px;color:#3a8c50;margin-top:4px;font-weight:600">🪓 ' + (en ? 'Clear' : '开垦') + '</div><div class="palCost" style="font-size:12px;font-weight:600;color:#3a8c50;margin-top:1px"><span class="coin-icon"></span> ' + this._plotCost() + '</div>';
       const pic = document.createElement('div'); pic.style.cssText = 'width:44px;height:38px;margin:0 auto;background-size:contain;background-repeat:no-repeat;background-position:center;'; pic.style.backgroundImage = "url('" + ASSET_DIR + "hd_soil.webp')"; pit.insertBefore(pic, pit.firstChild);
-      pit.onclick = () => this._addPlot(); pb.appendChild(pit);
+      pit.onclick = () => this._enterClearMode(); pb.appendChild(pit);
       PALETTE.forEach((type) => { const b = BUILDINGS[type]; const item = document.createElement('button'); item.dataset.type = type; item.style.cssText = 'border:1px solid #e0e0e0;border-radius:14px;background:#fff;padding:8px 10px 6px;min-width:64px;flex:0 0 auto;cursor:pointer;font:500 12px/1.3 "Noto Sans SC",system-ui,sans-serif;color:#444;'; item.innerHTML = '<div style="font-size:11px;color:#888;margin-top:4px">' + (en ? b.en : b.zh) + '</div><div class="palCost" style="font-size:12px;font-weight:600;color:#3a8c50;margin-top:1px"><span class="coin-icon"></span> ' + (b.cost || 0) + '</div>'; const ic = document.createElement('div'); ic.style.cssText = 'width:44px;height:38px;margin:0 auto;background-size:contain;background-repeat:no-repeat;background-position:center;'; ic.style.backgroundImage = "url('" + ASSET_DIR + ASSET_SRC[b.img] + "')"; item.insertBefore(ic, item.firstChild); item.onclick = () => this._addBuilding(type); pb.appendChild(item); });
       this._palBuild = pb; tray.appendChild(pb);
       const pt = document.createElement('div'); pt.style.cssText = rowCss;
@@ -1706,11 +1860,12 @@
         for (let gx = gx0; gx <= gx1; gx++) {
           if (gx + gy < -2) continue;
           const inWorld = gx >= 0 && gy >= 0 && gx < COLS && gy < ROWS;
-          const owned = inWorld && gx >= ob.x1 && gx <= ob.x2 && gy >= ob.y1 && gy <= ob.y2;
-          if (owned) continue;
+          const k = gx + ',' + gy;
+          // 矩形地界 + 开垦格 + 已有菜地都不种树（否则新开的田还压着林子）
+          if (inWorld && this._ownedCell(gx, gy)) continue;
+          if (inWorld && this._cellToPlot && this._cellToPlot[k] != null) continue;
           // 新农场：路前留一线草。老农场：未开发地（含镜头前）全部种树，空地只留山后林里。
           if (this._isFrontLand() && gy > ob.y2) continue;
-          const k = gx + ',' + gy;
           if (terr[k] === 'water' || terr[k] === 'path' || road[k]) continue;
           let nearNb = false;
           for (let i = 0; i < spots.length; i++) {
@@ -2051,6 +2206,14 @@
             s[Math.round(p.gx + dx) + ',' + Math.round(p.gy + dy)] = 1;
           }
         }
+      }
+      return s;
+    },
+    _roadCenterSet() {
+      const s = {};
+      for (let i = 0; i <= 48; i++) {
+        const p = this._roadWorld(i / 48);
+        s[Math.round(p.gx) + ',' + Math.round(p.gy)] = 1;
       }
       return s;
     },
@@ -2495,9 +2658,11 @@
 
     _blitBackdrop(ctx, W, H) {
       const stl = (Farm.state.data.map || []).find((m) => m && m.type === 'house');
+      const cc = Farm.state.data && Farm.state.data.clearedCells;
       const key = Math.round(this._camX) + ',' + Math.round(this._camY) + ',' + this._zoom.toFixed(3) + ',' + W + ',' + H
         + ',' + (stl ? stl.gx + '_' + stl.gy : '-')
-        + ',L' + this._landLevel() + (this._isFrontLand() ? 'F' : 'B');
+        + ',L' + this._landLevel() + (this._isFrontLand() ? 'F' : 'B')
+        + ',C' + (cc ? Object.keys(cc).sort().join('_') : '');
       if (this._bgKey !== key || !this._bgCache) {
         if (!this._bgCache) this._bgCache = document.createElement('canvas');
         const cv = this._bgCache, dpr = this._dpr, pw = Math.round(W * dpr), ph = Math.round(H * dpr);
@@ -2632,6 +2797,29 @@
         const pc = this._cell(this._pressCell.gx, this._pressCell.gy);
         this._diamond(pc.x, pc.y + th * 0.12, tw, th);
         ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.fill();
+      }
+
+      // 开垦模式：贴边未占地发金光，点它砍树成田
+      if (this._clearMode) {
+        const pulse = 0.55 + 0.35 * (0.5 + 0.5 * Math.sin(Date.now() / 260));
+        this._eachClearTarget((gx, gy) => {
+          if (this._ownedCell(gx, gy)) return;   // 只亮林子/新草地，院子里空地不铺金
+          const c = this._cell(gx, gy);
+          const cy = c.y + th * 0.06;
+          ctx.save();
+          ctx.globalAlpha = pulse * 0.35;
+          this._diamond(c.x, cy, tw * 1.18, th * 1.18);
+          ctx.fillStyle = '#ffe566';
+          ctx.fill();
+          ctx.globalAlpha = pulse;
+          this._diamond(c.x, cy, tw * 0.96, th * 0.96);
+          ctx.fillStyle = 'rgba(255,196,40,0.62)';
+          ctx.fill();
+          ctx.strokeStyle = '#fff4b0';
+          ctx.lineWidth = Math.max(2, th * 0.11);
+          ctx.stroke();
+          ctx.restore();
+        });
       }
 
       this._drawLockedLand();
