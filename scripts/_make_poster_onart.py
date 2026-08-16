@@ -9,9 +9,9 @@ import segno
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ART = os.path.join(ROOT, 'promo', 'keyart-farm-square.jpg')
 LOGO = os.path.join(ROOT, 'src', 'assets', 'images', 'logo-horizontal.png')
-# 新版另存，不覆盖 poster-phone-onart / poster-phone-onart-01
-OUT_PHONE = os.path.join(ROOT, 'promo', 'poster-phone-onart-02.png')
-OUT_A4 = os.path.join(ROOT, 'promo', 'poster-A4-onart-02.png')
+# 新版另存，不覆盖 01 / 02
+OUT_PHONE = os.path.join(ROOT, 'promo', 'poster-phone-onart-03.png')
+OUT_A4 = os.path.join(ROOT, 'promo', 'poster-A4-onart-03.png')
 
 SERIF = r'C:\Windows\Fonts\NotoSerifSC-VF.ttf'
 SANS = r'C:\Windows\Fonts\NotoSansSC-VF.ttf'
@@ -124,42 +124,66 @@ def dusk(canvas, w, h, band):
     return Image.alpha_composite(canvas, wash)
 
 
+def scan_bar(canvas, w, h):
+    """整宽奶油醒目栏：金边 + 大二维码 + 深色字，手机上也看得清。"""
+    bar_h = 390
+    top = h - bar_h
+    layer = Image.new('RGBA', (w, h), (0, 0, 0, 0))
+    ld = ImageDraw.Draw(layer)
+    ld.rectangle([0, top, w, h], fill=(246, 239, 224, 252))
+    ld.rectangle([0, top, w, top + 10], fill=(201, 162, 74, 255))
+    ld.rectangle([0, top + 10, w, top + 13], fill=(42, 74, 40, 220))
+    canvas = Image.alpha_composite(canvas, layer)
+    draw = ImageDraw.Draw(canvas)
+
+    qr_px = 268
+    qr = make_qr(qr_px)
+    qx = 36
+    qy = top + (bar_h - qr_px) // 2 + 4
+    draw.rounded_rectangle(
+        [qx - 10, qy - 10, qx + qr_px + 10, qy + qr_px + 10],
+        radius=18, fill=CREAM, outline=(201, 162, 74), width=4)
+    canvas.paste(qr, (qx, qy), qr)
+
+    zh = vf(SANS, 48, 720, SANS_BD)
+    en = ImageFont.truetype(GEORGIA, 28)
+    urlf = vf(SANS, 34, 720, SANS_BD)
+    sub = vf(SANS, 28, 580, SANS_BD)
+    sub_en = ImageFont.truetype(GEORGIA, 24)
+    tx = qx + qr_px + 40
+    ty = qy + 6
+    draw.text((tx, ty), '扫码即玩', font=zh, fill=INK)
+    draw.text((tx, ty + 62), 'Scan to play', font=en, fill=FOREST)
+    draw.text((tx, ty + 108), 'farm.easternmarket.ca', font=urlf, fill=FOREST)
+    draw.text((tx, ty + 164), '积分每天进会员卡，到店可用', font=sub, fill=INK)
+    draw.text((tx, ty + 208), 'Points on your member card', font=sub_en, fill=(90, 78, 48))
+    return canvas
+
+
 def phone():
     W, H = 1080, 1920
     art = cover(Image.open(ART).convert('RGB'), W, H, bias_y=10).convert('RGBA')
-    canvas = dusk(art, W, H, 820)
+    canvas = dusk(art, W, H, 980)
     paste_logo(canvas, W, 40, 232)
     draw = ImageDraw.Draw(canvas)
 
     # 对齐 onart-01：胶囊 → 东方农场 → 留空 → Eastern Farm → 两行利益句 → 英文
+    # 标题区上移，给底部醒目扫码栏让位
     name = vf(SERIF, 88, 660)
     title = vf(SERIF, 48, 560)
     kick_zh = vf(SANS, 22, 650, SANS_BD)
     kick_en = ImageFont.truetype(GEORGIA, 20)
     en_name = ImageFont.truetype(GEORGIA, 30)
     en_line = ImageFont.truetype(GEORGIA, 22)
-    meta = vf(SANS, 24, 560, SANS_BD)
-    meta_en = ImageFont.truetype(GEORGIA, 22)
-    urlf = vf(SANS, 26, 650, SANS_BD)
 
-    by = kicker_pill(draw, H - 740, W, kick_zh, kick_en)
+    by = kicker_pill(draw, H - 920, W, kick_zh, kick_en)
     spaced(draw, '东方农场', by + 20, name, CREAM, 16, W, shadow=(0, 3, (0, 0, 0, 130)))
     center(draw, 'Eastern Farm', by + 168, en_name, GOLD, W, shadow=(0, 2, (0, 0, 0, 100)))
     spaced(draw, '玩农场游戏', by + 220, title, CREAM, 8, W)
     spaced(draw, '赚超市积分', by + 282, title, CREAM, 8, W)
     center(draw, 'PLAY THE FARM  ·  EARN STORE POINTS', by + 348, en_line, GOLD, W)
 
-    qr = make_qr(152)
-    qx, qy = 80, H - 230
-    draw.rounded_rectangle([qx - 8, qy - 8, qx + 152 + 8, qy + 152 + 8],
-                           radius=14, fill=CREAM)
-    canvas.paste(qr, (qx, qy), qr)
-    tx = 260
-    draw.text((tx, H - 220), '扫码即玩', font=meta, fill=CREAM)
-    draw.text((tx, H - 188), 'Scan to play', font=meta_en, fill=GOLD)
-    draw.text((tx, H - 148), 'farm.easternmarket.ca', font=urlf, fill=GOLD)
-    draw.text((tx, H - 108), '积分每天进会员卡，到店可用', font=meta, fill=CREAM)
-    draw.text((tx, H - 76), 'Points on your member card', font=meta_en, fill=GOLD)
+    canvas = scan_bar(canvas, W, H)
 
     rgb = canvas.convert('RGB')
     rgb.save(OUT_PHONE, 'PNG', optimize=True)
@@ -207,4 +231,4 @@ def a4():
 
 if __name__ == '__main__':
     phone()
-    a4()
+    # 本轮只出手机海报 03；A4 仍用 onart-02，不覆盖。

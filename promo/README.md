@@ -25,7 +25,8 @@ FarmVille）都是免费入门 + 内购逼氪 —— **你往游戏里掏钱**�
 | `poster-phone.png` / `.jpg` | **手机海报 1080×1920**（米色文字区版） | 朋友圈 / 小红书 |
 | `poster-phone-onart.png` / `.jpg` | 手机叠字版 v1 | 保留 |
 | `poster-phone-onart-01.jpeg` | 手机叠字（Chris 认定字位最好的一版） | 保留，不覆盖 |
-| `poster-phone-onart-02.png` | **手机叠字现行** | 按 01 字位 + 英文加大、Eastern Farm 与中文拉开 |
+| `poster-phone-onart-02.png` | 手机叠字 02 | 按 01 字位 + 英文加大、Eastern Farm 与中文拉开 |
+| `poster-phone-onart-03.png` | **手机叠字现行** | 02 字位 + 底部整宽奶油醒目扫码栏（大二维码） |
 | `poster-A4-onart.png` | A4 叠字 v1 | 保留 |
 | `poster-A4-onart-02.png` | A4 叠字现行 | 与手机 02 同一套字阶 |
 | `keyart-farm-poster.jpg` | 插画海报 3:4 | 店内 A4 海报底图（风格更「画」，别用开屏） |
