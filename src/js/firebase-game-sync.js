@@ -1007,10 +1007,10 @@
       }
       const link = this.inviteLink();
       const text = lang === 'en'
-        ? 'I\'m farming at Eastern Market Happy Farm — join me and we both get ' + this.INVITE_BONUS + ' coins!'
-        : '我在东方超市·快乐农场种菜，点链接进来我们做邻居，你我各得 ' + this.INVITE_BONUS + ' 农场币！';
+        ? 'I\'m farming at Eastern Farm — join me and we both get ' + this.INVITE_BONUS + ' coins!'
+        : '我在东方农场种菜，点链接进来我们做邻居，你我各得 ' + this.INVITE_BONUS + ' 农场币！';
       if (navigator.share) {
-        try { await navigator.share({ title: lang === 'en' ? 'Eastern Market · Happy Farm' : '东方超市·快乐农场', text: text, url: link }); } catch (_) {}
+        try { await navigator.share({ title: lang === 'en' ? 'Eastern Farm' : '东方农场', text: text, url: link }); } catch (_) {}
         return;
       }
       try {

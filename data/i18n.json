@@ -2,7 +2,7 @@
   "_comment": "All static UI strings. Key once, two languages. Add new keys as needed.",
   "_schema_version": 1,
   "strings": {
-    "app_title": { "zh": "东方超市·快乐农场", "en": "Eastern Market · Happy Farm" },
+    "app_title": { "zh": "东方农场", "en": "Eastern Farm" },
     "tagline": { "zh": "好菜自己种", "en": "Grow your own" },
 
     "nav_farm": { "zh": "农场", "en": "Farm" },
@@ -114,7 +114,7 @@
     "about_made_by": { "zh": "本游戏由东方超市制作", "en": "Made by Eastern Market" },
     "about_visit_us": { "zh": "欢迎光临 Saskatoon 东方超市", "en": "Visit us at Eastern Market, Saskatoon" },
 
-    "tutorial_title": { "zh": "欢迎来到快乐农场 🌱", "en": "Welcome to Happy Farm 🌱" },
+    "tutorial_title": { "zh": "欢迎来到东方农场 🌱", "en": "Welcome to Eastern Farm 🌱" },
     "tutorial_subtitle": { "zh": "三步上手，今天就能收菜", "en": "Three steps. You'll harvest today." },
     "tutorial_step1_title": { "zh": "1. 点土地种菜", "en": "1. Tap soil to plant" },
     "tutorial_step1_body": { "zh": "棕色地块就是你的菜地。已经给你 3 种种子，点一下就能种。", "en": "Brown squares are your plots. You start with 3 seed types — tap to plant." },

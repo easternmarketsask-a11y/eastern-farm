@@ -1,6 +1,6 @@
 {
-  "name": "东方超市·快乐农场",
-  "short_name": "快乐农场",
+  "name": "东方农场",
+  "short_name": "东方农场",
   "description": "种菜、收获、过节，玩游戏赚超市积分。",
   "lang": "zh-CN",
   "start_url": "/src/index.html",

@@ -45,7 +45,7 @@
   }
 
   async function boot() {
-    console.log('🌱 Happy Farm booting...');
+    console.log('🌱 Eastern Farm booting...');
 
     // Storage-persistence probe — MUST run before Farm.state.init() writes.
     // sessionStorage survives same-tab reloads; localStorage should too. If
@@ -291,7 +291,7 @@
     // 心跳：持续刷新"上次活跃"，让下次回来能正确算出离开多久（被偷结算用）。
     setInterval(() => { Farm.state.data.lastActiveAt = Date.now(); Farm.state.save(); }, 60000);
 
-    console.log('✅ Happy Farm ready.');
+    console.log('✅ Eastern Farm ready.');
 
     // 存储不持久 → 明确告知用户(刷新就丢进度的根因)。延迟到开屏散去后弹。
     if (_storageBroken) setTimeout(showStorageWarning, 1600);

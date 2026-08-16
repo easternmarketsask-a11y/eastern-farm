@@ -143,15 +143,15 @@
       ctx.fillStyle = '#5a3c22';
       [[sgX + 14, sgY + 14], [sgX + sgW - 14, sgY + 14], [sgX + 14, sgY + sgH - 14], [sgX + sgW - 14, sgY + sgH - 14]]
         .forEach(([cx, cy]) => { ctx.beginPath(); ctx.arc(cx, cy, 4, 0, Math.PI * 2); ctx.fill(); });
-      // 快乐农场 (carved cream)
+      // 东方农场 (carved cream)
       ctx.save();
       ctx.shadowColor = 'rgba(60,38,18,0.6)'; ctx.shadowOffsetY = 2;
       ctx.fillStyle = '#fff3dd'; ctx.font = '700 40px ' + FD;
-      ctx.fillText('快乐农场', signCX, sgY + 52);
+      ctx.fillText('东方农场', signCX, sgY + 52);
       ctx.restore();
       // HAPPY FARM — letter-spaced
       (function () {
-        const txt = 'HAPPY FARM', ls = 3.5;
+        const txt = 'EASTERN FARM', ls = 2.2;
         ctx.font = '700 13px ' + EN; ctx.fillStyle = '#ffd9a0';
         let total = -ls;
         for (const ch of txt) total += ctx.measureText(ch).width + ls;
@@ -239,10 +239,10 @@
       // ---- CTA + URL + address (bigger text) ----
       ctx.fillStyle = '#2a5c34';
       ctx.font = '700 26px ' + FD;
-      ctx.fillText('我在东方超市·快乐农场种菜啦！', W / 2, 616);
+      ctx.fillText('我在东方农场种菜啦！', W / 2, 616);
       ctx.fillStyle = '#3a8c50';
       ctx.font = '700 16px ' + EN;
-      ctx.fillText('Farming at Eastern Market · Happy Farm!', W / 2, 640);
+      ctx.fillText('Farming at Eastern Farm!', W / 2, 640);
 
       const ug = ctx.createLinearGradient(0, 660, 0, 710);
       ug.addColorStop(0, '#46a05f'); ug.addColorStop(1, '#2f7a45');
@@ -316,8 +316,8 @@
           const file = new File([this._lastBlob], 'eastern-farm.png', { type: 'image/png' });
           await navigator.share({
             files: [file],
-            title: lang === 'en' ? 'Eastern Market · Happy Farm' : '东方超市·快乐农场',
-            text: lang === 'en' ? 'Come farm with me at Eastern Market!' : '来东方超市快乐农场一起种菜！',
+            title: lang === 'en' ? 'Eastern Farm' : '东方农场',
+            text: lang === 'en' ? 'Come farm with me at Eastern Farm!' : '来东方农场一起种菜！',
             url: GAME_URL,
           });
         } catch (e) { /* user cancelled / unsupported — ignore */ }
