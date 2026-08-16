@@ -958,6 +958,7 @@
       for (let y = 0; y < b.h; y++) for (let x = 0; x < b.w; x++) {
         const k = (gx + x) + ',' + (gy + y);
         if (!this._ownedCell(gx + x, gy + y) || plotCells[k] || occ[k] || t[k] === 'water') return false;
+        if (this._onRoad(gx + x, gy + y)) return false;
         // 🔒 全局互斥（2026-08-13 Chris:「所有建造物默认不可重叠」）——装饰摆件
         // 占的格建筑也不能压。此前四类放置里唯独漏了「别人检查装饰」这半边。
         if (this._decoAt(gx + x, gy + y) >= 0) return false;
@@ -1003,6 +1004,7 @@
     },
     _decoCellFree(gx, gy, exceptIdx) {
       if (!this._inBounds(gx, gy)) return false;
+      if (this._onRoad(gx, gy)) return false;
       if (this._plotCellSet()[gx + ',' + gy] || this._terrain()[gx + ',' + gy] === 'water' || this._buildingAt(gx, gy) >= 0) return false;
       const d = (Farm.state.data.decorations) || []; for (let i = 0; i < d.length; i++) if (i !== exceptIdx && d[i].gx === gx && d[i].gy === gy) return false;
       return true;
@@ -1377,6 +1379,7 @@
       if (this._terrain()[gx + ',' + gy] === 'water') return false;
       if (this._buildingAt(gx, gy) >= 0) return false;                       // under a building
       if (this._decoAt(gx, gy) >= 0) return false;                           // 装饰摆件占格（全局互斥）
+      if (this._onRoad(gx, gy)) return false;
       return true;
     },
     _plotCost() {   // 单一定价源（与商城 extra_plot_coins 同价，B5 地块统一）
@@ -1427,13 +1430,13 @@
       if (this._decoAt(gx, gy) >= 0) return false;
       // 只挡路心，不挡路旁一格（那条缓冲是给树留的）。否则乡路正好贴着
       // 地界南沿，开垦目标全被挤到镜头外的后山。
-      if ((road || this._roadCenterSet())[k]) return false;
+      if ((road || this._roadSet())[k]) return false;
       if (this._ownedCell(gx, gy)) return true;
       return this._adjacentOwned(gx, gy);
     },
     _eachClearTarget(fn) {
       const ob = this._ownedBounds();
-      const road = this._roadCenterSet();
+      const road = this._roadSet();
       const seen = {};
       const consider = (gx, gy) => {
         const k = gx + ',' + gy;
@@ -1605,9 +1608,10 @@
       if (this._brush === 'grass') { if (t[k] != null) { delete t[k]; this.render(); } return; }
       // 🔒 水不能刷在菜地/建筑上（2026-08-13）——否则又造出「水塘压着菜地」，
       // 而 _cellFreeForPlot/_canPlace 只挡得住「后放的一方」，挡不住后刷的水。
-      if (this._brush === 'water' && (this._cellToPlot[k] != null || this._buildingAt(gx, gy) >= 0 || this._decoAt(gx, gy) >= 0)) {
-        // 🔒 不弹文字提示（Chris 2026-08-13）——刷到占用格就在那一格显红叉，
-        // 与拖动建筑/摆件同一套视觉语言。刷过去自动淡出，不需要用户关掉任何东西。
+      // 乡路同样禁刷（2026-08-16 Chris:「马路应该不允许建造」）。
+      const blocked = this._cellToPlot[k] != null || this._buildingAt(gx, gy) >= 0
+        || this._decoAt(gx, gy) >= 0 || this._onRoad(gx, gy);
+      if ((this._brush === 'water' || this._brush === 'path') && blocked) {
         this._blockedCell = { gx, gy, t: Date.now() };
         this.render();
         return;
@@ -2146,7 +2150,7 @@
           // 场中塘：一块微起伏的湖，避免五格叠成三叶草、漫到谷仓
           const rx = ((maxX - minX) / 2 + tw * 0.62) * sx;
           const ry = ((maxY - minY) / 2 + th * 0.42) * sy;
-          const cyb = cyp + oy + th * 0.08;
+          const cyb = cyp + oy;
           const N = 20;
           for (let i = 0; i <= N; i++) {
             const a = (i / N) * 6.283 - 0.32;
@@ -2340,10 +2344,19 @@
       }
       return s;
     },
-    _drawCountryRoad(fit) {
-      const ctx = this._ctx, tw = this._tw(), th = this._th();
+    // 乡路路心：建筑/水塘/菜地/装饰都不能占。缓存跟摊位走。
+    _roadSet() {
+      const st = (Farm.state.data.map || []).find((m) => m && m.type === 'house');
+      const key = st ? (st.gx + ',' + st.gy) : '-';
+      if (this._roadSetKey === key && this._roadSetCache) return this._roadSetCache;
+      this._roadSetKey = key;
+      this._roadSetCache = this._roadCenterSet();
+      return this._roadSetCache;
+    },
+    _onRoad(gx, gy) { return !!this._roadSet()[gx + ',' + gy]; },
+    _drawRoadSurface(fit) {
+      const ctx = this._ctx, tw = this._tw();
       const N = 46;
-      // 三层叠出手绘土路: 宽的路基 → 亮的路面 → 两道车辙
       const passes = [
         { w: tw * 0.82, col: 'rgba(86,122,48,0.28)', off: 0 },
         { w: tw * 0.58, col: 'rgba(168,128,78,0.86)', off: 0 },
@@ -2367,6 +2380,10 @@
         }
       }
       ctx.globalAlpha = 1;
+    },
+    _drawCountryRoad(fit) {
+      const tw = this._tw(), th = this._th();
+      this._drawRoadSurface(fit);
       // 路口道具: 指路牌立在路中段的路边(路尽头会被菜摊挡住——截图实证);
       // 红邮箱挂在摊正前偏右(跟着摊走)。
       const mid = this._roadPoint(0.50);
@@ -2827,7 +2844,11 @@
           // Water cells are collected and drawn as ONE merged organic pond (below) rather
           // than per-tile diamonds (Chris 2026-06-19: looked like a grid). Water overrides
           // soil/path on a cell.
-          if (terrain[k] === 'water') { waterCells.push({ x: c.x, y: c.y, s: gx * 7.3 + gy * 13.7, gx: gx, gy: gy }); continue; }
+          if (terrain[k] === 'water') {
+            if (this._onRoad(gx, gy)) continue;   // 乡路上的旧水格不画，路权更高
+            waterCells.push({ x: c.x, y: c.y, s: gx * 7.3 + gy * 13.7, gx: gx, gy: gy });
+            continue;
+          }
           if (terrain[k] === 'path') groundTiles.push({ key: 'path', c });
         }
       }
@@ -2835,6 +2856,7 @@
       // 有机水塘的波浪轮廓天然会溢出水格边界一点；先画水塘再画地块，溢出的
       // 水沿被土床盖住 = 岸线自然贴着田边，绝不会出现「水漫到菜地上」。
       this._drawPond(waterCells);
+      this._drawRoadSurface();   // 路面盖住水塘溢出，乡路永远在水上面
       this._drawUnifiedField();
       for (const tI of groundTiles) this._tileImg(tI.key, tI.c);
       this._drawRoadWalker();
@@ -3207,6 +3229,8 @@
       for (let i = 0; i < plots.length; i++) occ[this._plotGX(i) + ',' + this._plotGY(i)] = 1;
       (Farm.state.data.map || []).forEach((o) => { const b = BUILDINGS[o.type]; if (!b) return; for (let y = 0; y < b.h; y++) for (let x = 0; x < b.w; x++) occ[(o.gx + x) + ',' + (o.gy + y)] = 1; });
       const t = Farm.state.data.mapTerrain || {}; Object.keys(t).forEach((k) => { if (t[k] === 'water') occ[k] = 1; });
+      const road = this._roadSet();
+      Object.keys(road).forEach((k) => { occ[k] = 1; });
       return occ;
     },
     _decoPlacements() {
