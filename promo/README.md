@@ -23,8 +23,11 @@ FarmVille）都是免费入门 + 内购逼氪 —— **你往游戏里掏钱**�
 | `keyart-farm-landscape.jpg` | 插画横版 16:9 | 网站横幅、店内电视 |
 | `keyart-farm-square.jpg` | 插画方版 1:1 | 微信分享图（无 UI / 无对话框） |
 | `poster-phone.png` / `.jpg` | **手机海报 1080×1920**（米色文字区版） | 朋友圈 / 小红书 |
-| `poster-phone-onart.png` / `.jpg` | **手机海报叠字版** | 字叠在油画上，英文加大；不覆盖上一版 |
-| `poster-A4-onart.png` | **A4 叠字版** | 字叠在油画上；原 `poster-A4.png` 保留 |
+| `poster-phone-onart.png` / `.jpg` | 手机叠字版 v1 | 保留 |
+| `poster-phone-onart-01.jpeg` | 手机叠字（Chris 认定字位最好的一版） | 保留，不覆盖 |
+| `poster-phone-onart-02.png` | **手机叠字现行** | 按 01 字位 + 英文加大、Eastern Farm 与中文拉开 |
+| `poster-A4-onart.png` | A4 叠字 v1 | 保留 |
+| `poster-A4-onart-02.png` | A4 叠字现行 | 与手机 02 同一套字阶 |
 | `keyart-farm-poster.jpg` | 插画海报 3:4 | 店内 A4 海报底图（风格更「画」，别用开屏） |
 | `keyart-points-flow.jpg` | 概念图 16:9 | **主轴图**：手机农场 → 金色积分流进会员卡 |
 

@@ -9,8 +9,9 @@ import segno
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ART = os.path.join(ROOT, 'promo', 'keyart-farm-square.jpg')
 LOGO = os.path.join(ROOT, 'src', 'assets', 'images', 'logo-horizontal.png')
-OUT_PHONE = os.path.join(ROOT, 'promo', 'poster-phone-onart.png')
-OUT_A4 = os.path.join(ROOT, 'promo', 'poster-A4-onart.png')
+# 新版另存，不覆盖 poster-phone-onart / poster-phone-onart-01
+OUT_PHONE = os.path.join(ROOT, 'promo', 'poster-phone-onart-02.png')
+OUT_A4 = os.path.join(ROOT, 'promo', 'poster-A4-onart-02.png')
 
 SERIF = r'C:\Windows\Fonts\NotoSerifSC-VF.ttf'
 SANS = r'C:\Windows\Fonts\NotoSansSC-VF.ttf'
@@ -126,25 +127,27 @@ def dusk(canvas, w, h, band):
 def phone():
     W, H = 1080, 1920
     art = cover(Image.open(ART).convert('RGB'), W, H, bias_y=10).convert('RGBA')
-    canvas = dusk(art, W, H, 760)
+    canvas = dusk(art, W, H, 820)
     paste_logo(canvas, W, 40, 232)
     draw = ImageDraw.Draw(canvas)
 
-    name = vf(SERIF, 84, 660)
-    title = vf(SERIF, 44, 560)
+    # 对齐 onart-01：胶囊 → 东方农场 → 留空 → Eastern Farm → 两行利益句 → 英文
+    name = vf(SERIF, 88, 660)
+    title = vf(SERIF, 48, 560)
     kick_zh = vf(SANS, 22, 650, SANS_BD)
     kick_en = ImageFont.truetype(GEORGIA, 20)
-    en_name = ImageFont.truetype(GEORGIA, 28)
-    en_line = ImageFont.truetype(GEORGIA, 24)
+    en_name = ImageFont.truetype(GEORGIA, 30)
+    en_line = ImageFont.truetype(GEORGIA, 22)
     meta = vf(SANS, 24, 560, SANS_BD)
     meta_en = ImageFont.truetype(GEORGIA, 22)
     urlf = vf(SANS, 26, 650, SANS_BD)
 
-    by = kicker_pill(draw, H - 700, W, kick_zh, kick_en)
-    spaced(draw, '东方农场', by + 18, name, CREAM, 14, W, shadow=(0, 3, (0, 0, 0, 130)))
-    center(draw, 'Eastern Farm', by + 112, en_name, GOLD, W, shadow=(0, 2, (0, 0, 0, 100)))
-    spaced(draw, '玩农场游戏，赚超市积分', by + 158, title, CREAM, 3, W)
-    center(draw, 'Play the farm. Earn store points.', by + 218, en_line, GOLD, W)
+    by = kicker_pill(draw, H - 740, W, kick_zh, kick_en)
+    spaced(draw, '东方农场', by + 20, name, CREAM, 16, W, shadow=(0, 3, (0, 0, 0, 130)))
+    center(draw, 'Eastern Farm', by + 168, en_name, GOLD, W, shadow=(0, 2, (0, 0, 0, 100)))
+    spaced(draw, '玩农场游戏', by + 220, title, CREAM, 8, W)
+    spaced(draw, '赚超市积分', by + 282, title, CREAM, 8, W)
+    center(draw, 'PLAY THE FARM  ·  EARN STORE POINTS', by + 348, en_line, GOLD, W)
 
     qr = make_qr(152)
     qx, qy = 80, H - 230
@@ -155,7 +158,7 @@ def phone():
     draw.text((tx, H - 220), '扫码即玩', font=meta, fill=CREAM)
     draw.text((tx, H - 188), 'Scan to play', font=meta_en, fill=GOLD)
     draw.text((tx, H - 148), 'farm.easternmarket.ca', font=urlf, fill=GOLD)
-    draw.text((tx, H - 108), '积分进会员卡，到店可用', font=meta, fill=CREAM)
+    draw.text((tx, H - 108), '积分每天进会员卡，到店可用', font=meta, fill=CREAM)
     draw.text((tx, H - 76), 'Points on your member card', font=meta_en, fill=GOLD)
 
     rgb = canvas.convert('RGB')
@@ -181,11 +184,12 @@ def a4():
     meta_en = ImageFont.truetype(GEORGIA, 26)
     urlf = vf(SANS, 32, 650, SANS_BD)
 
-    by = kicker_pill(draw, H - 860, W, kick_zh, kick_en)
-    spaced(draw, '东方农场', by + 24, name, CREAM, 16, W, shadow=(0, 3, (0, 0, 0, 130)))
-    center(draw, 'Eastern Farm', by + 146, en_name, GOLD, W)
-    spaced(draw, '玩农场游戏，赚超市积分', by + 206, title, CREAM, 4, W)
-    center(draw, 'Play the farm. Earn store points.', by + 276, en_line, GOLD, W)
+    by = kicker_pill(draw, H - 900, W, kick_zh, kick_en)
+    spaced(draw, '东方农场', by + 28, name, CREAM, 16, W, shadow=(0, 3, (0, 0, 0, 130)))
+    center(draw, 'Eastern Farm', by + 188, en_name, GOLD, W)
+    spaced(draw, '玩农场游戏', by + 250, title, CREAM, 10, W)
+    spaced(draw, '赚超市积分', by + 320, title, CREAM, 10, W)
+    center(draw, 'PLAY THE FARM  ·  EARN STORE POINTS', by + 396, en_line, GOLD, W)
 
     qr = make_qr(180)
     qx = (W - 180) // 2
