@@ -2835,7 +2835,7 @@ body.modal-open #bottombar { display: none; }
   /* 安全：内容高于视口时本层内滚，不裁掉登录/游客按钮。 */
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  background: #1a2214;
+  background: #5a6a38;
   padding: 0;
   animation: splashIn 0.4s ease;
 }
@@ -2865,9 +2865,14 @@ body.modal-open #bottombar { display: none; }
 .splash-veil {
   position: absolute;
   left: 0; right: 0; bottom: 0;
-  height: 68%;
+  height: 52%;
   pointer-events: none;
-  background: linear-gradient(180deg, rgba(16,22,12,0) 0%, rgba(16,22,12,0.42) 28%, rgba(16,22,12,0.88) 72%, rgba(16,22,12,0.96) 100%);
+  /* 暖金薄纱：托字，不把油画压成夜景 */
+  background: linear-gradient(180deg,
+    rgba(255, 210, 150, 0) 0%,
+    rgba(140, 90, 40, 0.10) 28%,
+    rgba(56, 42, 24, 0.32) 62%,
+    rgba(40, 32, 20, 0.50) 100%);
 }
 .splash-top {
   position: relative;
@@ -2937,10 +2942,10 @@ body.modal-open #bottombar { display: none; }
   font-family: 'Noto Serif SC', var(--font-display), serif;
   font-weight: 700;
   font-size: 40px;
-  color: #f6efe0;
+  color: #fff8ec;
   margin-top: 14px;
   letter-spacing: 0.22em;
-  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.35);
+  text-shadow: 0 1px 0 rgba(40, 28, 12, 0.35), 0 4px 16px rgba(20, 14, 8, 0.45);
   animation: splashSlideUp 0.6s ease 0.4s both;
 }
 .splash-title-en {
@@ -2948,9 +2953,10 @@ body.modal-open #bottombar { display: none; }
   font-size: 16px;
   font-weight: 600;
   letter-spacing: 0.16em;
-  color: #d4b87a;
+  color: #fff4d2;
   text-transform: none;
   margin-top: 10px;
+  text-shadow: 0 1px 0 rgba(30, 20, 8, 0.5), 0 2px 10px rgba(20, 14, 8, 0.55);
   animation: splashSlideUp 0.6s ease 0.5s both;
 }
 .splash-tagline {
@@ -2962,7 +2968,8 @@ body.modal-open #bottombar { display: none; }
   font-size: 20px;
   font-weight: 600;
   letter-spacing: 0.16em;
-  color: #f6efe0;
+  color: #fff8ec;
+  text-shadow: 0 1px 0 rgba(40, 28, 12, 0.3), 0 3px 12px rgba(20, 14, 8, 0.4);
   animation: splashSlideUp 0.6s ease 0.6s both;
 }
 .splash-tagline-en {
@@ -2972,9 +2979,10 @@ body.modal-open #bottombar { display: none; }
   font-weight: 600;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: #d4b87a;
+  color: #fff4d2;
   opacity: 1;
   margin-top: 10px;
+  text-shadow: 0 1px 0 rgba(30, 20, 8, 0.5), 0 2px 10px rgba(20, 14, 8, 0.55);
 }
 @keyframes splashSlideUp {
   from { opacity: 0; transform: translateY(12px); }
@@ -3030,10 +3038,11 @@ body.modal-open #bottombar { display: none; }
 .splash-footer {
   margin-top: 8px;
   font-size: 11px;
-  color: rgba(246, 239, 224, 0.62);
+  color: rgba(255, 246, 220, 0.88);
   background: none;
   padding: 0;
   border-radius: 0;
+  text-shadow: 0 1px 6px rgba(20, 14, 8, 0.45);
   animation: splashSlideUp 0.6s ease 0.95s both;
 }
 
@@ -3055,16 +3064,68 @@ body.modal-open #bottombar { display: none; }
 @media (min-height: 920px) {
   .splash .splash-perks { display: flex; }
 }
-.splash .splash-perk-en { color: rgba(212, 184, 122, 0.85); opacity: 1; }
+.splash .splash-perk-en { color: rgba(243, 224, 176, 0.95); opacity: 1; }
+/* 描金漆绿主钮：白字，金边，不发乌 */
 .splash .splash-login.splash-login--hero {
-  margin-top: 8px;
-  background: #2a4a32;
-  box-shadow: 0 4px 0 #1a2e1e, 0 8px 20px rgba(0, 0, 0, 0.28);
+  margin-top: 10px;
+  min-height: 56px;
+  padding: 12px 32px 13px;
+  background: linear-gradient(180deg, #7ed08f 0%, #45a35c 46%, #2f8246 100%);
+  border: 1.5px solid #efd9a4;
+  color: #fff;
+  text-shadow: 0 1px 0 rgba(24, 56, 28, 0.4);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.45),
+    0 5px 0 #1f5c32,
+    0 10px 22px rgba(32, 70, 28, 0.26);
 }
+.splash .splash-login.splash-login--hero:hover {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    0 5px 0 #1f5c32,
+    0 12px 26px rgba(32, 70, 28, 0.32);
+}
+.splash .splash-login.splash-login--hero .splash-login-zh {
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+.splash .splash-login.splash-login--hero .splash-login-en {
+  color: #fff8e8;
+  opacity: 1;
+  font-weight: 600;
+}
+/* 瓷白次钮：深字，金描边，压在草地上也看得清 */
 .splash .splash-start.splash-start--ghost {
-  background: rgba(246, 239, 224, 0.14);
-  border-color: rgba(246, 239, 224, 0.28);
-  color: #f6efe0;
+  background: #fff8ec;
+  border: 1.5px solid #d4bc7a;
+  color: #2c3d28;
+  min-height: 48px;
+  padding: 9px 22px 10px;
+  flex-direction: column;
+  gap: 2px;
+  box-shadow: 0 2px 0 #c9b06a, 0 6px 16px rgba(60, 48, 20, 0.14);
+}
+.splash .splash-start.splash-start--ghost .splash-start-zh {
+  font-weight: 700;
+  font-size: 14px;
+}
+.splash .splash-start.splash-start--ghost .splash-start-en {
+  color: #7a6540;
+  opacity: 1;
+  font-size: 11px;
+  font-weight: 600;
+  margin-left: 0;
+}
+.splash .splash-login.splash-login--logged-in {
+  background: linear-gradient(180deg, #fff8e1 0%, #f0c94a 100%);
+  border-color: #d4a017;
+  color: #5a3c08;
+  text-shadow: none;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.75),
+    0 5px 0 #c49220,
+    0 10px 20px rgba(160, 110, 20, 0.22);
 }
 
 @media (max-height: 700px) {
