@@ -1601,13 +1601,21 @@
         ctx.lineTo(right, base + span); ctx.lineTo(left, base + span); ctx.closePath(); ctx.fill();
       });
     },
-    _tree(x, y, s) {
+    _tree(x, y, s, flip) {
       const ctx = this._ctx;
       const im = this._img && this._img.tree;
       if (im && im.width) {
         const h = s * 1.85, w = h * (im.width / im.height);
-        this._shadow(x + s * 0.14, y + s * 0.05, s * 0.58, 0.16);
-        ctx.drawImage(im, x - w / 2, y - h + s * 0.08, w, h);
+        this._shadow(x + (flip ? -1 : 1) * s * 0.14, y + s * 0.05, s * 0.58, 0.16);
+        if (flip) {
+          ctx.save();
+          ctx.translate(x, 0);
+          ctx.scale(-1, 1);
+          ctx.drawImage(im, -w / 2, y - h + s * 0.08, w, h);
+          ctx.restore();
+        } else {
+          ctx.drawImage(im, x - w / 2, y - h + s * 0.08, w, h);
+        }
         return;
       }
       ctx.fillStyle = '#5a3a22';
@@ -1650,6 +1658,58 @@
       const cols = ['#f6c945', '#ef7a7a', '#e88ad0', '#ffffff'], col = cols[Math.abs(Math.round(x * 0.7 + y)) % 4];
       ctx.fillStyle = col; for (let a = 0; a < 5; a++) { const an = a / 5 * 6.283; ctx.beginPath(); ctx.arc(x + Math.cos(an) * s * 0.2, y - s * 0.95 + Math.sin(an) * s * 0.2, s * 0.15, 0, 6.283); ctx.fill(); }
       ctx.fillStyle = '#ffd34d'; ctx.beginPath(); ctx.arc(x, y - s * 0.95, s * 0.13, 0, 6.283); ctx.fill();
+    },
+    // 未开发农地 + 场外：油画树连成林。扩地后这片格变草地，树从缓存里消失。
+    _drawWildWoods() {
+      const tw = this._tw(), th = this._th(), W = this._cssW(), H = this._cssH();
+      const ob = this._ownedBounds();
+      const terr = this._terrain();
+      const road = this._roadClearSet();
+      const hl = this._cell(0, -3).y;
+      const spots = this.NEIGHBOR_SPOTS || [];
+      const corners = [this._screenToCell(0, 0), this._screenToCell(W, 0),
+                       this._screenToCell(0, H), this._screenToCell(W, H)];
+      let gx0 = Infinity, gx1 = -Infinity, gy0 = Infinity, gy1 = -Infinity;
+      for (const c of corners) {
+        gx0 = Math.min(gx0, c.gx); gx1 = Math.max(gx1, c.gx);
+        gy0 = Math.min(gy0, c.gy); gy1 = Math.max(gy1, c.gy);
+      }
+      gx0 = Math.max(-6, Math.floor(gx0) - 1); gy0 = Math.max(-4, Math.floor(gy0) - 1);
+      gx1 = Math.min(COLS + 6, Math.ceil(gx1) + 1); gy1 = Math.min(ROWS + 8, Math.ceil(gy1) + 1);
+      const list = [];
+      for (let gy = gy0; gy <= gy1; gy++) {
+        for (let gx = gx0; gx <= gx1; gx++) {
+          if (gx + gy < -2) continue;
+          const inWorld = gx >= 0 && gy >= 0 && gx < COLS && gy < ROWS;
+          const owned = inWorld && gx >= ob.x1 && gx <= ob.x2 && gy >= ob.y1 && gy <= ob.y2;
+          if (owned) continue;
+          const k = gx + ',' + gy;
+          if (terr[k] === 'water' || terr[k] === 'path' || road[k]) continue;
+          let nearNb = false;
+          for (let i = 0; i < spots.length; i++) {
+            const dx = gx - spots[i].gx, dy = gy - spots[i].gy;
+            if (dx * dx + dy * dy < 2.6) { nearNb = true; break; }
+          }
+          if (nearNb) continue;
+          const c = this._cell(gx, gy);
+          if (c.x + tw * 2 < 0 || c.x - tw * 2 > W || c.y + th * 3 < 0 || c.y - th * 4 > H) continue;
+          const dHl = (c.y - hl) / (th * 4.4);
+          if (dHl < 0.85) continue;
+          const hsh = ((gx * 73856093) ^ (gy * 19349663)) >>> 0;
+          const r1 = (hsh % 997) / 997, r2 = ((hsh >> 8) % 991) / 991;
+          const clump = ((Math.floor(gx / 2) * 2654435761) ^ (Math.floor(gy / 2) * 1597334677)) >>> 0;
+          if ((clump % 5) === 0) continue;          // 约 1/5 的 2×2 空成林窗
+          const dens = inWorld ? 0.52 : 0.70;
+          if (r1 > dens) continue;
+          list.push({ gx: gx, gy: gy, r1: r1, r2: r2, flip: (hsh & 1) === 0 });
+        }
+      }
+      list.sort((a, b) => (a.gx + a.gy) - (b.gx + b.gy));
+      for (let i = 0; i < list.length; i++) {
+        const t = list[i];
+        const c = this._cell(t.gx + (t.r1 - 0.5) * 0.62, t.gy + (t.r2 - 0.5) * 0.62);
+        try { this._tree(c.x, c.y, tw * (0.62 + t.r2 * 0.95), t.flip); } catch (e) { /* 单棵失败不毁整场 */ }
+      }
     },
     // scattered grass tufts + flowers around the farm (NOT on the plot block), world-anchored
     _drawMeadowTrees() {
@@ -1906,6 +1966,7 @@
       // 16×16 可开发世界画成半透明草格(条带+色斑+草簇), 贴合是构造上
       // 保证的; 扩地解锁的远处土地也由它呈现(_bgKey 在解锁时已置空重画)。
       const fit = this._drawGroundPlane(W, H);
+      this._drawWildWoods();
       this._drawMeadowTrees();
       this._drawHorizonMist(W, H);
       /* 人烟三件套(2026-08-14 Chris:「农场看起来像荒山野岭, 路人的出现
@@ -1933,22 +1994,37 @@
       const C = { x: B.x - 15.0, y: B.y + 3.4 };
       return { A, B, C };
     },
-    _roadPoint(t) {
+    _roadWorld(t) {
       const { A, B, C } = this._roadAnchors();
       const q = (P, Q, ctl, tt) => {
         const u = 1 - tt;
         return { gx: u * u * P.x + 2 * u * tt * ctl.x + tt * tt * Q.x,
                  gy: u * u * P.y + 2 * u * tt * ctl.y + tt * tt * Q.y };
       };
-      let g;
-      if (t < 0.72) {   // A→B 主段: 控制点向南压出一道缓弯
+      if (t < 0.72) {
         const ctl = { x: (A.x + B.x) / 2 + 0.8, y: Math.max(A.y, B.y) + 1.0 };
-        g = q(A, B, ctl, t / 0.72);
-      } else {          // B→C 收尾段: 从摊前继续向左前
-        const ctl = { x: (B.x + C.x) / 2, y: B.y + 0.7 };
-        g = q(B, C, ctl, (t - 0.72) / 0.28);
+        return q(A, B, ctl, t / 0.72);
       }
+      const ctl = { x: (B.x + C.x) / 2, y: B.y + 0.7 };
+      return q(B, C, ctl, (t - 0.72) / 0.28);
+    },
+    _roadPoint(t) {
+      const g = this._roadWorld(t);
       return this._cell(g.gx, g.gy);
+    },
+    _roadClearSet() {
+      // 路两侧各约 1 格不种树，乡路从林子里穿出来
+      const s = {};
+      for (let i = 0; i <= 48; i++) {
+        const p = this._roadWorld(i / 48);
+        for (let dy = -1; dy <= 1; dy++) {
+          for (let dx = -1; dx <= 1; dx++) {
+            if (dx * dx + dy * dy > 1.2) continue;
+            s[Math.round(p.gx + dx) + ',' + Math.round(p.gy + dy)] = 1;
+          }
+        }
+      }
+      return s;
     },
     _drawCountryRoad(fit) {
       const ctx = this._ctx, tw = this._tw(), th = this._th();
@@ -2221,10 +2297,10 @@
           const stripe = ((gx + gy) & 1) ? -0.35 : 0;
           const nzIn = (r1 - 0.5) * 6;
           let fr = 134 + patch + stripe + nzIn, fg = 170 + patch * 0.85 + stripe + nzIn * 0.7, fb = 66 + patch * 0.4 + stripe * 0.6 + nzIn * 0.5;
-          if (inWorld && !owned) { fr = fr * 0.95 + 7; fg = fg * 0.95 + 4; fb = fb * 0.93 + 7; }
-          // 野地基色(微偏黄, 噪点略强但收敛)
+          if (inWorld && !owned) { fr = 86 + nzIn; fg = 112 + nzIn * 0.6; fb = 52 + nzIn * 0.3; }
+          // 场外林下：更深的荫地，不是亮黄野草
           const nzOut = (r1 - 0.5) * 8;
-          const wr = 146 + nzOut, wg = 170 + nzOut * 0.8, wb = 68 + (r2 - 0.5) * 8;
+          const wr = 78 + nzOut, wg = 104 + nzOut * 0.7, wb = 50 + (r2 - 0.5) * 6;
           // 农场↔野地按「出界距离」渐变(6 格内过渡), 不出现生硬色阶边框
           const dOut = Math.max(0, Math.max(-gx, -gy, gx - (COLS - 1), gy - (ROWS - 1)));
           const wMix = Math.max(0, Math.min(1, dOut / 6));
@@ -2392,7 +2468,8 @@
     _blitBackdrop(ctx, W, H) {
       const stl = (Farm.state.data.map || []).find((m) => m && m.type === 'house');
       const key = Math.round(this._camX) + ',' + Math.round(this._camY) + ',' + this._zoom.toFixed(3) + ',' + W + ',' + H
-        + ',' + (stl ? stl.gx + '_' + stl.gy : '-');   // 摊位坐标: 乡路终段跟着摊走
+        + ',' + (stl ? stl.gx + '_' + stl.gy : '-')
+        + ',L' + this._landLevel();   // 扩地后未开发林要重画
       if (this._bgKey !== key || !this._bgCache) {
         if (!this._bgCache) this._bgCache = document.createElement('canvas');
         const cv = this._bgCache, dpr = this._dpr, pw = Math.round(W * dpr), ph = Math.round(H * dpr);
@@ -2570,7 +2647,7 @@
       const cost = next.coins + ' <span class="coin-icon"></span>' + (next.points ? (' + ' + next.points + ' <span class="points-icon"></span>') : '');
       const html = '<div style="text-align:center;padding:4px;">' +
         '<div style="font-size:40px;margin-bottom:4px;">🌄</div><h2 class="modal-title">' + (en ? 'Expand your farm?' : '扩大农场？') + '</h2>' +
-        '<div style="color:#666;margin:8px 0 14px;font-size:14px;line-height:1.5;">' + (en ? 'Claim this wild land — build and decorate on it.' : '把这片野地变成你的农场，可建造和装饰。') + '</div>' +
+        '<div style="color:#666;margin:8px 0 14px;font-size:14px;line-height:1.5;">' + (en ? 'Clear this woodland — build and plant on it.' : '把这片林子开成你的农场，可建造和种菜。') + '</div>' +
         '<div style="font-weight:600;font-size:16px;margin-bottom:16px;">' + (en ? 'Cost: ' : '花费：') + cost + '</div>' +
         '<div class="btn-row"><button class="btn secondary" id="landNo">' + (en ? 'Later' : '稍后') + '</button><button class="btn primary" id="landYes">🌱 ' + (en ? 'Unlock' : '解锁') + '</button></div></div>';
       Farm.ui.showModal(html);
