@@ -13,7 +13,7 @@
   const DEVICE_KEY = 'ef_feedback_device';
   const LOCAL_REWARD_DAY_KEY = 'ef_feedback_rewarded_day';
 
-  let cachedCfg = { coinReward: 500, adoptEp: 500 };
+  let cachedCfg = { coinReward: 300, adoptEp: 500 };
 
   function lang() {
     return (Farm.state && Farm.state.data && Farm.state.data.language) || 'zh';
@@ -88,19 +88,24 @@
         ? '今天的 ' + c + ' 农场币已经领过了。还可以再写，店主照样会看到。'
         : '今天交过了。还可以再写，店主照样会看到。';
     }
-    const bits = [];
-    if (c > 0) bits.push(en()
-      ? 'First note today gets <b>' + c + ' farm coins</b> right away.'
-      : '今天第一次提交立刻送 <b>' + c + ' 农场币</b>。');
-    if (p > 0) bits.push(en()
-      ? 'If Chris adopts it, you also get <b>' + p + ' store points</b>.'
-      : '写得有用、店主采纳后，再奖 <b>' + p + ' 超市积分</b>。');
-    if (!bits.length) {
+    if (c > 0 && p > 0) {
       return en()
-        ? 'A bug, a wish, or anything that felt off — Chris reads every note.'
-        : '哪里卡、看不懂、不好玩，写下来。店主每条都会看。';
+        ? 'Submit feedback and get <b>' + c + ' farm coins</b> right away. If we adopt it, you get <b>' + p + ' store points</b>.'
+        : '提交反馈立刻得' + c + '农场币。如意见被采纳，奖励' + p + '超市积分。';
     }
-    return bits.join(en() ? ' ' : '');
+    if (c > 0) {
+      return en()
+        ? 'Submit feedback and get <b>' + c + ' farm coins</b> right away.'
+        : '提交反馈立刻得' + c + '农场币。';
+    }
+    if (p > 0) {
+      return en()
+        ? 'If we adopt your note, you get <b>' + p + ' store points</b>.'
+        : '如意见被采纳，奖励' + p + '超市积分。';
+    }
+    return en()
+      ? 'A bug, a wish, or anything that felt off — Chris reads every note.'
+      : '哪里卡、看不懂、不好玩，写下来。店主每条都会看。';
   }
 
   function submitLabel(rewarded) {
