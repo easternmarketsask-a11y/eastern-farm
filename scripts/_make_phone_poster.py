@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""1080x1920 mobile poster from keyart-farm-square.jpg."""
+"""Editorial phone + A4 posters. Exact copy, painted on the keyart."""
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
 import io
 import os
@@ -8,93 +8,183 @@ import segno
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ART = os.path.join(ROOT, 'promo', 'keyart-farm-square.jpg')
 LOGO = os.path.join(ROOT, 'src', 'assets', 'images', 'logo-horizontal.png')
-OUT = os.path.join(ROOT, 'promo', 'poster-phone.png')
+OUT_PHONE = os.path.join(ROOT, 'promo', 'poster-phone.png')
+OUT_A4 = os.path.join(ROOT, 'promo', 'poster-A4.png')
 
-W, H = 1080, 1920
-YAHEI = r'C:\Windows\Fonts\msyh.ttc'
-YAHEI_BD = r'C:\Windows\Fonts\msyhbd.ttc'
+SERIF = r'C:\Windows\Fonts\NotoSerifSC-VF.ttf'
+SANS = r'C:\Windows\Fonts\NotoSansSC-VF.ttf'
+SANS_BD = r'C:\Windows\Fonts\msyhbd.ttc'
+GEORGIA = r'C:\Windows\Fonts\georgiab.ttf'
+GEORGIA_R = r'C:\Windows\Fonts\georgia.ttf'
+
+CREAM = (246, 239, 224)
+INK = (28, 38, 26)
+GOLD = (201, 162, 74)
+GOLD_SOFT = (212, 184, 122)
+DUSK = (22, 28, 18)
 
 
-def font(size, bold=False):
-    path = YAHEI_BD if bold else YAHEI
+def vf(path, size, weight=500, fallback=None):
     try:
-        return ImageFont.truetype(path, size, index=0)
+        f = ImageFont.truetype(path, size)
+        if hasattr(f, 'set_variation_by_axes'):
+            try:
+                f.set_variation_by_axes([weight])
+            except Exception:
+                pass
+        return f
     except OSError:
-        return ImageFont.truetype(YAHEI, size, index=0)
+        return ImageFont.truetype(fallback or SANS_BD, size)
 
 
-def cover(im, tw, th):
+def cover(im, tw, th, bias_y=0):
     s = max(tw / im.width, th / im.height)
     nw, nh = int(im.width * s + 0.5), int(im.height * s + 0.5)
     im = im.resize((nw, nh), Image.Resampling.LANCZOS)
     x = (nw - tw) // 2
-    y = max(0, (nh - th) // 2 - 40)  # a hair toward the sky
+    y = max(0, min(nh - th, (nh - th) // 2 + bias_y))
     return im.crop((x, y, x + tw, y + th))
 
 
-def main():
-    art = Image.open(ART).convert('RGB')
-    canvas = cover(art, W, H).convert('RGBA')
+def spaced(draw, text, y, font, fill, tracking, canvas_w, shadow=None):
+    widths = []
+    for ch in text:
+        b = draw.textbbox((0, 0), ch, font=font)
+        widths.append(b[2] - b[0])
+    total = sum(widths) + tracking * max(0, len(text) - 1)
+    x = (canvas_w - total) / 2
+    for ch, w in zip(text, widths):
+        if shadow:
+            draw.text((x + shadow[0], y + shadow[1]), ch, font=font, fill=shadow[2])
+        draw.text((x, y), ch, font=font, fill=fill)
+        x += w + tracking
+    return total
 
-    overlay = Image.new('RGBA', (W, H), (0, 0, 0, 0))
-    d = ImageDraw.Draw(overlay)
-    # Sky wash so the headline stays readable
-    for i in range(420):
-        a = int(165 * (1 - i / 420) ** 1.15)
-        d.line([(0, i), (W, i)], fill=(255, 236, 210, a))
-    # Bottom wash into the dock
-    for i in range(360):
-        a = int(230 * (i / 360) ** 1.35)
-        d.line([(0, H - 360 + i), (W, H - 360 + i)], fill=(40, 48, 28, a))
-    canvas = Image.alpha_composite(canvas, overlay)
-    draw = ImageDraw.Draw(canvas)
 
+def hairline(draw, cx, y, half, color, width=2):
+    draw.line([(cx - half, y), (cx + half, y)], fill=color, width=width)
+
+
+def make_qr(px, dark='#1c261a', light='#f6efe0'):
+    buf = io.BytesIO()
+    segno.make('https://farm.easternmarket.ca/', error='h').save(
+        buf, kind='png', scale=10, border=1, dark=dark, light=light)
+    buf.seek(0)
+    qr = Image.open(buf).convert('RGBA')
+    return qr.resize((px, px), Image.Resampling.LANCZOS)
+
+
+def paste_logo(canvas, w, top, max_w):
     logo = Image.open(LOGO).convert('RGBA')
-    lw = 280
+    lw = max_w
     lh = int(logo.height * lw / logo.width)
     logo = logo.resize((lw, lh), Image.Resampling.LANCZOS)
-    lx, ly = (W - lw) // 2, 36
-    draw.rounded_rectangle(
-        [lx - 16, ly - 8, lx + lw + 16, ly + lh + 8],
-        radius=16, fill=(255, 255, 255, 230),
-    )
-    canvas.paste(logo, (lx, ly), logo)
+    # soft plate so the mark reads on any sky, without a chunky white card
+    plate = Image.new('RGBA', (lw + 48, lh + 28), (0, 0, 0, 0))
+    pd = ImageDraw.Draw(plate)
+    pd.rounded_rectangle([0, 0, plate.width - 1, plate.height - 1],
+                         radius=18, fill=(246, 239, 224, 210))
+    blurred = plate.filter(ImageFilter.GaussianBlur(0.4))
+    px = (w - plate.width) // 2
+    canvas.paste(blurred, (px, top), blurred)
+    canvas.paste(logo, (px + 24, top + 14), logo)
+    return top + plate.height
 
-    def cx(text, fnt, y, fill, shadow=True):
-        box = draw.textbbox((0, 0), text, font=fnt)
-        tw = box[2] - box[0]
-        x = (W - tw) / 2
-        if shadow:
-            draw.text((x + 1, y + 2), text, font=fnt, fill=(255, 248, 230, 180))
-        draw.text((x, y), text, font=fnt, fill=fill)
 
-    cx('免费种菜，真积分到账', font(62, True), 168, (32, 68, 36))
-    cx('FREE TO PLAY  ·  REAL POINTS BACK', font(20, True), 250, (210, 72, 36))
+def phone():
+    W, H = 1080, 1920
+    art = cover(Image.open(ART).convert('RGB'), W, H, bias_y=20).convert('RGBA')
 
-    # Slim dock
-    dock = [36, H - 292, W - 36, H - 36]
-    draw.rounded_rectangle(dock, radius=28, fill=(255, 252, 244, 242))
-    draw.rounded_rectangle(dock, radius=28, outline=(236, 226, 204, 255), width=2)
+    wash = Image.new('RGBA', (W, H), (0, 0, 0, 0))
+    d = ImageDraw.Draw(wash)
+    for i in range(260):
+        a = int(80 * (1 - i / 260) ** 1.4)
+        d.line([(0, i), (W, i)], fill=(255, 232, 200, a))
+    # 字落在独立的暮色带上，不跟路牌抢
+    band = 700
+    for i in range(band):
+        t = i / (band - 1)
+        a = int(8 + 248 * (t ** 1.25))
+        d.line([(0, H - band + i), (W, H - band + i)], fill=(18, 24, 14, a))
+    canvas = Image.alpha_composite(art, wash)
+    paste_logo(canvas, W, 42, 248)
 
-    qbuf = io.BytesIO()
-    segno.make('https://farm.easternmarket.ca/', error='h').save(qbuf, kind='png', scale=8, border=2, dark='#2a5c34', light='#ffffff')
-    qbuf.seek(0)
-    qr = Image.open(qbuf).convert('RGBA').resize((188, 188), Image.Resampling.LANCZOS)
-    qx, qy = 68, H - 270
-    draw.rounded_rectangle([qx - 6, qy - 6, qx + 188 + 6, qy + 188 + 6], radius=14, fill=(255, 255, 255, 255))
+    draw = ImageDraw.Draw(canvas)
+    title = vf(SERIF, 76, 620)
+    en = ImageFont.truetype(GEORGIA, 20)
+    meta = vf(SANS, 24, 500, SANS_BD)
+    urlf = vf(SANS, 28, 620, SANS_BD)
+
+    y0 = H - 520
+    spaced(draw, '玩农场游戏', y0, title, CREAM, 12, W, shadow=(0, 3, (0, 0, 0, 110)))
+    spaced(draw, '赚超市积分', y0 + 94, title, CREAM, 12, W, shadow=(0, 3, (0, 0, 0, 110)))
+    hairline(draw, W // 2, y0 + 206, 48, GOLD, 2)
+    spaced(draw, 'PLAY THE FARM   ·   EARN STORE POINTS', y0 + 226, en, GOLD_SOFT, 2, W)
+
+    qr = make_qr(168)
+    qx, qy = 88, H - 268
+    draw.rounded_rectangle([qx - 10, qy - 10, qx + 168 + 10, qy + 168 + 10],
+                           radius=16, fill=CREAM)
     canvas.paste(qr, (qx, qy), qr)
 
     tx = 292
-    draw.text((tx, H - 262), '扫码开始玩', font=font(42, True), fill=(42, 92, 52))
-    draw.text((tx, H - 204), '手机打开就能种，不用下载', font=font(26, True), fill=(61, 50, 39))
-    draw.text((tx, H - 166), '种店里的菜  ·  积分进会员卡', font=font(22), fill=(125, 114, 99))
-    draw.text((tx, H - 118), 'farm.easternmarket.ca', font=font(28, True), fill=(42, 92, 52))
+    draw.text((tx, H - 248), '扫码即玩', font=meta, fill=CREAM)
+    draw.text((tx, H - 204), 'farm.easternmarket.ca', font=urlf, fill=GOLD_SOFT)
+    draw.text((tx, H - 154), '积分每天进会员卡，到店可用', font=meta, fill=(214, 206, 188))
 
     rgb = canvas.convert('RGB')
-    rgb.save(OUT, 'PNG', optimize=True)
-    rgb.save(OUT.replace('.png', '.jpg'), 'JPEG', quality=92, optimize=True)
-    print('wrote', OUT, rgb.size)
+    rgb.save(OUT_PHONE, 'PNG', optimize=True)
+    rgb.save(OUT_PHONE.replace('.png', '.jpg'), 'JPEG', quality=93, optimize=True)
+    print('wrote', OUT_PHONE, rgb.size)
+    return rgb
+
+
+def a4():
+    # ~190 dpi A4, matches the previous print size
+    W, H = 1587, 2245
+    art_h = int(H * 0.50)
+    canvas = Image.new('RGB', (W, H), (247, 241, 228))
+    art = cover(Image.open(ART).convert('RGB'), W, art_h + 80, bias_y=40)
+    canvas.paste(art, (0, 0))
+
+    fade = Image.new('RGBA', (W, H), (0, 0, 0, 0))
+    d = ImageDraw.Draw(fade)
+    for i in range(200):
+        a = int(255 * (i / 199) ** 1.1)
+        yy = art_h - 70 + i
+        d.line([(0, yy), (W, yy)], fill=(247, 241, 228, a))
+    canvas = Image.alpha_composite(canvas.convert('RGBA'), fade)
+    paste_logo(canvas, W, 48, 280)
+
+    draw = ImageDraw.Draw(canvas)
+    title = vf(SERIF, 110, 640)
+    en = ImageFont.truetype(GEORGIA, 24)
+    body = vf(SANS, 30, 450, SANS_BD)
+    urlf = vf(SANS, 34, 650, SANS_BD)
+
+    y = art_h + 8
+    spaced(draw, '玩农场游戏', y, title, INK, 12, W)
+    spaced(draw, '赚超市积分', y + 136, title, INK, 12, W)
+    hairline(draw, W // 2, y + 292, 56, GOLD, 3)
+    spaced(draw, 'PLAY THE FARM   ·   EARN STORE POINTS', y + 316, en, (154, 118, 48), 2, W)
+    spaced(draw, '手机打开就能种，不用下载', y + 390, body, (72, 64, 52), 1, W)
+    spaced(draw, '积分每天进入会员卡，到店买菜能用', y + 436, body, (72, 64, 52), 1, W)
+
+    qr = make_qr(220, dark='#1c261a', light='#f7f1e4')
+    qx = (W - 220) // 2
+    qy = y + 520
+    draw.rounded_rectangle([qx - 14, qy - 14, qx + 220 + 14, qy + 220 + 14],
+                           radius=16, fill=(255, 255, 255), outline=GOLD, width=3)
+    canvas.paste(qr, (qx, qy), qr)
+    spaced(draw, 'farm.easternmarket.ca', qy + 250, urlf, INK, 1, W)
+    spaced(draw, '扫码开始玩', qy + 300, body, (110, 96, 72), 2, W)
+
+    rgb = canvas.convert('RGB')
+    rgb.save(OUT_A4, 'PNG', optimize=True)
+    print('wrote', OUT_A4, rgb.size)
+    return rgb
 
 
 if __name__ == '__main__':
-    main()
+    phone()
+    a4()
