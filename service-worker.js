@@ -96,7 +96,7 @@ const PRECACHE = [
   '/src/js/seasons.js', '/src/js/harvest-status.js', '/src/js/warehouse.js', '/src/js/stall.js', '/src/js/life-story.js', '/src/js/orders.js',
   '/src/js/kitchen.js',
   '/src/js/shop.js', '/src/js/tasks.js', '/src/js/events.js', '/src/js/storekeeper.js',
-  '/src/js/rewards.js', '/src/js/store-rewards.js', '/src/js/achievements.js', '/src/js/tutorial.js', '/src/js/guide.js',
+  '/src/js/rewards.js', '/src/js/store-rewards.js', '/src/js/achievements.js', '/src/js/tutorial.js', '/src/js/guide.js', '/src/js/feedback.js',
   '/src/js/spotlight.js', '/src/js/login-nudge.js', '/src/js/promo.js', '/src/js/share.js',
   '/src/js/mapview-iso.js', '/src/js/main.js', '/src/js/pwa-install.js',
   '/data/achievements.json', '/data/ai-neighbors.json', '/data/coupons.json', '/data/crops.json',

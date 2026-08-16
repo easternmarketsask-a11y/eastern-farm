@@ -462,6 +462,7 @@
       { a: 'expand', icon: 'expand', zh: '开垦农田', en: 'Clear land' },
       { a: 'collection', icon: 'collection', zh: '图鉴', en: 'Collection' },
       { a: 'guide', icon: 'guide', zh: '怎么玩', en: 'How to' },
+      { a: 'feedback', icon: 'feedback', zh: '意见反馈', en: 'Feedback' },
       { a: 'settings', icon: 'settings', zh: '设置', en: 'Settings' },
     ];
     const grid = items.map(it =>
@@ -489,6 +490,7 @@
             break;
           case 'collection': openCollection(); break;
           case 'guide': if (Farm.guide) Farm.guide.open(); break;
+          case 'feedback': if (Farm.feedback) Farm.feedback.open(); break;
           case 'settings': openSettings(); break;
         }
       };

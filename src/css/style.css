@@ -2353,6 +2353,58 @@ body.modal-open #bottombar { display: none; }
   margin-bottom: 20px;
 }
 
+.fbk-cats {
+  display: flex;
+  gap: 8px;
+  margin: 0 0 12px;
+}
+.fbk-cat {
+  flex: 1;
+  padding: 8px 6px;
+  border-radius: 12px;
+  border: 1.5px solid #e6d8b4;
+  background: linear-gradient(180deg, #fffdf7 0%, #f4ecd9 100%);
+  color: #6f5d3e;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  box-shadow: 0 3px 0 #e2d3ac;
+}
+.fbk-cat.active {
+  background: linear-gradient(180deg, #5bb874 0%, #34864a 100%);
+  color: #fff;
+  border-color: #2a6038;
+  box-shadow: 0 3px 0 #2a6038;
+}
+.fbk-text {
+  width: 100%;
+  min-height: 120px;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  font-size: 14px;
+  line-height: 1.5;
+  border: 1.5px solid var(--border-soft);
+  border-radius: 12px;
+  background: #fff;
+  color: var(--warm-text);
+  resize: vertical;
+  font-family: inherit;
+}
+.fbk-text:focus {
+  outline: none;
+  border-color: #3a8c50;
+  box-shadow: 0 0 0 3px rgba(58, 140, 80, 0.18);
+}
+.fbk-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 6px 2px 0;
+  font-size: 11px;
+  color: var(--warm-text-soft);
+}
+
 /* Seed picker grid */
 .seed-list, .crop-list {
   display: grid;
