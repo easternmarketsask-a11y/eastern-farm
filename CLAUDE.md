@@ -135,6 +135,13 @@ farm / isoView / fbAuth 七个核心模块一个都没执行**，全在排队等
 隐私占位（会员实名不进游戏），但看着像假人，**不上名牌**。假称呼（王阿姨/李大爷…）
 一律禁止（`ai-neighbors.RETIRED=true`）。昵称唯一保存入口 `lifeStory.saveNickname`。
 
+### 🔒 画面/海报口味（2026-08-16 Chris）
+
+字叠在油画上。产品名 **东方农场**，**Eastern Farm** 要醒目并跟中文拉开，不许当下注脚。
+双语是重新设计，不是中文底下叠一行小英文。「会员专属」必须可读。扫码是整宽奶油通栏+大码。
+新海报另存版本号，不覆盖旧文件。开屏暖金薄纱、按钮高档能读清。细节见记忆 `project_chris_visual_taste`。
+现行海报构图：**04c**（`promo/poster-phone-onart-04c.png`）。
+
 ---
 
 ## Why This Exists
