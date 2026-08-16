@@ -14,7 +14,9 @@
   // Start zone origin. (The 2026-06-18 "forward move" to (6,6) was cancelled — Chris
   // preferred adapting via the new full-scene background instead. _undoForwardOnce()
   // shifts any save that got forwarded back to here.)
-  const PLOT_OX = 1, PLOT_OY = 2, PLOT_COLS = 3;
+  const PLOT_COLS = 3;
+  const PLOT_ORIGIN_BACK = { ox: 1, oy: 2 };   // 旧开局：靠山（y 小）
+  const PLOT_ORIGIN_FRONT = { ox: 1, oy: 7 };  // 新开局：镜头前（y 大），往后往山上扩
   const TW = 46, TH = 23;          // diamond width/height at zoom 1 (2:1 iso) — halved 2026-06-18 (Chris: shrink whole farm 50% so it's a small cluster in the meadow centre; bg is canvas-based so the farm gets relatively smaller)
   // ZMIN === BG_ZOOM_REF (0.70): at the most-zoomed-out point the painted backdrop's
   // FULL HEIGHT exactly fills the viewport (Chris 2026-06-18: "高度一旦达到背景图全高则不可
@@ -23,16 +25,22 @@
   // (_clampCam keeps the bg covering). ZMAX zooms in.
   const ZMIN = 0.70, ZMAX = 2.4;
   const REQUIRED_LV = { 4: 2, 5: 2, 6: 3, 7: 3, 8: 4, 9: 4, 10: 5, 11: 5 };
-  // Pay-to-expand land. Each level's TOTAL owned rectangle (cells x1,y1..x2,y2) grows
-  // outward; cost is to unlock UP TO that level. L0 = starting land (free, ⊇ the old
-  // 9×11 so existing farms are never taken away). Farthest level also costs a few 超市积分.
-  // Pay-to-expand land, anchored at (0,0) growing outward. L0 = starting owned area.
-  const LAND_LEVELS = [
-    { x1: 0, y1: 0, x2: 8, y2: 10, coins: 0, points: 0 },        // L0 start (owned)
-    { x1: 0, y1: 0, x2: 12, y2: 10, coins: 800, points: 0 },     // L1 → right strip
-    { x1: 0, y1: 0, x2: 12, y2: 13, coins: 1500, points: 0 },    // L2 → bottom
-    { x1: 0, y1: 0, x2: 15, y2: 15, coins: 3000, points: 30 },   // L3 → far corner (coins + points)
-    { x1: 0, y1: 0, x2: 19, y2: 15, coins: 6000, points: 50 },   // L4 沿乡路向东的临路地带(2026-08-14)
+  // Pay-to-expand land. Each level's TOTAL owned rectangle (cells x1,y1..x2,y2).
+  // 两套表：旧存档 landOrigin≠front 继续用 BACK（从山脚往镜头扩，不能改，否则已建的会掉出地界）。
+  // 新农场 landOrigin=front：开局在镜头前，扩地往山上（y 变小）再往东。
+  const LAND_LEVELS_BACK = [
+    { x1: 0, y1: 0, x2: 8, y2: 10, coins: 0, points: 0 },
+    { x1: 0, y1: 0, x2: 12, y2: 10, coins: 800, points: 0 },
+    { x1: 0, y1: 0, x2: 12, y2: 13, coins: 1500, points: 0 },
+    { x1: 0, y1: 0, x2: 15, y2: 15, coins: 3000, points: 30 },
+    { x1: 0, y1: 0, x2: 19, y2: 15, coins: 6000, points: 50 },
+  ];
+  const LAND_LEVELS_FRONT = [
+    { x1: 0, y1: 5, x2: 8, y2: 15, coins: 0, points: 0 },        // L0 镜头前 9×11
+    { x1: 0, y1: 2, x2: 8, y2: 15, coins: 800, points: 0 },     // L1 往山上 3 行
+    { x1: 0, y1: 0, x2: 12, y2: 15, coins: 1500, points: 0 },   // L2 到林线 + 往东
+    { x1: 0, y1: 0, x2: 15, y2: 15, coins: 3000, points: 30 },  // L3
+    { x1: 0, y1: 0, x2: 19, y2: 15, coins: 6000, points: 50 },  // L4 全图
   ];
   // 🔒 默认水塘 v2（2026-08-13 二次修正）：谷仓正前方**隔一整排草**。
   // v1 的 (6,6) 与谷仓底座 (6,5) 是相邻格——有机水塘的波浪轮廓一溢出就贴着
@@ -43,6 +51,8 @@
   // v3(2026-08-14): 十字形五格必然渲染成四瓣花 —— 改 2×2 实心块 + 东侧小湾,
   // 融合后是一块圆润的不规则塘。
   const DEFAULT_POND = { '5,7': 'water', '6,7': 'water', '5,8': 'water', '6,8': 'water', '7,8': 'water' };
+  // 新开局水塘：跟菜地/摊/谷仓一起前移 +5y，仍隔一排草
+  const DEFAULT_POND_FRONT = { '5,12': 'water', '6,12': 'water', '5,13': 'water', '6,13': 'water', '7,13': 'water' };
   // 历代默认水塘形状 —— _migratePond 只认这些**精确形状**搬家（用户自己画的不动）：
   // v0 在菜地生长路径上（第13块地曾直接落进水里）；v1 贴着谷仓。
   const LEGACY_POND_SHAPES = [
@@ -241,18 +251,17 @@
       ['farmGrid', 'farmDecorations'].forEach((idd) => { const e = document.getElementById(idd); if (e) e.style.display = 'none'; });
       const sc = document.querySelector('.farm-scene'); if (sc) sc.style.display = 'none';
 
-      if (!Array.isArray(Farm.state.data.map)) {   // tidy starter layout: house + barn flank the plot block on the right
-        // 菜摊默认在左前方、临着乡路(Chris 2026-08-14 定方位); 谷仓在右
-        Farm.state.data.map = [{ type: 'house', gx: 1, gy: 7 }, { type: 'barn', gx: 5, gy: 4 }];
+      this._ensureLandOrigin();
+      if (!Array.isArray(Farm.state.data.map)) {
+        // 菜摊默认在左前方、临着乡路; 谷仓在右。front 开局整体 +5y。
+        Farm.state.data.map = this._isFrontLand()
+          ? [{ type: 'house', gx: 1, gy: 12 }, { type: 'barn', gx: 5, gy: 9 }]
+          : [{ type: 'house', gx: 1, gy: 7 }, { type: 'barn', gx: 5, gy: 4 }];
         Farm.state.save();
       }
       // Default decorative pond for brand-new players (mapTerrain untouched = null).
-      // 🔒 位置必须避开菜地生长列（2026-08-13 Chris:「水塘跟菜地分开，不能重叠」）。
-      // 旧默认在 (1..3, 6..7) —— 正好是菜地列往下长的路：第 13 块地按老公式排到
-      // (1,6)，跟水塘同格（Chris 自己的农场就是这样撞上的）。新位置在谷仓前方
-      // (5..6, 6..8)，菜地列 (x 1..3) 永远长不到，与建筑 (5..6, 2..5) 也不相邻。
       if (Farm.state.data.mapTerrain == null) {
-        Farm.state.data.mapTerrain = DEFAULT_POND;
+        Farm.state.data.mapTerrain = Object.assign({}, this._isFrontLand() ? DEFAULT_POND_FRONT : DEFAULT_POND);
         Farm.state.save();
       }
 
@@ -401,14 +410,14 @@
         // plots now carry their own cell coords (so new plots can sit anywhere on owned
         // land); migrate legacy index-derived plots once.
         if (!Number.isInteger(p.gx) || !Number.isInteger(p.gy)) {
-          let gx = PLOT_OX + (i % PLOT_COLS), gy = PLOT_OY + Math.floor(i / PLOT_COLS);
-          // ⚠️ 老公式落点可能撞水/撞已占格（第 13 块 → (1,6) = 旧默认水塘）。
-          // 撞了就沿列继续往下找空格，别把菜地种进水塘里。
+          const org = this._plotOrigin();
+          let gx = org.ox + (i % PLOT_COLS), gy = org.oy + Math.floor(i / PLOT_COLS);
+          // ⚠️ 老公式落点可能撞水/撞已占格。撞了就沿列继续往下找空格。
           const terr = this._terrain();
           let guard = 0;
           while (guard++ < COLS * ROWS && (terr[gx + ',' + gy] === 'water' || this._cellToPlot[gx + ',' + gy] != null || this._buildingAt(gx, gy) >= 0)) {
             gx += 1;
-            if (gx >= PLOT_OX + PLOT_COLS) { gx = PLOT_OX; gy += 1; }
+            if (gx >= org.ox + PLOT_COLS) { gx = org.ox; gy += 1; }
           }
           p.gx = gx; p.gy = gy; migrated = true;
         }
@@ -416,8 +425,21 @@
       }
       if (migrated && Farm.state.save) Farm.state.save();
     },
-    _plotGX(i) { const p = (Farm.state.data.plots || [])[i]; return p ? (Number.isInteger(p.gx) ? p.gx : PLOT_OX + (i % PLOT_COLS)) : 0; },
-    _plotGY(i) { const p = (Farm.state.data.plots || [])[i]; return p ? (Number.isInteger(p.gy) ? p.gy : PLOT_OY + Math.floor(i / PLOT_COLS)) : 0; },
+    _plotGX(i) { const p = (Farm.state.data.plots || [])[i]; if (!p) return 0; if (Number.isInteger(p.gx)) return p.gx; const o = this._plotOrigin(); return o.ox + (i % PLOT_COLS); },
+    _plotGY(i) { const p = (Farm.state.data.plots || [])[i]; if (!p) return 0; if (Number.isInteger(p.gy)) return p.gy; const o = this._plotOrigin(); return o.oy + Math.floor(i / PLOT_COLS); },
+    _isFrontLand() { return !!(Farm.state.data && Farm.state.data.landOrigin === 'front'); },
+    _plotOrigin() { return this._isFrontLand() ? PLOT_ORIGIN_FRONT : PLOT_ORIGIN_BACK; },
+    _landTable() { return this._isFrontLand() ? LAND_LEVELS_FRONT : LAND_LEVELS_BACK; },
+    _ensureLandOrigin() {
+      const d = Farm.state.data;
+      if (!d || d.landOrigin === 'front' || d.landOrigin === 'back') return;
+      // 只给真正的新号打 front：还没有地图、水塘、也没有落过格的菜地。
+      // 老存档缺这个字段 → back，地界一格都不动。
+      const brandNew = !Array.isArray(d.map) && d.mapTerrain == null
+        && !(d.plots || []).some((p) => p && Number.isInteger(p.gx));
+      d.landOrigin = brandNew ? 'front' : 'back';
+      if (Farm.state.save) Farm.state.save();
+    },
 
     _farmRect() {
       const f = document.getElementById('farm');
@@ -886,10 +908,10 @@
       return this._itemIndex ? this._itemIndex[itemId] : null;
     },
     _inBounds(gx, gy) { return gx >= 0 && gy >= 0 && gx < COLS && gy < ROWS; },
-    _landLevel() { return Math.max(0, Math.min(LAND_LEVELS.length - 1, (Farm.state.data && Farm.state.data.landLevel) | 0)); },
-    _ownedBounds() { return LAND_LEVELS[this._landLevel()]; },
+    _landLevel() { const t = this._landTable(); return Math.max(0, Math.min(t.length - 1, (Farm.state.data && Farm.state.data.landLevel) | 0)); },
+    _ownedBounds() { return this._landTable()[this._landLevel()]; },
     _ownedCell(gx, gy) { const o = this._ownedBounds(); return gx >= o.x1 && gx <= o.x2 && gy >= o.y1 && gy <= o.y2; },
-    _nextLand() { const lv = this._landLevel(); return lv + 1 < LAND_LEVELS.length ? LAND_LEVELS[lv + 1] : null; },
+    _nextLand() { const t = this._landTable(), lv = this._landLevel(); return lv + 1 < t.length ? t[lv + 1] : null; },
     _footprintFree(gx, gy, type, exceptIdx) {
       const b = BUILDINGS[type];
       if (gx < 0 || gy < 0 || gx + b.w > COLS || gy + b.h > ROWS) return false;
@@ -1139,6 +1161,7 @@
           map: (L.bld || []).map((bb) => { const ob = { type: bb.t, gx: bb.x, gy: bb.y }; if (bb.lv) ob.lv = bb.lv; return ob; }),
           mapTerrain: {}, decorations: (L.deco || []).map((dd) => ({ itemId: dd.d, gx: dd.x, gy: dd.y, placedAt: 1 })),
           landLevel: L.landLevel || 0,
+          landOrigin: L.o === 'front' ? 'front' : 'back',
           activeEffects: {}, seeds: {}, warehouse: [],
           dailyClaims: { date: '', visitFootprints: [], likesSentToday: [] },
           sessionStats: { date: '' },
@@ -1683,6 +1706,8 @@
           const inWorld = gx >= 0 && gy >= 0 && gx < COLS && gy < ROWS;
           const owned = inWorld && gx >= ob.x1 && gx <= ob.x2 && gy >= ob.y1 && gy <= ob.y2;
           if (owned) continue;
+          // front 开局：镜头这一侧（y > 已开地）留草地和路，林子长在山后和两侧
+          if (this._isFrontLand() && gy > ob.y2) continue;
           const k = gx + ',' + gy;
           if (terr[k] === 'water' || terr[k] === 'path' || road[k]) continue;
           let nearNb = false;
@@ -2469,7 +2494,7 @@
       const stl = (Farm.state.data.map || []).find((m) => m && m.type === 'house');
       const key = Math.round(this._camX) + ',' + Math.round(this._camY) + ',' + this._zoom.toFixed(3) + ',' + W + ',' + H
         + ',' + (stl ? stl.gx + '_' + stl.gy : '-')
-        + ',L' + this._landLevel();   // 扩地后未开发林要重画
+        + ',L' + this._landLevel() + (this._isFrontLand() ? 'F' : 'B');
       if (this._bgKey !== key || !this._bgCache) {
         if (!this._bgCache) this._bgCache = document.createElement('canvas');
         const cv = this._bgCache, dpr = this._dpr, pw = Math.round(W * dpr), ph = Math.round(H * dpr);

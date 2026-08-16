@@ -131,6 +131,7 @@
             .slice(0, 40)
             .map((d) => ({ d: d.itemId, x: d.gx, y: d.gy })),
           landLevel: s.landLevel || 0,
+          o: s.landOrigin === 'front' ? 'front' : 'back',
         },
         // Live balances for the admin 游戏管理 panel (display only — the
         // authoritative copy stays in the local save).
