@@ -95,10 +95,15 @@ def variant_b():
 
 def variant_c():
     """只上移店名：东方农场上天；胶囊+对联仍贴扫码栏。"""
-    canvas, draw, W, H, f = base(380, 560)
+    canvas, draw, W, H, f = base(380, 620)
     draw_name(draw, 200, W, f)
-    by = kicker_pill(draw, H - 390 - 280, W, f['kick_zh'], f['kick_en'])
-    draw_couplet(draw, by + 16, W, f)
+    bar_top = H - 390
+    by = kicker_pill(draw, bar_top - 350, W, f['kick_zh'], f['kick_en'])
+    # 下区字阶：胶囊 → 空 → 对联两行拉开 → 再空一截 → 英文贴扫码栏上沿
+    spaced(draw, '玩农场游戏', by + 28, f['title'], CREAM, 8, W, shadow=(0, 2, (0, 0, 0, 140)))
+    spaced(draw, '赚超市积分', by + 104, f['title'], CREAM, 8, W, shadow=(0, 2, (0, 0, 0, 140)))
+    center(draw, 'PLAY THE FARM  ·  EARN STORE POINTS', bar_top - 58, f['en_line'],
+           (243, 224, 176), W, shadow=(0, 2, (0, 0, 0, 150)))
     save(scan_bar(canvas, W, H), 'poster-phone-onart-04c')
 
 
