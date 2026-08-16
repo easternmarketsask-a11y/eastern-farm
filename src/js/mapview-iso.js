@@ -1864,8 +1864,13 @@
           // 矩形地界 + 开垦格 + 已有菜地都不种树（否则新开的田还压着林子）
           if (inWorld && this._ownedCell(gx, gy)) continue;
           if (inWorld && this._cellToPlot && this._cellToPlot[k] != null) continue;
-          // 新农场：路前留一线草。老农场：未开发地（含镜头前）全部种树，空地只留山后林里。
-          if (this._isFrontLand() && gy > ob.y2) continue;
+          // 油画构图：农场坐在开阔草甸上。地界外 2 格是草地；
+          // 再往镜头前的围裙中央也不种树，两侧极疏留边角圆树。
+          const apron = gy > ob.y2;
+          const midX = (ob.x1 + ob.x2) / 2;
+          const inRing = gx >= ob.x1 - 2 && gx <= ob.x2 + 2 && gy >= ob.y1 - 2 && gy <= ob.y2 + 2;
+          if (inRing) continue;
+          if (apron && Math.abs(gx - midX) < 6) continue;
           if (terr[k] === 'water' || terr[k] === 'path' || road[k]) continue;
           let nearNb = false;
           for (let i = 0; i < spots.length; i++) {
@@ -1880,9 +1885,8 @@
           const hsh = ((gx * 73856093) ^ (gy * 19349663)) >>> 0;
           const r1 = (hsh % 997) / 997, r2 = ((hsh >> 8) % 991) / 991;
           const clump = ((Math.floor(gx / 2) * 2654435761) ^ (Math.floor(gy / 2) * 1597334677)) >>> 0;
-          const fillFront = !this._isFrontLand() && gy > ob.y2; // 老农场镜头前的空地改成密林
-          if (!fillFront && (clump % 5) === 0) continue;
-          const dens = fillFront ? 0.88 : (inWorld ? 0.55 : 0.78);
+          if (!apron && (clump % 5) === 0) continue;
+          const dens = apron ? 0.16 : (inWorld ? 0.55 : 0.78);
           if (r1 > dens) continue;
           list.push({ gx: gx, gy: gy, r1: r1, r2: r2, flip: (hsh & 1) === 0 });
         }
@@ -2034,29 +2038,29 @@
       ctx.shadowColor = 'rgba(25,60,80,0.32)'; ctx.shadowBlur = th * 0.5; ctx.shadowOffsetY = th * 0.16;
       ctx.fillStyle = '#2f6d80'; blobs(1, 1); ctx.fill();
       ctx.restore();
-      // 2) surface water — 黄昏暖倒影，不再是正午冰蓝
+      // 2) 溪水色：青蓝倒映暖天，不要奶油白云顶
       const g = ctx.createLinearGradient(0, minY - ry + oy, 0, maxY + ry + oy);
-      g.addColorStop(0, '#e8f0dc');
-      g.addColorStop(0.22, '#f2d8a0');
-      g.addColorStop(0.55, '#6aa8b0');
-      g.addColorStop(1, '#3a7a86');
+      g.addColorStop(0, '#b7d6c8');
+      g.addColorStop(0.28, '#7eb8c4');
+      g.addColorStop(0.62, '#4a8fa0');
+      g.addColorStop(1, '#2d6570');
       ctx.fillStyle = g; blobs(0.88, 0.84); ctx.fill();
-      // 左上受光的一抹金
       let cxp = 0, cyp = 0;
       for (const c of cells) { cxp += c.x; cyp += c.y; }
       cxp /= cells.length; cyp /= cells.length;
       ctx.save();
-      ctx.globalAlpha = 0.32;
-      ctx.fillStyle = '#ffe6b0';
+      ctx.globalAlpha = 0.22;
+      ctx.fillStyle = '#d8f0e8';
       ctx.beginPath();
-      ctx.ellipse(cxp - rx * 0.22, cyp + oy - ry * 0.12, rx * 0.55, ry * 0.28, -0.4, 0, 6.283);
+      ctx.ellipse(cxp - rx * 0.22, cyp + oy - ry * 0.12, rx * 0.42, ry * 0.20, -0.4, 0, 6.283);
       ctx.fill();
       ctx.restore();
       // 3) gentle animated ripples
-      ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.lineWidth = Math.max(1, th * 0.05); ctx.lineCap = 'round';
+      ctx.strokeStyle = 'rgba(230,248,240,0.22)'; ctx.lineWidth = Math.max(1, th * 0.045); ctx.lineCap = 'round';
       cells.forEach((c, i) => {
-        const wob = Math.sin(t * 1.4 + i * 1.3) * th * 0.05;
-        ctx.beginPath(); ctx.moveTo(c.x - rx * 0.32, c.y + oy + wob); ctx.quadraticCurveTo(c.x, c.y + oy - th * 0.07 + wob, c.x + rx * 0.32, c.y + oy + wob); ctx.stroke();
+        if (i % 2) return;
+        const wob = Math.sin(t * 1.4 + i * 1.3) * th * 0.04;
+        ctx.beginPath(); ctx.moveTo(c.x - rx * 0.26, c.y + oy + wob); ctx.quadraticCurveTo(c.x, c.y + oy - th * 0.05 + wob, c.x + rx * 0.26, c.y + oy + wob); ctx.stroke();
       });
       // 3.5) 水面波光: 两粒错相位的小闪(丰收田旁的一点灵动)
       for (let i = 0; i < Math.min(2, cells.length); i++) {
@@ -2075,9 +2079,13 @@
       // 4) 暖色草岸，不要粉花睡莲（宣传图是一条溪，不是卡通塘）
       ctx.save();
       ctx.globalAlpha = 0.35;
-      ctx.strokeStyle = '#6a8a40';
-      ctx.lineWidth = Math.max(2, th * 0.14);
+      ctx.strokeStyle = '#7a6a38';
+      ctx.lineWidth = Math.max(2.2, th * 0.16);
       blobs(1.02, 1.04); ctx.stroke();
+      ctx.globalAlpha = 0.22;
+      ctx.strokeStyle = '#c4a86a';
+      ctx.lineWidth = Math.max(1.4, th * 0.08);
+      blobs(1.05, 1.08); ctx.stroke();
       ctx.restore();
       ctx.restore();
     },
@@ -2096,11 +2104,11 @@
       const ctx = this._ctx, tw = this._tw(), th = this._th();
       // 金色黄昏天空（对齐 2026-08-15 宣传插画）：上暖下金，草地再盖住下半。
       const base = ctx.createLinearGradient(0, 0, 0, H);
-      base.addColorStop(0, '#f3b090');
-      base.addColorStop(0.22, '#f6c49a');
-      base.addColorStop(0.48, '#f0d8a8');
-      base.addColorStop(0.68, '#c8c07a');
-      base.addColorStop(1, '#8eae4a');
+      base.addColorStop(0, '#f4a888');
+      base.addColorStop(0.20, '#f6b890');
+      base.addColorStop(0.42, '#f3c89a');
+      base.addColorStop(0.64, '#d4c878');
+      base.addColorStop(1, '#9ab04a');
       ctx.fillStyle = base; ctx.fillRect(0, 0, W, H);
       // 左上太阳：柔光晕，不画硬边日轮（避免像贴纸）
       const sun = ctx.createRadialGradient(W * 0.16, H * 0.07, 0, W * 0.16, H * 0.07, Math.max(W, H) * 0.55);
@@ -2467,10 +2475,16 @@
       // 从林脚以下起铺(hl+0.8th), 树脚由菱形格自然探上去咬合, 不再一刀切。
       const gTop = Math.max(0, hl + th * 2.4);
       const meadow = ctx.createLinearGradient(0, gTop, 0, H);
-      meadow.addColorStop(0, 'rgb(127,160,80)');
-      meadow.addColorStop(0.4, 'rgb(118,158,68)');
-      meadow.addColorStop(1, 'rgb(96,148,58)');
+      meadow.addColorStop(0, 'rgb(168,176,78)');
+      meadow.addColorStop(0.38, 'rgb(148,168,64)');
+      meadow.addColorStop(1, 'rgb(118,148,52)');
       ctx.fillStyle = meadow;
+      ctx.fillRect(0, gTop, W, H - gTop);
+      const shade = ctx.createLinearGradient(0, gTop, W * 0.85, H);
+      shade.addColorStop(0, 'rgba(255,214,120,0.16)');
+      shade.addColorStop(0.55, 'rgba(255,200,100,0.04)');
+      shade.addColorStop(1, 'rgba(48,62,28,0.10)');
+      ctx.fillStyle = shade;
       ctx.fillRect(0, gTop, W, H - gTop);
       for (let gy = gy0; gy <= gy1; gy++) {
         for (let gx = gx0; gx <= gx1; gx++) {
@@ -2481,14 +2495,14 @@
           const r1 = (hsh % 997) / 997, r2 = ((hsh >> 8) % 991) / 991;
           const inWorld = gx >= 0 && gy >= 0 && gx < COLS && gy < ROWS;
           const owned = inWorld && gx >= ob.x1 && gx <= ob.x2 && gy >= ob.y1 && gy <= ob.y2;
-          // 基色: 农场内亮耕作绿(条带), 未拥有微降饱和, 世界外野草(偏黄+噪点强)
+          const apron = gy > ob.y2;
+          // 基色: 农场内亮耕作金绿, 镜头前围裙同色（油画是一整片草甸）
           let rr, gg, bb2;
-          // 农场基色: 大块起伏取代奇偶棋盘，近看也不像铺瓷砖
           const patch = Math.sin(gx * 0.52 + gy * 0.37) * 7 + Math.sin(gx * 0.19 - gy * 0.24) * 5;
           const stripe = ((gx + gy) & 1) ? -0.35 : 0;
           const nzIn = (r1 - 0.5) * 6;
-          let fr = 134 + patch + stripe + nzIn, fg = 170 + patch * 0.85 + stripe + nzIn * 0.7, fb = 66 + patch * 0.4 + stripe * 0.6 + nzIn * 0.5;
-          if (inWorld && !owned) { fr = 86 + nzIn; fg = 112 + nzIn * 0.6; fb = 52 + nzIn * 0.3; }
+          let fr = 162 + patch + stripe + nzIn, fg = 170 + patch * 0.7 + stripe + nzIn * 0.6, fb = 58 + patch * 0.3 + stripe * 0.45 + nzIn * 0.35;
+          if (inWorld && !owned && !apron) { fr = 96 + nzIn; fg = 122 + nzIn * 0.6; fb = 52 + nzIn * 0.3; }
           // 场外林下：更深的荫地，不是亮黄野草
           const nzOut = (r1 - 0.5) * 8;
           const wr = 78 + nzOut, wg = 104 + nzOut * 0.7, wb = 50 + (r2 - 0.5) * 6;
@@ -2527,7 +2541,7 @@
               ctx.quadraticCurveTo(bx + i * tw * 0.05, byy - th * 0.05, bx + i * tw * 0.075, byy - th * 0.13);
               ctx.stroke();
             }
-          } else if (inWorld && owned && r2 < 0.085) {
+          } else if ((owned || apron) && r2 < 0.10) {
             const fx = c.x + (r1 - 0.5) * tw * 0.5, fy = c.y + (r2 * 8 - 0.4) * th * 0.4;
             ctx.fillStyle = '#fdf6e8';
             for (let i = 0; i < 5; i++) { const an = i / 5 * 6.283; ctx.beginPath(); ctx.arc(fx + Math.cos(an) * tw * 0.022, fy + Math.sin(an) * th * 0.030, Math.max(0.8, tw * 0.014), 0, 6.283); ctx.fill(); }
@@ -2549,9 +2563,9 @@
     _drawGoldenHour(W, H) {
       const ctx = this._ctx;
       const g = ctx.createRadialGradient(W * 0.14, H * 0.06, 0, W * 0.14, H * 0.06, Math.max(W, H) * 1.15);
-      g.addColorStop(0, 'rgba(255,210,140,0.20)');
-      g.addColorStop(0.38, 'rgba(255,186,110,0.08)');
-      g.addColorStop(1, 'rgba(40,55,25,0.055)');
+      g.addColorStop(0, 'rgba(255,208,130,0.28)');
+      g.addColorStop(0.34, 'rgba(255,176,96,0.12)');
+      g.addColorStop(1, 'rgba(48,42,22,0.07)');
       ctx.fillStyle = g;
       ctx.fillRect(0, 0, W, H);
     },
