@@ -1755,11 +1755,24 @@
 
     // ---- render ----
     _blit(im, cx, by, maxW, maxH) { if (!im) return false; const s = Math.min(maxW / im.width, maxH / im.height), w = im.width * s, h = im.height * s; this._ctx.drawImage(im, cx - w / 2, by - h, w, h); return true; },
-    _cropSprite(id) {
-      const c = this._cropImg[id]; if (c instanceof Image) return c; if (c === true || c === false) return null;
-      const url = (Farm.cropArt && Farm.cropArt.spriteUrl) ? Farm.cropArt.spriteUrl(id) : null;
-      if (!url) { this._cropImg[id] = true; return null; }
-      this._cropImg[id] = false; const im = new Image(); im.onload = () => { this._cropImg[id] = im; if (this._on) this.render(); }; im.onerror = () => { this._cropImg[id] = true; }; im.src = url; return null;
+    _cropSprite(id) { return this._cropArtImg(id, 2); },
+    _cropArtImg(id, stage) {
+      const key = id + '_s' + stage;
+      const c = this._cropImg[key]; if (c instanceof Image) return c; if (c === true || c === false) return null;
+      let url = null;
+      if (stage >= 2 && Farm.cropArt && Farm.cropArt.spriteUrl) url = Farm.cropArt.spriteUrl(id);
+      if (!url && Farm.cropArt && Farm.cropArt.svg) {
+        const svg = Farm.cropArt.svg(id, stage, 256, { bare: true });
+        const m = svg && svg.match(/src="([^"]+)"/);
+        url = m ? m[1] : (svg ? ('data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg)) : null);
+      }
+      if (!url) { this._cropImg[key] = true; return null; }
+      this._cropImg[key] = false;
+      const im = new Image();
+      im.onload = () => { this._cropImg[key] = im; if (this._on) this.render(); };
+      im.onerror = () => { this._cropImg[key] = true; };
+      im.src = url;
+      return null;
     },
     // Lazy-load any map asset by file stem (e.g. 'crop_eggplant_2', 'animal_cat').
     _lazyImg(name) {
@@ -3074,10 +3087,21 @@
           plantTopY = topY;
         }
         else { const def = Farm.crops.get(plot.crop); ctx.font = (th * 1.1) + 'px sans-serif'; ctx.fillText((def && def.icon) || '🌿', c.x, by); }
-      } else if (mature) {
-        const im = this._cropSprite(plot.crop);
-        if (!this._blit(im, c.x, by, tw * 0.72, th * 1.7)) { const def = Farm.crops.get(plot.crop); ctx.font = (th * 1.1) + 'px sans-serif'; ctx.fillText((def && def.icon) || '🥬', c.x, by); }
-      } else { ctx.font = (th * (p >= 0.4 ? 0.9 : 0.7)) + 'px sans-serif'; ctx.fillText(p >= 0.4 ? '🌿' : '🌱', c.x, by); }
+      } else {
+        const st = p >= 1 ? 2 : p >= 0.4 ? 1 : 0;
+        const im = this._cropArtImg(plot.crop, st);
+        if (im) {
+          const s = (th * (0.88 + st * 0.16)) / 256;
+          const w = im.width * s, h = im.height * s;
+          const topY = (c.y + th * 0.34 - ripe) - h;
+          ctx.drawImage(im, c.x - w / 2, topY, w, h);
+          plantTopY = topY;
+        } else {
+          const def = Farm.crops.get(plot.crop);
+          ctx.font = (th * (mature ? 1.1 : (p >= 0.4 ? 0.9 : 0.7))) + 'px sans-serif';
+          ctx.fillText((def && def.icon) || (mature ? '🥬' : (p >= 0.4 ? '🌿' : '🌱')), c.x, by);
+        }
+      }
       if (mature) {
         /* 徽章 LOD(2026-08-14 打磨): <=3 块熟 → 白圈气泡(新手期指认清晰);
            更多 → 不画气泡 —— 12 个白圈叠成墙是全场最丑的画面(截图实证),

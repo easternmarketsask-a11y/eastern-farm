@@ -1,62 +1,21 @@
 """Generate a 500×500 share card for WeChat / OpenGraph previews.
 
 Output: src/assets/images/share-card.png
-
-WeChat preview rules (as of 2026):
-- Picks the first <img> >= 300x300 in the page, OR uses og:image
-- Best results with SQUARE 500×500 PNG, < 200KB
-- Caption falls back to <title> + meta[name="description"]
 """
-from PIL import Image, ImageDraw, ImageFont, ImageFilter
+from PIL import Image, ImageDraw, ImageFont
 from pathlib import Path
-import sys
 
 REPO = Path(__file__).resolve().parent.parent
 OUT = REPO / 'src' / 'assets' / 'images' / 'share-card.png'
 LOGO = REPO / 'src' / 'assets' / 'images' / 'logo-horizontal.png'
+ART = REPO / 'promo' / 'keyart-farm-square.jpg'
 
 W, H = 500, 500
 
-# ---- Background: warm cream gradient + green ground at bottom ----
-img = Image.new('RGB', (W, H), '#fef5e0')
-draw = ImageDraw.Draw(img)
-
-# Sky gradient
-for y in range(0, 360):
-    t = y / 360
-    r = int(254 + (253 - 254) * t)
-    g = int(245 + (248 - 245) * t)
-    b = int(224 + (238 - 224) * t)
-    draw.line([(0, y), (W, y)], fill=(r, g, b))
-
-# Green field at bottom (rolling hill)
-for y in range(360, H):
-    t = (y - 360) / (H - 360)
-    r = int(174 + (88 - 174) * t)
-    g = int(213 + (140 - 213) * t)
-    b = int(129 + (80 - 129) * t)
-    draw.line([(0, y), (W, y)], fill=(r, g, b))
-
-# Soft hill curve
-hill = Image.new('RGBA', (W, 120), (0, 0, 0, 0))
-hd = ImageDraw.Draw(hill)
-hd.pieslice([-50, -40, W + 50, 200], 180, 360, fill=(124, 179, 66, 255))
-img.paste(hill, (0, 320), hill)
-
-# ---- Eastern Market logo at top ----
-try:
-    logo = Image.open(LOGO).convert('RGBA')
-    lw, lh = logo.size
-    target_w = 240
-    target_h = int(lh * target_w / lw)
-    logo = logo.resize((target_w, target_h), Image.LANCZOS)
-    img.paste(logo, ((W - target_w) // 2, 24), logo)
-except Exception as e:
-    print(f"logo load failed: {e}", file=sys.stderr)
 
 def load_font(size, bold=False, serif=False):
     if serif:
-        for f in ['C:/Windows/Fonts/NotoSerifSC-VF.ttf', 'C:/Windows/Fonts/msyhbd.ttc']:
+        for f in [r'C:\Windows\Fonts\NotoSerifSC-VF.ttf', r'C:\Windows\Fonts\msyhbd.ttc']:
             try:
                 font = ImageFont.truetype(f, size)
                 if hasattr(font, 'set_variation_by_axes'):
@@ -67,88 +26,75 @@ def load_font(size, bold=False, serif=False):
                 return font
             except Exception:
                 continue
-    candidates = [
-        'C:/Windows/Fonts/georgiab.ttf' if (not serif and bold) else None,
-        'C:/Windows/Fonts/georgia.ttf' if not serif else None,
-        'C:/Windows/Fonts/msyhbd.ttc' if bold else 'C:/Windows/Fonts/msyh.ttc',
-        'C:/Windows/Fonts/simhei.ttf',
-    ]
-    for f in candidates:
-        if not f:
-            continue
+    for f in [
+        r'C:\Windows\Fonts\georgiab.ttf' if bold else r'C:\Windows\Fonts\georgia.ttf',
+        r'C:\Windows\Fonts\msyhbd.ttc' if bold else r'C:\Windows\Fonts\msyh.ttc',
+    ]:
         try:
             return ImageFont.truetype(f, size)
         except Exception:
             continue
     return ImageFont.load_default()
 
-title_font = load_font(56, bold=True, serif=True)
-en_font = load_font(28, bold=True)
-tag_font = load_font(20, bold=True, serif=True)
-url_font = load_font(16, bold=False)
+
+def cover(im, tw, th, bias_y=40):
+    s = max(tw / im.width, th / im.height)
+    nw, nh = int(im.width * s + 0.5), int(im.height * s + 0.5)
+    im = im.resize((nw, nh), Image.Resampling.LANCZOS)
+    x = (nw - tw) // 2
+    y = max(0, min(nh - th, (nh - th) // 2 + bias_y))
+    return im.crop((x, y, x + tw, y + th))
+
+
+art = cover(Image.open(ART).convert('RGB'), W, H, bias_y=30).convert('RGBA')
+wash = Image.new('RGBA', (W, H), (0, 0, 0, 0))
+wd = ImageDraw.Draw(wash)
+for i in range(170):
+    a = int(90 * (1 - i / 170) ** 1.35)
+    wd.line([(0, i), (W, i)], fill=(40, 28, 16, a))
+for i in range(90):
+    a = int(70 * (i / 89) ** 1.2)
+    wd.line([(0, H - 90 + i), (W, H - 90 + i)], fill=(20, 16, 10, a))
+canvas = Image.alpha_composite(art, wash)
+draw = ImageDraw.Draw(canvas)
+
+logo = Image.open(LOGO).convert('RGBA')
+lw = 200
+lh = int(logo.height * lw / logo.width)
+logo = logo.resize((lw, lh), Image.Resampling.LANCZOS)
+plate = Image.new('RGBA', (lw + 36, lh + 20), (0, 0, 0, 0))
+pd = ImageDraw.Draw(plate)
+pd.rounded_rectangle([0, 0, plate.width - 1, plate.height - 1], radius=14, fill=(246, 239, 224, 230))
+px = (W - plate.width) // 2
+canvas.paste(plate, (px, 16), plate)
+canvas.paste(logo, (px + 18, 26), logo)
+
+title_font = load_font(44, bold=True, serif=True)
+en_font = load_font(22, bold=True)
+url_font = load_font(15, bold=True)
+draw = ImageDraw.Draw(canvas)
 
 title_zh = '东方农场'
-bbox = draw.textbbox((0, 0), title_zh, font=title_font)
-tw = bbox[2] - bbox[0]
-th = bbox[3] - bbox[1]
-title_x = (W - tw) // 2
-title_y = 124
-draw.text((title_x + 2, title_y + 3), title_zh, font=title_font, fill=(0, 0, 0, 80))
-draw.text((title_x, title_y), title_zh, font=title_font, fill='#2a5c34')
+tb = draw.textbbox((0, 0), title_zh, font=title_font)
+tw, th = tb[2] - tb[0], tb[3] - tb[1]
+tx, ty = (W - tw) // 2, 16 + plate.height + 14
+draw.text((tx + 1, ty + 2), title_zh, font=title_font, fill=(20, 14, 8, 140))
+draw.text((tx, ty), title_zh, font=title_font, fill=(255, 248, 236))
 
-en_text = 'Eastern Farm'
-bbox2 = draw.textbbox((0, 0), en_text, font=en_font)
-ew = bbox2[2] - bbox2[0]
-draw.text(((W - ew) // 2, title_y + th + 18), en_text, font=en_font, fill='#3a8c50')
+en = 'Eastern Farm'
+eb = draw.textbbox((0, 0), en, font=en_font)
+ex = (W - (eb[2] - eb[0])) // 2
+draw.text((ex, ty + th + 22), en, font=en_font, fill=(255, 244, 210))
 
-# ---- Crop sprout illustrations ----
-# Just a simple sprout shape in green, repeated
-def draw_sprout(x, y, scale=1.0):
-    # Stem
-    draw.line([(x, y), (x, y - int(40 * scale))], fill='#2e6b1d', width=int(4 * scale))
-    # Left leaf
-    draw.ellipse(
-        [(x - int(20 * scale), y - int(38 * scale)),
-         (x + int(2 * scale), y - int(18 * scale))],
-        fill='#7cb342', outline='#3a6e1a', width=2
-    )
-    # Right leaf
-    draw.ellipse(
-        [(x - int(2 * scale), y - int(38 * scale)),
-         (x + int(20 * scale), y - int(18 * scale))],
-        fill='#9ccc65', outline='#3a6e1a', width=2
-    )
+bar = Image.new('RGBA', (W, 44), (246, 239, 224, 235))
+canvas.paste(bar, (0, H - 44), bar)
+url = 'farm.easternmarket.ca'
+ub = draw.textbbox((0, 0), url, font=url_font)
+ux = (W - (ub[2] - ub[0])) // 2
+draw = ImageDraw.Draw(canvas)
+draw.text((ux, H - 32), url, font=url_font, fill=(42, 74, 40))
 
-# Five sprouts along the bottom field, varied sizes
-draw_sprout(90,  440, scale=1.0)
-draw_sprout(180, 460, scale=1.3)
-draw_sprout(280, 455, scale=1.1)
-draw_sprout(370, 470, scale=1.4)
-draw_sprout(450, 450, scale=0.9)
-
-# ---- Bottom tagline ----
-tagline = '玩农场游戏 · 赚超市积分'
-bbox3 = draw.textbbox((0, 0), tagline, font=tag_font)
-tgw = bbox3[2] - bbox3[0]
-# Background pill for readability
-pad = 14
-pill_w = tgw + pad * 2
-pill_x = (W - pill_w) // 2
-pill_y = 252
-pill_overlay = Image.new('RGBA', (pill_w, 40), (255, 255, 255, 230))
-po_d = ImageDraw.Draw(pill_overlay)
-po_d.rounded_rectangle([(0, 0), (pill_w, 40)], radius=20, fill=(255, 248, 230, 245), outline=(232, 200, 130, 255), width=2)
-img.paste(pill_overlay, (pill_x, pill_y), pill_overlay)
-draw.text(((W - tgw) // 2, pill_y + 7), tagline, font=tag_font, fill='#8b5a00')
-
-# URL footer
-url_text = 'farm.easternmarket.ca'
-bbox4 = draw.textbbox((0, 0), url_text, font=url_font)
-uw = bbox4[2] - bbox4[0]
-draw.text(((W - uw) // 2, H - 32), url_text, font=url_font, fill='#3a8c50')
-
-# ---- Save ----
-OUT.parent.mkdir(parents=True, exist_ok=True)
-img.save(OUT, 'PNG', optimize=True)
-print(f"Saved: {OUT}")
-print(f"Size: {OUT.stat().st_size} bytes")
+rgb = canvas.convert('RGB')
+q = rgb.convert('P', palette=Image.ADAPTIVE, colors=128)
+q.save(OUT, 'PNG', optimize=True)
+print('Saved:', OUT, OUT.stat().st_size, 'bytes')

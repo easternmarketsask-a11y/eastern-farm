@@ -1,4 +1,4 @@
-# Adding a "玩快乐农场" link from the main store site
+# Adding a "玩东方农场" link from the main store site
 
 The game side already has links back to https://easternmarket.ca/
 (brand-bar logo + settings panel). For the reverse direction, you
@@ -15,7 +15,7 @@ In `frontend-web/src/components/TTHeader.tsx`, add a nav button:
   href="https://farm.easternmarket.ca/"
   className="text-sm font-medium text-green-700 hover:text-green-900 flex items-center gap-1"
 >
-  🌱 玩快乐农场
+  🌱 玩东方农场
 </a>
 ```
 
@@ -36,7 +36,7 @@ hero carousel:
     <div className="text-5xl">🌾</div>
     <div className="flex-1">
       <div className="text-lg font-bold text-green-800">
-        东方超市·快乐农场
+        东方农场
       </div>
       <div className="text-sm text-gray-600 mt-1">
         玩游戏赚积分 · 积分等同会员积分 · 可在店内兑换
@@ -60,7 +60,7 @@ add a card that says "玩游戏多赚积分":
   <div className="flex items-center gap-3">
     <span className="text-3xl">🌱</span>
     <div>
-      <div className="font-semibold text-amber-900">玩快乐农场 +赚积分</div>
+      <div className="font-semibold text-amber-900">玩东方农场 +赚积分</div>
       <div className="text-xs text-amber-700">
         种菜收获自动入您的会员账户
       </div>
