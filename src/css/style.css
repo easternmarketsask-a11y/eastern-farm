@@ -2880,15 +2880,29 @@ body.modal-open #bottombar { display: none; }
   flex: 0 0 auto;
 }
 .splash-kicker {
-  display: inline-block;
-  font-size: 12.5px;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 13px;
   font-weight: 700;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.12em;
   color: #1c261a;
   background: #f6efe0;
-  padding: 6px 16px;
+  padding: 7px 16px 8px;
   border-radius: 999px;
   animation: splashSlideUp 0.6s ease 0.25s both;
+}
+.splash-kicker-en {
+  font-family: var(--font-en);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  opacity: 0.85;
+}
+.splash-kicker-en::before {
+  content: '·';
+  margin-right: 8px;
+  opacity: 0.55;
 }
 
 .splash-content {
@@ -2922,28 +2936,28 @@ body.modal-open #bottombar { display: none; }
 .splash-title-zh {
   font-family: 'Noto Serif SC', var(--font-display), serif;
   font-weight: 700;
-  font-size: 42px;
+  font-size: 40px;
   color: #f6efe0;
-  margin-top: 0;
+  margin-top: 14px;
   letter-spacing: 0.22em;
   text-shadow: 0 2px 12px rgba(0, 0, 0, 0.35);
   animation: splashSlideUp 0.6s ease 0.4s both;
 }
 .splash-title-en {
   font-family: var(--font-en);
-  font-size: 11px;
+  font-size: 16px;
   font-weight: 600;
-  letter-spacing: 0.28em;
+  letter-spacing: 0.16em;
   color: #d4b87a;
-  text-transform: uppercase;
-  margin-top: -4px;
+  text-transform: none;
+  margin-top: 10px;
   animation: splashSlideUp 0.6s ease 0.5s both;
 }
 .splash-tagline {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  margin-top: 4px;
+  gap: 4px;
+  margin-top: 14px;
   font-family: 'Noto Serif SC', var(--font-display), serif;
   font-size: 20px;
   font-weight: 600;
@@ -2954,13 +2968,13 @@ body.modal-open #bottombar { display: none; }
 .splash-tagline-en {
   font-family: var(--font-en);
   font-style: normal;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 600;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   color: #d4b87a;
   opacity: 1;
-  margin-top: 6px;
+  margin-top: 10px;
 }
 @keyframes splashSlideUp {
   from { opacity: 0; transform: translateY(12px); }
