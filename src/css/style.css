@@ -2825,21 +2825,18 @@ body.modal-open #bottombar { display: none; }
 }
 
 /* =============== SPLASH SCREEN =============== */
+/* 2026-08-15：开屏跟宣传海报同一套油画 + 字阶。全幅 keyart，暮色带托字。 */
 .splash {
   position: fixed;
   inset: 0;
   z-index: 1000;
   display: flex;
-  /* 安全居中 + 可滚动（audit P0 2026-07-07）：原 align-items:center 在内容高于
-     视口时把顶底裁掉且无任何滚动路径——360×640 游客入口不可见、844×390 横屏
-     登录/游客按钮全部不可达（无法进入游戏）。改为 .splash-content{margin:auto}
-     居中：空间足够时效果与 center 相同，溢出时自动顶对齐 + 本层内滚。
-     （html/body 是 overflow:hidden 锁滚，本层自带 overflow-y:auto 不受影响。） */
+  flex-direction: column;
+  /* 安全：内容高于视口时本层内滚，不裁掉登录/游客按钮。 */
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  background:
-    radial-gradient(circle at 50% 30%, #ffffff 0%, #fef5e0 30%, #f5ecd5 100%);
-  padding: 24px;
+  background: #1a2214;
+  padding: 0;
   animation: splashIn 0.4s ease;
 }
 .splash.dismissed {
@@ -2852,46 +2849,70 @@ body.modal-open #bottombar { display: none; }
 @keyframes splashOut {
   to { opacity: 0; visibility: hidden; transform: scale(1.02); }
 }
-/* Real-illustration strip at the bottom of the splash (behind content).
-   Same farm-backdrop.jpg as the in-game scene band; the top edge fades
-   into the cream splash background via CSS mask. */
 .splash-scene {
   position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  inset: 0;
   pointer-events: none;
   line-height: 0;
 }
 .splash-scene-img {
   display: block;
   width: 100%;
-  height: 200px;
+  height: 100%;
   object-fit: cover;
-  object-position: 6% 38%;
-  -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 36%);
-  mask-image: linear-gradient(180deg, transparent 0, #000 36%);
+  object-position: center 38%;
+}
+.splash-veil {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 68%;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(16,22,12,0) 0%, rgba(16,22,12,0.42) 28%, rgba(16,22,12,0.88) 72%, rgba(16,22,12,0.96) 100%);
+}
+.splash-top {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: calc(14px + env(safe-area-inset-top)) 20px 0;
+  flex: 0 0 auto;
+}
+.splash-kicker {
+  display: inline-block;
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  color: #1c261a;
+  background: #f6efe0;
+  padding: 6px 16px;
+  border-radius: 999px;
+  animation: splashSlideUp 0.6s ease 0.25s both;
 }
 
 .splash-content {
-  position: relative;   /* keep above .splash-scene */
+  position: relative;
   z-index: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16px;
+  gap: 10px;
   text-align: center;
-  max-width: 360px;
+  max-width: 400px;
   width: 100%;
-  /* 安全居中：flex 容器里 margin:auto 双轴居中，内容溢出时自动顶对齐可滚
-     （替代父层 align-items:center 的裁切式居中，见 .splash 注释）。 */
-  margin: auto;
+  margin-top: auto;
+  margin-left: auto;
+  margin-right: auto;
+  padding: 8px 22px calc(18px + env(safe-area-inset-bottom));
 }
 .splash-logo {
-  width: 78%;
-  max-width: 280px;
+  width: 48%;
+  max-width: 176px;
   height: auto;
-  filter: drop-shadow(0 6px 20px rgba(232, 82, 42, 0.18));
+  background: rgba(246, 239, 224, 0.92);
+  padding: 8px 16px;
+  border-radius: 16px;
   animation: splashLogoIn 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) 0.1s both;
 }
 @keyframes splashLogoIn {
@@ -2899,22 +2920,21 @@ body.modal-open #bottombar { display: none; }
   to { opacity: 1; transform: scale(1) translateY(0); }
 }
 .splash-title-zh {
-  font-family: var(--font-display);
-  letter-spacing: 0.08em;
-  font-size: 40px;
-  color: #2a5c34;
-  margin-top: 6px;
-  letter-spacing: 4px;
+  font-family: 'Noto Serif SC', var(--font-display), serif;
+  font-weight: 700;
+  font-size: 42px;
+  color: #f6efe0;
+  margin-top: 0;
+  letter-spacing: 0.22em;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.35);
   animation: splashSlideUp 0.6s ease 0.4s both;
 }
 .splash-title-en {
   font-family: var(--font-en);
-  font-size: 12.5px;
+  font-size: 11px;
   font-weight: 600;
-  text-transform: uppercase;
   letter-spacing: 0.28em;
-  color: #E8522A;
-  letter-spacing: 6px;
+  color: #d4b87a;
   text-transform: uppercase;
   margin-top: -4px;
   animation: splashSlideUp 0.6s ease 0.5s both;
@@ -2923,16 +2943,24 @@ body.modal-open #bottombar { display: none; }
   display: flex;
   flex-direction: column;
   gap: 2px;
-  margin-top: 10px;
-  font-size: 13px;
-  color: var(--warm-text-soft);
+  margin-top: 4px;
+  font-family: 'Noto Serif SC', var(--font-display), serif;
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  color: #f6efe0;
   animation: splashSlideUp 0.6s ease 0.6s both;
 }
 .splash-tagline-en {
   font-family: var(--font-en);
-  font-style: italic;
-  font-size: 12px;
-  opacity: 0.75;
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #d4b87a;
+  opacity: 1;
+  margin-top: 6px;
 }
 @keyframes splashSlideUp {
   from { opacity: 0; transform: translateY(12px); }
@@ -2986,14 +3014,54 @@ body.modal-open #bottombar { display: none; }
   }
 }
 .splash-footer {
-  margin-top: 24px;
+  margin-top: 8px;
   font-size: 11px;
-  color: #5a4c3a;
-  /* cream pill so the address stays readable over the illustration strip */
-  background: rgba(253, 248, 238, 0.85);
-  padding: 4px 14px;
-  border-radius: 999px;
+  color: rgba(246, 239, 224, 0.62);
+  background: none;
+  padding: 0;
+  border-radius: 0;
   animation: splashSlideUp 0.6s ease 0.95s both;
+}
+
+/* 开屏叠在油画上：礼包/权益改成半透明奶油，别用正午糖果色 */
+.splash .splash-reward {
+  background: rgba(246, 239, 224, 0.92);
+  border: 1px solid rgba(201, 162, 74, 0.45);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+  margin-top: 10px;
+}
+.splash .splash-perks {
+  color: rgba(246, 239, 224, 0.82);
+  margin-top: 4px;
+  gap: 3px;
+  font-size: 12px;
+  /* 手机开屏跟海报一样少字；高屏再露权益 */
+  display: none;
+}
+@media (min-height: 920px) {
+  .splash .splash-perks { display: flex; }
+}
+.splash .splash-perk-en { color: rgba(212, 184, 122, 0.85); opacity: 1; }
+.splash .splash-login.splash-login--hero {
+  margin-top: 8px;
+  background: #2a4a32;
+  box-shadow: 0 4px 0 #1a2e1e, 0 8px 20px rgba(0, 0, 0, 0.28);
+}
+.splash .splash-start.splash-start--ghost {
+  background: rgba(246, 239, 224, 0.14);
+  border-color: rgba(246, 239, 224, 0.28);
+  color: #f6efe0;
+}
+
+@media (max-height: 700px) {
+  .splash-title-zh { font-size: 34px; }
+  .splash-tagline { font-size: 16px; }
+  .splash .splash-perks { display: none; }
+  .splash .splash-reward { padding: 6px 14px; }
+}
+@media (max-height: 520px) {
+  .splash-kicker { display: none; }
+  .splash .splash-reward { display: none; }
 }
 
 /* =============== MEMBER BUTTON (topbar slot) =============== */

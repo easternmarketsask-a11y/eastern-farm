@@ -54,8 +54,8 @@
      serial @import in style.css → ~2.3s first-paint stall on slow nets, B4).
      Loaded async via media="print"→onload so it never blocks render; display=swap
      already gives a system-font fallback until the webfont arrives. -->
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Plus+Jakarta+Sans:wght@400;500;700&family=ZCOOL+XiaoWei&display=swap" media="print" onload="this.media='all'">
-<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Plus+Jakarta+Sans:wght@400;500;700&family=ZCOOL+XiaoWei&display=swap"></noscript>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;700&family=ZCOOL+XiaoWei&display=swap" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;700&family=ZCOOL+XiaoWei&display=swap"></noscript>
 <link rel="stylesheet" href="css/style.css">
 
 <!-- ⚠️ 开屏按钮的「保命接管」——必须在 <head>，必须用事件委托（2026-08-11）
@@ -359,21 +359,21 @@
 
 <!-- Splash overlay (shown on first load; tap to enter) -->
 <div id="splash" class="splash">
-  <!-- Decorative meadow strip pinned to the bottom: hills + a row of
-       freshly-planted veggies. Sits behind the content (z-index). -->
-  <!-- Real illustration strip pinned to the bottom (same farm-backdrop.jpg
-       as the in-game scene band). Top edge fades into the cream splash via
-       CSS mask. Content sits high enough to clear the PWA install banner. -->
   <div class="splash-scene" aria-hidden="true">
-    <img class="splash-scene-img" src="assets/images/farm-backdrop.jpg" alt="">
+    <img class="splash-scene-img" src="assets/images/splash-keyart.jpg" alt="">
+  </div>
+  <div class="splash-veil" aria-hidden="true"></div>
+  <div class="splash-top">
+    <img class="splash-logo" src="assets/images/logo-horizontal-560.webp" alt="东方超市 · Eastern Market">
+    <div class="splash-kicker">东方超市会员专属</div>
   </div>
   <div class="splash-content">
-    <img class="splash-logo" src="assets/images/logo-horizontal-560.webp" alt="东方超市 · Eastern Market">
     <div class="splash-title-zh">东方农场</div>
     <div class="splash-title-en">Eastern Farm</div>
     <div class="splash-tagline">
-      <span class="splash-tagline-zh">好菜自己种</span>
-      <span class="splash-tagline-en">Grow your own</span>
+      <span class="splash-tagline-zh">玩农场游戏</span>
+      <span class="splash-tagline-zh">赚超市积分</span>
+      <span class="splash-tagline-en">Play the farm · Earn store points</span>
     </div>
 
     <!-- Reward hook + perks: pull guests over the login line. Hidden once
@@ -384,9 +384,9 @@
       <span class="splash-reward-en">Sign in → 3000 coins to start</span>
     </div>
     <ul class="splash-perks" id="splashPerks">
-      <li>🥬 攒超市积分，换东方超市真优惠<span class="splash-perk-en">Earn points → real Eastern Market deals</span></li>
-      <li>🏘 跟邻居互动、偷菜、互帮<span class="splash-perk-en">Visit neighbors — swap, help, have fun</span></li>
-      <li>☁️ 进度云端保存，换手机也不丢<span class="splash-perk-en">Cloud-saved progress — never lost</span></li>
+      <li>攒超市积分，到店买菜能用<span class="splash-perk-en">Points land on your member card</span></li>
+      <li>种的是店里在卖的菜<span class="splash-perk-en">Grow what we sell in store</span></li>
+      <li>进度云端保存，换手机也不丢<span class="splash-perk-en">Cloud-saved — never lost</span></li>
     </ul>
     <!-- PRIMARY: login (rewarded). SECONDARY: guest trial as a small link. -->
     <button class="splash-login splash-login--hero" id="splashLogin">
@@ -402,7 +402,7 @@
       <span class="splash-start-en">Just look around ›</span>
     </button>
     <div class="splash-footer">
-      <span>🏪 Saskatoon · 133-412 Willowgrove Square</span>
+      <span>Saskatoon · 133-412 Willowgrove Square</span>
     </div>
   </div>
 </div>
