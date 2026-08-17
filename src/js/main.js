@@ -799,11 +799,12 @@
                  style="width:16px;height:16px;cursor:pointer;"/>
           <span>${lang === 'en' ? 'Show me in neighbor list' : '显示在邻居列表里'}</span>
         </label>
+        ${Farm.fbAuth && Farm.fbAuth.isStoreOwner && Farm.fbAuth.isStoreOwner() ? `
         <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;margin-top:8px;padding-top:8px;border-top:1px dashed var(--border-soft);">
           <input id="ownerExcludeToggle" type="checkbox" ${Farm.state.data.excludeFromRanking === true ? 'checked' : ''}
                  style="width:16px;height:16px;cursor:pointer;"/>
           <span>${lang === 'en' ? '🏪 Store owner — keep me out of all rankings (I can still browse)' : '🏪 我是店主，不参与所有排名（仍可逛社区）'}</span>
-        </label>
+        </label>` : ''}
       </div>
 
       <div style="margin:16px 0;padding:12px;background:var(--cream-bg);border-radius:var(--radius-md);">
@@ -910,6 +911,10 @@
           ? (Farm.state.data.language === 'en' ? '🏪 You are now hidden from all rankings' : '🏪 已设为店主，不出现在任何排名中')
           : (Farm.state.data.language === 'en' ? 'Back in the rankings' : '已重新参与排名'), 2200);
       };
+    } else if (Farm.state.data.excludeFromRanking && !(Farm.fbAuth && Farm.fbAuth.isStoreOwner && Farm.fbAuth.isStoreOwner())) {
+      Farm.state.data.excludeFromRanking = false;
+      Farm.state.save();
+      if (Farm.fbGameSync) Farm.fbGameSync.push();
     }
     document.getElementById('resetBtn').onclick = () => {
       if (confirm(Farm.i18n.t('settings_reset_confirm'))) {

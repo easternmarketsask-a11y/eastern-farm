@@ -92,7 +92,7 @@
         // else's neighbor pool + leaderboards + weekly rewards, but the owner
         // can still browse the community (unlike visibleToNeighbors=false,
         // which also blinds the owner). Set via the owner toggle in settings.
-        excludeFromRanking: !!s.excludeFromRanking,
+        excludeFromRanking: !!(s.excludeFromRanking && Farm.fbAuth && Farm.fbAuth.isStoreOwner && Farm.fbAuth.isStoreOwner()),
         // Claimed limited-time promos (per-account guard against local reset).
         promoClaims: s.promoClaims || {},
         // Farm snapshot for real-member visits + stealing (spec 2026-06-11):

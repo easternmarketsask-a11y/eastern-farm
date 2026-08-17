@@ -257,6 +257,12 @@
     // doc(uid), which would create an orphan doc with no name/phone. Falls back
     // to uid only when no member doc resolved (shouldn't happen once logged in).
     memberDocId() { return (this.memberDoc && this.memberDoc.id) || this.uid(); },
+    // StockWise「游戏管理 → 标记为店主」写在 members.role 上。设置里的
+    // 「我是店主，不参与排名」只给这类账号看，不能人人自封。
+    isStoreOwner() {
+      const r = (this.memberDoc && this.memberDoc.role) || '';
+      return r === 'admin' || r === 'owner';
+    },
     onChange(cb) { this.listeners.push(cb); },
     _notify() { this.listeners.forEach(cb => { try { cb(this.currentUser, this.memberDoc); } catch (e) {} }); },
 
