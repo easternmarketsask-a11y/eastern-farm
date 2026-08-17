@@ -382,10 +382,13 @@
 
     <!-- Reward hook + perks: pull guests over the login line. Hidden once
          signed in (see firebase-auth._renderSplash). -->
+    <!-- ⚠️ 这句必须与 firebase-points.firstLoginGameSignupBonus 的发放条件一致。
+         2026-08-17 起 3000 币要「登录 + 留邮箱」才发（Chris 定），所以文案跟着改 ——
+         承诺了不兑现，顾客只会觉得这游戏骗人。改发放条件时**同步改这里**。 -->
     <div class="splash-reward" id="splashReward">
-      <span class="splash-reward-main">登录立得 <b>3000 农场币</b></span>
+      <span class="splash-reward-main">登录 + 留邮箱，送 <b>3000 农场币</b></span>
       <span class="splash-reward-sub">登录就能看见自己的超市积分</span>
-      <span class="splash-reward-en">See your store points · 3000 coins to start</span>
+      <span class="splash-reward-en">Sign in &amp; add email · 3000 coins</span>
     </div>
     <ul class="splash-perks" id="splashPerks">
       <li>超市积分进会员卡，到店买菜能用<span class="splash-perk-en">Points land on your member card</span></li>

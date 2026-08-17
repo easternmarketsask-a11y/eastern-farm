@@ -15,6 +15,8 @@
  */
 (function () {
   // Keep in sync with firebase-points.js GAME_SIGNUP_BONUS_END / _COINS.
+  // ⚠️ 2026-08-17 起 3000 币要「登录 + 留邮箱」才发 —— 文案里的承诺
+  //    必须与 firstLoginGameSignupBonus 的发放条件一致，改一处就要改两处。
   const BONUS_END = '2026-08-31';
   const BONUS_COINS = 3000;
   const L = () => (Farm.state.data.language === 'en' ? 'en' : 'zh');
@@ -47,7 +49,7 @@
       const en = L() === 'en';
       const bonusActive = Farm.state.getDateString() <= BONUS_END;
       const reward = bonusActive
-        ? (en ? `a <b>${BONUS_COINS.toLocaleString()}-coin</b> welcome gift` : `<b>${BONUS_COINS.toLocaleString()} 农场币</b>开局礼包`)
+        ? (en ? `a <b>${BONUS_COINS.toLocaleString()}-coin</b> welcome gift (sign in, then add your email)` : `<b>${BONUS_COINS.toLocaleString()} 农场币</b>开局礼包（登录后留个邮箱就送）`)
         : (en ? 'member rewards' : '会员奖励');
       const html = `
         <div class="ln-modal">

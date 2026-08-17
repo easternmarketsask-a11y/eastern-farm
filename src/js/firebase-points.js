@@ -282,6 +282,15 @@
           if (!snap.exists) return false;
           const data = snap.data();
           if (data.gameSignupBonusGivenAt) return false;
+          /* 🔒 必须留了**真**邮箱才发（Chris 2026-08-17：「设置邮箱并登录成功才发
+             3000 农场币」）。
+             这是拿零成本的东西（农场币是客户端货币）换一个真有用的东西（邮箱 ——
+             忘密码能自助重置、订单通知发得出去）。不挡人玩，只是没邮箱就没这份礼。
+
+             ⚠️ 排除 @phone.easternmarket.ca —— 那是登录用的**假邮箱**，不是联系方式，
+             收不到任何信。把它算成"留了邮箱"等于白送。 */
+          const mail = String(data.email || '').trim().toLowerCase();
+          if (!mail || mail.endsWith('@phone.easternmarket.ca')) return 'no_email';
           tx.update(memberRef, {
             gameSignupBonusGivenAt: firebase.firestore.FieldValue.serverTimestamp(),
             gameSignupBonusCoins: GAME_SIGNUP_BONUS_COINS,
@@ -292,6 +301,12 @@
         console.warn('[fb-points] signup bonus transaction failed:', e.message || e);
         return;
       }
+      if (granted === 'no_email') {
+        // 没留邮箱 → 不发，但**要告诉他为什么**。静默不发等于开屏承诺了却没兑现，
+        // 顾客只会觉得这游戏骗人。
+        setTimeout(() => this._showBonusNeedsEmailModal(GAME_SIGNUP_BONUS_COINS), 600);
+        return;
+      }
       if (!granted) return;
 
       // Credit locally + refresh HUD
@@ -300,6 +315,51 @@
 
       // Short delay so any login modal closes first
       setTimeout(() => this._showSignupBonusModal(GAME_SIGNUP_BONUS_COINS), 400);
+    },
+
+    /* 有资格但没留邮箱 —— 告诉他差一步，别静默不发。
+       开屏承诺了 3000 币，不给又不说，顾客只会觉得这游戏骗人。 */
+    _showBonusNeedsEmailModal(amount) {
+      const isEn = ((Farm.state && Farm.state.data && Farm.state.data.language) || 'zh') === 'en';
+      const html = `
+        <div style="text-align:center;padding:6px 4px;">
+          <div style="font-size:54px;line-height:1;margin-bottom:6px;">🎁</div>
+          <h2 class="modal-title" style="margin-bottom:4px;">
+            ${isEn ? 'One step to go' : '还差一步'}
+          </h2>
+          <div style="margin:18px 0;padding:20px 16px;background:linear-gradient(135deg,#fff8e7,#fef3d6);border-radius:16px;border:1px solid rgba(58,140,80,0.15);">
+            <div style="font-size:42px;font-weight:800;color:#3a8c50;line-height:1;letter-spacing:-1px;">
+              +${amount.toLocaleString()}
+            </div>
+            <div style="font-size:13px;color:#6b5840;margin-top:6px;font-weight:600;">
+              ${isEn ? 'farm coins' : '农场币'}
+            </div>
+          </div>
+          <p style="font-size:14px;color:#6b5840;margin:12px 0 18px;">
+            ${isEn ? 'Add your email to claim it.' : '留个邮箱就能领。'}
+          </p>
+          <button class="btn" id="bonusAddEmail" style="width:100%;padding:14px;font-size:15px;">
+            ${isEn ? 'Add email' : '去留邮箱'}
+          </button>
+          <button class="btn secondary" id="bonusEmailLater" style="width:100%;margin-top:8px;">
+            ${isEn ? 'Not now' : '先玩'}
+          </button>
+        </div>
+      `;
+      Farm.ui.showModal(html, {
+        queue: true,
+        queueKey: 'bonus_needs_email',
+        onShow: () => {
+          const go = document.getElementById('bonusAddEmail');
+          if (go) go.onclick = () => {
+            Farm.ui.hideModal();
+            // 复用现成的「设置登录方式」屏（它会把邮箱写进 members.email）
+            if (Farm.fbAuth && Farm.fbAuth.openEmailSetup) Farm.fbAuth.openEmailSetup();
+          };
+          const later = document.getElementById('bonusEmailLater');
+          if (later) later.onclick = () => Farm.ui.hideModal();
+        },
+      });
     },
 
     _showSignupBonusModal(amount) {
