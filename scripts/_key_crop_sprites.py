@@ -9,9 +9,10 @@ MAP = ROOT / "src" / "assets" / "images" / "map"
 SESS = Path(r"C:\Users\yue00\.grok\sessions\D%3A%5C\01a00718-f95b-7452-b183-7f5defbb801b\images")
 
 JOBS = [
-    ("132.jpg", "crop_bamboo"),
-    ("133.jpg", "crop_yam"),
-    ("134.jpg", "crop_osmanthus"),
+    ("138.jpg", "crop_sprout", 0),
+    ("135.jpg", "crop_sprout", 1),
+    ("136.jpg", "crop_choysum", 3),
+    ("137.jpg", "crop_spinach", 3),
 ]
 
 
@@ -52,7 +53,9 @@ def crop_content(im: Image.Image, pad=8) -> Image.Image:
 
 def main():
     MAP.mkdir(parents=True, exist_ok=True)
-    for src_name, stem in JOBS:
+    for job in JOBS:
+        src_name, stem = job[0], job[1]
+        stage = job[2] if len(job) > 2 else 3
         src = SESS / src_name
         im = key_green(Image.open(src))
         im = crop_content(im)
@@ -60,11 +63,12 @@ def main():
         if long > 320:
             s = 320 / long
             im = im.resize((max(1, int(im.width * s)), max(1, int(im.height * s))), Image.Resampling.LANCZOS)
-        png = MAP / (stem + "_3.png")
-        webp = MAP / (stem + "_3.webp")
+        tag = stem + "_" + str(stage)
+        png = MAP / (tag + ".png")
+        webp = MAP / (tag + ".webp")
         im.save(png, "PNG")
         im.save(webp, "WEBP", quality=90, method=6)
-        print(stem, im.size, png.stat().st_size // 1024, "KB")
+        print(tag, im.size, png.stat().st_size // 1024, "KB")
 
 
 if __name__ == "__main__":

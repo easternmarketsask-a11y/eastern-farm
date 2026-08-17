@@ -12,22 +12,22 @@
   d.coins = 120; d.level = 3; d.landLevel = 1; d.landOrigin = 'front';
   const now = Date.now();
   const mix = [
-    { id: 'tomato', p: 0.18 },
-    { id: 'tomato', p: 0.55 },
-    { id: 'tomato', p: 1 },
-    { id: 'eggplant', p: 0.45 },
-    { id: 'da_bai_cai', p: 1 },
-    { id: 'xiao_cong', p: 0.35 },
-    { id: 'xiao_cong', p: 1 },
-    { id: 'eggplant', p: 1 }
+    { id: 'mang_guo', p: 0.15 },
+    { id: 'mang_guo', p: 0.5 },
+    { id: 'mang_guo', p: 1 },
+    { id: 'cai_xin', p: 1 },
+    { id: 'bo_cai', p: 1 },
+    { id: 'ye_zi', p: 0.2 },
+    { id: 'li_zhi', p: 1 },
+    { id: null, p: 0 }
   ];
   d.plots = (d.plots || []).map((p, i) => {
     const m = mix[i % mix.length];
-    const def = Farm.crops.get(m.id);
+    const def = m.id && Farm.crops.get(m.id);
     const grow = (def && def.grow_minutes) || 30;
     return Object.assign({}, p, {
       unlocked: i < 8, crop: i < 8 ? m.id : null,
-      plantedAt: i < 8 ? now - grow * 60000 * m.p : 0,
+      plantedAt: (i < 8 && m.id) ? now - grow * 60000 * m.p : 0,
       harvestsLeft: 0, watered: true
     });
   });

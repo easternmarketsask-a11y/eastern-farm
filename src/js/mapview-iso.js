@@ -106,9 +106,9 @@
     niu_jiao_jiao: 'crop_chili', suan_tai: 'crop_garlic', tomato: 'crop_tomato', cucumber: 'crop_cucumber',
     shanghai_miao: 'crop_qingcai',
     // 未单独重绘的叶菜/葱蒜走最近的油画贴图，避免成熟后飘 emoji
-    qingcai: 'crop_qingcai', cai_xin: 'crop_qingcai', bo_cai: 'crop_qingcai',
-    you_mai_cai: 'crop_qingcai', wa_wa_cai: 'crop_qingcai', da_bai_cai: 'crop_qingcai',
-    ji_mao_cai: 'crop_qingcai', tong_hao: 'crop_qingcai', xian_cai: 'crop_qingcai',
+    qingcai: 'crop_qingcai', cai_xin: 'crop_choysum', bo_cai: 'crop_spinach',
+    you_mai_cai: 'crop_spinach', wa_wa_cai: 'crop_qingcai', da_bai_cai: 'crop_qingcai',
+    ji_mao_cai: 'crop_qingcai', tong_hao: 'crop_choysum', xian_cai: 'crop_spinach',
     xi_lan_hua: 'crop_broccoli', wo_sun: 'crop_qingcai',
     tw_cauliflower: 'crop_cauli',
     hu_luo_bo: 'crop_carrot', bai_luo_bo: 'crop_daikon',
@@ -2144,6 +2144,10 @@
         ctx.stroke();
       }
       if (empty) {
+        ctx.fillStyle = 'rgba(48, 28, 12, 0.28)';
+        ctx.beginPath();
+        ctx.ellipse(c.x, cy + th * 0.02, iw * 0.16, ih * 0.14, 0, 0, 6.283);
+        ctx.fill();
         ctx.strokeStyle = 'rgba(74,108,42,0.42)';
         ctx.lineWidth = Math.max(0.7, tw * 0.015);
         for (let i = 0; i < 3; i++) {
@@ -3207,15 +3211,16 @@
       let synth = false;
       if (!im && fr < 3) {
         if (exact === 'failed') {
-          const mature = this._lazyImg(stem + '_3');
-          if (mature) { im = mature; synth = true; }
+          // 没幼苗帧：用通用幼苗/小苗，不要把带果的成树缩小当幼苗
+          const sprout = this._lazyImg(fr <= 0 ? 'crop_sprout_0' : 'crop_sprout_1');
+          if (sprout) { im = sprout; synth = true; }
         } else {
-          this._lazyImg(stem + '_3');
+          this._lazyImg(fr <= 0 ? 'crop_sprout_0' : 'crop_sprout_1');
         }
       }
       if (!im) return null;
       const ctx = this._ctx;
-      const grow = synth ? Math.max(0.18, Math.min(1, progress || 0)) : (0.55 + fr * 0.15);
+      const grow = synth ? (fr <= 0 ? 0.28 : 0.52) : (0.55 + fr * 0.15);
       const s = (th * (0.70 + grow * 0.62)) / 260;
       const w = im.width * s, h = im.height * s;
       const soilY = c.y + th * 0.10 - (ripe || 0);
@@ -3296,13 +3301,18 @@
            更多 → 不画气泡 —— 12 个白圈叠成墙是全场最丑的画面(截图实证),
            改由本体弹跳+金色光晕承担指认, 顶部「N 棵已熟可收」负责总量。 */
         if ((this._matureCount || 0) <= 3) {
-          const def = Farm.crops.get(plot.crop), bob = Math.sin(tNow * 2.5 + gx + gy) * th * 0.12;
-          const r = th * 0.5, bx = c.x, byy = plantTopY - th * 0.5 + bob;
-          ctx.beginPath(); ctx.arc(bx, byy, r, 0, Math.PI * 2); ctx.fillStyle = 'rgba(255,255,255,0.95)'; ctx.fill();
-          ctx.strokeStyle = 'rgba(120,160,70,0.9)'; ctx.lineWidth = Math.max(1.5, th * 0.06); ctx.stroke();
-          ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = (r * 1.25) + 'px sans-serif';
-          ctx.fillText((def && def.icon) || '✅', bx, byy + r * 0.05);
-          ctx.textBaseline = 'alphabetic';
+          const bob = Math.sin(tNow * 2.5 + gx + gy) * th * 0.12;
+          const r = th * 0.42, bx = c.x, byy = plantTopY - th * 0.42 + bob;
+          ctx.beginPath(); ctx.arc(bx, byy, r, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(255,252,240,0.94)'; ctx.fill();
+          ctx.strokeStyle = 'rgba(90,140,55,0.88)'; ctx.lineWidth = Math.max(1.4, th * 0.055); ctx.stroke();
+          ctx.strokeStyle = '#3a8c50'; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+          ctx.lineWidth = Math.max(1.8, th * 0.08);
+          ctx.beginPath();
+          ctx.moveTo(bx - r * 0.34, byy + r * 0.04);
+          ctx.lineTo(bx - r * 0.06, byy + r * 0.30);
+          ctx.lineTo(bx + r * 0.38, byy - r * 0.26);
+          ctx.stroke();
         } else {
           // 偶发闪光: 每块地按自己的相位隔几秒闪一下, 全田任意时刻只有零星几颗
           const ph = (tNow * 0.4 + (gx * 7 + gy * 13) * 0.37) % 1;
