@@ -12,14 +12,14 @@
   d.coins = 120; d.level = 8; d.landLevel = 1; d.landOrigin = 'back';
   const now = Date.now();
   const mix = [
+    { id: 'lian_ou', p: 1 },
+    { id: 'tw_cauliflower', p: 1 },
+    { id: 'mang_guo', p: 1 },
+    { id: 'sheng_jiang', p: 1 },
+    { id: 'taro', p: 1 },
+    { id: 'xiang_yin_putao', p: 1 },
     { id: 'hu_luo_bo', p: 1 },
-    { id: 'bai_luo_bo', p: 1 },
-    { id: 'cucumber', p: 1 },
-    { id: 'suan_tai', p: 1 },
-    { id: 'yu_mi', p: 1 },
-    { id: 'xi_lan_hua', p: 1 },
-    { id: 'cilantro', p: 1 },
-    { id: 'niu_jiao_jiao', p: 1 }
+    { id: 'yu_mi', p: 1 }
   ];
   d.plots = (d.plots || []).map((p, i) => {
     const m = mix[i % mix.length];

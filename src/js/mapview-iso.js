@@ -3219,7 +3219,7 @@
       const s = (th * (0.70 + grow * 0.62)) / 260;
       const w = im.width * s, h = im.height * s;
       const soilY = c.y + th * 0.10 - (ripe || 0);
-      const extra = ({ crop_carrot: 0.22, crop_daikon: 0.20, crop_yam: 0.16, crop_garlic: 0.10, crop_cucumber: 0.08 })[stem] || 0;
+      const extra = ({ crop_carrot: 0.22, crop_daikon: 0.20, crop_yam: 0.16, crop_garlic: 0.10, crop_cucumber: 0.08, crop_ginger: 0.18, crop_taro: 0.08 })[stem] || 0;
       const bury = h * ((synth ? (0.28 - grow * 0.08) : 0.20) + extra);
       const topY = soilY - h + bury;
       ctx.save();
