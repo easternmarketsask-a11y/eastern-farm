@@ -4562,16 +4562,21 @@ body.modal-open .pwa-install-banner { display: none; }
 .harvest-status-bar {
   position: fixed; left: 50%; transform: translateX(-50%);
   top: calc(50px + env(safe-area-inset-top));
-  z-index: 8; background: rgba(255,252,240,0.62); backdrop-filter: blur(8px);
+  z-index: 8; background: rgba(255,252,240,0.38); backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(200,180,140,0.4); border-radius: 999px;
-  padding: 3px 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+  border: 1px solid rgba(200,180,140,0.28); border-radius: 999px;
+  padding: 2px 10px; box-shadow: 0 1px 6px rgba(0,0,0,0.08);
   max-width: 80%; pointer-events: none;
 }
 /* 外层 bar 是 pointer-events:none 的穿透浮层；onclick 绑在 center 胶囊上
    (harvest-status.js render() 的 setAction)，必须恢复 auto 否则一键全收/
    仓满入口/签到提示整个点不动（2026-07-05 UX 第 1 批 #1 修复）。 */
-.harvest-status-bar .harvest-status-center { display: flex; align-items: center; gap: 8px; pointer-events: auto; }
+.harvest-status-bar .harvest-status-center { display: flex; align-items: center; gap: 8px; pointer-events: auto; background: rgba(255,253,246,0.42); }
+.harvest-status-bar .harvest-status-center.is-actionable {
+  background: linear-gradient(180deg, rgba(241,251,231,0.52) 0%, rgba(205,235,172,0.38) 100%);
+  border-color: rgba(166,209,120,0.48);
+  box-shadow: 0 1px 3px rgba(60,80,30,0.10), inset 0 1px 0 rgba(255,255,255,0.35);
+}
 .harvest-status-bar .harvest-status-btn { pointer-events: auto; }
 .harvest-status-bar:empty, .harvest-status-bar .harvest-status-center:empty { display: none; }
 

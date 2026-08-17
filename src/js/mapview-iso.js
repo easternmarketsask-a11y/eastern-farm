@@ -2158,6 +2158,74 @@
       }
       ctx.restore();
     },
+    // 可种的床坐在一小片暖土草甸上，箱子不像扔在高尔夫草坪。
+    // 只用已解锁地块的外包，锁地不扩这片土，避免又连成整田。
+    _drawGardenPatch() {
+      const plots = Farm.state.data.plots || [];
+      const pts = [];
+      for (let i = 0; i < plots.length; i++) {
+        if (!plots[i] || !plots[i].unlocked) continue;
+        pts.push(this._cell(this._plotGX(i), this._plotGY(i)));
+      }
+      if (!pts.length) return;
+      let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+      for (let i = 0; i < pts.length; i++) {
+        const p = pts[i];
+        if (p.x < minX) minX = p.x;
+        if (p.x > maxX) maxX = p.x;
+        if (p.y < minY) minY = p.y;
+        if (p.y > maxY) maxY = p.y;
+      }
+      const tw = this._tw(), th = this._th(), ctx = this._ctx;
+      const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2 + th * 0.08;
+      const rx = (maxX - minX) / 2 + tw * 0.92;
+      const ry = (maxY - minY) / 2 + th * 0.95;
+      ctx.save();
+      ctx.fillStyle = 'rgba(62, 42, 16, 0.12)';
+      ctx.beginPath();
+      ctx.ellipse(cx + tw * 0.06, cy + th * 0.22, rx * 1.04, ry * 1.08, -0.12, 0, 6.283);
+      ctx.fill();
+      const g = ctx.createRadialGradient(cx - rx * 0.2, cy - ry * 0.25, th * 0.2, cx, cy, Math.max(rx, ry) * 1.15);
+      g.addColorStop(0, 'rgba(154, 118, 48, 0.44)');
+      g.addColorStop(0.48, 'rgba(138, 122, 46, 0.22)');
+      g.addColorStop(1, 'rgba(132, 128, 48, 0)');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, rx, ry, -0.12, 0, 6.283);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(196, 154, 78, 0.32)';
+      ctx.lineWidth = Math.max(0.6, th * 0.026);
+      ctx.lineCap = 'round';
+      const nStraw = 10 + pts.length * 2;
+      for (let i = 0; i < nStraw; i++) {
+        const a = i * 2.31 + 0.4;
+        const r = 0.22 + (i % 7) * 0.09;
+        const x = cx + Math.cos(a) * rx * r;
+        const y = cy + Math.sin(a * 1.15) * ry * r;
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x + tw * (0.05 + (i % 3) * 0.02), y + th * 0.035);
+        ctx.stroke();
+      }
+      ctx.fillStyle = 'rgba(150, 132, 96, 0.45)';
+      for (let i = 0; i < 5; i++) {
+        const a = i * 1.7 + 0.8;
+        ctx.beginPath();
+        ctx.ellipse(cx + Math.cos(a) * rx * 0.62, cy + Math.sin(a) * ry * 0.55, tw * 0.035, th * 0.022, a, 0, 6.283);
+        ctx.fill();
+      }
+      const edge = [
+        [cx - rx * 0.82, cy + ry * 0.15],
+        [cx + rx * 0.78, cy + ry * 0.22],
+        [cx - rx * 0.15, cy + ry * 0.88],
+        [cx + rx * 0.28, cy - ry * 0.72],
+      ];
+      for (let i = 0; i < edge.length; i++) {
+        if (i % 2 === 0) this._flower(edge[i][0], edge[i][1], tw * 0.18);
+        else this._tuft(edge[i][0], edge[i][1], tw * 0.22);
+      }
+      ctx.restore();
+    },
     // 每块菜地单独一张床，中间露草。不再合成一整片土。
     _drawUnifiedField() {
       const plots = Farm.state.data.plots || [];
@@ -2950,6 +3018,7 @@
       // 水沿被土床盖住 = 岸线自然贴着田边，绝不会出现「水漫到菜地上」。
       this._drawPond(waterCells);
       this._drawRoadSurface();   // 路面盖住水塘溢出，乡路永远在水上面
+      this._drawGardenPatch();
       this._drawUnifiedField();
       for (const tI of groundTiles) this._tileImg(tI.key, tI.c);
       this._drawRoadWalker();
