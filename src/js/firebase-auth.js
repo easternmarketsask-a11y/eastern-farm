@@ -395,8 +395,13 @@
         otp:   [en ? 'Verify your phone' : '验证手机号',
                 en ? `We'll text ${this._formatPhone((this._currentPhoneE164 || '').replace('+1', ''))}`
                    : `将发送到 ${this._formatPhone((this._currentPhoneE164 || '').replace('+1', ''))}`],
+        /* 副标题要说**好处**，不是说明书。
+           实测 77 个 Auth 账号里 67 个是「有手机号、无邮箱」—— 短信验完就把这一屏
+           关掉了，于是每次登录都要再发一条短信（Chris 真金白银）。原文案
+           「以后用这个邮箱和密码登录」只描述了这是什么，没给填的理由。 */
         bind:  [en ? 'Set up your login' : '设置登录方式',
-                en ? 'Use this email and password from now on' : '以后用这个邮箱和密码登录'],
+                en ? 'Then you can sign in straight away — no more waiting for a text'
+                   : '设好以后直接登录，不用再等短信'],
       }[view] || ['', ''];
 
       const body = {
