@@ -397,16 +397,33 @@
     startBtn.onclick = dismiss;
     window.__splashReady = true;
     window.__splashDismiss = dismiss;
-    // 用户在 boot 完成前点过了 —— 现在补上他那一下，不用再点第二次
-    if (_enterRequested()) { dismiss(); return; }
-    // Splash login shortcut: dismiss splash + open login modal directly
+
+    /* 🔴 登录按钮必须**先绑**，再处理「boot 前点过」的补偿（2026-08-17 修）
+       -------------------------------------------------------------------
+       原来的顺序是：
+           if (_enterRequested()) { dismiss(); return; }   // ← return 在这
+           if (loginBtn) loginBtn.onclick = ...            // ← 永远到不了
+       于是只要玩家在 boot 跑完之前点过任何一个开屏按钮（手机上几乎必然 ——
+       按钮 1.6 秒就画出来了，window.Farm 要 6 秒），登录按钮就**从来没被绑上**，
+       而那一下被当成「进去逛逛」，人以游客身份掉进游戏。
+
+       实测后果：7 天 462 人进游戏，登录 **0** 次。主按钮写着「会员登录 · 领礼包」，
+       却从来不通往登录。 */
+    const openLoginSoon = () => setTimeout(() => {
+      if (Farm.fbAuth && Farm.fbAuth.openLoginModal) Farm.fbAuth.openLoginModal();
+    }, 700);
+
     if (loginBtn) {
-      loginBtn.onclick = () => {
-        dismiss();
-        setTimeout(() => {
-          if (Farm.fbAuth && Farm.fbAuth.openLoginModal) Farm.fbAuth.openLoginModal();
-        }, 700);
-      };
+      loginBtn.onclick = () => { dismiss(); openLoginSoon(); };
+    }
+
+    // 用户在 boot 完成前点过了 —— 现在补上他那一下，不用再点第二次。
+    // 🔒 要分清他点的是哪个：点的是「会员登录」就得把登录弹窗打开，
+    //    不能一律当成「进去逛逛」（那正是上面说的那个 bug）。
+    if (_enterRequested()) {
+      dismiss();
+      if (window.__splashLoginRequested) openLoginSoon();
+      return;
     }
     document.addEventListener('keydown', (e) => {
       if (splash.parentNode && (e.key === 'Enter' || e.key === ' ')) {

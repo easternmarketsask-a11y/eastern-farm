@@ -715,6 +715,11 @@
         console.warn('[auth] bind-email 回写失败，留待登录时自愈:', e);
       }
       try { user.sendEmailVerification().catch(() => {}); } catch (_) {}
+      // 漏斗「补上邮箱」。3000 农场币要「登录 + 留邮箱」才发，而没邮箱的会员
+      // 靠常驻提醒条慢慢补 —— 补没补上只有这个数看得见（login 与它的差就是
+      // 登录了却仍拿不到礼包的人）。发在这里而不是 bind-email 回写成功处：
+      // 回写失败会在下次登录自愈，人确实已经把邮箱设好了。
+      if (Farm.track) Farm.track('email_set');
       this._onLoginSuccess(lang);
     },
 

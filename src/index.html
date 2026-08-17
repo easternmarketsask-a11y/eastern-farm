@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#fdf8ee">
 <!-- 部署构建号（deploy.sh 每次注入 CACHE_VERSION 时间戳）。SW 新鲜度守卫据此
      判断本页是否已过期（见页尾脚本）。ef-dev = 未部署的本地版本。 -->
-<meta name="ef-build" content="ef-2608171507">
+<meta name="ef-build" content="ef-2608171546">
 
 <!-- ==================== PWA (add to home screen) ==================== -->
 <link rel="manifest" href="manifest.webmanifest">
@@ -129,12 +129,31 @@
     }
     if (window.__splashEnterRequested) return;
     window.__splashEnterRequested = true;
+    /* 🔴 必须记住点的是**哪个**按钮（2026-08-17 修，这是 7 天 462 人进游戏、
+       登录 0 次的根因）
+       ------------------------------------------------------------------
+       以前这里只记「有人要进去」，不记是哪个按钮。而 main.js 的 wireSplash
+       在 `if (_enterRequested()) { dismiss(); return; }` 里 **return 在绑定
+       登录按钮之前** —— 于是：
+
+         boot 没跑完时点「会员登录 · 领礼包」
+           → 只记下「要进去」
+           → boot 完成 → dismiss() → return（登录按钮永远没被绑上）
+           → 以游客身份掉进游戏，**登录弹窗一次都不出现**
+
+       而 boot 有多慢？本文件上面那段注释里就写着实测：1.6 秒按钮画出来了，
+       6.0 秒 window.Farm 还不存在。手机上几乎所有人都在这个窗口里点。
+       所以主按钮「会员登录」实际上从来没通往登录。
+
+       🔒 __splashLoginRequested 是与 main.js 的第四个契约全局，改名两处同改。 */
+    if (btn.id === 'splashLogin') window.__splashLoginRequested = true;
     // 静默是最糟的失败态 —— 至少让人知道「收到了，在加载」
     try {
-      var s = document.getElementById('splashStart');
+      var s = document.getElementById(btn.id);
       if (s) {
-        var zh = s.querySelector('.splash-start-zh');
-        var en = s.querySelector('.splash-start-en');
+        var isLogin = btn.id === 'splashLogin';
+        var zh = s.querySelector(isLogin ? '.splash-login-zh' : '.splash-start-zh');
+        var en = s.querySelector(isLogin ? '.splash-login-en' : '.splash-start-en');
         if (zh) zh.textContent = '正在加载…';
         if (en) en.textContent = 'Loading…';
         s.style.opacity = '0.7';

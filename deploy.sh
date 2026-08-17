@@ -122,6 +122,36 @@ else
     echo "—— 部署中止：部署后玩家刷新拿不到新代码(见上)。别绕过它，这会让所有人卡在旧版本。"
     exit 1
   fi
+
+  # 闸门 D: 开屏「会员登录」按钮真的通往登录(约 12 秒)
+  # 2026-08-17 加：这个按钮曾整整坏着而没人发现 —— 玩家在 boot 跑完前点它(手机上
+  # 几乎必然，按钮 1.6 秒画出来、window.Farm 要 6 秒)，就被当成「进去逛逛」，
+  # 登录弹窗一次都不出现。实测代价是 7 天 462 人进游戏、登录 0 次。
+  # 冒烟(闸门 B)抓不到它：那边只看「有没有抛异常」，而这个 bug 一声不吭。
+  echo "▶ 闸门 D: 开屏登录按钮回归测试(约 12 秒)…"
+  $PYCMD scripts/verify/slow-server.py 8143 3 >/dev/null 2>&1 &
+  SLOW_PID=$!
+  trap 'kill $SLOW_PID 2>/dev/null || true' EXIT
+  sleep 1
+  SPLASH_OUT="$(mktemp)"
+  node scripts/verify/cdp.mjs "http://127.0.0.1:8143/src/" "scripts/verify/splash-login-test.js" 300 >"$SPLASH_OUT" 2>/dev/null || true
+  kill $SLOW_PID 2>/dev/null || true
+  trap - EXIT
+  if ! node -e '
+    const o = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
+    const r = o.evalResult;
+    if (!r) { console.error("✗ 开屏登录测试没跑出结果(evalResult=null)"); process.exit(1); }
+    if (r.inconclusive) { console.log("  ⚠ 未测到目标路径: " + r.inconclusive + "(不阻断)"); process.exit(0); }
+    if (r.failures && r.failures.length) {
+      console.error("✗ 开屏「会员登录」按钮不通往登录:");
+      r.failures.forEach(f => console.error("  - " + f));
+      process.exit(1);
+    }
+    console.log("  ✓ boot 前点登录 → 登录弹窗如期打开");
+  ' "$SPLASH_OUT"; then
+    echo "—— 部署中止：开屏主按钮写着「会员登录」却不通往登录。这条静默失败，别绕过。"
+    exit 1
+  fi
 fi
 
 # 3. 提交未保存的改动(如果有;SW 版本注入保证至少有它)
