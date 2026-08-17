@@ -121,6 +121,8 @@
     li_zhi: 'crop_lychee', long_yan: 'crop_lychee',
     xiang_yin_putao: 'crop_grape',
     osmanthus: 'crop_osmanthus',
+    shan_yao: 'crop_yam', chun_sun: 'crop_bamboo',
+    ye_zi: 'crop_coconut', liu_lian: 'crop_durian',
     jing_cong: 'crop_chives', xiao_cong: 'crop_chives', jiu_huang: 'crop_chives',
     ku_gua: 'crop_cucumber', fo_shou_gua: 'crop_cucumber', dong_gua: 'crop_cucumber',
   };
@@ -2037,70 +2039,117 @@
     // matches the crops' own baked soil exactly → every plot (empty or planted) is a
     // consistent raised tilled bed. Bottom-anchored like the crops so heights line up.
     _drawFurrowBed(c, gx, gy, kind) {
-      // 独立抬起的苗床。kind: open | empty | locked
+      // 独立木框苗床。kind: open | empty | locked
+      // 锁地只留淡描边，不挖暗洞；可种的床是抬起的木箱+垄土。
       const ctx = this._ctx, tw = this._tw(), th = this._th();
       const locked = kind === 'locked';
-      const empty = kind === 'empty' || locked;
-      const scale = locked ? 0.70 : BED_W;
+      const empty = kind === 'empty';
+      const scale = locked ? 0.58 : BED_W;
       const w = tw * scale, h = th * scale;
       const cy = c.y + th * 0.06;
       const hsh = ((((gx || 0) * 73856093) ^ ((gy || 0) * 19349663)) >>> 0);
       const tint = ((hsh % 17) - 8) / 8;
-      const lift = locked ? 0.55 : 1;
-      // 床影：让每块地从草里抬起来
+      const dz = th * (locked ? 0.08 : 0.28);
+      const Lx = c.x - w / 2, Rx = c.x + w / 2, By = cy + h / 2;
+      if (locked) {
+        ctx.save();
+        ctx.globalAlpha = 0.34;
+        ctx.strokeStyle = 'rgba(150,118,70,0.70)';
+        ctx.lineWidth = Math.max(0.9, th * 0.038);
+        this._diamond(c.x, cy, w, h);
+        ctx.stroke();
+        ctx.restore();
+        return;
+      }
       ctx.save();
-      ctx.globalAlpha = 0.22 * lift;
+      ctx.globalAlpha = 0.24;
       ctx.fillStyle = '#2a180c';
-      this._diamond(c.x + tw * 0.04, cy + th * 0.10, w * 1.02, h * 1.06);
+      this._diamond(c.x + tw * 0.05, cy + th * 0.14 + dz * 0.35, w * 1.08, h * 1.12);
       ctx.fill();
       ctx.restore();
-      this._diamond(c.x, cy, w, h);
-      const g = ctx.createLinearGradient(c.x - w * 0.45, cy - h * 0.35, c.x + w * 0.3, cy + h * 0.4);
-      if (locked) {
-        g.addColorStop(0, '#7a6848');
-        g.addColorStop(0.5, '#5a4a32');
-        g.addColorStop(1, '#3e3424');
-      } else {
-        const r0 = Math.round(186 + tint * 10), g0 = Math.round(118 + tint * 6), b0 = Math.round(62 + tint * 4);
-        const r1 = Math.round(92 + tint * 8), g1 = Math.round(54 + tint * 4), b1 = Math.round(24);
-        g.addColorStop(0, 'rgb(' + r0 + ',' + g0 + ',' + b0 + ')');
-        g.addColorStop(0.45, 'rgb(' + Math.round((r0 + r1) / 2) + ',' + Math.round((g0 + g1) / 2) + ',' + Math.round((b0 + b1) / 2) + ')');
-        g.addColorStop(1, 'rgb(' + r1 + ',' + g1 + ',' + b1 + ')');
-      }
-      ctx.fillStyle = g;
+      // 前左木帮（暗）
+      ctx.beginPath();
+      ctx.moveTo(Lx, cy); ctx.lineTo(c.x, By); ctx.lineTo(c.x, By + dz); ctx.lineTo(Lx, cy + dz);
+      ctx.closePath();
+      const lg = ctx.createLinearGradient(Lx, cy, c.x, By + dz);
+      lg.addColorStop(0, '#8a5628');
+      lg.addColorStop(1, '#4e2e12');
+      ctx.fillStyle = lg;
       ctx.fill();
-      // 亮边：独立床的轮廓
-      ctx.strokeStyle = locked ? 'rgba(220,200,150,0.18)' : 'rgba(240,210,150,0.28)';
-      ctx.lineWidth = Math.max(1, th * 0.045);
-      this._diamond(c.x, cy, w * 0.98, h * 0.96);
+      ctx.strokeStyle = 'rgba(40,20,8,0.38)';
+      ctx.lineWidth = Math.max(0.7, th * 0.024);
+      for (let i = 1; i <= 2; i++) {
+        const t = i / 3;
+        const x1 = Lx + (c.x - Lx) * t, y1 = cy + (By - cy) * t;
+        ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x1, y1 + dz); ctx.stroke();
+      }
+      // 前右木帮（亮）
+      ctx.beginPath();
+      ctx.moveTo(Rx, cy); ctx.lineTo(c.x, By); ctx.lineTo(c.x, By + dz); ctx.lineTo(Rx, cy + dz);
+      ctx.closePath();
+      const rg = ctx.createLinearGradient(Rx, cy, c.x, By + dz);
+      rg.addColorStop(0, '#d2a45e');
+      rg.addColorStop(1, '#8a5524');
+      ctx.fillStyle = rg;
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(70,40,14,0.32)';
+      for (let i = 1; i <= 2; i++) {
+        const t = i / 3;
+        const x1 = Rx + (c.x - Rx) * t, y1 = cy + (By - cy) * t;
+        ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x1, y1 + dz); ctx.stroke();
+      }
+      // 木框顶沿
+      this._diamond(c.x, cy, w, h);
+      const wood = ctx.createLinearGradient(c.x - w * 0.4, cy - h * 0.4, c.x + w * 0.25, cy + h * 0.4);
+      wood.addColorStop(0, '#e0bc7a');
+      wood.addColorStop(0.5, '#c08a48');
+      wood.addColorStop(1, '#8d5726');
+      ctx.fillStyle = wood;
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(70,40,14,0.45)';
+      ctx.lineWidth = Math.max(0.8, th * 0.03);
+      this._diamond(c.x, cy, w, h);
       ctx.stroke();
+      // 框内垄土（略内收，露出一圈木沿）
+      const iw = w * 0.78, ih = h * 0.76;
+      this._diamond(c.x, cy + th * 0.01, iw, ih);
+      const r0 = Math.round((empty ? 176 : 164) + tint * 10);
+      const g0 = Math.round((empty ? 112 : 100) + tint * 6);
+      const b0 = Math.round(56 + tint * 4);
+      const r1 = Math.round(86 + tint * 6), g1 = Math.round(50 + tint * 4), b1 = 22;
+      const soil = ctx.createLinearGradient(c.x - iw * 0.4, cy - ih * 0.3, c.x + iw * 0.25, cy + ih * 0.4);
+      soil.addColorStop(0, 'rgb(' + r0 + ',' + g0 + ',' + b0 + ')');
+      soil.addColorStop(0.5, 'rgb(' + Math.round((r0 + r1) / 2) + ',' + Math.round((g0 + g1) / 2) + ',' + Math.round((b0 + b1) / 2) + ')');
+      soil.addColorStop(1, 'rgb(' + r1 + ',' + g1 + ',' + b1 + ')');
+      ctx.fillStyle = soil;
+      ctx.fill();
       ctx.save();
       ctx.beginPath();
-      this._diamond(c.x, cy, w * 0.90, h * 0.86);
+      this._diamond(c.x, cy + th * 0.01, iw * 0.96, ih * 0.94);
       ctx.clip();
-      ctx.strokeStyle = locked ? 'rgba(50,36,18,0.22)' : 'rgba(48,24,10,0.38)';
-      ctx.lineWidth = Math.max(1, th * 0.065);
+      ctx.strokeStyle = 'rgba(48,24,10,0.36)';
+      ctx.lineWidth = Math.max(1, th * 0.058);
       ctx.lineCap = 'round';
       const slope = th / tw;
-      const spacing = th * (0.18 + (hsh % 5) * 0.012);
+      const spacing = th * (0.17 + (hsh % 5) * 0.01);
       const phase = ((hsh >> 6) % 7) * th * 0.02;
-      const b0 = Math.round((cy - slope * c.x + phase) / spacing) * spacing;
+      const bBase = Math.round((cy - slope * c.x + phase) / spacing) * spacing;
       for (let k = -5; k <= 5; k++) {
-        const b = b0 + k * spacing;
-        const x1 = c.x - w * 0.55, x2 = c.x + w * 0.55;
-        const wob = Math.sin(k * 1.4 + (gx || 0) * 0.7) * th * 0.02;
+        const b = bBase + k * spacing;
+        const x1 = c.x - iw * 0.55, x2 = c.x + iw * 0.55;
+        const wob = Math.sin(k * 1.4 + (gx || 0) * 0.7) * th * 0.018;
         ctx.beginPath();
         ctx.moveTo(x1, slope * x1 + b);
         ctx.quadraticCurveTo(c.x, slope * c.x + b + wob, x2, slope * x2 + b);
         ctx.stroke();
       }
       if (empty) {
-        ctx.strokeStyle = 'rgba(74, 108, 42,' + (locked ? '0.22' : '0.40') + ')';
-        ctx.lineWidth = Math.max(0.7, tw * 0.016);
+        ctx.strokeStyle = 'rgba(74,108,42,0.42)';
+        ctx.lineWidth = Math.max(0.7, tw * 0.015);
         for (let i = 0; i < 3; i++) {
           const a = (c.x * 0.11 + c.y * 0.07 + i * 1.9 + (gx || 0));
-          const bx = c.x + Math.cos(a) * w * 0.18;
-          const by = cy + Math.sin(a * 1.2) * h * 0.16;
+          const bx = c.x + Math.cos(a) * iw * 0.18;
+          const by = cy + Math.sin(a * 1.2) * ih * 0.16;
           ctx.beginPath();
           ctx.moveTo(bx, by + th * 0.03);
           ctx.quadraticCurveTo(bx + tw * 0.02, by - th * 0.05, bx + tw * 0.03, by - th * 0.10);
