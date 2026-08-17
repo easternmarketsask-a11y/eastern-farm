@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#fdf8ee">
 <!-- 部署构建号（deploy.sh 每次注入 CACHE_VERSION 时间戳）。SW 新鲜度守卫据此
      判断本页是否已过期（见页尾脚本）。ef-dev = 未部署的本地版本。 -->
-<meta name="ef-build" content="ef-2608171546">
+<meta name="ef-build" content="ef-2608171605">
 
 <!-- ==================== PWA (add to home screen) ==================== -->
 <link rel="manifest" href="manifest.webmanifest">
@@ -479,6 +479,10 @@
       <button class="btn harvest-status-btn hidden" id="harvestStatusBtn"></button>
     </div>
   </div>
+
+  <!-- 没留邮箱的常驻提醒条（Chris 8/17 定：常驻不打断，不要每次登录弹窗）。
+       默认 hidden，由 firebase-auth.refreshEmailNudge() 按 members.email 决定去留。 -->
+  <div id="emailNudge" class="email-nudge" hidden></div>
 
   <!-- Main farm view -->
   <main id="farm">

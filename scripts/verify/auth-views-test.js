@@ -1,0 +1,73 @@
+/* auth-views-test.js — 登录弹窗每一屏都画得出来、没有死引用（由 cdp.mjs 注入）。
+
+   2026-08-17 登录改造把「邮箱+密码」换成「手机号/用户名+密码」，顺带删了
+   _renderEmailTab / _renderBindView / _emailLogin。这类改动最容易留下的伤是
+   **某一屏点进去就抛 TypeError**，而它只在那一屏被打开时才发作 ——
+   冒烟测试(smoke-flows)走的是商店/任务那些入口，一个都碰不到登录弹窗。
+
+   所以这里逐屏打开，检查三件事：
+     ① 渲染不抛异常
+     ② 关键控件真的在 DOM 里（不是渲染了个空壳）
+     ③ 每屏的主按钮都绑上了 onclick（「点了没反应」是本项目反复出现的失败态） */
+(async () => {
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  for (let i = 0; i < 120 && !(window.Farm && Farm.fbAuth && Farm.ui); i++) await sleep(100);
+  const A = window.Farm && window.Farm.fbAuth;
+  if (!A) return { failures: ['Farm.fbAuth 没加载'] };
+
+  const failures = [], ran = [];
+  // 每屏：视图名 → 必须存在的元素 id，其中第一个必须绑上 onclick
+  const SCREENS = [
+    ['login',     ['authIdentBtn', 'authIdent', 'authPassword']],
+    ['phone',     ['authNextBtn', 'authPhone']],
+    ['sent',      []],
+    ['otp',       ['authSendBtn']],
+    ['setpw',     ['authSetPwBtn', 'setPw', 'setUser']],
+    ['forgot',    ['authForgotBtn', 'forgotIdent']],
+    ['email',     ['authEmailStartBtn', 'addEmail']],
+    ['emailcode', ['authEmailConfirmBtn', 'emailCode']],
+  ];
+
+  for (const [view, ids] of SCREENS) {
+    try {
+      A._view = view;
+      A._renderLoginModal();
+      await sleep(60);
+      ids.forEach((id, idx) => {
+        const el = document.getElementById(id);
+        if (!el) { failures.push(`${view}: 缺元素 #${id}`); return; }
+        // 第一个 id 约定是这屏的主按钮 —— 没绑 onclick 就是「点了没反应」
+        if (idx === 0 && typeof el.onclick !== 'function') {
+          failures.push(`${view}: 主按钮 #${id} 没绑 onclick`);
+        }
+      });
+      ran.push(view);
+    } catch (e) {
+      failures.push(`${view}: 渲染抛异常 ${(e && e.message) || e}`);
+    }
+  }
+
+  // ⓘ 折叠说明：默认必须是收起的，点一下要能展开（Chris 8/17 的硬要求）
+  try {
+    A._view = 'login';
+    A._renderLoginModal();
+    await sleep(60);
+    const btn = document.querySelector('[data-auth-info]');
+    const body = btn && document.getElementById(btn.dataset.authInfo);
+    if (!btn || !body) {
+      failures.push('login: 没有 ⓘ 折叠说明');
+    } else {
+      if (!body.hidden) failures.push('ⓘ 说明默认就是展开的（应默认隐藏）');
+      btn.click();
+      await sleep(30);
+      if (body.hidden) failures.push('ⓘ 点了不展开');
+      if (btn.getAttribute('aria-expanded') !== 'true') failures.push('ⓘ 没更新 aria-expanded');
+    }
+    ran.push('info-toggle');
+  } catch (e) {
+    failures.push('info-toggle: ' + ((e && e.message) || e));
+  }
+
+  try { Farm.ui.hideModal(); } catch (_) {}
+  return { failures, ran };
+})()

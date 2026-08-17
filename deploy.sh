@@ -152,6 +152,37 @@ else
     echo "—— 部署中止：开屏主按钮写着「会员登录」却不通往登录。这条静默失败，别绕过。"
     exit 1
   fi
+
+  # 闸门 E: 登录弹窗每一屏都画得出来、主按钮都绑上了(约 5 秒)
+  # 2026-08-17 加：登录改造(手机号/用户名+密码)删掉了三个旧渲染函数。这类改动的
+  # 典型伤是「某一屏点进去就 TypeError」，而它只在那屏被打开时发作 —— 闸门 B 走的是
+  # 商店/任务那些入口，一个都碰不到登录弹窗。「点了没反应」是本项目反复出现的失败态。
+  echo "▶ 闸门 E: 登录弹窗逐屏回归测试(约 5 秒)…"
+  $PYCMD -m http.server 8145 --bind 127.0.0.1 >/dev/null 2>&1 &
+  AUTH_PID=$!
+  trap 'kill $AUTH_PID 2>/dev/null || true' EXIT
+  sleep 1
+  AUTH_OUT="$(mktemp)"
+  node scripts/verify/cdp.mjs "http://127.0.0.1:8145/src/" "scripts/verify/auth-views-test.js" 4000 >"$AUTH_OUT" 2>/dev/null || true
+  kill $AUTH_PID 2>/dev/null || true
+  trap - EXIT
+  if ! node -e '
+    const o = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
+    const r = o.evalResult;
+    if (!r || !r.ran || !r.ran.length) {
+      console.error("✗ 登录弹窗测试没跑起来(evalResult=" + JSON.stringify(r) + ")");
+      process.exit(1);
+    }
+    if (r.failures && r.failures.length) {
+      console.error("✗ 登录弹窗有问题:");
+      r.failures.forEach(f => console.error("  - " + f));
+      process.exit(1);
+    }
+    console.log("  ✓ 登录弹窗 " + r.ran.length + " 屏全部正常");
+  ' "$AUTH_OUT"; then
+    echo "—— 部署中止：登录流程有屏打不开或按钮没绑。别绕过，这直接挡住所有会员。"
+    exit 1
+  fi
 fi
 
 # 3. 提交未保存的改动(如果有;SW 版本注入保证至少有它)

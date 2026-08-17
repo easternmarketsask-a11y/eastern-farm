@@ -29,6 +29,12 @@
  */
 (function () {
   const REMEMBER_KEY = 'eastern_farm_last_phone';
+  /* 登录框记住的标识（手机号**或**用户名）。
+     🔒 必须与 REMEMBER_KEY 分开：那个键只装手机号，专供「用手机号激活」那一屏
+     预填。混着存的话，设过用户名的人再去激活，手机号框里会冒出一个用户名。
+     🔒 这是**本机**的便利，不是「认识你」——绝不存姓名、绝不显示姓名。
+     陌生设备上不得出现任何顾客姓名是隐私红线（spec 3.2）。 */
+  const IDENT_KEY = 'eastern_farm_last_ident';
   // 会员激活流程要问后端「这个手机号该走哪条路」。与 analytics.js 同一个后端。
   const STOCKWISE_BASE = 'https://stockwise-app-873982544406.us-central1.run.app';
 
@@ -94,6 +100,8 @@
           if (Farm.promo && Farm.promo.check) {
             setTimeout(() => Farm.promo.check(), 1800);
           }
+          // 会员档到手才知道有没有真邮箱 —— 常驻提醒条在这里定去留
+          this.refreshEmailNudge();
           if (Farm.fbPoints && Farm.fbPoints.firstLoginBackfill) {
             Farm.fbPoints.firstLoginBackfill(user);
           }
@@ -180,6 +188,7 @@
           this._notify();
           this._renderTopbar();
           this._renderSplash();
+          this.refreshEmailNudge();   // 退出登录后把提醒条收掉
         }
         // Auth (and, for members, the cloud restore above) has now settled.
         // Release the deferred sign-in auto-open so it decides on the REAL state
@@ -370,12 +379,23 @@
        🔒 手机号不再是登录方式，只用于**一次性激活**：验证短信不免费（每天前 10 条外
        每条计费），而日常登录不该每次都掏钱。手机号仍是会员身份的关联字段。
 
-       五个视图（_view）：
-         login  邮箱 + 密码           ← 默认，日常路径
-         phone  输入手机号 →【继续】   ← 激活/找回入口，调后端 start 判断走哪条
-         sent   已发送到 ****@域名     ← 有登记邮箱的人
-         otp    【发送短信验证码】     ← 没登记邮箱的人；🔒 短信必须由**这一次点击**触发
-         bind   填邮箱 + 设密码        ← 短信验证通过后
+       ── 2026-08-17 改：日常登录改成「手机号 / 用户名 + 密码」 ──
+       spec: stockwise_final/docs/superpowers/specs/2026-08-17-phone-username-password-login-design.md
+
+       🔒 邮箱不再是登录的**前提**。实测 77 个 Auth 账号里 67 个「有手机号、无邮箱」——
+       他们在设邮箱那一屏就走掉了，于是每次登录都得再发一条短信（Chris 真金白银）。
+       Chris 定调：「人家不要这个方便的时候难道我们就不要这个客人吗」。
+       邮箱改成登录**之后**慢慢补（常驻提醒条 + 3000 农场币），不挡在门口。
+
+       视图（_view）：
+         login      手机号/用户名 + 密码   ← 默认，日常路径（邮箱也认，含 @ 即直登）
+         phone      输入手机号 →【继续】    ← 激活入口，调后端 start 判断走哪条
+         sent       已发送到 ****@域名      ← 有登记邮箱的人
+         otp        【发送短信验证码】      ← 🔒 短信必须由**这一次点击**触发
+         setpw      设密码 + 选填用户名     ← 短信验证通过后（一辈子一次）
+         forgot     忘记密码                ← 留过邮箱自助；没留的到店
+         email      后补邮箱 · 第 1 步      ← 输邮箱，发验证码
+         emailcode  后补邮箱 · 第 2 步      ← 输验证码，验过才写会员档
 
        🔴 为什么 otp 要单独一屏、不能在点「继续」时就把短信发了：
        signInWithPhoneNumber 必须在用户点击那一瞬**同步**调用，前面有任何 await
@@ -384,32 +404,38 @@
     _renderLoginModal() {
       const lang = Farm.state.data.language;
       const en = lang === 'en';
+      // 手机号屏用 REMEMBER_KEY（只装号码）；登录/忘记密码屏用 IDENT_KEY（号码或用户名）
       const remembered = localStorage.getItem(REMEMBER_KEY) || '';
+      const rememberedIdent = localStorage.getItem(IDENT_KEY) || remembered;
       const view = this._view || 'login';
 
       const T = {
-        login: [en ? 'Member sign in' : '会员登录', en ? 'Sign in with your email' : '用您的邮箱登录'],
+        /* 🔒 副标题一律短（Chris 8/17：「所有提示语都要要尽量简洁！」）。
+           说明性的长句一律收进 ⓘ，默认不显示。 */
+        login: [en ? 'Member sign in' : '会员登录', ''],
         phone: [en ? 'First time here?' : '第一次登录',
-                en ? 'Enter the phone number you gave us in store' : '请输入您在店里登记的手机号'],
+                en ? 'The number you gave us in store' : '您在店里登记的手机号'],
         sent:  [en ? 'Check your email' : '请查收邮件', ''],
         otp:   [en ? 'Verify your phone' : '验证手机号',
                 en ? `We'll text ${this._formatPhone((this._currentPhoneE164 || '').replace('+1', ''))}`
                    : `将发送到 ${this._formatPhone((this._currentPhoneE164 || '').replace('+1', ''))}`],
-        /* 副标题要说**好处**，不是说明书。
-           实测 77 个 Auth 账号里 67 个是「有手机号、无邮箱」—— 短信验完就把这一屏
-           关掉了，于是每次登录都要再发一条短信（Chris 真金白银）。原文案
-           「以后用这个邮箱和密码登录」只描述了这是什么，没给填的理由。 */
-        bind:  [en ? 'Set up your login' : '设置登录方式',
-                en ? 'Then you can sign in straight away — no more waiting for a text'
-                   : '设好以后直接登录，不用再等短信'],
+        /* 「一辈子一次」要说出来 —— 这一屏是整个方案的收益点：设完以后再不发短信。 */
+        setpw: [en ? 'Set your password' : '设置密码',
+                en ? 'Just once — after this you sign in straight away' : '只需这一次，以后直接登录'],
+        forgot: [en ? 'Forgot password' : '忘记密码', ''],
+        email:  [en ? 'Add your email' : '添加邮箱', ''],
+        emailcode: [en ? 'Enter the code' : '输入验证码', ''],
       }[view] || ['', ''];
 
       const body = {
-        login: () => this._renderEmailTab(lang),
+        login: () => this._renderIdentView(lang, rememberedIdent),
         phone: () => this._renderPhoneView(lang, remembered),
         sent:  () => this._renderSentView(lang),
         otp:   () => this._renderOtpView(lang),
-        bind:  () => this._renderBindView(lang),
+        setpw: () => this._renderSetPwView(lang),
+        forgot: () => this._renderForgotView(lang, rememberedIdent),
+        email:  () => this._renderEmailAddView(lang),
+        emailcode: () => this._renderEmailCodeView(lang),
       }[view]();
 
       const html = `
@@ -529,21 +555,118 @@
       `;
     },
 
-    /** 短信验证通过 → 设置以后要用的邮箱和密码。 */
-    _renderBindView(lang) {
+    /* 🔒 说明一律默认隐藏，收进 ⓘ（Chris 8/17：「所有说明都应该默认隐藏，
+       旁边可放一个『？』，点问号时出现」）。
+       屏上只留「做什么」，「为什么/怎么办」点开才看 —— 长辈看的是一屏干净的表单，
+       想知道的人一点就有。可访问性走 aria-expanded / aria-controls，不是纯视觉开关。 */
+    _info(id, text) {
+      return `<button type="button" class="auth-info-btn" data-auth-info="${id}"
+                aria-expanded="false" aria-controls="${id}"
+                aria-label="${Farm.state.data.language === 'en' ? 'More info' : '说明'}">ⓘ</button>
+        <p class="auth-info-body" id="${id}" hidden>${text}</p>`;
+    },
+
+    /** 日常登录：手机号 / 用户名 + 密码。含 @ 的当邮箱直登（老用户仍然有效）。 */
+    _renderIdentView(lang, remembered) {
       const en = lang === 'en';
       return `
         <div class="auth-field">
-          <label class="auth-label" for="bindEmail">${en ? 'Email' : '邮箱'}</label>
-          <input type="email" id="bindEmail" class="auth-input" autocomplete="email"
-                 placeholder="you@example.com"/>
+          <label class="auth-label" for="authIdent">
+            ${en ? 'Phone or username' : '手机号或用户名'}
+            ${this._info('identInfo', en
+              ? 'Your phone is the one you gave us in store. If you signed up with an email, type that instead.'
+              : '手机号就是您在店里登记的那个。用邮箱注册过的话，这里填邮箱。')}
+          </label>
+          <input type="text" id="authIdent" class="auth-input" autocomplete="username"
+                 value="${String(remembered).replace(/"/g, '&quot;')}"
+                 placeholder="${en ? '(306) 123-4567' : '(306) 123-4567'}"/>
         </div>
         <div class="auth-field">
-          <label class="auth-label" for="bindPw">${en ? 'Password' : '设置密码'}</label>
-          <input type="password" id="bindPw" class="auth-input" autocomplete="new-password"
+          <label class="auth-label" for="authPassword">${en ? 'Password' : '密码'}</label>
+          <input type="password" id="authPassword" class="auth-input" autocomplete="current-password"/>
+        </div>
+        <button class="btn auth-primary" id="authIdentBtn">${en ? 'Sign in' : '登录'}</button>
+        <button class="auth-ghost auth-ghost--strong" data-auth-go="phone">${en
+          ? 'First time? Activate with your phone' : '第一次登录？用手机号激活'}</button>
+        <button class="auth-ghost" data-auth-go="forgot">${en ? 'Forgot password' : '忘记密码'}</button>
+        <button class="auth-ghost" onclick="Farm.ui.hideModal()">${Farm.i18n.t('btn_cancel')}</button>
+      `;
+    },
+
+    /** 短信验证通过 → 设密码（+ 选填用户名）。一辈子一次，之后永不再发短信。 */
+    _renderSetPwView(lang) {
+      const en = lang === 'en';
+      return `
+        <div class="auth-field">
+          <label class="auth-label" for="setPw">${en ? 'Password' : '设置密码'}</label>
+          <input type="password" id="setPw" class="auth-input" autocomplete="new-password"
                  placeholder="${en ? 'At least 6 characters' : '至少 6 位'}"/>
         </div>
-        <button class="btn auth-primary" id="authBindBtn">${en ? 'Finish' : '完成'}</button>
+        <div class="auth-field">
+          <label class="auth-label" for="setUser">
+            ${en ? 'Username (optional)' : '用户名（选填）'}
+            ${this._info('userInfo', en
+              ? 'Sign in with this instead of your phone number, if you prefer.'
+              : '设了以后可以用它代替手机号登录。')}
+          </label>
+          <input type="text" id="setUser" class="auth-input" autocomplete="username"
+                 placeholder="${en ? 'Leave blank if you like' : '不填也可以'}"/>
+        </div>
+        <button class="btn auth-primary" id="authSetPwBtn">${en ? 'Done' : '完成'}</button>
+      `;
+    },
+
+    /** 忘记密码：留过邮箱的自助；没留的到店改。 */
+    _renderForgotView(lang, remembered) {
+      const en = lang === 'en';
+      return `
+        <div class="auth-field">
+          <label class="auth-label" for="forgotIdent">${en ? 'Phone or username' : '手机号或用户名'}</label>
+          <input type="text" id="forgotIdent" class="auth-input" autocomplete="username"
+                 value="${String(remembered).replace(/"/g, '&quot;')}"/>
+        </div>
+        <button class="btn auth-primary" id="authForgotBtn">${en ? 'Send reset email' : '发送重置邮件'}</button>
+        <!-- 🔒 「到店」是欢迎，不是麻烦事（Chris 8/17：「我本来就希望他们天天来店里」）。
+             禁止写成「不用跑一趟店里」这类把到店当成本的话。 -->
+        <p class="auth-hint">${en
+          ? 'No email on file? Our staff can reset it for you in store.'
+          : '没留过邮箱？到店里请店员帮您重设。'}</p>
+        <button class="auth-ghost" data-auth-go="login">${en ? 'Back' : '返回'}</button>
+      `;
+    },
+
+    /** 后补邮箱 第 1 步：输邮箱 → 发验证码。 */
+    _renderEmailAddView(lang) {
+      const en = lang === 'en';
+      return `
+        <div class="auth-field">
+          <label class="auth-label" for="addEmail">
+            ${en ? 'Email' : '邮箱'}
+            ${this._info('emailInfo', en
+              ? 'Used for order updates and for resetting your password yourself.'
+              : '用来收订单通知，以及自己重设密码。')}
+          </label>
+          <input type="email" id="addEmail" class="auth-input" autocomplete="email"
+                 placeholder="you@example.com"/>
+        </div>
+        <button class="btn auth-primary" id="authEmailStartBtn">${en ? 'Send code' : '发送验证码'}</button>
+        <button class="auth-ghost" onclick="Farm.ui.hideModal()">${Farm.i18n.t('btn_cancel')}</button>
+      `;
+    },
+
+    /** 后补邮箱 第 2 步：输验证码（单输入框，理由见下面 _renderPhoneStep2 的注释）。 */
+    _renderEmailCodeView(lang) {
+      const en = lang === 'en';
+      const to = this._emailSentTo ? `<p class="auth-sent-line">${en ? 'Sent to' : '已发送到'} <b>${this._emailSentTo}</b></p>` : '';
+      return `
+        ${to}
+        <div class="auth-field">
+          <input type="tel" id="emailCode" class="auth-code-input"
+                 inputmode="numeric" autocomplete="one-time-code" maxlength="6"
+                 placeholder="------" aria-label="${en ? 'Verification code' : '验证码'}"/>
+        </div>
+        <button class="btn auth-primary" id="authEmailConfirmBtn">${en ? 'Confirm' : '确认'}</button>
+        <button class="auth-ghost" data-auth-go="email">${en ? 'Use a different email' : '换个邮箱'}</button>
       `;
     },
 
@@ -574,24 +697,6 @@
       `;
     },
 
-    _renderEmailTab(lang) {
-      return `
-        <div class="auth-field">
-          <label class="auth-label">${lang === 'en' ? 'Email' : '邮箱'}</label>
-          <input type="email" id="authEmail" class="auth-input" autocomplete="email"/>
-        </div>
-        <div class="auth-field">
-          <label class="auth-label">${lang === 'en' ? 'Password' : '密码'}</label>
-          <input type="password" id="authPassword" class="auth-input" autocomplete="current-password"/>
-        </div>
-        <button class="btn auth-primary" id="authEmailBtn">${lang === 'en' ? 'Sign in' : '登录'}</button>
-        <!-- 激活/找回入口。手机号不再是登录方式，只走这条一次性的路。 -->
-        <button class="auth-ghost auth-ghost--strong" data-auth-go="phone">${lang === 'en'
-          ? 'First time? Activate with your phone' : '第一次登录？用手机号激活'}</button>
-        <button class="auth-ghost" onclick="Farm.ui.hideModal()">${Farm.i18n.t('btn_cancel')}</button>
-      `;
-    },
-
     _wireLoginModal() {
       const view = this._view || 'login';
 
@@ -600,15 +705,61 @@
         btn.onclick = () => this._go(btn.dataset.authGo);
       });
 
+      // ⓘ 折叠说明（默认收起）。放在视图分支之外 —— 哪一屏都可能有。
+      document.querySelectorAll('[data-auth-info]').forEach(btn => {
+        btn.onclick = () => {
+          const body = document.getElementById(btn.dataset.authInfo);
+          if (!body) return;
+          const open = !body.hidden;
+          body.hidden = open;
+          btn.setAttribute('aria-expanded', String(!open));
+        };
+      });
+
       if (view === 'login') {
-        const emailEl = document.getElementById('authEmail');
-        if (emailEl) setTimeout(() => emailEl.focus(), 100);
-        const btn = document.getElementById('authEmailBtn');
-        if (btn) btn.onclick = () => this._emailLogin();
-        ['authEmail', 'authPassword'].forEach(id => {
+        const identEl = document.getElementById('authIdent');
+        // 已填过手机号（本机记住的）就把光标放到密码上，少一步
+        const first = (identEl && identEl.value) ? document.getElementById('authPassword') : identEl;
+        if (first) setTimeout(() => first.focus(), 100);
+        const btn = document.getElementById('authIdentBtn');
+        if (btn) btn.onclick = () => this._identLogin();
+        ['authIdent', 'authPassword'].forEach(id => {
           const el = document.getElementById(id);
-          if (el) el.onkeydown = (e) => { if (e.key === 'Enter') this._emailLogin(); };
+          if (el) el.onkeydown = (e) => { if (e.key === 'Enter') this._identLogin(); };
         });
+
+      } else if (view === 'setpw') {
+        const el = document.getElementById('setPw');
+        if (el) setTimeout(() => el.focus(), 100);
+        const btn = document.getElementById('authSetPwBtn');
+        if (btn) btn.onclick = () => this._setCredentials();
+        ['setPw', 'setUser'].forEach(id => {
+          const x = document.getElementById(id);
+          if (x) x.onkeydown = (e) => { if (e.key === 'Enter') this._setCredentials(); };
+        });
+
+      } else if (view === 'forgot') {
+        const btn = document.getElementById('authForgotBtn');
+        if (btn) btn.onclick = () => this._forgotPassword();
+        const el = document.getElementById('forgotIdent');
+        if (el) el.onkeydown = (e) => { if (e.key === 'Enter') this._forgotPassword(); };
+
+      } else if (view === 'email') {
+        const el = document.getElementById('addEmail');
+        if (el) setTimeout(() => el.focus(), 100);
+        const btn = document.getElementById('authEmailStartBtn');
+        if (btn) btn.onclick = () => this._emailVerifyStart();
+        if (el) el.onkeydown = (e) => { if (e.key === 'Enter') this._emailVerifyStart(); };
+
+      } else if (view === 'emailcode') {
+        const el = document.getElementById('emailCode');
+        if (el) {
+          setTimeout(() => el.focus(), 100);
+          el.oninput = (e) => { e.target.value = (e.target.value || '').replace(/\D/g, '').slice(0, 6); };
+          el.onkeydown = (e) => { if (e.key === 'Enter') this._emailVerifyConfirm(); };
+        }
+        const btn = document.getElementById('authEmailConfirmBtn');
+        if (btn) btn.onclick = () => this._emailVerifyConfirm();
 
       } else if (view === 'phone') {
         const phoneEl = document.getElementById('authPhone');
@@ -643,38 +794,105 @@
           if (sendBtn) sendBtn.onclick = () => this._sendCode();
         }
 
-      } else if (view === 'bind') {
-        const el = document.getElementById('bindEmail');
-        if (el) setTimeout(() => el.focus(), 100);
-        const btn = document.getElementById('authBindBtn');
-        if (btn) btn.onclick = () => this._bindEmail();
-        ['bindEmail', 'bindPw'].forEach(id => {
-          const x = document.getElementById(id);
-          if (x) x.onkeydown = (e) => { if (e.key === 'Enter') this._bindEmail(); };
-        });
       }
     },
 
-    /** 短信验证通过后：把邮箱+密码挂到**当前这个手机号账号**上，再让后端记进会员档案。
-     *
-     * 🔴 必须用 linkWithCredential 而不是新建账号 —— 新建 = 一人两 uid，
-     * 而农场存档按 farm_players/{uid} 存，换 uid 等于农场当场清零且不可逆。
-     */
-    async _bindEmail() {
+    /* 日常登录：手机号 / 用户名 / 邮箱 + 密码。
+       手机号和用户名都不是 Firebase 认识的东西，所以先问后端要「登录用的假邮箱」
+       （/resolve-login），再拿它走标准的邮箱+密码登录。
+
+       🔒 后端对**查不到**的号码也回一个形状相同的占位假邮箱 —— 登录会失败在
+       Firebase 那一步，统一报「不对」。这样这个接口就不是会员枚举器。
+       前端因此**不能**把 resolve 的结果当成「这个号存在」，也不能分别提示。 */
+    async _identLogin() {
       const lang = Farm.state.data.language;
       const en = lang === 'en';
       this._showError('');
-      const email = (document.getElementById('bindEmail') || {}).value || '';
-      const pw = (document.getElementById('bindPw') || {}).value || '';
-      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim())) {
-        this._showError(en ? 'Please enter a valid email.' : '请输入正确的邮箱地址。');
+      const ident = ((document.getElementById('authIdent') || {}).value || '').trim();
+      const pw = (document.getElementById('authPassword') || {}).value || '';
+      if (!ident) {
+        this._showError(en ? 'Please enter your phone or username.' : '请输入手机号或用户名。');
         return;
       }
+      if (!pw) {
+        this._showError(en ? 'Please enter your password.' : '请输入密码。');
+        return;
+      }
+      const btn = document.getElementById('authIdentBtn');
+      const reset = () => { if (btn) { btn.disabled = false; btn.textContent = en ? 'Sign in' : '登录'; } };
+      if (btn) { btn.disabled = true; btn.textContent = en ? 'Signing in…' : '登录中…'; }
+
+      // 用户名不允许含 @（后端 validate_username 保证），所以含 @ 一定是邮箱。
+      // 老会员（10 个已有邮箱密码的）走这条，一步都不多。
+      let loginId = ident;
+      if (ident.indexOf('@') === -1) {
+        try {
+          const r = await fetch(STOCKWISE_BASE + '/api/public/member-auth/resolve-login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ identifier: ident }),
+          });
+          const d = await r.json().catch(() => null);
+          if (!r.ok || !d || !d.loginId) throw new Error((d && d.detail) || 'HTTP ' + r.status);
+          loginId = d.loginId;
+        } catch (e) {
+          // 🔒 请求失败绝不能显示成「账号密码不对」——那是把一个错误的事实告诉顾客
+          this._showError(en ? 'Could not reach the server. Please try again.' : '连接不上服务器，请重试。');
+          reset();
+          return;
+        }
+      }
+
+      try {
+        await Farm.fb.auth.signInWithEmailAndPassword(loginId, pw);
+      } catch (e) {
+        const c = (e && e.code) || '';
+        /* 🔒 「不是你的错」的失败不许显示成「密码不对」——那是把一个错误的事实
+           告诉顾客，他会一遍遍试自己明明记得的密码。只有真的凭据不匹配才那么说。 */
+        let msg;
+        if (c === 'auth/unauthorized-domain') {
+          msg = en ? 'Login is not enabled for this site yet.' : '此站点尚未启用登录。';
+        } else if (c === 'auth/too-many-requests') {
+          msg = en ? 'Too many attempts. Please try again later.' : '尝试次数过多，请稍后再试。';
+        } else if (c === 'auth/network-request-failed') {
+          msg = en ? 'Network problem. Please try again.' : '网络不通，请重试。';
+        } else {
+          /* 统一口径：不区分「没这个号」和「密码错」，否则就是会员枚举器。
+
+             第二句是给 10 个用真邮箱注册的老会员的（实测 77 个 Auth 账号里 10 个
+             如此）。他们的账号挂的是真邮箱，而 /resolve-login 按手机号只会算出
+             假邮箱 —— 输手机号必然登不上。
+             🔒 后端**不能**改成回真邮箱：那等于任何人拿一个手机号就能查出别人的
+             邮箱地址，比这个不便严重得多。所以在这里给一句对**所有人**都一样的
+             中性提示 —— 不透露任何账号存不存在。 */
+          msg = en
+            ? 'That phone/username and password don’t match.\nSigned up with an email? Enter the email instead.'
+            : '手机号/用户名或密码不对。\n用邮箱注册过的话，请填邮箱。';
+        }
+        this._showError(msg);
+        reset();
+        return;
+      }
+      // 本机记住输入过的标识（只在这台设备上，绝不存/显示姓名 —— 陌生设备隐私红线）
+      try { localStorage.setItem(IDENT_KEY, ident); } catch (_) {}
+      this._onLoginSuccess(lang);
+    },
+
+    /* 首次激活（短信验证通过后）：设密码 + 选填用户名。一辈子一次。
+       🔴 由后端 admin SDK 写到**当前这个 uid** 上，不新建账号 —— 新建 = 一人两 uid，
+       而农场存档按 farm_players/{uid} 存，换 uid 等于农场当场清零且不可逆。 */
+    async _setCredentials() {
+      const lang = Farm.state.data.language;
+      const en = lang === 'en';
+      this._showError('');
+      const pw = (document.getElementById('setPw') || {}).value || '';
+      const username = ((document.getElementById('setUser') || {}).value || '').trim();
       if (pw.length < 6) {
         this._showError(en ? 'Password must be at least 6 characters.' : '密码至少 6 位。');
         return;
       }
-      const btn = document.getElementById('authBindBtn');
+      const btn = document.getElementById('authSetPwBtn');
+      const reset = () => { if (btn) { btn.disabled = false; btn.textContent = en ? 'Done' : '完成'; } };
       if (btn) { btn.disabled = true; btn.textContent = en ? 'Saving…' : '保存中…'; }
 
       const user = Farm.fb.auth.currentUser;
@@ -684,43 +902,136 @@
         return;
       }
       try {
-        const cred = firebase.auth.EmailAuthProvider.credential(email.trim(), pw);
-        await user.linkWithCredential(cred);
-      } catch (e) {
-        const code = (e && e.code) || '';
-        this._showError(
-          code === 'auth/email-already-in-use'
-            ? (en ? 'That email is already used by another account. Please use a different one.'
-                  : '这个邮箱已被其他账号使用，请换一个。')
-            : (en ? 'Could not save. Please try again.' : '保存失败，请重试。')
-        );
-        if (btn) { btn.disabled = false; btn.textContent = en ? 'Finish' : '完成'; }
-        return;
-      }
-      // Auth 层已经绑好了，再让后端写进会员档案（顺序不能反：反了 link 失败会把档案改脏）
-      try {
         const token = await user.getIdToken();
-        const r = await fetch(STOCKWISE_BASE + '/api/public/member-auth/bind-email', {
+        const r = await fetch(STOCKWISE_BASE + '/api/public/member-auth/set-credentials', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
-          body: JSON.stringify({ email: email.trim() }),
+          body: JSON.stringify({ password: pw, username: username || null }),
         });
-        if (!r.ok) {
-          const d = await r.json().catch(() => null);
-          throw new Error((d && d.detail) || 'HTTP ' + r.status);
-        }
+        const d = await r.json().catch(() => null);
+        if (!r.ok) throw new Error((d && d.detail) || 'HTTP ' + r.status);
       } catch (e) {
-        // 这里失败不该把人挡在门外：他的 Auth 账号已经能用了。
-        // 关联会在下次登录时由 _loadMemberDoc 按邮箱自动补上（幂等自愈）。
-        console.warn('[auth] bind-email 回写失败，留待登录时自愈:', e);
+        // 后端把「用户名被占」「密码太短」这类都写在 detail 里，直接用它 ——
+        // 换成笼统的「保存失败」顾客就不知道该改什么了
+        this._showError(String((e && e.message) || '')
+          || (en ? 'Could not save. Please try again.' : '保存失败，请重试。'));
+        reset();
+        return;
       }
-      try { user.sendEmailVerification().catch(() => {}); } catch (_) {}
-      // 漏斗「补上邮箱」。3000 农场币要「登录 + 留邮箱」才发，而没邮箱的会员
-      // 靠常驻提醒条慢慢补 —— 补没补上只有这个数看得见（login 与它的差就是
-      // 登录了却仍拿不到礼包的人）。发在这里而不是 bind-email 回写成功处：
-      // 回写失败会在下次登录自愈，人确实已经把邮箱设好了。
-      if (Farm.track) Farm.track('email_set');
+      // 下次登录默认填这个（本机）。设了用户名就填用户名，否则填手机号。
+      try {
+        localStorage.setItem(IDENT_KEY,
+          username || this._formatPhone((this._currentPhoneE164 || '').replace('+1', '')));
+      } catch (_) {}
       this._onLoginSuccess(lang);
+    },
+
+    /** 忘记密码：留过邮箱的自助收信；没留的到店改。对外那句话三种情况完全一样。 */
+    async _forgotPassword() {
+      const en = Farm.state.data.language === 'en';
+      this._showError('');
+      const ident = ((document.getElementById('forgotIdent') || {}).value || '').trim();
+      if (!ident) {
+        this._showError(en ? 'Please enter your phone or username.' : '请输入手机号或用户名。');
+        return;
+      }
+      const btn = document.getElementById('authForgotBtn');
+      if (btn) { btn.disabled = true; btn.textContent = en ? 'Sending…' : '发送中…'; }
+      try {
+        const r = await fetch(STOCKWISE_BASE + '/api/public/member-auth/forgot-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ identifier: ident }),
+        });
+        const d = await r.json().catch(() => null);
+        if (!r.ok) throw new Error((d && d.detail) || 'HTTP ' + r.status);
+        Farm.ui.toast(en
+          ? 'If we have your email, the reset link is on its way.'
+          : '留过邮箱的话，重置信已经发出。', 4000);
+        this._go('login');
+      } catch (e) {
+        this._showError(en ? 'Could not send. Please try again.' : '发送失败，请重试。');
+        if (btn) { btn.disabled = false; btn.textContent = en ? 'Send reset email' : '发送重置邮件'; }
+      }
+    },
+
+    /** 后补邮箱 第 1 步：查占用 + 发验证码。 */
+    async _emailVerifyStart() {
+      const en = Farm.state.data.language === 'en';
+      this._showError('');
+      const email = ((document.getElementById('addEmail') || {}).value || '').trim();
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+        this._showError(en ? 'Please enter a valid email.' : '请输入正确的邮箱地址。');
+        return;
+      }
+      const btn = document.getElementById('authEmailStartBtn');
+      const reset = () => { if (btn) { btn.disabled = false; btn.textContent = en ? 'Send code' : '发送验证码'; } };
+      if (btn) { btn.disabled = true; btn.textContent = en ? 'Sending…' : '发送中…'; }
+      const user = Farm.fb.auth.currentUser;
+      if (!user) { this._showError(en ? 'Please sign in first.' : '请先登录。'); reset(); return; }
+      try {
+        const token = await user.getIdToken();
+        const r = await fetch(STOCKWISE_BASE + '/api/public/member-auth/email-verify/start', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+          body: JSON.stringify({ email }),
+        });
+        const d = await r.json().catch(() => null);
+        if (!r.ok) throw new Error((d && d.detail) || 'HTTP ' + r.status);
+        this._emailSentTo = (d && d.sentTo) || '';
+        this._pendingEmail = email;
+        this._go('emailcode');
+      } catch (e) {
+        this._showError(String((e && e.message) || '')
+          || (en ? 'Could not send. Please try again.' : '发送失败，请重试。'));
+        reset();
+      }
+    },
+
+    /** 后补邮箱 第 2 步：验码通过才写进会员档。 */
+    async _emailVerifyConfirm() {
+      const en = Farm.state.data.language === 'en';
+      this._showError('');
+      const code = ((document.getElementById('emailCode') || {}).value || '').trim();
+      if (code.length !== 6) {
+        this._showError(en ? 'Enter the 6-digit code.' : '请输入 6 位验证码。');
+        return;
+      }
+      const btn = document.getElementById('authEmailConfirmBtn');
+      const reset = () => { if (btn) { btn.disabled = false; btn.textContent = en ? 'Confirm' : '确认'; } };
+      if (btn) { btn.disabled = true; btn.textContent = en ? 'Checking…' : '验证中…'; }
+      const user = Farm.fb.auth.currentUser;
+      if (!user) { this._showError(en ? 'Please sign in first.' : '请先登录。'); reset(); return; }
+      try {
+        const token = await user.getIdToken();
+        const r = await fetch(STOCKWISE_BASE + '/api/public/member-auth/email-verify/confirm', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+          body: JSON.stringify({ code }),
+        });
+        const d = await r.json().catch(() => null);
+        if (!r.ok) throw new Error((d && d.detail) || 'HTTP ' + r.status);
+      } catch (e) {
+        this._showError(String((e && e.message) || '')
+          || (en ? 'Could not verify. Please try again.' : '验证失败，请重试。'));
+        reset();
+        return;
+      }
+      // 漏斗「补上邮箱」。3000 农场币要「登录 + 留邮箱」才发，而没邮箱的会员靠常驻
+      // 提醒条慢慢补 —— 补没补上只有这个数看得见（login 与它的差就是登录了却仍
+      // 拿不到礼包的人）。
+      if (Farm.track) Farm.track('email_set');
+      // 本地会员档里的邮箱也跟上，提醒条才会立刻消失（不用等下次拉取）
+      if (this.memberDoc) this.memberDoc.email = this._pendingEmail || this.memberDoc.email;
+      Farm.ui.hideModal();
+      this.refreshEmailNudge();
+      Farm.ui.toast(en ? 'Email saved 🎉' : '邮箱已保存 🎉', 3000);
+      // 邮箱是发 3000 农场币的条件，补上后立刻再试一次（事务幂等，重复调安全）
+      try {
+        if (Farm.fbPoints && Farm.fbPoints.firstLoginGameSignupBonus) {
+          Farm.fbPoints.firstLoginGameSignupBonus(user);
+        }
+      } catch (_) {}
     },
 
     // 单个验证码输入框：只留数字、满 6 位自动提交。自动填充/粘贴不用任何补丁。
@@ -977,9 +1288,13 @@
            Chris 因此以为「客人都登录不上」。 */
         this._trackLoginOnce();
 
-        // 短信只是**激活**的第一半：接着让他设好以后要用的邮箱和密码，
-        // 否则下次又得再发一条短信 —— 而这套改造的全部意义就是不再每次发短信。
-        this._go('bind');
+        /* 短信只是**激活**的第一半：接着设密码，否则下次又得再发一条短信 ——
+           而这套改造的全部意义就是不再每次发短信。
+           🔒 这一屏**不要邮箱**（2026-08-17 改）。原来这里要邮箱+密码，实测 77 个
+           账号里 67 个就是在这儿走掉的，于是每次登录都掏一条短信钱。邮箱改成登录
+           之后靠常驻提醒条慢慢补 —— Chris：「人家不要这个方便的时候难道我们就
+           不要这个客人吗」。 */
+        this._go('setpw');
         return;
       } catch (e) {
         console.warn('OTP verify failed', e);
@@ -991,40 +1306,45 @@
       }
     },
 
-    // ============ Email login (legacy) ============
-    async _emailLogin() {
-      const lang = Farm.state.data.language;
-      this._showError('');
-      const email = document.getElementById('authEmail').value.trim();
-      const password = document.getElementById('authPassword').value;
-      if (!email || !password) {
-        this._showError(lang === 'en' ? 'Email and password required.' : '请输入邮箱和密码。');
-        return;
-      }
-      const btn = document.getElementById('authEmailBtn');
-      if (btn) { btn.disabled = true; btn.textContent = lang === 'en' ? 'Signing in…' : '登录中…'; }
-      try {
-        await Farm.fb.auth.signInWithEmailAndPassword(email, password);
-        this._onLoginSuccess(lang);
-      } catch (e) {
-        if (btn) { btn.disabled = false; btn.textContent = lang === 'en' ? 'Sign in' : '登录'; }
-        const c = e.code || '';
-        let msg;
-        if (c === 'auth/unauthorized-domain') {
-          msg = lang === 'en' ? 'Login not enabled for this site.' : '此站点尚未启用登录。';
-        } else if (c === 'auth/user-not-found' || c === 'auth/invalid-credential' || c === 'auth/wrong-password') {
-          msg = lang === 'en' ? 'Email or password incorrect.' : '邮箱或密码不正确。';
-        } else {
-          msg = lang === 'en' ? 'Sign-in failed.' : '登录失败。';
-        }
-        this._showError(msg);
-      }
+    /* 旧的 _emailLogin(邮箱+密码专用) 已于 2026-08-17 删除 —— 它读的 #authEmail
+       随着登录屏改成「手机号/用户名」一起没了，留着就是个会抛 TypeError 的死函数。
+       邮箱登录并没有取消：_identLogin 见到含 @ 的输入就直接当邮箱走，老会员照常。 */
+
+    /* 让别处（「还差一步·留邮箱领 3000 币」弹窗、常驻提醒条）能直接打开补邮箱屏。
+       内部用 _go('email')，但别的模块不该依赖内部方法名。 */
+    openEmailSetup() {
+      if (!this.currentUser) { this.openLoginModal(); return; }
+      this._go('email');
     },
 
-    /* 让别处（如「还差一步·留邮箱领 3000 币」那个弹窗）能直接打开设邮箱屏。
-       内部用 _go('bind')，但别的模块不该依赖内部方法名。 */
-    openEmailSetup() {
-      this._go('bind');
+    /* ============ 没留邮箱的常驻提醒条（Chris 8/17 选的方案）============
+       Chris 明确否掉了「每次登录弹窗提醒」：那是打断，玩家会学会闭着眼点掉。
+       改成一条不挡路的常驻条 —— 想理它随时点，不想理就一直在那儿。
+
+       🔒 判据是 members.email 有没有真邮箱。假邮箱（手机号登录用的
+       {…}@phone.easternmarket.ca）不算 —— 那是我们自己造的登录 id，不是
+       能收信的地址，算成有邮箱就等于永远不提醒、订单通知也永远发不出去。 */
+    hasRealEmail() {
+      const m = this.memberDoc || {};
+      const mail = String(m.email || '').trim().toLowerCase();
+      return !!mail && !mail.endsWith('@phone.easternmarket.ca');
+    },
+
+    refreshEmailNudge() {
+      const host = document.getElementById('emailNudge');
+      if (!host) return;
+      const show = !!this.currentUser && !this.hasRealEmail();
+      if (!show) { host.hidden = true; host.innerHTML = ''; return; }
+      const en = Farm.state.data.language === 'en';
+      host.hidden = false;
+      // 🔒 一句话说完（Chris：「所有提示语都要要尽量简洁！」）。
+      // 好处（订单通知 / 自助改密码）收进补邮箱那一屏的 ⓘ，这里不铺开。
+      host.innerHTML = `
+        <span class="email-nudge-text">${en
+          ? 'Add your email — 3,000 farm coins' : '留个邮箱，送 3000 农场币'}</span>
+        <button type="button" class="email-nudge-btn" id="emailNudgeBtn">${en ? 'Add' : '去添加'}</button>`;
+      const btn = document.getElementById('emailNudgeBtn');
+      if (btn) btn.onclick = () => this.openEmailSetup();
     },
 
     /* 把当前 Auth 账号关联到同手机号的会员档（后端 admin SDK 写，绕过

@@ -1189,6 +1189,68 @@ body.mapmode #warehouseBtn { display: none !important; }
   color: var(--warm-text);
 }
 
+/* ⓘ 折叠说明（Chris 8/17：说明一律默认隐藏，点问号才出现）。
+   ⓘ 跟在 label 文字后面，是个真 <button> —— 键盘能到、读屏能念，
+   不是一个装样子的 <span>。触摸目标 ≥28px，长辈手指点得中。 */
+.auth-info-btn {
+  appearance: none;
+  border: 0;
+  background: none;
+  padding: 0 4px;
+  margin-left: 2px;
+  min-width: 28px;
+  min-height: 28px;
+  font-size: 14px;
+  line-height: 1;
+  color: var(--warm-text-soft);
+  cursor: pointer;
+}
+.auth-info-btn:hover { color: var(--leaf-green); }
+.auth-info-body {
+  margin: 6px 0 0;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.035);
+  font-size: 13px;
+  line-height: 1.6;
+  /* 承载信息的说明文字不能太淡 —— 中老年顾客读不出（全站共同口径） */
+  color: var(--warm-text);
+  font-weight: 400;
+}
+
+/* 没留邮箱的常驻提醒条：一条不挡路的横幅，不是弹窗。
+   Chris 明确否掉了「每次登录弹窗提醒」—— 那是打断，玩家会学会闭眼点掉。 */
+.email-nudge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 0 12px 8px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: #fff6e0;
+  border: 1px solid #f0dcae;
+  font-size: 14px;
+  color: var(--warm-text);
+}
+.email-nudge[hidden] { display: none; }
+.email-nudge-text { line-height: 1.4; }
+.email-nudge-btn {
+  appearance: none;
+  border: 0;
+  border-radius: 999px;
+  padding: 7px 16px;
+  /* 触摸目标 ≥44px 高（含 padding），手机上点得中 */
+  min-height: 36px;
+  background: var(--leaf-green);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.email-nudge-btn:active { transform: translateY(1px); }
+
 .auth-title { margin-bottom: 2px; }
 .auth-sub {
   text-align: center;
