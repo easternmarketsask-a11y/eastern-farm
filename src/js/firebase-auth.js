@@ -287,8 +287,14 @@
           if (!pq.empty) {
             const d = pq.docs[0];
             this.memberDoc = { id: d.id, ...d.data() };
-            if (d.data().firebase_uid == null) {
-              d.ref.update({ firebase_uid: uid, updatedAt: Farm.fb.serverTimestamp() }).catch(() => {});
+            /* 🔒 补关联走后端，别改回客户端 update。
+               这里原来是 d.ref.update({firebase_uid}).catch(() => {})，而 959 个
+               会员档**根本没有 firebase_uid 这个键** —— firestore 自链接规则第一条
+               判的是 `== null`，键不存在时那条 update 被拒，空 catch 又把失败吞了。
+               结果 50 个真会员一直关联不上（详见 /link-phone 端点的说明）。
+               只在确实没关联时才调，所以不是每次启动都打后端。 */
+            if (!d.data().firebase_uid) {
+              this._linkPhoneViaBackend().catch(() => {});
             }
             this._syncLocalBalance();
             return;
@@ -930,24 +936,37 @@
       try {
         const credential = await this._confirmation.confirm(code);
         const user = credential.user;
-        // Link firebase_uid to members doc if not already set. Use the
-        // phone we stored in step 1 — authPhone input no longer exists
-        // by step 2 so reading it back from the DOM would return ''.
-        const e164 = this._currentPhoneE164 || '';
+
+        /* 🔒 把 Auth 账号关联到会员档 —— **必须走后端**，别改回客户端直写。
+
+           2026-08-17 查出来的事故：这里原来是客户端自己
+               db.collection('members').where('phone','==',e164).update({firebase_uid})
+           而 977 个会员里 959 个的文档**根本没有 firebase_uid 这个键**（RewardUp
+           迁移过来时就没有）。firestore 的自链接规则第一条写的是
+               resource.data.firebase_uid == null
+           「键不存在」与「键存在且为 null」在规则引擎里不是一回事 —— 那条 update
+           被拒，而下面那个 catch 把失败**静默吞掉**了。
+
+           后果：50 个真会员短信登录成功、手机号与会员档一一对应，却从来没关联上，
+           在游戏里看不到自己的积分（最高 5,429 分），下次登录还得再花一条短信。
+           登录成功、没有报错、玩得下去 —— 所以两年没人发现。
+
+           后端 /link-phone 用 admin SDK 写，绕过规则，行为确定。 */
         try {
-          if (!e164) throw new Error('no phone');
-          const snap = await Farm.fb.db.collection('members').where('phone', '==', e164).limit(1).get();
-          if (!snap.empty) {
-            const docRef = snap.docs[0].ref;
-            const md = snap.docs[0].data();
-            if (md.firebase_uid !== user.uid) {
-              await docRef.update({
-                firebase_uid: user.uid,
-                updatedAt: Farm.fb.serverTimestamp(),
-              });
-            }
-          }
-        } catch (e) { /* non-fatal */ }
+          await this._linkPhoneViaBackend();
+        } catch (e) {
+          // 关联失败不该把人挡在门外（Auth 账号已经能用了），但**要留痕** ——
+          // 上一版的空 catch 正是这个 bug 藏两年的原因。下次启动
+          // _loadMemberDoc 会再试一次（幂等），所以能自愈。
+          console.warn('[auth] link-phone 失败，下次登录会自愈:', e);
+        }
+
+        /* 漏斗：短信验证成功就算「登录」。
+           原来只在下面 bind-email 走完时才发 track('login')，于是短信验过就走的人
+           在后台完全不存在 —— 8/15 促销明明有 2 个人登录成功，漏斗显示 0，
+           Chris 因此以为「客人都登录不上」。 */
+        this._trackLoginOnce();
+
         // 短信只是**激活**的第一半：接着让他设好以后要用的邮箱和密码，
         // 否则下次又得再发一条短信 —— 而这套改造的全部意义就是不再每次发短信。
         this._go('bind');
@@ -992,9 +1011,34 @@
       }
     },
 
+    /* 把当前 Auth 账号关联到同手机号的会员档（后端 admin SDK 写，绕过
+       firestore 规则）。幂等 —— 已关联就直接回成功，可以放心重复调。
+       要求 ID token 里有 phone_number，也就是必须是短信验证过的账号。 */
+    async _linkPhoneViaBackend() {
+      const u = this.currentUser;
+      if (!u) return;
+      const idToken = await u.getIdToken();
+      const r = await fetch(STOCKWISE_BASE + '/api/public/member-auth/link-phone', {
+        method: 'POST',
+        headers: { Authorization: 'Bearer ' + idToken },
+      });
+      if (!r.ok) throw new Error('link-phone HTTP ' + r.status);
+      return r.json().catch(() => null);
+    },
+
+    /* 漏斗「登录」只数一次。
+       短信流程在验证码通过那一刻就发（那才是真正登录成功的时刻），走完
+       bind-email 后 _onLoginSuccess 会再走一次这里 —— 没有这个闸就一个人数两次。
+       邮箱登录只经过 _onLoginSuccess，不受影响。 */
+    _trackLoginOnce() {
+      if (this._loginTracked) return;
+      this._loginTracked = true;
+      if (Farm.track) Farm.track('login');
+    },
+
     _onLoginSuccess(lang) {
       Farm.ui.hideModal();
-      if (Farm.track) Farm.track('login');   // 漏斗:真实登录转化(仅主动登录成功时,非每次恢复)
+      this._trackLoginOnce();   // 漏斗:真实登录转化(仅主动登录成功时,非每次恢复)
       if (Farm.audio) Farm.audio.play('achievement');
       setTimeout(() => {
         const name = (this.memberDoc && (this.memberDoc.name || this.memberDoc.username))
