@@ -209,7 +209,6 @@
         const titleObj = Farm.state && Farm.state.levelTitle ? Farm.state.levelTitle(gameLv) : null;
         const titleStr = titleObj ? (lang === 'en' ? titleObj.en : titleObj.zh) : '';
         loginBtn.innerHTML = `
-          <span class="icon">🌱</span>
           <span>${lang === 'en' ? 'Welcome, ' : '欢迎回来，'}${safeName}${titleStr ? ' · Lv ' + gameLv + ' ' + titleStr : ''}</span>
         `;
         loginBtn.classList.add('splash-login--logged-in');

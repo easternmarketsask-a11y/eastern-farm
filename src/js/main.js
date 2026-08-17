@@ -752,71 +752,73 @@
     const html = `
       <h2 class="modal-title">${Farm.i18n.t('settings_title')}</h2>
 
-      <div style="margin:16px 0;padding:12px;background:var(--cream-bg);border-radius:var(--radius-md);">
-        <div style="font-weight:600;margin-bottom:8px;">${Farm.i18n.t('settings_language')}</div>
-        <div style="display:flex;gap:8px;">
-          <button class="btn ${lang === 'zh' ? '' : 'secondary'}" id="langZh" style="flex:1;">中文</button>
-          <button class="btn ${lang === 'en' ? '' : 'secondary'}" id="langEn" style="flex:1;">English</button>
+      <div class="settings-card">
+        <div class="settings-card-title">${Farm.i18n.t('settings_language')}</div>
+        <div class="settings-btn-row">
+          <button class="btn ${lang === 'zh' ? '' : 'secondary'}" id="langZh">中文</button>
+          <button class="btn ${lang === 'en' ? '' : 'secondary'}" id="langEn">English</button>
         </div>
       </div>
 
-      <div style="margin:16px 0;padding:12px;background:var(--cream-bg);border-radius:var(--radius-md);">
-        <div style="font-weight:600;margin-bottom:8px;">${Farm.i18n.t('settings_sound')}</div>
-        <div style="display:flex;gap:8px;" class="settings-sound-row">
-          <button class="btn ${tier === 'normal' ? '' : 'secondary'}" id="soundNormal" style="flex:1;">${lang === 'en' ? '🔊 Normal' : '🔊 正常'}</button>
-          <button class="btn ${tier === 'low' ? '' : 'secondary'}" id="soundLow" style="flex:1;">${lang === 'en' ? '🔉 Low' : '🔉 小声'}</button>
-          <button class="btn ${tier === 'off' ? '' : 'secondary'}" id="soundOff" style="flex:1;">${lang === 'en' ? '🔇 Off' : '🔇 关'}</button>
+      <div class="settings-card">
+        <div class="settings-card-title">${Farm.i18n.t('settings_sound')}</div>
+        <div class="settings-btn-row settings-sound-row">
+          <button class="btn ${tier === 'normal' ? '' : 'secondary'}" id="soundNormal">${lang === 'en' ? 'Normal' : '正常'}</button>
+          <button class="btn ${tier === 'low' ? '' : 'secondary'}" id="soundLow">${lang === 'en' ? 'Low' : '小声'}</button>
+          <button class="btn ${tier === 'off' ? '' : 'secondary'}" id="soundOff">${lang === 'en' ? 'Off' : '关'}</button>
         </div>
-        <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;margin-top:10px;padding-top:10px;border-top:1px dashed var(--border-soft);">
-          <input id="ambientToggle" type="checkbox" ${ambientOn ? 'checked' : ''}
-                 style="width:16px;height:16px;cursor:pointer;"/>
-          <span>${lang === 'en' ? '🍃 Background farm ambience (wind + birds)' : '🍃 农场环境声（轻风 + 鸟鸣）'}</span>
+        <label class="settings-row">
+          <span class="settings-row-txt">${lang === 'en' ? 'Farm ambience (wind + birds)' : '农场环境声（轻风 + 鸟鸣）'}</span>
+          <span class="settings-switch-wrap">
+            <input id="ambientToggle" class="settings-switch-input" type="checkbox" ${ambientOn ? 'checked' : ''}/>
+            <span class="settings-switch" aria-hidden="true"></span>
+          </span>
         </label>
       </div>
 
-      <div style="margin:16px 0;padding:12px;background:var(--cream-bg);border-radius:var(--radius-md);">
-        <div style="font-weight:600;margin-bottom:8px;">🌻 ${lang === 'en' ? 'Farm display' : '农场显示'}</div>
-        <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;">
-          <input id="petsToggle" type="checkbox" ${Farm.state.data.petsEnabled === false ? '' : 'checked'}
-                 style="width:16px;height:16px;cursor:pointer;"/>
-          <span>${lang === 'en'
-            ? '🐾 Pets roam the yard (bought in the Mall)'
-            : '🐾 小动物在院子里走动（农场商城买的宠物）'}</span>
+      <div class="settings-card">
+        <div class="settings-card-title">${lang === 'en' ? 'Farm display' : '农场显示'}</div>
+        <label class="settings-row">
+          <span class="settings-row-txt">${lang === 'en'
+            ? 'Pets roam the yard (from the Mall)'
+            : '小动物在院子里走动（农场商城购买）'}</span>
+          <span class="settings-switch-wrap">
+            <input id="petsToggle" class="settings-switch-input" type="checkbox" ${Farm.state.data.petsEnabled === false ? '' : 'checked'}/>
+            <span class="settings-switch" aria-hidden="true"></span>
+          </span>
         </label>
       </div>
 
-      <div style="margin:16px 0;padding:12px;background:var(--cream-bg);border-radius:var(--radius-md);">
-        <div style="font-weight:600;margin-bottom:8px;">🏘 ${lang === 'en' ? 'Neighbor settings' : '邻居设置'}</div>
-        <div style="font-size:11px;color:var(--warm-text-soft);margin-bottom:8px;">
-          ${lang === 'en' ? 'How other members see you in the neighbor list.' : '其他会员在邻居列表里看到你的样子。'}
-        </div>
-        <label style="display:block;font-size:12px;font-weight:600;margin-bottom:4px;">${lang === 'en' ? 'Nickname' : '我的昵称'}</label>
-        <input id="nicknameInput" type="text" maxlength="12" placeholder="${lang === 'en' ? 'e.g., Sask Mom' : '例如：萨城宝妈'}"
-               value="${(Farm.state.data.nickname || '').replace(/"/g, '&quot;')}"
-               style="width:100%;padding:8px 10px;font-size:13px;border:1.5px solid var(--border-soft);border-radius:8px;background:#fff;margin-bottom:10px;box-sizing:border-box;"/>
-        <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;">
-          <input id="visibleToggle" type="checkbox" ${Farm.state.data.visibleToNeighbors !== false ? 'checked' : ''}
-                 style="width:16px;height:16px;cursor:pointer;"/>
-          <span>${lang === 'en' ? 'Show me in neighbor list' : '显示在邻居列表里'}</span>
+      <div class="settings-card">
+        <div class="settings-card-title">${lang === 'en' ? 'Neighbor settings' : '邻居设置'}</div>
+        <div class="settings-card-hint">${lang === 'en' ? 'How other members see you in the neighbor list.' : '其他会员在邻居列表里看到你的样子。'}</div>
+        <label class="settings-field-label">${lang === 'en' ? 'Nickname' : '我的昵称'}</label>
+        <input id="nicknameInput" class="settings-input" type="text" maxlength="12" placeholder="${lang === 'en' ? 'e.g., Sask Mom' : '例如：萨城宝妈'}"
+               value="${(Farm.state.data.nickname || '').replace(/"/g, '&quot;')}"/>
+        <label class="settings-row">
+          <span class="settings-row-txt">${lang === 'en' ? 'Show me in neighbor list' : '显示在邻居列表里'}</span>
+          <span class="settings-switch-wrap">
+            <input id="visibleToggle" class="settings-switch-input" type="checkbox" ${Farm.state.data.visibleToNeighbors !== false ? 'checked' : ''}/>
+            <span class="settings-switch" aria-hidden="true"></span>
+          </span>
         </label>
         ${Farm.fbAuth && Farm.fbAuth.isStoreOwner && Farm.fbAuth.isStoreOwner() ? `
-        <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;margin-top:8px;padding-top:8px;border-top:1px dashed var(--border-soft);">
-          <input id="ownerExcludeToggle" type="checkbox" ${Farm.state.data.excludeFromRanking === true ? 'checked' : ''}
-                 style="width:16px;height:16px;cursor:pointer;"/>
-          <span>${lang === 'en' ? '🏪 Store owner — keep me out of all rankings (I can still browse)' : '🏪 我是店主，不参与所有排名（仍可逛社区）'}</span>
+        <label class="settings-row settings-row--owner">
+          <span class="settings-row-txt">${lang === 'en' ? 'Keep me out of all rankings (I can still browse)' : '不参与所有排名（仍可逛社区）'}</span>
+          <span class="settings-switch-wrap">
+            <input id="ownerExcludeToggle" class="settings-switch-input" type="checkbox" ${Farm.state.data.excludeFromRanking === true ? 'checked' : ''}/>
+            <span class="settings-switch" aria-hidden="true"></span>
+          </span>
         </label>` : ''}
       </div>
 
-      <div style="margin:16px 0;padding:12px;background:var(--cream-bg);border-radius:var(--radius-md);">
-        <div style="font-weight:600;margin-bottom:4px;">${Farm.i18n.t('settings_about')}</div>
-        <div style="font-size:12px;color:var(--warm-text-soft);line-height:1.6;">
+      <div class="settings-card">
+        <div class="settings-card-title">${Farm.i18n.t('settings_about')}</div>
+        <div class="settings-card-hint">
           ${Farm.i18n.t('about_made_by')}<br>
           ${Farm.i18n.t('about_visit_us')}
         </div>
-        <a href="https://easternmarket.ca/"
-           style="display:inline-flex;align-items:center;gap:6px;margin-top:10px;padding:8px 14px;background:linear-gradient(135deg,#3a8c50,#2a5c34);color:#fff;text-decoration:none;border-radius:var(--radius-pill);font-size:13px;font-weight:600;">
-          🏪 ${lang === 'en' ? 'Visit Eastern Market site' : '访问东方超市官网'} →
-        </a>
+        <a class="settings-store-link" href="https://easternmarket.ca/">${lang === 'en' ? 'Visit Eastern Market' : '访问东方超市官网'} →</a>
       </div>
 
       <div class="btn-row">
