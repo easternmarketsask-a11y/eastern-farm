@@ -18,6 +18,9 @@
  * delivery completion). When offline / not logged in: no-op silently.
  */
 (function () {
+  // 与 firebase-auth.js / firebase-points.js / analytics.js / feedback.js 同一个后端
+  const STOCKWISE_BASE = 'https://stockwise-app-873982544406.us-central1.run.app';
+  const FRIEND_LOOKUP_TIMEOUT_MS = 15000;
   const SYNC_MIN_INTERVAL_MS = 30 * 1000;   // was 60s — halve worst-case loss between pushes
   const SAVE_BLOB_VERSION = 1;   // cloud save-blob schema version
   const PRIVACY_DEFAULT_VISIBLE = true;
@@ -781,44 +784,43 @@
     // Phone-based friend lookup. Returns { found, member } where member
     // is { uid, doc } if exists + visible, else null. Doesn't add the
     // friend — caller handles that to keep this fn pure.
-    // ⚠️ 2026-08-16 起这条查询会被 Firestore 规则拒绝（permission-denied）。
     //
-    // 原因：`members` 的 `allow list` 原来是「任何登录用户 + limit<=1」，于是
-    // 随便输一个手机号就能把**整份会员文档**（姓名/手机号/积分/member_code）
-    // 拉到客户端 —— 而 member_code 是收银台扫的身份凭据，拿到它等于拿到在
-    // 柜台被认成这个人的凭据。规则已收紧成「只能查到自己」。
+    // 🔒 **必须走后端，不许改回客户端直查 Firestore。**
     //
-    // 加好友功能要恢复，需要后端出一个只回 { uid, 昵称, 等级 } 的接口
-    // （不回手机号/积分/member_code），本函数再改调它。在那之前这里会返回
-    // reason:'unavailable'，UI 照实说明，不让玩家对着一个永远好不了的
-    // 「请重试」反复点。
+    // 2026-08-16 之前这里是：
+    //     db.collection('members').where('phone','==', 任意号码).limit(1).get()
+    // Firestore 查询返回的是**整份文档** —— 玩家随便输一个手机号，就能拿到对方
+    // 的姓名、手机号、积分余额和 member_code。而 member_code 是收银台扫的身份
+    // 凭据，拿到它等于拿到在柜台被认成这个人的凭据。
+    //
+    // `members` 的 firestore 规则已收紧成「只能查到自己」，这条路已经走不通；
+    // 功能改由后端 GET /api/members/me/friend-lookup 承接，它只回
+    //     { uid, gameStats: { displayName, level } }
+    // 返回形状与本函数原来的一致，所以 neighbors.js 不用改。
     async findMemberByPhone(phoneE164) {
-      if (!Farm.fb || !Farm.fb.available) return { found: false };
+      if (!Farm.fbAuth || !Farm.fbAuth.isLoggedIn || !Farm.fbAuth.isLoggedIn()) {
+        return { found: false, reason: 'not_logged_in' };
+      }
+      // 超时用 AbortController —— 弱网下「连上了但爬不动」不会让玩家一直转圈
+      const ctl = new AbortController();
+      const timer = setTimeout(() => ctl.abort(), FRIEND_LOOKUP_TIMEOUT_MS);
       try {
-        const snap = await Farm.fb.db.collection('members')
-          .where('phone', '==', phoneE164).limit(1).get();
-        if (snap.empty) return { found: false, reason: 'not_member' };
-        const doc = snap.docs[0];
-        const data = doc.data();
-        const stats = data.gameStats || {};
-        // Block adding members who opted out of visibility
-        if (stats.visibleToNeighbors === false) {
-          return { found: false, reason: 'hidden' };
-        }
-        // Block adding members who haven't started the game yet
-        if (!stats.level) return { found: false, reason: 'not_playing' };
-        // Block adding yourself
-        const myUid = Farm.fbAuth && meId();
-        if (doc.id === myUid) return { found: false, reason: 'self' };
-        return { found: true, member: { uid: doc.id, doc: data } };
+        const idToken = await Farm.fbAuth.currentUser.getIdToken();
+        const url = STOCKWISE_BASE + '/api/members/me/friend-lookup?phone='
+          + encodeURIComponent(phoneE164);
+        const res = await fetch(url, {
+          headers: { Authorization: 'Bearer ' + idToken },
+          signal: ctl.signal,
+        });
+        // 查太频繁 ≠ 查不到这个人。分开报，否则玩家会以为好友不是会员。
+        if (res.status === 429) return { found: false, reason: 'too_many' };
+        if (!res.ok) return { found: false, reason: 'error' };
+        return await res.json();
       } catch (e) {
-        // permission-denied = 上面说的规则收紧，不是网络问题。分开报，
-        // 否则 UI 会显示「请重试」，而这个重试永远不会成功。
-        if (e && (e.code === 'permission-denied' || e.code === 7)) {
-          return { found: false, reason: 'unavailable' };
-        }
         console.warn('[gameSync] findMemberByPhone failed', e);
         return { found: false, reason: 'error' };
+      } finally {
+        clearTimeout(timer);
       }
     },
 

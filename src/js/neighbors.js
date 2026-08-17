@@ -872,13 +872,14 @@
             not_member:  lang === 'en' ? "Phone not registered at our store. Ask them to sign up at Eastern Market." : '此号码未注册东方超市会员',
             not_playing: lang === 'en' ? "This member hasn't started playing the game yet." : '此会员还没玩这个游戏',
             error:       lang === 'en' ? 'Lookup failed. Try again.' : '查询失败，请重试',
-            // 会员资料查询已按隐私要求收紧（见 firebase-game-sync.findMemberByPhone）。
-            // 照实说「暂时不能用」并给出可行的替代，不要让玩家一直点重试。
-            // ⚠️ 只说事实：目前加好友**只有**手机号这一个入口，没有别的替代路径，
-            // 所以不要在这里编一个「用其它方式添加」的说法。
-            unavailable: lang === 'en'
-              ? 'Adding by phone is paused while we make member lookup more private. It\'ll be back shortly.'
-              : '为保护会员隐私，按手机号加好友暂时关闭，我们正在换一种更安全的方式，很快恢复。',
+            // 后端限流命中（防手机号枚举）。必须与「查不到这个人」分开说，
+            // 否则玩家会以为好友不是会员。
+            too_many: lang === 'en'
+              ? 'Too many lookups just now — please try again in a bit.'
+              : '刚才查得太频繁了，过一会儿再试。',
+            not_logged_in: lang === 'en'
+              ? 'Please sign in first to add friends.'
+              : '请先登录再添加好友。',
           };
           errEl.textContent = msgs[res.reason] || (lang === 'en' ? 'Not found.' : '未找到');
           return;
