@@ -152,7 +152,7 @@
   const BLD = 0.7;   // global building-sprite scale (Chris 2026-06-18: buildings were too big) — shrinks all building sprites uniformly so the starter farm fits the central meadow
   const charmOf = (b) => Math.max(1, Math.round((b.cost || 0) / 8));
   const COOP_INTERVAL = 5 * 60 * 1000, COOP_REWARD = 30;   // 鸡舍每 5 分钟产一窝蛋，收一次 +30 农场币
-  const BED_W = 1.02;   // 宣传图是一整块垄沟田：格略重叠，垄线跨格连续
+  const BED_W = 0.78;   // 独立苗床：格间露草。点按热区仍用满格菱形，缝里也好点
   // World-locked backdrop placement (mapview-iso _drawBackdrop). The landscape image's
   // focal point (BG_FX, BG_FY in image fractions = the central flat meadow) is pinned to
   // world cell (BG_ANCHOR_GX, BG_ANCHOR_GY) ≈ the farm start-area centre, and it scales
@@ -851,7 +851,8 @@
       for (const o of list) {
         const c = this._cell(o.gx, o.gy);
         const d = Math.abs(px - c.x) / (tw / 2) + Math.abs(py - (c.y + th * 0.12)) / (th / 2);
-        if (d <= 0.88) return o;
+        // 视觉床缩小后，热区略大于格子，缝里点也能点中，前排优先
+        if (d <= 1.06) return o;
       }
       // 第二遍：无基底命中时才用高盒接住「点在植株上半身」的 tap（植株高出
       // 基底 ~3 格）。盒宽收窄到苗床宽（±BED_W/2，was ±0.5 满格），盒底裁到
@@ -2035,114 +2036,94 @@
     // Empty-plot soil bed: a painted soil cube EXTRACTED from a crop sprite, so it
     // matches the crops' own baked soil exactly → every plot (empty or planted) is a
     // consistent raised tilled bed. Bottom-anchored like the crops so heights line up.
-    _drawFurrowBed(c) {
-      // 宣传图那块田：扁的等距垄沟土面；垄线用屏幕斜率对齐，邻格连成一块田
+    _drawFurrowBed(c, gx, gy, kind) {
+      // 独立抬起的苗床。kind: open | empty | locked
       const ctx = this._ctx, tw = this._tw(), th = this._th();
-      const w = tw * BED_W, h = th * BED_W;
+      const locked = kind === 'locked';
+      const empty = kind === 'empty' || locked;
+      const scale = locked ? 0.70 : BED_W;
+      const w = tw * scale, h = th * scale;
       const cy = c.y + th * 0.06;
+      const hsh = ((((gx || 0) * 73856093) ^ ((gy || 0) * 19349663)) >>> 0);
+      const tint = ((hsh % 17) - 8) / 8;
+      const lift = locked ? 0.55 : 1;
+      // 床影：让每块地从草里抬起来
+      ctx.save();
+      ctx.globalAlpha = 0.22 * lift;
+      ctx.fillStyle = '#2a180c';
+      this._diamond(c.x + tw * 0.04, cy + th * 0.10, w * 1.02, h * 1.06);
+      ctx.fill();
+      ctx.restore();
       this._diamond(c.x, cy, w, h);
       const g = ctx.createLinearGradient(c.x - w * 0.45, cy - h * 0.35, c.x + w * 0.3, cy + h * 0.4);
-      g.addColorStop(0, '#b07a42');
-      g.addColorStop(0.42, '#8a5428');
-      g.addColorStop(1, '#5a3016');
+      if (locked) {
+        g.addColorStop(0, '#7a6848');
+        g.addColorStop(0.5, '#5a4a32');
+        g.addColorStop(1, '#3e3424');
+      } else {
+        const r0 = Math.round(186 + tint * 10), g0 = Math.round(118 + tint * 6), b0 = Math.round(62 + tint * 4);
+        const r1 = Math.round(92 + tint * 8), g1 = Math.round(54 + tint * 4), b1 = Math.round(24);
+        g.addColorStop(0, 'rgb(' + r0 + ',' + g0 + ',' + b0 + ')');
+        g.addColorStop(0.45, 'rgb(' + Math.round((r0 + r1) / 2) + ',' + Math.round((g0 + g1) / 2) + ',' + Math.round((b0 + b1) / 2) + ')');
+        g.addColorStop(1, 'rgb(' + r1 + ',' + g1 + ',' + b1 + ')');
+      }
       ctx.fillStyle = g;
       ctx.fill();
+      // 亮边：独立床的轮廓
+      ctx.strokeStyle = locked ? 'rgba(220,200,150,0.18)' : 'rgba(240,210,150,0.28)';
+      ctx.lineWidth = Math.max(1, th * 0.045);
+      this._diamond(c.x, cy, w * 0.98, h * 0.96);
+      ctx.stroke();
       ctx.save();
       ctx.beginPath();
-      this._diamond(c.x, cy, w * 0.97, h * 0.93);
+      this._diamond(c.x, cy, w * 0.90, h * 0.86);
       ctx.clip();
-      ctx.strokeStyle = 'rgba(62,34,14,0.42)';
-      ctx.lineWidth = Math.max(1.2, th * 0.08);
+      ctx.strokeStyle = locked ? 'rgba(50,36,18,0.22)' : 'rgba(48,24,10,0.38)';
+      ctx.lineWidth = Math.max(1, th * 0.065);
       ctx.lineCap = 'round';
       const slope = th / tw;
-      const spacing = th * 0.20;
-      const b0 = Math.round((cy - slope * c.x) / spacing) * spacing;
-      for (let k = -6; k <= 6; k++) {
+      const spacing = th * (0.18 + (hsh % 5) * 0.012);
+      const phase = ((hsh >> 6) % 7) * th * 0.02;
+      const b0 = Math.round((cy - slope * c.x + phase) / spacing) * spacing;
+      for (let k = -5; k <= 5; k++) {
         const b = b0 + k * spacing;
-        const x1 = c.x - tw * 0.55, x2 = c.x + tw * 0.55;
+        const x1 = c.x - w * 0.55, x2 = c.x + w * 0.55;
+        const wob = Math.sin(k * 1.4 + (gx || 0) * 0.7) * th * 0.02;
         ctx.beginPath();
         ctx.moveTo(x1, slope * x1 + b);
-        ctx.lineTo(x2, slope * x2 + b);
+        ctx.quadraticCurveTo(c.x, slope * c.x + b + wob, x2, slope * x2 + b);
         ctx.stroke();
+      }
+      if (empty) {
+        ctx.strokeStyle = 'rgba(74, 108, 42,' + (locked ? '0.22' : '0.40') + ')';
+        ctx.lineWidth = Math.max(0.7, tw * 0.016);
+        for (let i = 0; i < 3; i++) {
+          const a = (c.x * 0.11 + c.y * 0.07 + i * 1.9 + (gx || 0));
+          const bx = c.x + Math.cos(a) * w * 0.18;
+          const by = cy + Math.sin(a * 1.2) * h * 0.16;
+          ctx.beginPath();
+          ctx.moveTo(bx, by + th * 0.03);
+          ctx.quadraticCurveTo(bx + tw * 0.02, by - th * 0.05, bx + tw * 0.03, by - th * 0.10);
+          ctx.stroke();
+        }
       }
       ctx.restore();
     },
-    // 宣传图是一整块垄沟田：所有菜地格合成一块土，垄线跨格连续
+    // 每块菜地单独一张床，中间露草。不再合成一整片土。
     _drawUnifiedField() {
       const plots = Farm.state.data.plots || [];
       if (!plots.length) return;
-      const ctx = this._ctx, tw = this._tw(), th = this._th();
-      const w = tw * 1.08, h = th * 1.08;
-      const cells = [];
-      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      const list = [];
       for (let i = 0; i < plots.length; i++) {
         if (!plots[i]) continue;
-        const c = this._cell(this._plotGX(i), this._plotGY(i));
-        const cy = c.y + th * 0.06;
-        cells.push({ x: c.x, y: cy, fallow: !plots[i].unlocked || !plots[i].crop });
-        if (c.x < minX) minX = c.x; if (c.x > maxX) maxX = c.x;
-        if (cy < minY) minY = cy; if (cy > maxY) maxY = cy;
+        list.push({ i: i, gx: this._plotGX(i), gy: this._plotGY(i), p: plots[i] });
       }
-      if (!cells.length) return;
-      ctx.save();
-      ctx.beginPath();
-      for (const c of cells) this._diamondPath(c.x + tw * 0.05, c.y + th * 0.08, w, h);
-      ctx.fillStyle = 'rgba(42,28,12,0.20)';
-      ctx.fill();
-      ctx.restore();
-      ctx.save();
-      ctx.beginPath();
-      for (const c of cells) this._diamondPath(c.x, c.y, w, h);
-      const g = ctx.createLinearGradient(minX - tw, minY - th * 0.4, maxX + tw * 0.3, maxY + th);
-      g.addColorStop(0, '#7a4a22');
-      g.addColorStop(0.42, '#5c3416');
-      g.addColorStop(1, '#3a1c0c');
-      ctx.fillStyle = g;
-      ctx.fill();
-      ctx.clip();
-      // 油画那块田：深巧克力土 + 看得见的软垄
-      ctx.strokeStyle = 'rgba(24,10,4,0.26)';
-      ctx.lineWidth = Math.max(0.8, th * 0.055);
-      ctx.lineCap = 'round';
-      const slope = th / tw;
-      const spacing = th * 0.24;
-      const cx0 = (minX + maxX) / 2, cy0 = (minY + maxY) / 2;
-      const b0 = Math.round((cy0 - slope * cx0) / spacing) * spacing;
-      for (let k = -16; k <= 16; k++) {
-        const b = b0 + k * spacing;
-        const x1 = minX - tw * 1.4, x2 = maxX + tw * 1.4;
-        const mid = (x1 + x2) / 2;
-        const wob = Math.sin(k * 1.7) * th * 0.035;
-        ctx.beginPath();
-        ctx.moveTo(x1, slope * x1 + b);
-        ctx.quadraticCurveTo(mid, slope * mid + b + wob, x2, slope * x2 + b);
-        ctx.stroke();
+      list.sort((a, b) => (a.gx + a.gy) - (b.gx + b.gy));
+      for (let n = 0; n < list.length; n++) {
+        const o = list[n];
+        const kind = !o.p.unlocked ? 'locked' : (o.p.crop ? 'open' : 'empty');
+        this._drawFurrowBed(this._cell(o.gx, o.gy), o.gx, o.gy, kind);
       }
-      ctx.fillStyle = 'rgba(32,16,6,0.10)';
-      for (const c of cells) {
-        for (let i = 0; i < 3; i++) {
-          const a = (c.x * 0.13 + c.y * 0.09 + i * 2.1);
-          ctx.beginPath();
-          ctx.ellipse(c.x + Math.cos(a) * tw * 0.18, c.y + Math.sin(a * 1.3) * th * 0.16, tw * 0.035, th * 0.02, a, 0, 6.283);
-          ctx.fill();
-        }
-        // 空床/锁地：几根细草，别像缺贴图的光板
-        if (c.fallow) {
-          ctx.strokeStyle = 'rgba(74, 108, 42, 0.38)';
-          ctx.lineWidth = Math.max(0.7, tw * 0.016);
-          ctx.lineCap = 'round';
-          for (let i = 0; i < 3; i++) {
-            const a = c.x * 0.11 + c.y * 0.07 + i * 1.9;
-            const bx = c.x + Math.cos(a) * tw * 0.16;
-            const by = c.y + Math.sin(a * 1.2) * th * 0.12;
-            ctx.beginPath();
-            ctx.moveTo(bx, by + th * 0.04);
-            ctx.quadraticCurveTo(bx + tw * 0.02, by - th * 0.06, bx + tw * 0.04, by - th * 0.12);
-            ctx.stroke();
-          }
-        }
-      }
-      ctx.restore();
     },
     _tilledDiamond(cx, cy) {
       const im = this._img.plot_bed, ctx = this._ctx, tw = this._tw(), th = this._th();
