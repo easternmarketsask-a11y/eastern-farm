@@ -3197,6 +3197,41 @@
       ctx.beginPath(); ctx.arc(x, by + h * 0.42, s * 0.09, 0, Math.PI * 2); ctx.fill();
       ctx.restore();
     },
+    // 油画植株：优先用对应生长帧，缺 _0/_1/_2 时用成熟图缩小冒出。
+    // 下缘埋进木床土面并裁掉，看起来是从土里长，不是摆在箱子上。
+    _drawIsoPlant(stem, fr, progress, c, tw, th, ripe) {
+      const exactKey = 'L_' + stem + '_' + fr;
+      const exact = this._img[exactKey];
+      let im = exact instanceof Image ? exact : null;
+      if (!im && exact !== 'failed') im = this._lazyImg(stem + '_' + fr);
+      let synth = false;
+      if (!im && fr < 3) {
+        if (exact === 'failed') {
+          const mature = this._lazyImg(stem + '_3');
+          if (mature) { im = mature; synth = true; }
+        } else {
+          this._lazyImg(stem + '_3');
+        }
+      }
+      if (!im) return null;
+      const ctx = this._ctx;
+      const grow = synth ? Math.max(0.18, Math.min(1, progress || 0)) : (0.55 + fr * 0.15);
+      const s = (th * (0.70 + grow * 0.62)) / 260;
+      const w = im.width * s, h = im.height * s;
+      const soilY = c.y + th * 0.10 - (ripe || 0);
+      const bury = h * (synth ? (0.28 - grow * 0.08) : 0.20);
+      const topY = soilY - h + bury;
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(c.x - tw * 1.25, c.y - th * 5.2, tw * 2.5, th * 5.2 + th * 0.14);
+      ctx.clip();
+      if (synth && grow < 0.85) {
+        ctx.filter = 'saturate(1.15) brightness(1.04)';
+      }
+      ctx.drawImage(im, c.x - w / 2, topY, w, h);
+      ctx.restore();
+      return topY;
+    },
     // 没有油画立方体贴图的菜：用 SVG 放大铺满土床，下缘埋进垄，绝不回退 emoji。
     _drawBedCropArt(cropId, progress, c, tw, th, ripe) {
       const st = progress >= 1 ? 2 : progress >= 0.4 ? 1 : 0;
@@ -3242,15 +3277,11 @@
         ctx.beginPath(); ctx.ellipse(c.x, c.y + th * 0.30, tw * 0.38, th * 0.28, 0, 0, 6.283); ctx.fill();
       }
       let plantTopY = c.y - th * 1.3;   // fallback bubble anchor
-      if (ISO_CROPS[plot.crop]) {
-        const im = this._lazyImg(ISO_CROPS[plot.crop] + '_' + fr);
-        if (im) {
-          // 宣传图里菜把头铺满土床、根部埋进垄里，不要小贴纸飘在格子上
-          const s = (th * (1.04 + fr * 0.16)) / 260;
-          const w = im.width * s, h = im.height * s;
-          const topY = (c.y + th * 0.34 - ripe) - h;
-          ctx.drawImage(im, c.x - w / 2, topY, w, h);
-          plantTopY = topY;
+      const isoStem = ISO_CROPS[plot.crop];
+      if (isoStem) {
+        const drawn = this._drawIsoPlant(isoStem, fr, p, c, tw, th, ripe);
+        if (drawn != null) {
+          plantTopY = drawn;
         } else {
           this._drawBedCropArt(plot.crop, p, c, tw, th, ripe);
           plantTopY = c.y - th * 1.05 - ripe;

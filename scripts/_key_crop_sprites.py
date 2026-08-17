@@ -9,24 +9,31 @@ MAP = ROOT / "src" / "assets" / "images" / "map"
 SESS = Path(r"C:\Users\yue00\.grok\sessions\D%3A%5C\01a00718-f95b-7452-b183-7f5defbb801b\images")
 
 JOBS = [
-    ("97.jpg", "crop_yam"),
+    ("99.jpg", "crop_tomato"),
+    ("100.jpg", "crop_eggplant"),
+    ("101.jpg", "crop_qingcai"),
+    ("98.jpg", "crop_chives"),
 ]
 
 
 def key_green(im: Image.Image) -> Image.Image:
+    # 从四角采样实际幕布色（生成图经常不是纯 #00FF00），按 RGB 距离抠。
+    # 不要用 HSV 色相：橄榄叶绿叶会跟幕布落在同一段色相里。
     rgba = im.convert("RGBA")
-    hsv = rgba.convert("HSV")
     a = np.array(rgba)
-    h = np.array(hsv)[:, :, 0]
-    s = np.array(hsv)[:, :, 1]
-    v = np.array(hsv)[:, :, 2]
-    # chroma green: hue ~80-100 in PIL 0-255 (~120 deg)
-    green = (h > 50) & (h < 115) & (s > 70) & (v > 70)
-    alpha = a[:, :, 3].copy()
-    alpha[green] = 0
-    near = (~green) & (h > 45) & (h < 125) & (s > 45) & (v > 55)
-    alpha[near] = np.minimum(alpha[near], 40)
-    a[:, :, 3] = alpha
+    rgb = a[:, :, :3].astype(np.float32)
+    h, w = rgb.shape[:2]
+    corners = np.stack([
+        rgb[2, 2], rgb[2, w - 3], rgb[h - 3, 2], rgb[h - 3, w - 3],
+        rgb[2, w // 2], rgb[h // 2, 2],
+    ])
+    bg = np.median(corners, axis=0)
+    d = np.sqrt(((rgb - bg) ** 2).sum(axis=2))
+    alpha = a[:, :, 3].astype(np.float32)
+    alpha[d < 28] = 0
+    near = (d >= 28) & (d < 52)
+    alpha[near] = np.minimum(alpha[near], ((d[near] - 28.0) / 24.0) * 255.0)
+    a[:, :, 3] = np.clip(alpha, 0, 255).astype(np.uint8)
     return Image.fromarray(a, "RGBA")
 
 
