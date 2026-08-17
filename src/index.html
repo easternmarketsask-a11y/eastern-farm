@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#fdf8ee">
 <!-- 部署构建号（deploy.sh 每次注入 CACHE_VERSION 时间戳）。SW 新鲜度守卫据此
      判断本页是否已过期（见页尾脚本）。ef-dev = 未部署的本地版本。 -->
-<meta name="ef-build" content="ef-2608171605">
+<meta name="ef-build" content="ef-2608171643">
 
 <!-- ==================== PWA (add to home screen) ==================== -->
 <link rel="manifest" href="manifest.webmanifest">
@@ -92,12 +92,47 @@
      这一发放在 <head> 内联，HTML 一到就计数，不依赖任何模块。
      后台「新手漏斗」用 来到页面 − 成功进入 = 打不开人数。 */
   var TRACK_URL = 'https://stockwise-app-873982544406.us-central1.run.app/api/public/game-track';
+
+  /* 👥 访客 id：唯一能回答「到底来了多少**人**」的东西（2026-08-17 加）
+     ----------------------------------------------------------------
+     所有埋点计数器都是 +1 累加，数的是**次数**：一个人刷新 5 次就是 5。
+     于是「昨天 462」看着像 462 个客人，实际谁也不知道来了多少人 ——
+     Chris 问「真实活跃客人有多少」时，这套埋点一个字都答不上来。
+
+     这里给每台设备一个随机 id，后端按天去重就能数出人数。
+     🔒 无任何个人信息：crypto 随机数，与手机号/姓名/账号完全无关，
+        登录与否都一样。它只用来回答「今天来了几个人」。
+     🔒 一个固定键、32 字符 —— 符合本项目 localStorage 的上界铁律
+        （见 CLAUDE.md「浏览器存储与 Service Worker 铁律」）。
+     ⚠️ 数的是设备不是自然人：清了存储 / 换手机 = 算新的一个，所以是**下限**。 */
+  var VKEY = 'ef_visitor_id';
+  function visitorId() {
+    try {
+      var v = localStorage.getItem(VKEY);
+      if (typeof v === 'string' && /^[0-9a-f]{16,64}$/.test(v)) return v;
+      var a = new Uint8Array(16);
+      (window.crypto || window.msCrypto).getRandomValues(a);
+      v = Array.prototype.map.call(a, function (b) {
+        return ('0' + b.toString(16)).slice(-2);
+      }).join('');
+      localStorage.setItem(VKEY, v);
+      return v;
+    } catch (_) {
+      // 存储被拦（无痕 / App 内置浏览器）→ 没有 id，这次就只算次数不算人。
+      // 宁可少算，也不要为了凑数每次生成一个新 id 把人数灌水。
+      return '';
+    }
+  }
+  window.__efVisitorId = visitorId();
+
   window.__efTrack = function (ev) {
     try {
+      var body = { event: ev };
+      if (window.__efVisitorId) body.visitor = window.__efVisitorId;
       fetch(TRACK_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ event: ev }),
+        body: JSON.stringify(body),
         keepalive: true,          // 页面被关掉/跳走也要送达
       }).catch(function () {});
     } catch (_) { /* 埋点永远不许影响游戏 */ }

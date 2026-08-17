@@ -18,10 +18,15 @@
 
   function track(event) {
     try {
+      var body = { event: event };
+      /* 👥 访客 id 由 index.html 的 <head> 内联段生成（那段跑得最早，
+         open_attempt 就靠它发）。这里只**复用**，不自己再造一个 ——
+         两处各生成一次的话，同一个人会被数成两个。 */
+      if (window.__efVisitorId) body.visitor = window.__efVisitorId;
       fetch(STOCKWISE_BASE + '/api/public/game-track', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ event: event }),
+        body: JSON.stringify(body),
         keepalive: true,   // survive page unload (e.g. tracking on close)
       }).catch(function () {});
     } catch (_) { /* analytics must never break gameplay */ }
