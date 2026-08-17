@@ -2237,14 +2237,10 @@
             <stop offset="100%" stop-color="#a04500"/>
           </radialGradient>
         </defs>
-        <ellipse cx="50" cy="92" rx="24" ry="3" fill="#000" opacity="0.25"/>
+        <ellipse cx="50" cy="94" rx="20" ry="2.4" fill="#000" opacity="0.22"/>
         <g filter="url(#ds_kumquat)">
-          <!-- Brown pot -->
-          <path d="M 32 86 L 36 76 L 64 76 L 68 86 Z" fill="#8b5a2b" stroke="#5d3a1a" stroke-width="0.7"/>
-          <rect x="30" y="74" width="40" height="4" rx="2" fill="#a0673b" stroke="#5d3a1a" stroke-width="0.6"/>
-
-          <!-- Brown trunk -->
-          <path d="M 48 76 L 48 56 L 52 56 L 52 76 Z" fill="#6d4528" stroke="#3d2614" stroke-width="0.5"/>
+          <!-- 种在地里：短树干从土里长出，不要花盆 -->
+          <path d="M 47 94 L 47 56 L 53 56 L 53 94 Z" fill="#6d4528" stroke="#3d2614" stroke-width="0.5"/>
 
           <!-- Green foliage dome -->
           <ellipse cx="50" cy="42" rx="28" ry="22" fill="url(#foliage_kumquat)" stroke="#1f4d10" stroke-width="0.7"/>
@@ -2268,7 +2264,39 @@
           <circle cx="35" cy="35" r="0.8"/><circle cx="49" cy="27" r="1"/><circle cx="61" cy="35" r="0.8"/>
           <circle cx="39" cy="49" r="0.8"/><circle cx="57" cy="49" r="0.8"/>
         </g>
-        <ellipse cx="50" cy="86" rx="14" ry="1.4" fill="#000" opacity="0.25"/>
+        <ellipse cx="50" cy="92" rx="14" ry="1.4" fill="#000" opacity="0.22"/>
+      `;
+    },
+    yu_mi(c) {
+      const husk = c || '#7cb342';
+      const dark = darken(husk, 0.22);
+      const hi = lighten(husk, 0.12);
+      return `
+        <path d="M 46 96 L 47 28 L 53 28 L 54 96 Z" fill="${dark}"/>
+        <path d="M 36 96 Q 28 62 34 36 Q 40 52 44 96 Z" fill="${husk}" stroke="${dark}" stroke-width="0.8"/>
+        <path d="M 64 96 Q 72 62 66 36 Q 60 52 56 96 Z" fill="${hi}" stroke="${dark}" stroke-width="0.8"/>
+        <ellipse cx="50" cy="38" rx="9" ry="22" fill="#f4d03f" stroke="#c9a227" stroke-width="1"/>
+        <g fill="#e0b020" opacity="0.55">
+          <circle cx="47" cy="28" r="1.1"/><circle cx="53" cy="32" r="1.1"/>
+          <circle cx="47" cy="38" r="1.1"/><circle cx="53" cy="42" r="1.1"/>
+          <circle cx="47" cy="48" r="1.1"/><circle cx="53" cy="52" r="1.1"/>
+        </g>
+        <path d="M 42 24 Q 50 8 58 24" fill="${husk}" stroke="${dark}" stroke-width="0.7"/>
+      `;
+    },
+    li_zhi(c) {
+      const red = c || '#d64545';
+      const dark = darken(red, 0.2);
+      return `
+        <path d="M 48 96 L 49 58 L 52 58 L 53 96 Z" fill="#6d4528"/>
+        <ellipse cx="38" cy="52" rx="11" ry="6" fill="#558b2f" transform="rotate(-28 38 52)"/>
+        <ellipse cx="62" cy="50" rx="11" ry="6" fill="#6ab041" transform="rotate(24 62 50)"/>
+        <circle cx="42" cy="40" r="8" fill="${red}" stroke="${dark}" stroke-width="0.8"/>
+        <circle cx="56" cy="36" r="9" fill="${red}" stroke="${dark}" stroke-width="0.8"/>
+        <circle cx="50" cy="48" r="7.5" fill="${lighten(red, 0.08)}" stroke="${dark}" stroke-width="0.8"/>
+        <g fill="#fff" opacity="0.45">
+          <circle cx="40" cy="37" r="1.4"/><circle cx="54" cy="33" r="1.6"/>
+        </g>
       `;
     },
     // taro — emoji-style. Purple-brown rounded oval root with horizontal
@@ -2702,9 +2730,9 @@
       const size = sizePx || 64;
       const soil = opts.bare ? '' : SOIL;
 
-      // Mature stage: prefer the illustration sprite (renders via <img>,
-      // works in every innerHTML call site).
-      if (stage >= 2) {
+      // Mature stage in shop/lists: prefer the illustration sprite.
+      // 田里 inBed 必须走 SVG：目录 PNG 是整根/盆栽贴纸，埋不进垄。
+      if (stage >= 2 && !opts.inBed) {
         const url = this.spriteUrl(cropId);
         if (url) {
           return '<img class="crop-sprite" src="' + url + '" width="' + size +

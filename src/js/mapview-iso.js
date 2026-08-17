@@ -109,9 +109,9 @@
     qingcai: 'crop_qingcai', cai_xin: 'crop_qingcai', bo_cai: 'crop_qingcai',
     you_mai_cai: 'crop_qingcai', wa_wa_cai: 'crop_qingcai', da_bai_cai: 'crop_qingcai',
     ji_mao_cai: 'crop_qingcai', tong_hao: 'crop_qingcai', xian_cai: 'crop_qingcai',
-    xi_lan_hua: 'crop_qingcai',
+    xi_lan_hua: 'crop_qingcai', wo_sun: 'crop_qingcai',
     jing_cong: 'crop_chives', xiao_cong: 'crop_chives', jiu_huang: 'crop_chives',
-    ku_gua: 'crop_cucumber', fo_shou_gua: 'crop_cucumber',
+    ku_gua: 'crop_cucumber', fo_shou_gua: 'crop_cucumber', dong_gua: 'crop_cucumber',
   };
   // cost = 农场币 to place (coins; East Points stay scarce for real rewards). charm =
   // 农场魅力 gained (derived ≈ cost/8) — a vanity progression to drive the build impulse.
@@ -1760,12 +1760,17 @@
       const key = id + '_s' + stage;
       const c = this._cropImg[key]; if (c instanceof Image) return c; if (c === true || c === false) return null;
       let url = null;
-      if (stage >= 2 && Farm.cropArt && Farm.cropArt.spriteUrl) url = Farm.cropArt.spriteUrl(id);
-      if (!url && Farm.cropArt && Farm.cropArt.svg) {
-        const svg = Farm.cropArt.svg(id, stage, 256, { bare: true });
-        const m = svg && svg.match(/src="([^"]+)"/);
-        url = m ? m[1] : (svg ? ('data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg)) : null);
+      // 田里不用商店目录 PNG（整根萝卜/花盆栽），那种是贴纸。成熟也走 SVG，好埋进垄里。
+      if (Farm.cropArt && Farm.cropArt.svg) {
+        const svg = Farm.cropArt.svg(id, stage, 256, { bare: true, inBed: true });
+        if (svg && svg.indexOf('<img') === -1) {
+          url = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+        } else if (svg) {
+          const m = svg.match(/src="([^"]+)"/);
+          url = m ? m[1] : null;
+        }
       }
+      if (!url && stage >= 2 && Farm.cropArt && Farm.cropArt.spriteUrl) url = Farm.cropArt.spriteUrl(id);
       if (!url) { this._cropImg[key] = true; return null; }
       this._cropImg[key] = false;
       const im = new Image();
@@ -3082,6 +3087,23 @@
       ctx.beginPath(); ctx.arc(x, by + h * 0.42, s * 0.09, 0, Math.PI * 2); ctx.fill();
       ctx.restore();
     },
+    // 没有油画立方体贴图的菜：用 SVG 放大铺满土床，下缘埋进垄，绝不回退 emoji。
+    _drawBedCropArt(cropId, progress, c, tw, th, ripe) {
+      const st = progress >= 1 ? 2 : progress >= 0.4 ? 1 : 0;
+      const im = this._cropArtImg(cropId, st);
+      if (!im) return;
+      const ctx = this._ctx;
+      const s = (th * (1.18 + st * 0.22)) / 220;
+      const w = im.width * s, h = im.height * s;
+      const bury = h * 0.30;
+      const topY = (c.y + th * 0.20 - (ripe || 0)) - h + bury;
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(c.x - tw * 1.15, c.y - th * 4.2, tw * 2.3, th * 4.2 + th * 0.20);
+      ctx.clip();
+      ctx.drawImage(im, c.x - w / 2, topY, w, h);
+      ctx.restore();
+    },
     _drawPlot(plot, gx, gy, idx) {
       const ctx = this._ctx, tw = this._tw(), th = this._th(), c = this._cell(gx, gy);
       if (!plot.unlocked) {
@@ -3119,22 +3141,13 @@
           const topY = (c.y + th * 0.34 - ripe) - h;
           ctx.drawImage(im, c.x - w / 2, topY, w, h);
           plantTopY = topY;
-        }
-        else { const def = Farm.crops.get(plot.crop); ctx.font = (th * 1.1) + 'px sans-serif'; ctx.fillText((def && def.icon) || '🌿', c.x, by); }
-      } else {
-        const st = p >= 1 ? 2 : p >= 0.4 ? 1 : 0;
-        const im = this._cropArtImg(plot.crop, st);
-        if (im) {
-          const s = (th * (0.88 + st * 0.16)) / 256;
-          const w = im.width * s, h = im.height * s;
-          const topY = (c.y + th * 0.34 - ripe) - h;
-          ctx.drawImage(im, c.x - w / 2, topY, w, h);
-          plantTopY = topY;
         } else {
-          const def = Farm.crops.get(plot.crop);
-          ctx.font = (th * (mature ? 1.1 : (p >= 0.4 ? 0.9 : 0.7))) + 'px sans-serif';
-          ctx.fillText((def && def.icon) || (mature ? '🥬' : (p >= 0.4 ? '🌿' : '🌱')), c.x, by);
+          this._drawBedCropArt(plot.crop, p, c, tw, th, ripe);
+          plantTopY = c.y - th * 1.05 - ripe;
         }
+      } else {
+        this._drawBedCropArt(plot.crop, p, c, tw, th, ripe);
+        plantTopY = c.y - th * 1.05 - ripe;
       }
       if (mature) {
         /* 徽章 LOD(2026-08-14 打磨): <=3 块熟 → 白圈气泡(新手期指认清晰);
@@ -3153,9 +3166,20 @@
           const ph = (tNow * 0.4 + (gx * 7 + gy * 13) * 0.37) % 1;
           if (ph < 0.12) {
             ctx.globalAlpha = Math.sin(ph / 0.12 * Math.PI);
-            ctx.font = (th * 0.55) + 'px sans-serif'; ctx.textBaseline = 'middle';
-            ctx.fillText('✨', c.x + tw * 0.22, plantTopY + th * 0.2);
-            ctx.globalAlpha = 1; ctx.textBaseline = 'alphabetic';
+            const sx = c.x + tw * 0.22, sy = plantTopY + th * 0.2, r = th * 0.16;
+            ctx.fillStyle = 'rgba(255,214,110,0.95)';
+            ctx.beginPath();
+            ctx.moveTo(sx, sy - r);
+            ctx.lineTo(sx + r * 0.28, sy - r * 0.28);
+            ctx.lineTo(sx + r, sy);
+            ctx.lineTo(sx + r * 0.28, sy + r * 0.28);
+            ctx.lineTo(sx, sy + r);
+            ctx.lineTo(sx - r * 0.28, sy + r * 0.28);
+            ctx.lineTo(sx - r, sy);
+            ctx.lineTo(sx - r * 0.28, sy - r * 0.28);
+            ctx.closePath();
+            ctx.fill();
+            ctx.globalAlpha = 1;
           }
         }
       } else {
