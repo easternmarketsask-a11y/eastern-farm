@@ -435,6 +435,11 @@
     },
     _plotGX(i) { const p = (Farm.state.data.plots || [])[i]; if (!p) return 0; if (Number.isInteger(p.gx)) return p.gx; const o = this._plotOrigin(); return o.ox + (i % PLOT_COLS); },
     _plotGY(i) { const p = (Farm.state.data.plots || [])[i]; if (!p) return 0; if (Number.isInteger(p.gy)) return p.gy; const o = this._plotOrigin(); return o.oy + Math.floor(i / PLOT_COLS); },
+    _plotPos(i) {
+      if (this._moving && this._moving.kind === 'plot' && this._moving.idx === i)
+        return { gx: this._moving.gx, gy: this._moving.gy };
+      return { gx: this._plotGX(i), gy: this._plotGY(i) };
+    },
     _isFrontLand() { return !!(Farm.state.data && Farm.state.data.landOrigin === 'front'); },
     _plotOrigin() { return this._isFrontLand() ? PLOT_ORIGIN_FRONT : PLOT_ORIGIN_BACK; },
     _landTable() { return this._isFrontLand() ? LAND_LEVELS_FRONT : LAND_LEVELS_BACK; },
@@ -682,6 +687,12 @@
         if (this._sel >= 0) { const ch = this._delChip((Farm.state.data.map)[this._sel]); if (Math.hypot(p.x - ch.x, p.y - ch.y) <= ch.r) { const o = Farm.state.data.map[this._sel], b = BUILDINGS[o.type], refund = b ? Math.round((b.cost || 0) / 2) : 0; Farm.state.data.map.splice(this._sel, 1); this._sel = -1; if (refund > 0) { Farm.state.addCoins(refund); if (Farm.ui && Farm.ui.refreshHUD) Farm.ui.refreshHUD(); if (Farm.ui && Farm.ui.toast) Farm.ui.toast(this._lang() === 'en' ? ('Removed — refunded ' + refund + ' coins') : ('已移除 — 退回 ' + refund + ' 农场币')); } this._refreshPaletteAfford(); Farm.state.save(); this.render(); return; } }
         // Grab by the VISIBLE sprite (generous), not the tiny footprint cell — on a
         // phone you tap the building/decoration you see, which sits above its cell.
+        const phit = this._plotAtPoint(p.x, p.y);
+        if (phit && phit.i != null) {
+          this._sel = -1;
+          this._moving = { kind: 'plot', idx: phit.i, gx: phit.gx, gy: phit.gy, valid: true, sx: p.x, sy: p.y, moved: false };
+          this.render(); return;
+        }
         const bidx = this._buildingAtPoint(p.x, p.y);
         if (bidx >= 0) { const o = Farm.state.data.map[bidx]; this._sel = bidx; this._moving = { kind: 'building', idx: bidx, gx: o.gx, gy: o.gy, valid: true, sx: p.x, sy: p.y, moved: false }; this.render(); return; }
         const didx = this._decoAtPoint(p.x, p.y);
@@ -719,6 +730,7 @@
         if (Math.abs(p.x - this._moving.sx) + Math.abs(p.y - this._moving.sy) > 4) this._moving.moved = true;
         const c = this._screenToCell(p.x, p.y);
         if (this._moving.kind === 'deco') { this._moving.gx = c.gx; this._moving.gy = c.gy; this._moving.valid = this._decoCellFree(c.gx, c.gy, this._moving.idx); }
+        else if (this._moving.kind === 'plot') { this._moving.gx = c.gx; this._moving.gy = c.gy; this._moving.valid = this._cellFreeForPlotMove(c.gx, c.gy, this._moving.idx); }
         else { const o = Farm.state.data.map[this._moving.idx], b = BUILDINGS[o.type]; const gx = c.gx - (b.w >> 1), gy = c.gy - (b.h >> 1); this._moving.gx = gx; this._moving.gy = gy; this._moving.valid = this._footprintFree(gx, gy, o.type, this._moving.idx); }
         this.render(); return;
       }
@@ -788,6 +800,10 @@
         const m = this._moving; this._moving = null;
         if (m.moved && m.valid) {
           if (m.kind === 'deco') { const d = Farm.state.data.decorations[m.idx]; if (d) { d.gx = m.gx; d.gy = m.gy; Farm.state.save(); } }
+          else if (m.kind === 'plot') {
+            const pl = (Farm.state.data.plots || [])[m.idx];
+            if (pl) { pl.gx = m.gx; pl.gy = m.gy; this._pcs = null; this._buildLayout(); Farm.state.save(); }
+          }
           else { const o = Farm.state.data.map[m.idx]; if (o) { o.gx = m.gx; o.gy = m.gy; Farm.state.save(); } }
         }
         this.render(); this._drag = null; return;
@@ -1001,7 +1017,8 @@
         else { w = b.w * tw * 1.06 * BLD; h = b.sc * th * 2.0 * BLD; }
         if (px >= cc.x - w / 2 && px <= cc.x + w / 2 && py >= by - h && py <= by) return i;
       }
-      return -1;
+      const cell = this._screenToCell(px, py);
+      return this._buildingAt(cell.gx, cell.gy);
     },
     _decoAt(gx, gy) { const d = (Farm.state.data.decorations) || []; for (let i = 0; i < d.length; i++) if (d[i].gx === gx && d[i].gy === gy) return i; return -1; },
     // Nearest decoration to a tap, by on-screen distance (generous radius) — small
@@ -1388,11 +1405,18 @@
     },
     _PLOT_COST: 200,
     _cellFreeForPlot(gx, gy) {
-      if (!this._ownedCell(gx, gy)) return false;
-      if (this._cellToPlot[gx + ',' + gy] != null) return false;            // already a plot
+      return this._cellFreeForPlotMove(gx, gy, -1);
+    },
+    _cellFreeForPlotMove(gx, gy, exceptIdx) {
+      if (!this._inBounds(gx, gy) || !this._ownedCell(gx, gy)) return false;
+      const plots = Farm.state.data.plots || [];
+      for (let i = 0; i < plots.length; i++) {
+        if (i === exceptIdx || !plots[i]) continue;
+        if (this._plotGX(i) === gx && this._plotGY(i) === gy) return false;
+      }
       if (this._terrain()[gx + ',' + gy] === 'water') return false;
-      if (this._buildingAt(gx, gy) >= 0) return false;                       // under a building
-      if (this._decoAt(gx, gy) >= 0) return false;                           // 装饰摆件占格（全局互斥）
+      if (this._buildingAt(gx, gy) >= 0) return false;
+      if (this._decoAt(gx, gy) >= 0) return false;
       if (this._onRoad(gx, gy)) return false;
       return true;
     },
@@ -1716,7 +1740,7 @@
       if (this._palTerrain) this._palTerrain.style.display = terr ? 'flex' : 'none';
       if (this._modeTabs) Array.from(this._modeTabs.children).forEach((t) => { const on = t.dataset.mode === this._editMode; t.style.background = on ? '#FF9800' : '#eee'; t.style.color = on ? '#fff' : '#777'; });
       if (this._palTerrain) Array.from(this._palTerrain.children).forEach((it) => { it.style.outline = (it.dataset.brush === this._brush) ? '3px solid #FF9800' : 'none'; });
-      if (this._hint) { const s = this._hint.querySelector('span'); if (s) s.textContent = terr ? (en ? 'Tap / drag to paint terrain' : '点按或拖动涂刷地形（草地=擦除）') : (en ? ('✨ Charm ' + this._farmCharm() + ' · drag to place · ✕ remove (50% back)') : ('✨ 农场魅力 ' + this._farmCharm() + ' · 拖动摆放 · ✕ 移除(退一半)')); }
+      if (this._hint) { const s = this._hint.querySelector('span'); if (s) s.textContent = terr ? (en ? 'Tap / drag to paint terrain' : '点按或拖动涂刷地形（草地=擦除）') : (en ? ('✨ Charm ' + this._farmCharm() + ' · drag house, plot or deco · ✕ remove building (50% back)') : ('✨ 农场魅力 ' + this._farmCharm() + ' · 拖房子、菜地或装饰 · ✕ 拆除建筑退一半')); }
       this._layoutUI();
     },
     setEditMode(m) { this._editMode = m; this._sel = -1; this._moving = null; this._refreshModeUI(); this.render(); },
@@ -2169,7 +2193,8 @@
       const pts = [];
       for (let i = 0; i < plots.length; i++) {
         if (!plots[i] || !plots[i].unlocked) continue;
-        pts.push(this._cell(this._plotGX(i), this._plotGY(i)));
+        const pp = this._plotPos(i);
+        pts.push(this._cell(pp.gx, pp.gy));
       }
       if (!pts.length) return;
       let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
@@ -2237,7 +2262,8 @@
       const list = [];
       for (let i = 0; i < plots.length; i++) {
         if (!plots[i]) continue;
-        list.push({ i: i, gx: this._plotGX(i), gy: this._plotGY(i), p: plots[i] });
+        const pp = this._plotPos(i);
+        list.push({ i: i, gx: pp.gx, gy: pp.gy, p: plots[i] });
       }
       list.sort((a, b) => (a.gx + a.gy) - (b.gx + b.gy));
       for (let n = 0; n < list.length; n++) {
@@ -3058,8 +3084,8 @@
       for (let i = 0; i < plots.length; i++) { if (plots[i] && !plots[i].unlocked) { const rv = REQUIRED_LV[i] || 2; if (rv < nextLv) nextLv = rv; } }
       this._nextLockLv = nextLv;
       for (let i = 0; i < plots.length; i++) {
-        const gx = this._plotGX(i), gy = this._plotGY(i);
-        draws.push({ d: gx + gy, fn: () => this._drawPlot(plots[i], gx, gy, i) });
+        const pp = this._plotPos(i);
+        draws.push({ d: pp.gx + pp.gy, fn: () => this._drawPlot(plots[i], pp.gx, pp.gy, i) });
       }
       const map = (Farm.state.data.map) || [];
       for (let i = 0; i < map.length; i++) {
