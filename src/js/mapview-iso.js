@@ -1947,12 +1947,14 @@
           const c = this._cell(gx, gy);
           if (c.x + tw * 2 < 0 || c.x - tw * 2 > W || c.y + th * 3 < 0 || c.y - th * 4 > H) continue;
           const dHl = (c.y - hl) / (th * 4.4);
-          if (dHl < 0.85) continue;
+          // 油画后山有疏树。原先 0.85 把中景整片裁掉，只剩地平线上三棵。
+          if (dHl < 0.50) continue;
           const hsh = ((gx * 73856093) ^ (gy * 19349663)) >>> 0;
           const r1 = (hsh % 997) / 997, r2 = ((hsh >> 8) % 991) / 991;
           const clump = ((Math.floor(gx / 2) * 2654435761) ^ (Math.floor(gy / 2) * 1597334677)) >>> 0;
           if (!apron && (clump % 5) === 0) continue;
-          const dens = apron ? 0.16 : (inWorld ? 0.55 : 0.78);
+          const uphill = gy < ob.y1 - 1;
+          const dens = apron ? 0.16 : (uphill ? 0.64 : (inWorld ? 0.55 : 0.78));
           if (r1 > dens) continue;
           list.push({ gx: gx, gy: gy, r1: r1, r2: r2, flip: (hsh & 1) === 0 });
         }
@@ -1967,6 +1969,7 @@
     // scattered grass tufts + flowers around the farm (NOT on the plot block), world-anchored
     _drawMeadowTrees() {
       const tw = this._tw(), th = this._th();
+      // 油画中景：田后山坡疏落圆树，尺寸不一。不进镜头前围裙中央。
       const spots = [
         { gx: -1.6, gy: 4.8, s: 0.72 },
         { gx: 15.2, gy: 2.4, s: 0.64 },
@@ -1975,6 +1978,17 @@
         { gx: 8.4, gy: -0.6, s: 0.50 },
         { gx: 2.2, gy: -1.1, s: 0.44 },
         { gx: 11.6, gy: 0.4, s: 0.42 },
+        { gx: 0.6, gy: 3.4, s: 0.70 },
+        { gx: 3.4, gy: 2.2, s: 0.52 },
+        { gx: 6.0, gy: 3.8, s: 0.76 },
+        { gx: 8.8, gy: 2.8, s: 0.46 },
+        { gx: 11.4, gy: 4.4, s: 0.66 },
+        { gx: 14.2, gy: 3.0, s: 0.58 },
+        { gx: 16.8, gy: 4.6, s: 0.72 },
+        { gx: -2.2, gy: 6.0, s: 0.54 },
+        { gx: 1.8, gy: 6.2, s: 0.48 },
+        { gx: 13.6, gy: 6.6, s: 0.50 },
+        { gx: 4.6, gy: 5.2, s: 0.42 },
       ];
       for (const s of spots) {
         const igx = Math.round(s.gx), igy = Math.round(s.gy);
@@ -2049,7 +2063,7 @@
         if (!plots[i]) continue;
         const c = this._cell(this._plotGX(i), this._plotGY(i));
         const cy = c.y + th * 0.06;
-        cells.push({ x: c.x, y: cy });
+        cells.push({ x: c.x, y: cy, fallow: !plots[i].unlocked || !plots[i].crop });
         if (c.x < minX) minX = c.x; if (c.x > maxX) maxX = c.x;
         if (cy < minY) minY = cy; if (cy > maxY) maxY = cy;
       }
@@ -2064,15 +2078,15 @@
       ctx.beginPath();
       for (const c of cells) this._diamondPath(c.x, c.y, w, h);
       const g = ctx.createLinearGradient(minX - tw, minY - th * 0.4, maxX + tw * 0.3, maxY + th);
-      g.addColorStop(0, '#8f5e30');
-      g.addColorStop(0.45, '#6a421c');
-      g.addColorStop(1, '#452410');
+      g.addColorStop(0, '#7a4a22');
+      g.addColorStop(0.42, '#5c3416');
+      g.addColorStop(1, '#3a1c0c');
       ctx.fillStyle = g;
       ctx.fill();
       ctx.clip();
-      // 软垄：淡、略弯，不要一整排木板
-      ctx.strokeStyle = 'rgba(38,18,8,0.14)';
-      ctx.lineWidth = Math.max(0.7, th * 0.045);
+      // 油画那块田：深巧克力土 + 看得见的软垄
+      ctx.strokeStyle = 'rgba(24,10,4,0.26)';
+      ctx.lineWidth = Math.max(0.8, th * 0.055);
       ctx.lineCap = 'round';
       const slope = th / tw;
       const spacing = th * 0.24;
@@ -2095,6 +2109,21 @@
           ctx.beginPath();
           ctx.ellipse(c.x + Math.cos(a) * tw * 0.18, c.y + Math.sin(a * 1.3) * th * 0.16, tw * 0.035, th * 0.02, a, 0, 6.283);
           ctx.fill();
+        }
+        // 空床/锁地：几根细草，别像缺贴图的光板
+        if (c.fallow) {
+          ctx.strokeStyle = 'rgba(74, 108, 42, 0.38)';
+          ctx.lineWidth = Math.max(0.7, tw * 0.016);
+          ctx.lineCap = 'round';
+          for (let i = 0; i < 3; i++) {
+            const a = c.x * 0.11 + c.y * 0.07 + i * 1.9;
+            const bx = c.x + Math.cos(a) * tw * 0.16;
+            const by = c.y + Math.sin(a * 1.2) * th * 0.12;
+            ctx.beginPath();
+            ctx.moveTo(bx, by + th * 0.04);
+            ctx.quadraticCurveTo(bx + tw * 0.02, by - th * 0.06, bx + tw * 0.04, by - th * 0.12);
+            ctx.stroke();
+          }
         }
       }
       ctx.restore();
@@ -2707,9 +2736,9 @@
     _drawGoldenHour(W, H) {
       const ctx = this._ctx;
       const g = ctx.createRadialGradient(W * 0.14, H * 0.06, 0, W * 0.14, H * 0.06, Math.max(W, H) * 1.15);
-      g.addColorStop(0, 'rgba(255,208,130,0.32)');
-      g.addColorStop(0.34, 'rgba(255,176,96,0.14)');
-      g.addColorStop(1, 'rgba(48,42,22,0.08)');
+      g.addColorStop(0, 'rgba(255,208,130,0.38)');
+      g.addColorStop(0.34, 'rgba(255,176,96,0.16)');
+      g.addColorStop(1, 'rgba(48,42,22,0.07)');
       ctx.fillStyle = g;
       ctx.fillRect(0, 0, W, H);
     },
@@ -2788,17 +2817,22 @@
       hill(th * 5.6, th * 1.05, '#d2c07a', 1.4);
       hill(th * 4.0, th * 1.20, '#a8b86a', 2.6);
       hill(th * 2.5, th * 0.95, '#7fa050', 0.9);
-      // 坡上散落圆树 + 几棵细柏，像宣传图后景，不要一排尖塔
-      const step = tw * 1.55;
-      const x0 = -((this._camX * 0.55) % step) - step;
-      for (let x = x0; x < W + step; x += step) {
-        const seed = Math.abs(Math.round((x + this._camX * 0.55) / step));
-        const hsh = ((seed * 2654435761) >>> 0) % 1000 / 1000;
-        if (hsh < 0.16) continue;
-        const tx = x + (hsh - 0.5) * tw;
-        const ty = hl - th * (1.4 + hsh * 3.2);
-        const ts = tw * (0.42 + hsh * 0.50);
-        this._tree(tx, ty, ts);
+      // 远坡一小圈、近坡稍大：油画后山是疏林，不是三棵孤树
+      const bands = [
+        { step: tw * 1.18, y0: 3.6, ySpan: 3.4, s0: 0.28, sSpan: 0.38, skip: 0.10, cam: 0.42 },
+        { step: tw * 1.42, y0: 1.1, ySpan: 2.2, s0: 0.40, sSpan: 0.48, skip: 0.18, cam: 0.55 },
+      ];
+      for (const B of bands) {
+        const x0 = -((this._camX * B.cam) % B.step) - B.step;
+        for (let x = x0; x < W + B.step; x += B.step) {
+          const seed = Math.abs(Math.round((x + this._camX * B.cam) / B.step));
+          const hsh = ((seed * 2654435761) >>> 0) % 1000 / 1000;
+          if (hsh < B.skip) continue;
+          const tx = x + (hsh - 0.5) * tw * 0.8;
+          const ty = hl - th * (B.y0 + hsh * B.ySpan);
+          const ts = tw * (B.s0 + hsh * B.sSpan);
+          this._tree(tx, ty, ts, (seed & 1) === 0);
+        }
       }
     },
     /* 地平薄雾: 必须画在**地面之后**(第一版画在 _drawHorizon 里, 随即被地面
