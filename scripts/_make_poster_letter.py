@@ -115,22 +115,27 @@ def kicker_pill(draw, y, canvas_w, zh_font, en_font):
     return y + bh
 
 
-def dusk(canvas, w, h, band):
+def dusk(canvas, w, h, band, top_band=0):
     wash = Image.new('RGBA', (w, h), (0, 0, 0, 0))
     d = ImageDraw.Draw(wash)
     for i in range(280):
         a = int(78 * (1 - i / 280) ** 1.4)
         d.line([(0, i), (w, i)], fill=(255, 232, 200, a))
+    if top_band > 1:
+        for i in range(top_band):
+            t = 1 - i / (top_band - 1)
+            a = int(110 * (t ** 1.25))
+            d.line([(0, i), (w, i)], fill=(42, 30, 18, a))
     for i in range(band):
         t = i / (band - 1)
-        a = int(10 + 250 * (t ** 1.10))
+        a = int(12 + 248 * (t ** 1.12))
         d.line([(0, h - band + i), (w, h - band + i)], fill=(16, 22, 12, a))
     return Image.alpha_composite(canvas, wash)
 
 
 def scan_bar(canvas):
-    """奶油扫码栏：Letter 比 A4 矮，码和标题不能叠在画上。"""
-    bar_h = 560
+    """04c 同款奶油扫码栏。"""
+    bar_h = 520
     top = H - bar_h
     layer = Image.new('RGBA', (W, H), (0, 0, 0, 0))
     ld = ImageDraw.Draw(layer)
@@ -143,49 +148,59 @@ def scan_bar(canvas):
     qr_px = 360
     qr = make_qr(qr_px)
     qx = SAFE + 20
-    qy = top + (bar_h - qr_px) // 2 + 8
+    qy = top + (bar_h - qr_px) // 2 + 6
     draw.rounded_rectangle(
         [qx - 14, qy - 14, qx + qr_px + 14, qy + qr_px + 14],
         radius=22, fill=CREAM, outline=(201, 162, 74), width=6)
     canvas.paste(qr, (qx, qy), qr)
 
-    zh = vf(SANS, 72, 720, SANS_BD)
-    en = ImageFont.truetype(GEORGIA, 40)
-    urlf = vf(SANS, 48, 720, SANS_BD)
+    zh = vf(SANS, 68, 720, SANS_BD)
+    en = ImageFont.truetype(GEORGIA, 38)
+    urlf = vf(SANS, 46, 720, SANS_BD)
     sub = vf(SANS, 36, 560, SANS_BD)
     sub_en = ImageFont.truetype(GEORGIA_R, 30)
-    loc = ImageFont.truetype(GEORGIA_R, 26)
     tx = qx + qr_px + 56
-    ty = qy + 8
+    ty = qy + 18
     draw.text((tx, ty), '扫码即玩', font=zh, fill=INK)
-    draw.text((tx, ty + 92), 'Scan to play', font=en, fill=FOREST)
-    draw.text((tx, ty + 156), 'farm.easternmarket.ca', font=urlf, fill=FOREST)
-    draw.text((tx, ty + 230), '手机打开就能种，积分进会员卡', font=sub, fill=INK)
-    draw.text((tx, ty + 282), 'Play on your phone · points on your card', font=sub_en, fill=(90, 78, 48))
-    draw.text((tx, ty + 336), 'Willowgrove Square  ·  Saskatoon', font=loc, fill=(140, 122, 88))
+    draw.text((tx, ty + 88), 'Scan to play', font=en, fill=FOREST)
+    draw.text((tx, ty + 148), 'farm.easternmarket.ca', font=urlf, fill=FOREST)
+    draw.text((tx, ty + 220), '积分每天进会员卡，到店可用', font=sub, fill=INK)
+    draw.text((tx, ty + 272), 'Points on your member card', font=sub_en, fill=(90, 78, 48))
     return canvas
 
 
 def letter():
-    art = cover(Image.open(ART).convert('RGB'), W, H, bias_y=40).convert('RGBA')
-    canvas = dusk(art, W, H, 980)
+    # 04c：店名上天，胶囊+对联贴扫码栏，菜地全露
+    BAR_H = 520
+    art = cover(Image.open(ART).convert('RGB'), W, H, bias_y=10).convert('RGBA')
+    canvas = dusk(art, W, H, 720, top_band=620)
     paste_logo(canvas, W, SAFE - 16, 400)
     draw = ImageDraw.Draw(canvas)
 
-    name = vf(SERIF, 156, 660)
-    title = vf(SERIF, 72, 560)
+    name = vf(SERIF, 148, 660)
+    title = vf(SERIF, 78, 560)
     kick_zh = vf(SANS, 34, 650, SANS_BD)
     kick_en = ImageFont.truetype(GEORGIA, 30)
-    en_name = ImageFont.truetype(GEORGIA, 44)
-    en_line = ImageFont.truetype(GEORGIA, 32)
+    en_name = ImageFont.truetype(GEORGIA, 64)
+    en_line = ImageFont.truetype(GEORGIA, 34)
+    cream_en = (255, 244, 214)
+    couplet_en = (243, 224, 176)
 
-    # 标题压在田前草地上，扫码栏之上
-    by = kicker_pill(draw, H - 1320, W, kick_zh, kick_en)
-    spaced(draw, '东方农场', by + 28, name, CREAM, 20, W, shadow=(0, 4, (0, 0, 0, 140)))
-    center(draw, 'Eastern Farm', by + 246, en_name, GOLD, W, shadow=(0, 2, (0, 0, 0, 110)))
-    spaced(draw, '玩农场游戏', by + 322, title, CREAM, 12, W)
-    spaced(draw, '赚超市积分', by + 416, title, CREAM, 12, W)
-    center(draw, 'PLAY THE FARM  ·  EARN STORE POINTS', by + 520, en_line, GOLD, W)
+    name_y = 390
+    spaced(draw, '东方农场', name_y, name, CREAM, 20, W, shadow=(0, 4, (0, 0, 0, 150)))
+    center(draw, 'Eastern Farm', name_y + 228, en_name, cream_en, W,
+           shadow=(0, 3, (0, 0, 0, 170)))
+
+    bar_top = H - BAR_H
+    en_y = bar_top - 78
+    zh2_y = en_y - 158
+    zh1_y = zh2_y - 132
+    kick_y = zh1_y - 110
+    kicker_pill(draw, kick_y, W, kick_zh, kick_en)
+    spaced(draw, '玩农场游戏', zh1_y, title, CREAM, 10, W, shadow=(0, 3, (0, 0, 0, 140)))
+    spaced(draw, '赚超市积分', zh2_y, title, CREAM, 10, W, shadow=(0, 3, (0, 0, 0, 140)))
+    center(draw, 'PLAY THE FARM  ·  EARN STORE POINTS', en_y, en_line,
+           couplet_en, W, shadow=(0, 2, (0, 0, 0, 150)))
 
     canvas = scan_bar(canvas)
 
