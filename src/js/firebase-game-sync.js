@@ -781,6 +781,17 @@
     // Phone-based friend lookup. Returns { found, member } where member
     // is { uid, doc } if exists + visible, else null. Doesn't add the
     // friend — caller handles that to keep this fn pure.
+    // ⚠️ 2026-08-16 起这条查询会被 Firestore 规则拒绝（permission-denied）。
+    //
+    // 原因：`members` 的 `allow list` 原来是「任何登录用户 + limit<=1」，于是
+    // 随便输一个手机号就能把**整份会员文档**（姓名/手机号/积分/member_code）
+    // 拉到客户端 —— 而 member_code 是收银台扫的身份凭据，拿到它等于拿到在
+    // 柜台被认成这个人的凭据。规则已收紧成「只能查到自己」。
+    //
+    // 加好友功能要恢复，需要后端出一个只回 { uid, 昵称, 等级 } 的接口
+    // （不回手机号/积分/member_code），本函数再改调它。在那之前这里会返回
+    // reason:'unavailable'，UI 照实说明，不让玩家对着一个永远好不了的
+    // 「请重试」反复点。
     async findMemberByPhone(phoneE164) {
       if (!Farm.fb || !Farm.fb.available) return { found: false };
       try {
@@ -801,6 +812,11 @@
         if (doc.id === myUid) return { found: false, reason: 'self' };
         return { found: true, member: { uid: doc.id, doc: data } };
       } catch (e) {
+        // permission-denied = 上面说的规则收紧，不是网络问题。分开报，
+        // 否则 UI 会显示「请重试」，而这个重试永远不会成功。
+        if (e && (e.code === 'permission-denied' || e.code === 7)) {
+          return { found: false, reason: 'unavailable' };
+        }
         console.warn('[gameSync] findMemberByPhone failed', e);
         return { found: false, reason: 'error' };
       }
