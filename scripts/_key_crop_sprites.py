@@ -9,14 +9,14 @@ MAP = ROOT / "src" / "assets" / "images" / "map"
 SESS = Path(r"C:\Users\yue00\.grok\sessions\D%3A%5C\01a00718-f95b-7452-b183-7f5defbb801b\images")
 
 JOBS = [
-    ("83.jpg", "crop_carrot"),
-    ("82.jpg", "crop_daikon"),
-    ("81.jpg", "crop_corn"),
-    ("77.jpg", "crop_lotus"),
-    ("84.jpg", "crop_broccoli"),
-    ("80.jpg", "crop_cauli"),
-    ("79.jpg", "crop_kumquat"),
-    ("78.jpg", "crop_pomelo"),
+    ("85.jpg", "crop_narcissus"),
+    ("86.jpg", "crop_taro"),
+    ("87.jpg", "crop_ginger"),
+    ("88.jpg", "crop_mango"),
+    ("89.jpg", "crop_osmanthus"),
+    ("90.jpg", "crop_dragon"),
+    ("91.jpg", "crop_grape"),
+    ("92.jpg", "crop_lychee"),
 ]
 
 

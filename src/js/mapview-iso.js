@@ -115,6 +115,12 @@
     yu_mi: 'crop_corn', lian_ou: 'crop_lotus',
     kumquat: 'crop_kumquat', pomelo: 'crop_pomelo',
     sha_tang_ju: 'crop_kumquat', wo_gan: 'crop_kumquat', pa_pa_gan: 'crop_pomelo',
+    narcissus: 'crop_narcissus', taro: 'crop_taro', sheng_jiang: 'crop_ginger',
+    mang_guo: 'crop_mango', pi_pa: 'crop_mango',
+    huo_long_guo: 'crop_dragon',
+    li_zhi: 'crop_lychee', long_yan: 'crop_lychee',
+    xiang_yin_putao: 'crop_grape',
+    osmanthus: 'crop_osmanthus',
     jing_cong: 'crop_chives', xiao_cong: 'crop_chives', jiu_huang: 'crop_chives',
     ku_gua: 'crop_cucumber', fo_shou_gua: 'crop_cucumber', dong_gua: 'crop_cucumber',
   };
