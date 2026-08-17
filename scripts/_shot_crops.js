@@ -13,13 +13,13 @@
   const now = Date.now();
   const mix = [
     { id: 'hu_luo_bo', p: 1 },
+    { id: 'yu_mi', p: 1 },
+    { id: 'lian_ou', p: 1 },
+    { id: 'xi_lan_hua', p: 1 },
+    { id: 'tw_cauliflower', p: 1 },
     { id: 'kumquat', p: 1 },
-    { id: 'taro', p: 0.5 },
-    { id: 'narcissus', p: 0.2 },
     { id: 'pomelo', p: 1 },
-    { id: 'bai_luo_bo', p: 0.7 },
-    { id: 'wo_sun', p: 1 },
-    { id: 'sheng_jiang', p: 0.35 }
+    { id: 'bai_luo_bo', p: 1 }
   ];
   d.plots = (d.plots || []).map((p, i) => {
     const m = mix[i % mix.length];

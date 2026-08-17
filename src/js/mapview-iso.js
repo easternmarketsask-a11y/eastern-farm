@@ -109,7 +109,12 @@
     qingcai: 'crop_qingcai', cai_xin: 'crop_qingcai', bo_cai: 'crop_qingcai',
     you_mai_cai: 'crop_qingcai', wa_wa_cai: 'crop_qingcai', da_bai_cai: 'crop_qingcai',
     ji_mao_cai: 'crop_qingcai', tong_hao: 'crop_qingcai', xian_cai: 'crop_qingcai',
-    xi_lan_hua: 'crop_qingcai', wo_sun: 'crop_qingcai',
+    xi_lan_hua: 'crop_broccoli', wo_sun: 'crop_qingcai',
+    tw_cauliflower: 'crop_cauli',
+    hu_luo_bo: 'crop_carrot', bai_luo_bo: 'crop_daikon',
+    yu_mi: 'crop_corn', lian_ou: 'crop_lotus',
+    kumquat: 'crop_kumquat', pomelo: 'crop_pomelo',
+    sha_tang_ju: 'crop_kumquat', wo_gan: 'crop_kumquat', pa_pa_gan: 'crop_pomelo',
     jing_cong: 'crop_chives', xiao_cong: 'crop_chives', jiu_huang: 'crop_chives',
     ku_gua: 'crop_cucumber', fo_shou_gua: 'crop_cucumber', dong_gua: 'crop_cucumber',
   };
@@ -2224,10 +2229,10 @@
       ctx.save();
       body(1, 1); ctx.clip();
       const g = ctx.createLinearGradient(0, minY - th, 0, maxY + th);
-      g.addColorStop(0, '#c5ddd0');
-      g.addColorStop(0.28, '#6eafb8');
-      g.addColorStop(0.68, '#3a7e8c');
-      g.addColorStop(1, '#245860');
+      g.addColorStop(0, '#b8dce8');
+      g.addColorStop(0.28, '#5aa8c4');
+      g.addColorStop(0.68, '#2d7a94');
+      g.addColorStop(1, '#1d5468');
       ctx.fillStyle = g;
       ctx.fillRect(minX - tw * 1.4, minY - th * 1.4, (maxX - minX) + tw * 2.8, (maxY - minY) + th * 2.8);
       ctx.globalAlpha = 0.16;
