@@ -309,6 +309,9 @@ V2 (later): API connection to Clover POS for real-time validation.
   Chrome DevTools device mode before committing.
 - **Touch + click parity**: every interaction must work with both tap and
   mouse click.
+- 🔒 **我的家换图靠 `o.lv`**（2026-08-18）：深度排序若只克隆 `{ type, gx, gy }`，
+  升级只改存档、地图永远画 1 级小宅。`_drawBuilding` 必须带 `lv`；
+  `_homeSprite` 不要退回 `this._img.house`。
 
 ---
 

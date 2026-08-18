@@ -1079,7 +1079,13 @@
        升级 = 变美(手绘加装逐级出现) + 魅力涨, 是金币的长期出口。 */
     _homeSpec(o) {
       const n = HOME_LEVELS.length;
-      const lv = Math.min(Math.max((o && o.lv) || 1, 1), n);
+      // 深度排序会克隆建筑；漏掉 lv 时回落到场上那一座「我的家」。
+      let lv = o && o.lv;
+      if (lv == null && Farm.state && Farm.state.data) {
+        const home = (Farm.state.data.map || []).find((m) => m && m.type === 'home');
+        if (home && home.lv != null) lv = home.lv;
+      }
+      lv = Math.min(Math.max(lv || 1, 1), n);
       return HOME_LEVELS[lv - 1];
     },
     _homeSprite(o) {
@@ -1169,6 +1175,12 @@
       if (Farm.audio) Farm.audio.play('achievement');
       if (Farm.ui.refreshHUD) Farm.ui.refreshHUD();
       if (Farm.ui.confettiBurst) Farm.ui.confettiBurst();
+      // 镜头对准刚换的房子，关掉面板就能看见对应档贴图。
+      const hb = BUILDINGS.home;
+      const hc = this._cell(o.gx + (hb.w - 1) / 2, o.gy + (hb.h - 1) / 2);
+      this._camX += hc.x - this._cssW() / 2;
+      this._camY += hc.y - this._cssH() * 0.55;
+      this._clampCam();
       this.render();
       this._openHomePanel(mapIdx);
     },
@@ -3228,7 +3240,8 @@
         const o = map[i], b = BUILDINGS[o.type]; if (!b) continue;
         const mv = this._moving && this._moving.kind === 'building' && this._moving.idx === i;
         const gx = mv ? this._moving.gx : o.gx, gy = mv ? this._moving.gy : o.gy;
-        draws.push({ d: (gx + gy) + (b.w - 1) + (b.h - 1) + 0.5, fn: () => this._drawBuilding({ type: o.type, gx, gy }, b, mv, i) });
+        // 必须带 lv：_homeSprite / _homeDrawMul 靠它换图换尺寸。只传 type+坐标会永远画 1 级。
+        draws.push({ d: (gx + gy) + (b.w - 1) + (b.h - 1) + 0.5, fn: () => this._drawBuilding({ type: o.type, gx, gy, lv: o.lv }, b, mv, i) });
       }
       const nowW = Date.now();
       const wdt = this._lastWalkT ? Math.min(0.25, (nowW - this._lastWalkT) / 1000) : 0;
@@ -3548,9 +3561,11 @@
       // 按压反馈（audit B2 P2）：被按住的建筑以底边为锚缩到 94%（Hay Day 式
       // squash），与地块按压高亮同一套 _down/_up 生命周期。
       const pk = (!this._build && idx != null && idx === this._pressBuilding) ? 0.94 : 1;
-      // 我的家：每级换图 + 明显放大（碰撞仍 2×2）
-      const hz = o.type === 'home' ? this._homeDrawMul(o) : 1;
-      const him = o.type === 'home' ? this._homeSprite(o) : this._img[b.img];
+      // 我的家：每级换图 + 明显放大（碰撞仍 2×2）。等级读场上那条记录，不信克隆。
+      const rec = (idx != null && Farm.state.data && Farm.state.data.map) ? Farm.state.data.map[idx] : null;
+      const homeO = (o.type === 'home' && rec) ? rec : o;
+      const hz = o.type === 'home' ? this._homeDrawMul(homeO) : 1;
+      const him = o.type === 'home' ? this._homeSprite(homeO) : this._img[b.img];
       if (!this._blit(him, cc.x, by, b.w * tw * 0.92 * BLD * pk * hz, b.sc * th * 2.2 * BLD * pk * hz)) { ctx.fillStyle = '#c0392b'; ctx.fillRect(cc.x - tw * 0.4, by - th, tw * 0.8, th); }
       if (o.type === 'house' && !moving) {
         this._drawShopSign(cc.x, by, b.w * tw * 0.92 * BLD, b.sc * th * 2.2 * BLD);
