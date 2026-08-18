@@ -32,6 +32,26 @@
     } catch (_) { /* analytics must never break gameplay */ }
   }
 
+  /* 一次页面加载只发一次的事件用这个（2026-08-17 加）。
+
+     🔴 起因：open_guest 一直在**双发**。boot 在 ~100ms 跑到 main.js 的兜底
+     （那时 Firebase SDK 还没到，被判成"离线→访客"），~300ms SDK 落地后
+     firebase-auth 的 onAuthStateChanged 又记一次。后台「其中访客」因此比
+     「成功进入」还多（8/17 实测 191 vs 132），而访客本该是进入的子集。
+
+     这个双发是 2026-08-12 加载改造的副作用：在那之前 SDK 是 <script defer>
+     同步加载的，boot 跑到那行时它早就在了，兜底根本不会命中。改成动态晚加载
+     之后，兜底几乎每次都先开火 —— 没人发现，因为埋点坏了不会报错。
+
+     🔒 凡是「一次加载最多算一次」的事件，一律走 trackOnce，别用 track。 */
+  var _once = {};
+  function trackOnce(event) {
+    if (_once[event]) return;
+    _once[event] = true;
+    track(event);
+  }
+
   window.Farm = window.Farm || {};
   Farm.track = track;
+  Farm.trackOnce = trackOnce;
 })();

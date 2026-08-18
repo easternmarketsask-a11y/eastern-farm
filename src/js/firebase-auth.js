@@ -59,7 +59,9 @@
         // user (a fixed boot timer miscounts slow auth restores as guests).
         const _firstResolve = !this._authResolvedOnce;
         this._authResolvedOnce = true;
-        if (_firstResolve && !user && Farm.track) Farm.track('open_guest');
+        // trackOnce：main.js 里还有一条 8 秒兜底（离线时 SDK 永远不到），
+        // 两条路只能算一个人一次。历史上它们同时开火，访客被记了两遍。
+        if (_firstResolve && !user && Farm.trackOnce) Farm.trackOnce('open_guest');
         if (user) {
           this.currentUser = user;
           await this._loadMemberDoc(user.uid);

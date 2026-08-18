@@ -301,7 +301,22 @@
     // Firebase 不可用(离线)时永远不会回调,这里兜底记一次访客。
     if (Farm.track) {
       Farm.track('open');
-      if (!Farm.fb || !Farm.fb.available) Farm.track('open_guest');
+      /* 🔴 这个兜底必须等一等（2026-08-17 修）
+         --------------------------------------------------------------
+         原来是「此刻 Firebase 不可用 → 立刻记一次访客」。2026-08-12 把
+         Firebase SDK 改成动态晚加载之后，boot 跑到这行时它**几乎总是**还没到
+         （实测 boot 100ms / SDK 300ms），于是这里每次都开火，SDK 落地后
+         firebase-auth 的 onAuthStateChanged 再开一次 —— 访客被记了两遍。
+         后台「其中访客」因此比「成功进入」还多（191 vs 132），而访客本该是
+         进入的子集。埋点坏了不报错，所以没人发现。
+
+         现在等 8 秒：真的离线/CDN 挂了，SDK 到那时也不会来，兜底照样生效；
+         只是慢一点就到的正常情况不再重复计数。trackOnce 再兜一层。 */
+      setTimeout(function () {
+        if (!Farm.fb || !Farm.fb.available) {
+          (Farm.trackOnce || Farm.track)('open_guest');
+        }
+      }, 8000);
     }
 
     // Mark a fully-completed boot in this tab. The storage probe (top of boot)
