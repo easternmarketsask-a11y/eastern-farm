@@ -414,11 +414,6 @@
           // Celebratory modal instead of a tiny toast (per owner request:
           // make level-up feel meaningful + preview the next milestone)
           Farm.ui.showLevelUpModal(li.oldLevel, li.newLevel, { epAwarded: epAward });
-          // 升到解锁等级（Lv7）→ 顺菜解锁庆祝提示（等升级弹窗关掉后再弹）
-          const unlockLv = (Farm.socialConfig && Farm.socialConfig.STEAL_UNLOCK_LEVEL) || 7;
-          if (li.oldLevel < unlockLv && li.newLevel >= unlockLv && Farm.coach) {
-            Farm.coach.fire('steal_unlocked', 1200);
-          }
           // Limited-time promo: reaching Lv3 this week → bonus coins. Waits
           // for the level-up modal to close before showing its own.
           if (Farm.promo && Farm.promo.check) Farm.promo.check();
@@ -431,6 +426,9 @@
       const renderDelay = (plot.harvestsLeft > 0) ? 0 : 350;
       setTimeout(() => this.renderGrid(), renderDelay);
 
+      if ((Farm.state.data.totalHarvests || 0) === 1 && Farm.coach) {
+        Farm.coach.fire('steal_unlocked', 800);
+      }
       // Notify tasks system
       if (Farm.tasks) Farm.tasks.onEvent('harvest', { cropId: result.cropId, coins: result.coins });
       // Check achievements (covers totalHarvests, festival_harvests, level, crops_set)

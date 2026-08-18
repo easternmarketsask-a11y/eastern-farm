@@ -471,7 +471,8 @@
     if (!c.lotterySpunFree) pending++;
     // 走访：只有真有邻居可走时才计（没邻居时「今日」面板会把走访卡撤掉，红点不该还替它数着）
     const nb = Farm.neighbors && Farm.neighbors._todayList;
-    if (nb && nb.length && (c.neighborsVisited || []).length < 3) pending++;
+    const needNb = (Farm.neighbors && Farm.neighbors.visitTarget) ? Farm.neighbors.visitTarget() : 3;
+    if (nb && nb.length && !c.neighborQuestPaid && (c.neighborsVisited || []).length < needNb) pending++;
     // 今日特价种子：买过就不再计（2026-08-15 之前它永远 +1，红点一天到晚清不掉＝没有红点）
     const specId = Farm.daily && Farm.daily.getSpecialSeedId();
     if (specId && !c.specialSeedBought) pending++;

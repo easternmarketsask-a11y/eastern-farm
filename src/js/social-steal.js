@@ -21,7 +21,8 @@
     FERT_YIELD_MULT: 2,               // 施肥：产量 ×2
     DOG_PROTECT: 1,                   // 看家狗在岗：被偷上限 -1（T6）
     // ===== 真会员互偷（spec 2026-06-11）=====
-    STEAL_UNLOCK_LEVEL: 7,            // 自己达到 Lv7 才解锁"顺菜"功能（Chris 2026-06-11）
+    STEAL_UNLOCK_LEVEL: 1,            // 等级不再卡顺菜
+    STEAL_UNLOCK_HARVESTS: 1,         // 自己收过一棵菜之后就能顺（Chris 2026-08-18）
     LOST_DAILY_MAX: 3,                // 每天最多被真人偷走的棵数（超出的事件作废）
     NEWBIE_PROTECT_LEVEL: 3,          // victim level < 3 不可被偷
     DOG_CATCH_CHANCE: 0.2,            // 对方有狗时小偷被抓概率
@@ -51,6 +52,11 @@
 
     perTargetCap(targetId) {
       return socialConfig.STEAL_PER_TARGET + (this._graceStore()[targetId] || 0);
+    },
+
+    isUnlocked() {
+      const need = socialConfig.STEAL_UNLOCK_HARVESTS || 1;
+      return ((Farm.state.data && Farm.state.data.totalHarvests) || 0) >= need;
     },
 
     // 今日是否还能从该对象顺一棵。
@@ -95,12 +101,11 @@
     // victim: { uid, name, level, hasGuardDog }；plotInfo: { plotIdx, cropId, plantedAt }
     async stealFromReal(victim, plotInfo) {
       const lang = Farm.state.data.language || 'zh';
-      // 自己未到解锁等级 → 不能顺菜（UI 已隐藏可偷态，这里是兜底）
-      if ((Farm.state.data.level || 1) < socialConfig.STEAL_UNLOCK_LEVEL) {
+      if (!this.isUnlocked()) {
         return { ok: false, reason: 'locked',
           message: lang === 'en'
-            ? `🔒 Reach Lv${socialConfig.STEAL_UNLOCK_LEVEL} to unlock grabbing crops`
-            : `农场达到 Lv${socialConfig.STEAL_UNLOCK_LEVEL} 后解锁顺菜` };
+            ? 'Harvest a crop of your own first, then you can take one from a neighbor.'
+            : '先收一次自己的菜，才能去邻居家顺。' };
       }
       if ((victim.level || 1) < socialConfig.NEWBIE_PROTECT_LEVEL) {
         return { ok: false, reason: 'newbie_protected' };

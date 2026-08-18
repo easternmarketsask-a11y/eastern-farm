@@ -85,6 +85,7 @@
       date: '',
       lotterySpunFree: false,   // free daily spin used?
       neighborsVisited: [],     // neighbor IDs visited today
+      neighborQuestPaid: false, // 今日走访奖励已发
       newsRead: false,
       firstHarvestDone: false,  // first harvest of day bonus claimed?
       firstDeliveryDone: false, // first warehouse→market delivery of day (+20%)
@@ -133,7 +134,7 @@
     orderEp: { date: '', earned: 0 },  // self-resetting daily cap on 超市积分 from orders
 
     // ============ Neighbor system (Phase 1 — 2026-05-24) ============
-    nickname: null,             // user-set in settings (else derived "{firstChar}邻居")
+    nickname: null,             // 玩家自起；空则对外显示会员真名
     visibleToNeighbors: true,   // privacy toggle (settings)
     excludeFromRanking: false,  // store-owner flag: hide from others' rankings/neighbors (owner can still browse)
     lastLikesSeen: 0,           // count of likes the user has already acknowledged
@@ -418,6 +419,7 @@
               date: today,
               lotterySpunFree: false,
               neighborsVisited: [],
+              neighborQuestPaid: false,
               newsRead: false,
               firstHarvestDone: false,
               firstDeliveryDone: false,
@@ -761,7 +763,7 @@
       }
       if (!this.data.dailyClaims || this.data.dailyClaims.date !== today) {
         this.data.dailyClaims = {
-          date: today, lotterySpunFree: false, neighborsVisited: [], newsRead: false,
+          date: today, lotterySpunFree: false, neighborsVisited: [], neighborQuestPaid: false, newsRead: false,
           firstHarvestDone: false, firstDeliveryDone: false, likesSentToday: [], helpSentToday: [],
           stickersSentToday: [], stolenToday: 0, stolenFromTargets: {}, lostToRealToday: 0, visitFootprints: [],
         };

@@ -137,7 +137,7 @@
         <div class="daily-card daily-neighbor">
           <div class="daily-card-title">🏘 ${lang === 'en' ? 'Visit Neighbors' : '邻居走访'}</div>
           <div class="daily-card-body">
-            ${lang === 'en' ? `Visit 3 neighbors today (${visited}/3) → +40 <span class="coin-icon"></span>` : `今日走访 3 户邻居 (${visited}/3) → +40 <span class="coin-icon"></span>`}
+            ${lang === 'en' ? `Visit neighbors who are online today (${visited}/3) → +40 <span class="coin-icon"></span>` : `走访今天在线的邻居 (${visited}/3) → +40 <span class="coin-icon"></span>`}
           </div>
           <button class="daily-claim" id="dailyOpenNeighbors">
             ${visitedComplete ? '✅ ' + (lang === 'en' ? 'Done' : '已完成') : '🚪 ' + (lang === 'en' ? 'Visit' : '去走访')}
@@ -193,9 +193,16 @@
       // 别挂一个永远 0/3 完不成的任务在那。
       if (Farm.neighbors && Farm.neighbors._fetchToday) {
         Farm.neighbors._fetchToday().then((list) => {
-          if (!list || list.length === 0) {
-            const card = document.querySelector('.daily-card.daily-neighbor');
-            if (card) card.remove();
+          const card = document.querySelector('.daily-card.daily-neighbor');
+          if (!card) return;
+          if (!list || list.length === 0) { card.remove(); return; }
+          const need = Math.min(3, list.length);
+          const body = card.querySelector('.daily-card-body');
+          const lang2 = Farm.state.data.language;
+          if (body) {
+            body.innerHTML = lang2 === 'en'
+              ? ('Visit neighbors online today (' + visited + '/' + need + ') → +40 <span class="coin-icon"></span>')
+              : ('走访今天在线的邻居（' + visited + '/' + need + '）→ +40 <span class="coin-icon"></span>');
           }
         }).catch(() => {});
       }

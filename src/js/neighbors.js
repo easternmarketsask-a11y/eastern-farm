@@ -77,21 +77,40 @@
     _todayList: null,
     _leaderboardList: null,
 
-    // Build "today's 3 neighbors". Tries Firestore first; falls back to
-    // procedural if Firestore returned no real members (e.g., first week
-    // after launch when only Chris has the app).
+    visitTarget() {
+      const n = (this._todayList || []).length;
+      if (n <= 0) return 0;
+      return Math.min(3, n);
+    },
+    noteVisit(neighbor) {
+      const id = (neighbor && neighbor.id) || (neighbor && neighbor.uid ? 'real_' + neighbor.uid : '');
+      if (!id || !Farm.state.claimNeighborVisit) return;
+      const wasNew = Farm.state.claimNeighborVisit(id);
+      if (!wasNew) return;
+      const visited = Farm.state.data.dailyClaims.neighborsVisited || [];
+      const need = this.visitTarget() || 3;
+      const claims = Farm.state.data.dailyClaims;
+      if (claims.neighborQuestPaid || visited.length < need) return;
+      claims.neighborQuestPaid = true;
+      Farm.state.addCoins(40);
+      Farm.state.save();
+      if (Farm.ui.refreshHUD) Farm.ui.refreshHUD();
+      const lang = Farm.state.data.language;
+      setTimeout(() => {
+        if (Farm.ui.toast) Farm.ui.toast(lang === 'en'
+          ? 'Visited today\'s neighbors · +40 coins'
+          : '今日走访完成 · +40 农场币', 3000);
+        if (Farm.audio) Farm.audio.play('achievement');
+      }, 400);
+    },
+
+    // 今天在过线的真人，不够 3 个也全列，不补假人。
     async _fetchToday() {
       if (this._todayList) return this._todayList;
       let real = [];
-      if (Farm.fbGameSync) {
-        try {
-          const pool = await Farm.fbGameSync.fetchVisiblePool(30);
-          real = Farm.fbGameSync.pickDailyThree(pool);
-        } catch (_) {}
+      if (Farm.fbGameSync && Farm.fbGameSync.fetchOnlineToday) {
+        try { real = await Farm.fbGameSync.fetchOnlineToday(20); } catch (_) {}
       }
-      // Real members only — no procedural/fake fill-ins. If fewer than 3 real
-      // neighbors are available we just show fewer cards (and an invite state
-      // when there are none), rather than fabricating fake players.
       const list = real.map((m, order) => ({
         isReal: true,
         uid: m.uid,
@@ -105,17 +124,6 @@
         id: 'real_' + m.uid,
         order,
       }));
-      // 真会员不足 3 个时，用确定性 AI 邻居补足（够真，不再显示"还没邻居在线"）。
-      // 真人优先，AI 兜底。
-      if (list.length < 3 && Farm.aiNeighbors && Farm.aiNeighbors.loaded) {
-        const need = 3 - list.length;
-        const now = Date.now();
-        Farm.aiNeighbors.dailyPick(need, Farm.state.getDateString()).forEach((aiId, i) => {
-          const card = Farm.aiNeighbors.displayCard(aiId, now);
-          card.order = list.length + i;
-          list.push(card);
-        });
-      }
       this._todayList = list;
       return this._todayList;
     },
@@ -186,6 +194,7 @@
       this._leaderboardList = null;
       this._selfRank = null;
       this._currentTab = 'today';
+      if (Farm.isoView) Farm.isoView._distantAt = 0;
       this._render();
     },
 
@@ -227,7 +236,7 @@
       const tabBarHtml = `
         <div class="tab-bar" style="margin-bottom:10px;">
           <button class="tab-btn ${tab === 'today' ? 'active' : ''}" data-tab="today">
-            🏘 ${lang === 'en' ? 'Today' : '今日'}
+            🏘 ${lang === 'en' ? 'Online today' : '今天在线'}
           </button>
           <button class="tab-btn ${tab === 'friends' ? 'active' : ''}" data-tab="friends">
             💚 ${lang === 'en' ? 'Friends' : '好友'}${friendCount > 0 ? ' (' + friendCount + ')' : ''}
@@ -312,19 +321,24 @@
           `;
         }).join('');
         // Progress bar + counter
-        const visitPct = Math.min(100, visited.length / 3 * 100);
+        const need = Math.min(3, Math.max(1, list.length));
+        const visitPct = Math.min(100, visited.length / need * 100);
         const progressHtml = `
           <div class="neighbor-progress-wrap">
+            <div style="margin-bottom:8px;">
+              <button class="btn" id="todayInviteBtn" style="width:100%;">📨 ${lang === 'en' ? 'Invite a friend' : '邀请好友'}</button>
+            </div>
             <div class="neighbor-progress-text">
-              <span>${lang === 'en' ? 'Visit 3 → +40 <span class="coin-icon"></span>' : '走访 3 户 → +40 <span class="coin-icon"></span>'}</span>
-              <span class="neighbor-progress-count">${visited.length}/3</span>
+              <span>${lang === 'en' ? ('Visit ' + need + ' → +40 <span class="coin-icon"></span>') : ('走访 ' + need + ' 户 → +40 <span class="coin-icon"></span>')}</span>
+              <span class="neighbor-progress-count">${visited.length}/${need}</span>
             </div>
             <div class="neighbor-progress-bar"><div class="neighbor-progress-fill" style="width:${visitPct}%;"></div></div>
             <div class="neighbor-likes-meta">${lang === 'en' ? 'Likes left today' : '今日剩余赞'}: ❤️ ${likesRemaining}</div>
           </div>
         `;
         document.getElementById('neighborBody').innerHTML = progressHtml + '<div class="neighbor-list">' + cardsHtml + '</div>';
-        // 首次有邻居可见：教点赞/串门赚币（仅在确有邻居时）
+        const todayInv = document.getElementById('todayInviteBtn');
+        if (todayInv) todayInv.onclick = () => { if (Farm.fbGameSync) Farm.fbGameSync.shareInvite(); };
         if (list.length > 0 && Farm.coach) Farm.coach.fire('first_neighbor', 500);
         document.querySelectorAll('.neighbor-card').forEach(card => {
           card.onclick = () => {
@@ -480,9 +494,8 @@
       }
       if (!fd) fd = generateFarmDisplay(neighbor.id);
 
-      // 自己达到解锁等级才能顺菜（Chris 2026-06-11：Lv7 解锁）
       const cfg = Farm.socialConfig || {};
-      const stealUnlocked = (Farm.state.data.level || 1) >= (cfg.STEAL_UNLOCK_LEVEL || 7);
+      const stealUnlocked = !!(Farm.steal && Farm.steal.isUnlocked && Farm.steal.isUnlocked());
       // 可偷判定：解锁 + 真会员需有真快照 + 不是自己 + 已登录 + 对方过新手保护线
       const realStealable = stealUnlocked && !!realSnap && !!myId && neighbor.uid !== myId &&
         (realSnap.level >= (cfg.NEWBIE_PROTECT_LEVEL || 3)) &&
@@ -560,7 +573,7 @@
         ${(isAI || realStealable)
           ? `<div class="neighbor-steal-tip">${lang === 'en' ? 'Tap a ripe crop to take one' : '点成熟作物可取回一棵'}</div>`
           : (!stealUnlocked && fd.plots.some(p => p.cropId && p.stage >= 2)
-              ? `<div class="neighbor-steal-tip" style="opacity:.85;">${lang === 'en' ? `🔒 Reach Lv${cfg.STEAL_UNLOCK_LEVEL || 7} to unlock grabbing crops` : `🔒 农场到 Lv${cfg.STEAL_UNLOCK_LEVEL || 7} 解锁顺菜`}</div>`
+              ? `<div class="neighbor-steal-tip" style="opacity:.85;">${lang === 'en' ? 'Harvest a crop of your own first, then you can take one here.' : '先收一次自己的菜，才能在这里顺。'}</div>`
               : '')}
         ${decoHtml}
         <div class="neighbor-actions">
@@ -582,20 +595,7 @@
       }
 
       // Mark visited + reward if 3rd of day
-      const wasNew = Farm.state.claimNeighborVisit(neighbor.id);
-      if (wasNew) {
-        const visited = Farm.state.data.dailyClaims.neighborsVisited;
-        if (visited.length === 3) {
-          Farm.state.addCoins(40);
-          Farm.ui.refreshHUD();
-          setTimeout(() => {
-            Farm.ui.toast(lang === 'en'
-              ? '🎉 Visited 3 neighbors! +40 <span class="coin-icon"></span>'
-              : '🎉 走访 3 户完成 +40 <span class="coin-icon"></span>', 3000);
-            if (Farm.audio) Farm.audio.play('achievement');
-          }, 400);
-        }
-      }
+      this.noteVisit(neighbor);
 
       document.getElementById('neighborBack').onclick = () => this._render();
 

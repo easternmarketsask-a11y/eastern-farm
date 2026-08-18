@@ -283,7 +283,7 @@
     _sel: -1, _moving: null,
     _pets: {},          // seed -> {fx,fy,tx,ty,pause,face,hx,hy} live walk state (not persisted)
     _lastWalkT: 0,
-    _buildBtn: null, _palette: null, _hint: null, _modeTabs: null, _palBuild: null, _palTerrain: null,
+    _buildBtn: null, _communityBtn: null, _palette: null, _hint: null, _modeTabs: null, _palBuild: null, _palTerrain: null,
 
     // DEFAULT farm view (Hay Day isometric). Chosen via Farm.state.farmStyle()
     // (saved preference + URL override); players switch in the guide (ⓘ).
@@ -844,8 +844,13 @@
       const dragEnd = this._drag, wasTap = dragEnd && !dragEnd.moved && !this._pinch; this._drag = null;
       if (!wasTap) { if (dragEnd && !this._pinch) this._glideStart(dragEnd); return; }
       if (!p) return;
-      // 🔒 拜访模式: 点什么都只给轻反馈, 绝不触发种收/建造/商店(那些会动伪状态)
-      if (this._visit) { this._visitTapReact(p); return; }
+      // 拜访：点成熟菜=顺，点生长中=浇水帮忙。不触发种收/建造（那些会写进伪状态）。
+      if (this._visit) {
+        const vhit = this._plotAtPoint(p.x, p.y);
+        if (vhit) { this._visitPlotTap(vhit); return; }
+        this._visitTapReact(p);
+        return;
+      }
       if (this._clearMode) {
         const cc = this._screenToCell(p.x, p.y);
         if (this._canClear(cc.gx, cc.gy)) { this._tryClear(cc.gx, cc.gy); return; }
@@ -1541,11 +1546,14 @@
         if (Farm.fbGameSync && Farm.fbGameSync.recordVisit && info.uid) {
           try { Farm.fbGameSync.recordVisit(info.uid); } catch (e) {}   // 足迹用真身状态记
         }
+        if (Farm.neighbors && Farm.neighbors.noteVisit && info._neighbor) {
+          try { Farm.neighbors.noteVisit(info._neighbor); } catch (e) {}
+        }
         const real = Farm.state.data, L = info.layout;
         const vd = {
           language: real.language, level: info.level || 1,
           coins: real.coins, eastPoints: real.eastPoints,   // HUD 仍显示我的钱包
-          plots: (L.plots || []).map((pp) => ({ unlocked: true, crop: pp.c || null, plantedAt: pp.p || 0, gx: pp.x, gy: pp.y })),
+          plots: (L.plots || []).map((pp) => ({ unlocked: true, crop: pp.c || null, plantedAt: pp.p || 0, gx: pp.x, gy: pp.y, srcI: pp.i })),
           map: (L.bld || []).map((bb) => { const ob = { type: bb.t, gx: bb.x, gy: bb.y }; if (bb.lv) ob.lv = bb.lv; return ob; }),
           mapTerrain: {}, decorations: (L.deco || []).map((dd) => ({ itemId: dd.d, gx: dd.x, gy: dd.y, placedAt: 1 })),
           landLevel: L.landLevel || 0,
@@ -1638,7 +1646,7 @@
       act.id = 'visitActions';
       act.innerHTML =
         '<button class="visit-btn" id="visitLike">👍 ' + (en ? 'Like' : '点赞') + '</button>'
-        + '<button class="visit-btn" id="visitInteract">🥬 ' + (en ? 'Interact' : '互动·顺菜') + '</button>'
+        + '<button class="visit-btn" id="visitWater">💧 ' + (en ? 'Water' : '浇水') + '</button>'
         + '<button class="visit-btn visit-btn--home" id="visitHome">↩️ ' + (en ? 'Go home' : '回自家') + '</button>';
       document.body.appendChild(act);
       const info2 = this._visit.info;
@@ -1650,25 +1658,75 @@
           ? (en ? 'Already liked today' : '今日已赞过')
           : (en ? 'Liked! ❤️' : '已点赞 ❤️'), 2200);
       };
-      document.getElementById('visitInteract').onclick = () => {
-        // 顺菜/送礼走既有的经典互动面板(带看门狗/上限), 以真身打开
+      document.getElementById('visitWater').onclick = async () => {
         if (Farm.audio) Farm.audio.play('tap');
-        const target = info2._neighbor;
-        this.exitVisitFarm();
-        if (target && Farm.neighbors && Farm.neighbors.viewFarm) Farm.neighbors.viewFarm(target, { classic: true });
-        else if (Farm.neighbors && Farm.neighbors.open) Farm.neighbors.open();
+        if (!(Farm.fbGameSync && Farm.fbGameSync.sendHelp) || !info2.uid) return;
+        const r = await this._withRealState(() => Farm.fbGameSync.sendHelp(info2.uid));
+        if (Farm.ui && Farm.ui.toast) {
+          Farm.ui.toast(r && r.ok
+            ? (en ? 'Watered their crops.' : '帮他们浇了水。')
+            : ((r && r.message) || (en ? 'Already helped today.' : '今天已经帮过了。')), 2200);
+        }
+        if (r && r.ok) {
+          (Farm.state.data.plots || []).forEach((pl) => {
+            if (pl && pl.crop && Farm.tending && Farm.tending.applyWaterSpeedup) Farm.tending.applyWaterSpeedup(pl);
+          });
+          this.render();
+          if (Farm.ui.refreshHUD) Farm.ui.refreshHUD();
+        }
       };
     },
 
-    // 拜访中点到 TA 家的东西 → 轻反馈, 绝不触发任何真操作
+    async _visitPlotTap(hit) {
+      const plot = (Farm.state.data.plots || [])[hit.i];
+      const info = this._visit && this._visit.info;
+      if (!plot || !plot.crop || !info) { this._visitTapReact({ x: 0, y: 0 }); return; }
+      const en = this._lang() === 'en';
+      const gs = (info._neighbor && info._neighbor._doc && info._neighbor._doc.gameStats) || {};
+      if (Farm.crops.isMature(plot)) {
+        if (!(Farm.steal && Farm.steal.stealFromReal)) return;
+        if (!Farm.steal.isUnlocked || !Farm.steal.isUnlocked()) {
+          if (Farm.ui && Farm.ui.toast) Farm.ui.toast(en
+            ? 'Harvest a crop of your own first, then you can take one here.'
+            : '先收一次自己的菜，才能在这里顺。');
+          return;
+        }
+        const r = await this._withRealState(() => Farm.steal.stealFromReal(
+          { uid: info.uid, name: info.name, level: info.level || 1, hasGuardDog: !!gs.hasGuardDog },
+          { plotIdx: (plot.srcI != null ? plot.srcI : hit.i), cropId: plot.crop, plantedAt: plot.plantedAt || 0 }
+        ));
+        if (r && r.ok) {
+          plot.crop = null; plot.plantedAt = 0;
+          this.render();
+          if (Farm.ui && Farm.ui.toast) Farm.ui.toast(en ? 'Taken to your barn.' : '已放进自家谷仓。', 2000);
+          if (Farm.audio) Farm.audio.play('coin');
+          if (Farm.ui.refreshHUD) Farm.ui.refreshHUD();
+        } else if (Farm.ui && Farm.ui.toast) {
+          Farm.ui.toast((r && r.message) || (en ? 'Could not take that crop.' : '这棵没顺成。'), 2600);
+        }
+        return;
+      }
+      if (!(Farm.fbGameSync && Farm.fbGameSync.sendHelp)) return;
+      const r = await this._withRealState(() => Farm.fbGameSync.sendHelp(info.uid));
+      if (r && r.ok) {
+        if (Farm.tending && Farm.tending.applyWaterSpeedup) Farm.tending.applyWaterSpeedup(plot);
+        this.render();
+        if (Farm.ui && Farm.ui.toast) Farm.ui.toast(en ? 'Watered their crops.' : '帮他们浇了水。', 2000);
+        if (Farm.audio) Farm.audio.play('coin');
+        if (Farm.ui.refreshHUD) Farm.ui.refreshHUD();
+      } else if (Farm.ui && Farm.ui.toast) {
+        Farm.ui.toast((r && r.message) || (en ? 'Already helped today.' : '今天已经帮过了。'), 2200);
+      }
+    },
+    // 拜访中点到空地/建筑 → 轻反馈
     _visitTapReact(p) {
       const en = this._lang() === 'en';
       if (Farm.ui && Farm.ui.floatText) Farm.ui.floatText('✨', p.x, p.y - 8, '#e8a020');
       if (!this._visitHintShown) {
         this._visitHintShown = true;
         if (Farm.ui && Farm.ui.toast) Farm.ui.toast(en
-          ? 'You are visiting — use the buttons below to interact'
-          : '正在拜访。顺菜请点下方「互动」', 3200);
+          ? 'Tap a ripe crop to take one. Tap a growing crop to water.'
+          : '点成熟的菜可顺走一棵。点还在长的菜是帮忙浇水。', 3200);
       }
     },
 
@@ -2012,6 +2070,11 @@
       btn.onclick = () => this.toggleBuild();
       document.body.appendChild(btn); this._buildBtn = btn;
       if (!(Farm.state.data && Farm.state.data.mapBuildSeen) && btn.animate) this._buildPulse = btn.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.09)' }, { transform: 'scale(1)' }], { duration: 1300, iterations: Infinity, easing: 'ease-in-out' });
+      const nbBtn = document.createElement('button');
+      nbBtn.id = 'isoCommunityBtn';
+      nbBtn.style.cssText = 'position:fixed;left:14px;z-index:20;border:none;border-radius:24px;padding:11px 16px;min-height:44px;box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;font:600 15px/1 "Noto Sans SC",system-ui,sans-serif;color:#fff;background:#3a8c50;box-shadow:0 3px 10px rgba(0,0,0,.22);cursor:pointer;';
+      nbBtn.onclick = () => { if (Farm.audio) Farm.audio.play('tap'); if (Farm.neighbors) Farm.neighbors.open(); };
+      document.body.appendChild(nbBtn); this._communityBtn = nbBtn;
 
       const tray = document.createElement('div'); tray.id = 'isoPalette';
       tray.style.cssText = 'position:fixed;left:0;right:0;z-index:20;display:none;flex-direction:column;gap:8px;padding:9px 10px;background:rgba(255,255,255,.94);box-shadow:0 -3px 12px rgba(0,0,0,.12);';
@@ -2059,9 +2122,9 @@
     // mode/zoom/camera state lives on `this` and survives the rebuild.
     relang() {
       if (!this._on) return;   // map inactive → next init() builds it fresh in the right language
-      [this._buildBtn, this._palette, this._hint, this._zoomUI].forEach((el) => { if (el && el.remove) el.remove(); });
+      [this._buildBtn, this._communityBtn, this._palette, this._hint, this._zoomUI].forEach((el) => { if (el && el.remove) el.remove(); });
       if (this._buildPulse && this._buildPulse.cancel) { try { this._buildPulse.cancel(); } catch (e) {} }
-      this._buildBtn = this._palette = this._hint = this._zoomUI = null;
+      this._buildBtn = this._communityBtn = this._palette = this._hint = this._zoomUI = null;
       this._modeTabs = this._palBuild = this._palTerrain = null;
       this._buildUI();   // rebuilds in current language; _refreshModeUI()+_layoutUI() restore the mode
       this.render();
@@ -2078,6 +2141,14 @@
       }
       if (this._palette) { this._palette.style.display = this._build ? 'flex' : 'none'; this._palette.style.left = r.left + 'px'; this._palette.style.right = Math.max(0, window.innerWidth - (r.left + r.width)) + 'px'; this._palette.style.bottom = fromBottom + 'px'; }
       if (this._buildBtn) { const ph = (this._build && this._palette) ? (this._palette.getBoundingClientRect().height || 74) : 0; this._buildBtn.style.right = (Math.max(0, window.innerWidth - (r.left + r.width)) + 14) + 'px'; this._buildBtn.style.bottom = (fromBottom + (this._build ? ph + 10 : 14)) + 'px'; this._buildBtn.textContent = this._build ? (en ? '✓ Done' : '✓ 完成') : (en ? '🔨 Build' : '🔨 建造'); this._buildBtn.style.background = this._build ? '#FF9800' : '#4CAF50'; }
+      if (this._communityBtn) {
+        const ph = (this._build && this._palette) ? (this._palette.getBoundingClientRect().height || 74) : 0;
+        this._communityBtn.style.left = 'auto';
+        this._communityBtn.style.right = (Math.max(0, window.innerWidth - (r.left + r.width)) + 14) + 'px';
+        this._communityBtn.style.bottom = (fromBottom + (this._build ? ph + 10 : 14) + 52) + 'px';
+        this._communityBtn.textContent = en ? '🏘 Neighbors' : '🏘 邻居';
+        this._communityBtn.style.display = (this._build || this._visit) ? 'none' : 'inline-flex';
+      }
       if (this._hint) { this._hint.style.display = this._build ? 'block' : 'none'; this._hint.style.left = r.left + 'px'; this._hint.style.right = Math.max(0, window.innerWidth - (r.left + r.width)) + 'px'; this._hint.style.top = (r.top + 8) + 'px'; }
     },
     _refreshModeUI() {
@@ -3034,27 +3105,28 @@
        摆在你世界的地平线上, 各占一个固定方位(uid 决定, 稳定不跳), 屋下挂
        名牌+等级, 点小屋 → 打开社区页拜访。真正的共享世界坐标(物理不重叠的
        区域地图)是第二阶段, 需要服务端坐标注册表, 见 roadmap。 */
-    NEIGHBOR_SPOTS: [{ gx: -2.6, gy: 1.4 }, { gx: 18.6, gy: 0.6 }, { gx: -4.2, gy: 7.5 }],
+    NEIGHBOR_SPOTS: [
+      { gx: 6, gy: 24 }, { gx: 12, gy: 23 }, { gx: 18, gy: 24 },
+      { gx: 3, gy: 23 }, { gx: 22, gy: 23 }, { gx: 9, gy: 25 },
+      { gx: 15, gy: 25 }, { gx: 24, gy: 24 },
+    ],
     _loadDistantFarms() {
-      if (this._distantReq) return;
-      this._distantReq = true;
+      const now = Date.now();
+      if (this._distantAt && now - this._distantAt < 60000) return;
+      this._distantAt = now;
       const tryFetch = () => {
-        if (!(Farm.neighbors && Farm.neighbors._fetchToday)) { setTimeout(tryFetch, 5000); return; }
+        if (!(Farm.neighbors && Farm.neighbors._fetchToday)) { setTimeout(tryFetch, 4000); return; }
         Farm.neighbors._fetchToday().then((list) => {
           this._distantFarms = (list || []).slice(0, this.NEIGHBOR_SPOTS.length)
             .map((n) => ({
-              /* 名牌只挂玩家**自己起的**农场昵称(2026-08-15 Chris 看到「X邻居/
-                 S邻居」以为又是假人 —— 那是没起昵称的真实玩家被隐私打码成
-                 「姓氏首字母+邻居」, 看着像占位符)。没起昵称 = 匿名小屋不挂牌,
-                 与「没有就没有」同一原则; 点小屋照样能进社区/拜访。 */
-              name: (n._doc && n._doc.gameStats && n._doc.gameStats.nickname) ? n.name : null,
+              name: n.name || null,
               level: n.level || 1, emoji: n.emoji, _n: n,
             }));
-          this._bgKey = null;   // 名牌进相机缓存, 数据到了重画一次
+          this._bgKey = null;
           if (this._on) this.render();
         }).catch(() => {});
       };
-      setTimeout(tryFetch, 4000);   // 等 Firebase 晚初始化完成
+      tryFetch();
     },
     _drawFarNeighbors(fit) {
       if (this._visit) { this._neighborHits = []; return; }
@@ -3065,7 +3137,7 @@
       for (let i = 0; i < this.NEIGHBOR_SPOTS.length; i++) {
         const sp = this.NEIGHBOR_SPOTS[i];
         const nb = farms && farms[i];
-        if (!nb && i >= 2) continue;              // 没数据时保底只画前两户匿名小屋
+        if (!nb) continue;
         const c = this._cell(sp.gx, sp.gy);
         this._drawTinyCottage(c.x, c.y);
         this._neighborHits.push({ x: c.x, y: c.y - th * 0.5, r: th * 1.5 });

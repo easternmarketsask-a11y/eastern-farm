@@ -4675,6 +4675,7 @@ body.modal-open .pwa-install-banner { display: none; }
 
 /* =============== 拜访模式(2026-08-14 共享世界) =============== */
 /* 在别人家: 自家的 dock/建造钮/顶部提示条都收起来, 界面只留「看和互动」 */
+.visit-mode #isoCommunityBtn { display: none !important; }
 .visit-mode #bottombar,
 .visit-mode #isoBuildBtn,
 .visit-mode #harvestStatusBar,

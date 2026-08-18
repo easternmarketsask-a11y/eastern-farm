@@ -212,7 +212,9 @@
       if (this.currentUser) {
         const stats = (this.memberDoc && this.memberDoc.gameStats) || {};
         const realName = (this.memberDoc && (this.memberDoc.name || this.memberDoc.username)) || '';
-        const nickname = stats.nickname || (realName ? (realName.charAt(0) + '邻居') : (lang === 'en' ? 'Member' : '会员'));
+        const nickname = (stats.nickname && String(stats.nickname).trim())
+          || realName
+          || (lang === 'en' ? 'Member' : '会员');
         const safeName = String(nickname).replace(/[<>"&]/g, '');
         // Game level title (e.g. "Lv 5 学徒") — real because it's based
         // on actual XP earned in-game.

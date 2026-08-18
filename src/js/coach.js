@@ -31,8 +31,8 @@
                       en: 'Tap a growing plot to water it — 20% faster.' },
     first_neighbor: { zh: '社区可拜访邻居、点赞，并获得农场币。',
                       en: 'Visit neighbors to like, drop by, and earn coins.' },
-    steal_unlocked: { zh: '已解锁顺菜：在邻居家点成熟作物，可取回一棵。',
-                      en: 'Grabbing unlocked: tap a ripe crop at a neighbor’s to take one.' },
+    steal_unlocked: { zh: '可以去邻居家点成熟的菜，顺走一棵放进谷仓。',
+                      en: 'You can tap a ripe crop at a neighbor’s farm and take one to your barn.' },
   };
 
   const coach = {

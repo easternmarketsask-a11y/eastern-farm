@@ -7,7 +7,7 @@
  *     level: number,
  *     totalHarvests: number,
  *     totalDeliveries: number,
- *     nickname: string | null,   // user-set; null → derive "{firstChar}邻居"
+ *     nickname: string | null,   // user-set; empty → public displayName uses real member name
  *     visibleToNeighbors: bool,  // default true (set via settings)
  *     likesReceived: number,     // atomic counter, only ever incremented
  *     lastSeenAt: serverTimestamp,
@@ -55,25 +55,18 @@
   }
 
   const gameSync = {
-    // Safe public display name for THIS player (no real name leaks to others):
-    // nickname if set, else "{firstChar of own real name}邻居", else generic.
-    // Computed for the player's OWN doc only, so reading their own member name
-    // is fine — the derived string is what gets stored publicly.
+    // 对外名字：有农场昵称用昵称；没有就用会员真名（Chris 2026-08-18）。
     _selfDisplayName() {
       const s = Farm.state.data;
-      if (s.nickname) return s.nickname;
+      if (s.nickname && String(s.nickname).trim()) return String(s.nickname).trim();
       const md = (Farm.fbAuth && Farm.fbAuth.memberDoc) || {};
-      const realName = md.name || md.firstName || '';
-      const fc = (realName + '').trim().charAt(0);
-      return this._fallbackName(fc);
+      const realName = (md.name || md.firstName || md.username || '').trim();
+      if (realName) return realName;
+      return this._fallbackName();
     },
 
-    // Language-aware fallback display name for members with no set nickname.
-    // Keeps EN neighbor lists from leaking Chinese「邻居」when the viewer is
-    // playing in English. Display/derive layer only — never a save field.
-    _fallbackName(firstChar) {
+    _fallbackName() {
       const en = (Farm.state && Farm.state.data && Farm.state.data.language) === 'en';
-      if (firstChar) return en ? 'Neighbor ' + firstChar : firstChar + '邻居';
       return en ? 'Saskatoon farmer' : '萨城邻居';
     },
 
@@ -119,9 +112,11 @@
         worldLayout: {
           v: 1,
           plots: (s.plots || [])
-            .filter((p) => p && p.unlocked && Number.isInteger(p.gx))
-            .slice(0, 48)
-            .map((p) => ({ x: p.gx, y: p.gy, c: p.crop || null, p: p.plantedAt || 0 })),
+            .map((p, i) => (p && p.unlocked && Number.isInteger(p.gx))
+              ? { i: i, x: p.gx, y: p.gy, c: p.crop || null, p: p.plantedAt || 0 }
+              : null)
+            .filter(Boolean)
+            .slice(0, 48),
           bld: (s.map || [])
             .filter((o) => o && Number.isInteger(o.gx))
             .slice(0, 24)
@@ -398,17 +393,33 @@
       this.push();
     },
 
-    // Compute the public display name for a member doc.
     displayName(doc) {
-      if (!doc) return this._fallbackName('');
+      if (!doc) return this._fallbackName();
       const stats = doc.gameStats || {};
-      // Prefer the safe precomputed name (farm_players docs carry no real name).
-      if (stats.displayName) return stats.displayName;
-      if (stats.nickname) return stats.nickname;
-      // Legacy fallback (member docs): derive from real name first character.
-      const realName = doc.name || doc.firstName || '';
-      const firstChar = (realName + '').trim().charAt(0);
-      return this._fallbackName(firstChar);
+      if (stats.nickname && String(stats.nickname).trim()) return String(stats.nickname).trim();
+      const realName = (doc.name || doc.firstName || doc.username || '').trim();
+      if (realName) return realName;
+      if (stats.displayName && String(stats.displayName).trim()) return String(stats.displayName).trim();
+      return this._fallbackName();
+    },
+
+    _lastSeenMs(doc) {
+      const last = doc && doc.gameStats && doc.gameStats.lastSeenAt;
+      if (!last) return 0;
+      if (typeof last.toMillis === 'function') return last.toMillis();
+      const n = new Date(last).getTime();
+      return isFinite(n) ? n : 0;
+    },
+
+    // 今天在过线的真人（萨城本地日），按最近活动排。
+    async fetchOnlineToday(limit) {
+      const cap = limit || 20;
+      const pool = await this.fetchVisiblePool(Math.max(40, cap));
+      const today = Farm.state.getDateString();
+      return pool.filter((m) => {
+        const ms = this._lastSeenMs(m.doc);
+        return ms && Farm.state.getDateString(new Date(ms)) === today;
+      }).slice(0, cap);
     },
 
     // Query a pool of visible members. We pick 3 of these deterministically
