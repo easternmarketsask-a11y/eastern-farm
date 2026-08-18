@@ -10,7 +10,7 @@
  * upright sprites placed on cells, depth-sorted back-to-front (gx+gy).
  */
 (function () {
-  const COLS = 20, ROWS = 16;      // 前景不再加空行：空地放山后头并种满树
+  const COLS = 28, ROWS = 16;      // 2026-08-18 往东扩 8 格给建造。不往镜头前加空行（构图：空地在山后）。
   // Start zone origin. (The 2026-06-18 "forward move" to (6,6) was cancelled — Chris
   // preferred adapting via the new full-scene background instead. _undoForwardOnce()
   // shifts any save that got forwarded back to here.)
@@ -26,21 +26,22 @@
   const ZMIN = 0.70, ZMAX = 2.4;
   const REQUIRED_LV = { 4: 2, 5: 2, 6: 3, 7: 3, 8: 4, 9: 4, 10: 5, 11: 5 };
   // Pay-to-expand land. Each level's TOTAL owned rectangle (cells x1,y1..x2,y2).
-  // 两套表：旧存档 landOrigin≠front 继续用 BACK（从山脚往镜头扩，不能改，否则已建的会掉出地界）。
+  // 两套表：旧存档 landOrigin≠front 继续用 BACK（从山脚往镜头扩）。
   // 新农场 landOrigin=front：开局在镜头前，扩地往山上（y 变小）再往东。
+  // 🔒 每一档只许放大、不许缩小（老存档已建物不能掉出地界）。2026-08-18 东扩。
   const LAND_LEVELS_BACK = [
-    { x1: 0, y1: 0, x2: 8, y2: 10, coins: 0, points: 0 },
-    { x1: 0, y1: 0, x2: 12, y2: 10, coins: 800, points: 0 },
-    { x1: 0, y1: 0, x2: 12, y2: 13, coins: 1500, points: 0 },
-    { x1: 0, y1: 0, x2: 15, y2: 15, coins: 3000, points: 30 },
-    { x1: 0, y1: 0, x2: 19, y2: 15, coins: 6000, points: 50 },
+    { x1: 0, y1: 0, x2: 14, y2: 12, coins: 0, points: 0 },
+    { x1: 0, y1: 0, x2: 18, y2: 13, coins: 800, points: 0 },
+    { x1: 0, y1: 0, x2: 22, y2: 14, coins: 1500, points: 0 },
+    { x1: 0, y1: 0, x2: 25, y2: 15, coins: 3000, points: 30 },
+    { x1: 0, y1: 0, x2: 27, y2: 15, coins: 6000, points: 50 },
   ];
   const LAND_LEVELS_FRONT = [
-    { x1: 0, y1: 9, x2: 8, y2: 15, coins: 0, points: 0 },       // L0 世界前缘
-    { x1: 0, y1: 5, x2: 8, y2: 15, coins: 800, points: 0 },     // L1 往山上开林
-    { x1: 0, y1: 2, x2: 12, y2: 15, coins: 1500, points: 0 },   // L2
-    { x1: 0, y1: 0, x2: 15, y2: 15, coins: 3000, points: 30 },  // L3
-    { x1: 0, y1: 0, x2: 19, y2: 15, coins: 6000, points: 50 },  // L4
+    { x1: 0, y1: 6, x2: 16, y2: 15, coins: 0, points: 0 },      // L0 开局就有东侧空地
+    { x1: 0, y1: 3, x2: 20, y2: 15, coins: 800, points: 0 },    // L1
+    { x1: 0, y1: 1, x2: 23, y2: 15, coins: 1500, points: 0 },   // L2
+    { x1: 0, y1: 0, x2: 25, y2: 15, coins: 3000, points: 30 },  // L3
+    { x1: 0, y1: 0, x2: 27, y2: 15, coins: 6000, points: 50 },  // L4 满图 28×16
   ];
   // 🔒 默认水塘 v2（2026-08-13 二次修正）：谷仓正前方**隔一整排草**。
   // v1 的 (6,6) 与谷仓底座 (6,5) 是相邻格——有机水塘的波浪轮廓一溢出就贴着
@@ -1757,6 +1758,10 @@
       const ob = this._ownedBounds(), ctr = this._screenToCell(this._cssW() / 2, this._cssH() / 2);
       const tries = [[ctr.gx, ctr.gy]];
       for (let gy = ob.y1; gy <= ob.y2; gy++) for (let gx = ob.x1; gx <= ob.x2; gx++) tries.push([gx, gy]);
+      Object.keys(Farm.state.data.clearedCells || {}).forEach((k) => {
+        const a = k.split(',');
+        tries.push([+a[0], +a[1]]);
+      });
       for (const [gx, gy] of tries) if (this._cellFreeForPlot(gx, gy)) {
         if (!Farm.state.spendCoins(cost)) return;
         // 走同一计数器：extraPlots +1（同帽同价），plot 带上选好的 gx,gy。
@@ -2831,7 +2836,7 @@
       // 2026-08-15 Chris:「菜摊前的路应该一直延伸, 不能断了」——
       // 两端都伸到世界之外(A 东端 24 格外, C 西端 B-15 格), 任何摊位位置/
       // 缩放下路都是「从远方来、往远方去」的过路道, 不会断在草地里。
-      const A = { x: 24.0, y: 9.8 };
+      const A = { x: COLS + 4, y: 9.8 };
       const C = { x: B.x - 15.0, y: B.y + 3.4 };
       return { A, B, C };
     },
@@ -3341,9 +3346,11 @@
     _blitBackdrop(ctx, W, H) {
       const stl = (Farm.state.data.map || []).find((m) => m && m.type === 'house');
       const cc = Farm.state.data && Farm.state.data.clearedCells;
+      const ob = this._ownedBounds();
       const key = Math.round(this._camX) + ',' + Math.round(this._camY) + ',' + this._zoom.toFixed(3) + ',' + W + ',' + H
         + ',' + (stl ? stl.gx + '_' + stl.gy : '-')
         + ',L' + this._landLevel() + (this._isFrontLand() ? 'F' : 'B')
+        + ',R' + ob.x1 + '_' + ob.y1 + '_' + ob.x2 + '_' + ob.y2
         + ',C' + (cc ? Object.keys(cc).sort().join('_') : '');
       if (this._bgKey !== key || !this._bgCache) {
         if (!this._bgCache) this._bgCache = document.createElement('canvas');
