@@ -92,6 +92,34 @@ try {
   await cdp.send('Runtime.enable', {}, sessionId);
   await cdp.send('Log.enable', {}, sessionId);
   await cdp.send('Page.enable', {}, sessionId);
+
+  /* 🔒 验证跑动绝不许写进真实埋点计数器（2026-08-17 加）
+     ------------------------------------------------------------------
+     起因：拿这些脚本对**生产站**跑验证时，每跑一次就往 Chris 后台漏斗里加
+     一次「来到 / 进入 / 访客」；而无头浏览器每次都是全新配置，按人去重那一列
+     每跑一次还多算一台设备。当天 UTC 计数一度 3/2/4 全是测试流量。
+     后台数字是 Chris 拿来做经营判断的 —— 往里灌假数据比不测更糟。
+
+     必须用 addScriptToEvaluateOnNewDocument（**页面任何脚本之前**执行）：
+     open_attempt 是在 <head> 内联段里发的，等到 Runtime.evaluate 那会儿
+     早就发出去了，拦不住。
+     假装成功返回 200，免得被测代码走进 .catch() 分支 —— 那会让验证测的是
+     另一条路径。 */
+  await cdp.send('Page.addScriptToEvaluateOnNewDocument', {
+    source: `(function () {
+      var orig = window.fetch;
+      window.fetch = function (u) {
+        try {
+          if (String(u).indexOf('game-track') !== -1) {
+            return Promise.resolve(new Response('{"ok":true}', { status: 200 }));
+          }
+        } catch (e) {}
+        return orig.apply(this, arguments);
+      };
+      window.__efTrackingBlocked = true;
+    })();`,
+  }, sessionId);
+
   await cdp.send('Page.navigate', { url }, sessionId);
   await sleep(waitMs); // let fetch()-based async init settle
 
