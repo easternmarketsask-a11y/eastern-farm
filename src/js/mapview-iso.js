@@ -134,9 +134,8 @@
   // cost = 农场币 to place (coins; East Points stay scarce for real rewards). charm =
   // 农场魅力 gained (derived ≈ cost/8) — a vanity progression to drive the build impulse.
   const BUILDINGS = {
-    // 我的家：全场限一座。2026-08-18 起每级换一张贴图、占地视觉变大。
-    // 碰撞仍是 2×2，避免旧存档挤爆邻格。更高档以后继续往 HOME_LEVELS 加。
-    home: { img: 'house', w: 2, h: 2, sc: 2.3, zh: '我的家', en: 'My Home', tap: 'home', cost: 300, unique: true },
+    // 我的家：可多座（HOME_CAP）。碰撞仍 2×2。点房子=改建补差价；调色盘再建=付全价。
+    home: { img: 'house', w: 2, h: 2, sc: 2.3, zh: '我的家', en: 'My Home', tap: 'home', cost: 300 },
     barn: { img: 'barn', w: 2, h: 2, sc: 2.4, zh: '谷仓', en: 'Barn', tap: 'warehouse', cost: 350 },
     // 菜摊(类型名 house 是历史存档键, 不能改): 2026-08-14 二次定位 ——
     // Chris:「摊位看起来就是菜摊, 干脆作为菜摊用, 卖菜给路人; 种子店不需要实体」。
@@ -206,7 +205,9 @@
   // 'stall' 2026-08-14 从面板下架: 摊位贴图现在是种子店的专属形象, 再卖同款
   // 装饰摊 = 两个一样的摊分不清哪个能买种子。已放置的照常渲染不受影响。
   const PALETTE = ['home', 'barn', 'house', 'greenhouse', 'coop', 'well', 'tree', 'bush', 'lantern', 'fence', 'wheel', 'bridge'];
-  // 我的家升级表: 每级的名字/升级价/玩家等级门槛/魅力值。lv 存在 map 对象上(o.lv)。
+  // 我的家图册。改建只收与现款的差价；另建一座收全价（农户小宅另建至少 cost=300）。
+  // lv 存在每座 map 对象上。全场最多 HOME_CAP 座。
+  const HOME_CAP = 4;
   const HOME_LEVELS = [
     { zh: '农户小宅', en: 'Farm Cottage',     cost: 0,     needLv: 1,  charm: 40,   upkeep: 0,   stem: 'p_house_1', draw: 1.00, mansion: false },
     { zh: '砖瓦农居', en: 'Brick Farmhouse',  cost: 1200,  needLv: 3,  charm: 90,   upkeep: 8,   stem: 'p_house_2', draw: 1.22, mansion: false },
@@ -698,7 +699,7 @@
       if (ids.length === 2) { const [a, b] = ids.map(k => this._pointers[k]); this._pinch = { dist: Math.hypot(a.x - b.x, a.y - b.y) || 1, zoom: this._zoom }; this._drag = null; this._moving = null; this._painting = false; this._pressCell = null; this._pressBuilding = -1; return; }
       if (this._build && this._editMode === 'terrain') { const c = this._screenToCell(p.x, p.y); this._painting = true; this._paintCell(c.gx, c.gy); return; }
       if (this._build) {
-        if (this._sel >= 0) { const ch = this._delChip((Farm.state.data.map)[this._sel]); if (Math.hypot(p.x - ch.x, p.y - ch.y) <= ch.r) { const o = Farm.state.data.map[this._sel], b = BUILDINGS[o.type], refund = b ? Math.round((b.cost || 0) / 2) : 0; Farm.state.data.map.splice(this._sel, 1); this._sel = -1; if (refund > 0) { Farm.state.addCoins(refund); if (Farm.ui && Farm.ui.refreshHUD) Farm.ui.refreshHUD(); if (Farm.ui && Farm.ui.toast) Farm.ui.toast(this._lang() === 'en' ? ('Removed — refunded ' + refund + ' coins') : ('已移除 — 退回 ' + refund + ' 农场币')); } this._refreshPaletteAfford(); Farm.state.save(); this.render(); return; } }
+        if (this._sel >= 0) { const ch = this._delChip((Farm.state.data.map)[this._sel]); if (Math.hypot(p.x - ch.x, p.y - ch.y) <= ch.r) { const o = Farm.state.data.map[this._sel], b = BUILDINGS[o.type]; let refund = b ? Math.round((b.cost || 0) / 2) : 0; if (o.type === 'home') { const spec = this._homeSpec(o); refund = Math.round(Math.max(BUILDINGS.home.cost || 300, spec.cost || 0) / 2); } Farm.state.data.map.splice(this._sel, 1); this._sel = -1; if (refund > 0) { Farm.state.addCoins(refund); if (Farm.ui && Farm.ui.refreshHUD) Farm.ui.refreshHUD(); if (Farm.ui && Farm.ui.toast) Farm.ui.toast(this._lang() === 'en' ? ('Removed — refunded ' + refund + ' coins') : ('已移除 — 退回 ' + refund + ' 农场币')); } this._refreshPaletteAfford(); Farm.state.save(); this.render(); return; } }
         // Grab by the VISIBLE sprite (generous), not the tiny footprint cell — on a
         // phone you tap the building/decoration you see, which sits above its cell.
         const phit = this._plotAtPoint(p.x, p.y);
@@ -1079,14 +1080,61 @@
        升级 = 变美(手绘加装逐级出现) + 魅力涨, 是金币的长期出口。 */
     _homeSpec(o) {
       const n = HOME_LEVELS.length;
-      // 深度排序会克隆建筑；漏掉 lv 时回落到场上那一座「我的家」。
-      let lv = o && o.lv;
-      if (lv == null && Farm.state && Farm.state.data) {
-        const home = (Farm.state.data.map || []).find((m) => m && m.type === 'home');
-        if (home && home.lv != null) lv = home.lv;
-      }
-      lv = Math.min(Math.max(lv || 1, 1), n);
+      const lv = Math.min(Math.max((o && o.lv) || 1, 1), n);
       return HOME_LEVELS[lv - 1];
+    },
+    _homes() {
+      return ((Farm.state.data && Farm.state.data.map) || []).filter((m) => m && m.type === 'home');
+    },
+    // fromId 有值 = 改建补差价；null = 另建付全价（不低于落成价）。
+    _homePay(fromId, toId) {
+      const n = HOME_LEVELS.length;
+      const to = HOME_LEVELS[Math.min(Math.max(toId || 1, 1), n) - 1];
+      const place = BUILDINGS.home.cost || 300;
+      if (fromId == null) {
+        return { coins: Math.max(place, to.cost || 0), points: to.points || 0 };
+      }
+      const from = HOME_LEVELS[Math.min(Math.max(fromId || 1, 1), n) - 1];
+      return {
+        coins: Math.max(0, (to.cost || 0) - (from.cost || 0)),
+        points: Math.max(0, (to.points || 0) - (from.points || 0)),
+      };
+    },
+    _spendHomePay(pay, desc) {
+      const en = this._lang() === 'en';
+      const needPts = pay.points || 0;
+      const loggedIn = !!(Farm.fbAuth && Farm.fbAuth.isLoggedIn && Farm.fbAuth.isLoggedIn());
+      if (needPts) {
+        if (!loggedIn) {
+          if (Farm.ui.toast) Farm.ui.toast(en ? 'Mansions use store points. Sign in first.' : '豪宅要用超市积分，请先登录。');
+          return false;
+        }
+        if ((Farm.state.data.eastPoints || 0) < needPts) {
+          if (Farm.ui.toast) Farm.ui.toast(en ? 'Not enough store points' : '超市积分不足');
+          return false;
+        }
+      }
+      if (pay.coins > 0 && !Farm.state.spendCoins(pay.coins)) {
+        if (Farm.ui.toast) Farm.ui.toast(en ? 'Not enough coins' : '农场币不足');
+        return false;
+      }
+      if (needPts && !Farm.state.spendEastPoints(needPts, {
+        source: 'ep_shop:home_mansion',
+        description: desc,
+      })) {
+        if (pay.coins > 0) Farm.state.addCoins(pay.coins);
+        if (Farm.ui.toast) Farm.ui.toast(en ? 'Not enough store points' : '超市积分不足');
+        return false;
+      }
+      return true;
+    },
+    _focusHome(o) {
+      const hb = BUILDINGS.home;
+      const hc = this._cell(o.gx + (hb.w - 1) / 2, o.gy + (hb.h - 1) / 2);
+      this._camX += hc.x - this._cssW() / 2;
+      this._camY += hc.y - this._cssH() * 0.55;
+      this._clampCam();
+      this.render();
     },
     _homeSprite(o) {
       const spec = this._homeSpec(o);
@@ -1104,10 +1152,10 @@
     collectHomeUpkeep() {
       const d = Farm.state && Farm.state.data;
       if (!d || Farm.state._visitLock) return;
-      const o = (d.map || []).find((m) => m && m.type === 'home');
-      if (!o) return;
-      const spec = this._homeSpec(o);
-      const fee = spec.upkeep || 0;
+      const homes = this._homes();
+      if (!homes.length) return;
+      let fee = 0;
+      homes.forEach((o) => { fee += (this._homeSpec(o).upkeep || 0); });
       const today = Farm.state.getDateString();
       const en = this._lang() === 'en';
       if (d.homeUpkeepOn === today && !d.homeNeglected) return;
@@ -1136,33 +1184,10 @@
     _buyHome(mapIdx, houseId) {
       const o = (Farm.state.data.map || [])[mapIdx];
       const spec = HOME_LEVELS[houseId - 1];
-      const en = this._lang() === 'en';
       if (!o || o.type !== 'home' || !spec) return;
       if ((o.lv || 1) === houseId) return;
-      const needPts = spec.points || 0;
-      const loggedIn = !!(Farm.fbAuth && Farm.fbAuth.isLoggedIn && Farm.fbAuth.isLoggedIn());
-      if (needPts) {
-        if (!loggedIn) {
-          if (Farm.ui.toast) Farm.ui.toast(en ? 'Mansions use store points. Sign in first.' : '豪宅要用超市积分，请先登录。');
-          return;
-        }
-        if ((Farm.state.data.eastPoints || 0) < needPts) {
-          if (Farm.ui.toast) Farm.ui.toast(en ? 'Not enough store points' : '超市积分不足');
-          return;
-        }
-      }
-      if (spec.cost > 0 && !Farm.state.spendCoins(spec.cost)) {
-        if (Farm.ui.toast) Farm.ui.toast(en ? 'Not enough coins' : '农场币不足');
-        return;
-      }
-      if (needPts && !Farm.state.spendEastPoints(needPts, {
-        source: 'ep_shop:home_mansion',
-        description: '豪宅：' + spec.zh + ' / Mansion: ' + spec.en,
-      })) {
-        if (spec.cost > 0) Farm.state.addCoins(spec.cost);
-        if (Farm.ui.toast) Farm.ui.toast(en ? 'Not enough store points' : '超市积分不足');
-        return;
-      }
+      const pay = this._homePay(o.lv || 1, houseId);
+      if (!this._spendHomePay(pay, '改建：' + spec.zh + ' / Remodel: ' + spec.en)) return;
       o.lv = houseId;
       Farm.state.data.homeUpkeepOn = Farm.state.getDateString();
       Farm.state.data.homeNeglected = false;
@@ -1175,14 +1200,51 @@
       if (Farm.audio) Farm.audio.play('achievement');
       if (Farm.ui.refreshHUD) Farm.ui.refreshHUD();
       if (Farm.ui.confettiBurst) Farm.ui.confettiBurst();
-      // 镜头对准刚换的房子，关掉面板就能看见对应档贴图。
-      const hb = BUILDINGS.home;
-      const hc = this._cell(o.gx + (hb.w - 1) / 2, o.gy + (hb.h - 1) / 2);
-      this._camX += hc.x - this._cssW() / 2;
-      this._camY += hc.y - this._cssH() * 0.55;
-      this._clampCam();
-      this.render();
+      this._focusHome(o);
       this._openHomePanel(mapIdx);
+    },
+
+    _findHomeSpot() {
+      const b = BUILDINGS.home;
+      const ctr = this._screenToCell(this._cssW() / 2, this._cssH() / 2);
+      const c0x = ctr.gx - (b.w >> 1), c0y = ctr.gy - (b.h >> 1);
+      const tries = [[c0x, c0y]];
+      for (let gy = 0; gy + b.h <= ROWS; gy++) for (let gx = 0; gx + b.w <= COLS; gx++) tries.push([gx, gy]);
+      tries.sort((p1, p2) => (Math.abs(p1[0] - c0x) + Math.abs(p1[1] - c0y)) - (Math.abs(p2[0] - c0x) + Math.abs(p2[1] - c0y)));
+      for (const [gx, gy] of tries) if (this._footprintFree(gx, gy, 'home', -1)) return { gx, gy };
+      return null;
+    },
+    _placeNewHome(houseId) {
+      const spec = HOME_LEVELS[houseId - 1];
+      const en = this._lang() === 'en';
+      if (!spec) return;
+      if (this._homes().length >= HOME_CAP) {
+        if (Farm.ui.toast) Farm.ui.toast(en ? 'House limit reached. Tap a house to remodel.' : '房子已经建满。点现有的房子可以改建。');
+        return;
+      }
+      const spot = this._findHomeSpot();
+      if (!spot) {
+        if (Farm.ui.toast) Farm.ui.toast(en ? 'No room' : '没有空位了');
+        return;
+      }
+      const pay = this._homePay(null, houseId);
+      if (!this._spendHomePay(pay, '建房：' + spec.zh + ' / Build: ' + spec.en)) return;
+      const rec = { type: 'home', gx: spot.gx, gy: spot.gy, lv: houseId };
+      (Farm.state.data.map = Farm.state.data.map || []).push(rec);
+      Farm.state.data.homeUpkeepOn = Farm.state.getDateString();
+      Farm.state.data.homeNeglected = false;
+      if (Farm.lifeStory && Farm.lifeStory.record) {
+        Farm.lifeStory.record('homeid_' + houseId,
+          '新盖了一座：' + spec.zh + '。',
+          'Built a new ' + spec.en + '.');
+      }
+      Farm.state.save();
+      if (Farm.audio) Farm.audio.play('achievement');
+      if (Farm.ui.refreshHUD) Farm.ui.refreshHUD();
+      if (Farm.ui.confettiBurst) Farm.ui.confettiBurst();
+      this._refreshPaletteAfford();
+      this._focusHome(rec);
+      this._openHomePanel(Farm.state.data.map.indexOf(rec));
     },
 
     _openHomePanel(idx) {
@@ -1211,19 +1273,21 @@
             + ' <span class="coin-icon"></span></button>'
           : '')
         + '<div style="margin:12px 0 8px;font-size:13px;font-weight:600;">'
-        + (en ? 'Choose a home' : '选一款房子') + '</div>'
+        + (en ? 'Remodel this house' : '改建这栋') + '</div>'
         + '<div style="max-height:46vh;overflow-y:auto;display:grid;grid-template-columns:1fr 1fr;gap:8px;">';
       HOME_LEVELS.forEach((h, i) => {
         const id = i + 1;
         const here = id === curId;
-        const needP = h.points || 0;
-        const rich = coins >= h.cost && (!needP || (loggedIn && pts >= needP));
+        const payAmt = this._homePay(curId, id);
+        const rich = coins >= payAmt.coins && (!payAmt.points || (loggedIn && pts >= payAmt.points));
         const tag = h.mansion ? (en ? 'Mansion' : '豪宅') : '';
         let action;
-        if (here) action = '<div style="font-size:12px;color:var(--leaf-dark);">' + (en ? 'Living here' : '正在住') + '</div>';
+        if (here) action = '<div style="font-size:12px;color:var(--leaf-dark);">' + (en ? 'This house' : '就是这栋') + '</div>';
         else {
-          const price = (h.cost ? (h.cost.toLocaleString() + ' <span class="coin-icon"></span>') : (en ? 'Move in' : '入住'))
-            + (needP ? (' + ' + needP + ' <span class="points-icon"></span>') : '');
+          const price = (!payAmt.coins && !payAmt.points)
+            ? (en ? 'Switch' : '换成这款')
+            : ((payAmt.coins ? (payAmt.coins.toLocaleString() + ' <span class="coin-icon"></span>') : '')
+              + (payAmt.points ? ((payAmt.coins ? ' + ' : '') + payAmt.points + ' <span class="points-icon"></span>') : ''));
           action = '<button class="btn' + (rich ? '' : ' secondary') + '" data-home-id="' + id + '" style="width:100%;padding:6px 8px;font-size:13px;"'
             + (rich ? '' : ' disabled') + '>' + price + '</button>';
         }
@@ -1246,6 +1310,44 @@
       });
       const pay = document.getElementById('homePayUpkeep');
       if (pay) pay.onclick = () => { self.collectHomeUpkeep(); self._openHomePanel(idx); };
+    },
+
+    _openNewHomePanel() {
+      if (!(Farm.ui && Farm.ui.showModal)) return;
+      const en = this._lang() === 'en';
+      const coins = Farm.state.data.coins || 0;
+      const pts = Farm.state.data.eastPoints || 0;
+      const loggedIn = !!(Farm.fbAuth && Farm.fbAuth.isLoggedIn && Farm.fbAuth.isLoggedIn());
+      const face = (stem, px) => '<img src="' + this._homeStemUrl(stem)
+        + '" alt="" style="width:' + px + 'px;height:' + px + 'px;object-fit:contain;'
+        + 'filter:drop-shadow(0 3px 4px rgba(60,35,15,.2));"/>';
+      let body = '<div style="margin:0 0 8px;font-size:13px;color:var(--warm-text-soft);">'
+        + (en ? 'A new house costs the full catalog price. Remodel an existing one to pay only the difference.' : '新盖一座按图册全价。点场上已有的房子改建，只补差价。') + '</div>'
+        + '<div style="max-height:52vh;overflow-y:auto;display:grid;grid-template-columns:1fr 1fr;gap:8px;">';
+      HOME_LEVELS.forEach((h, i) => {
+        const id = i + 1;
+        const payAmt = this._homePay(null, id);
+        const rich = coins >= payAmt.coins && (!payAmt.points || (loggedIn && pts >= payAmt.points));
+        const tag = h.mansion ? (en ? 'Mansion' : '豪宅') : '';
+        const price = (payAmt.coins ? (payAmt.coins.toLocaleString() + ' <span class="coin-icon"></span>') : '')
+          + (payAmt.points ? ((payAmt.coins ? ' + ' : '') + payAmt.points + ' <span class="points-icon"></span>') : '');
+        body += '<div style="border:1.5px solid #e8e0d4;border-radius:12px;padding:8px 8px 10px;background:#fff;text-align:center;">'
+          + face(h.stem, 72)
+          + '<div style="font-size:13px;font-weight:600;margin-top:4px;">' + (en ? h.en : h.zh) + '</div>'
+          + (tag ? '<div style="font-size:11px;color:#b45309;">' + tag + '</div>' : '')
+          + '<div style="font-size:11px;color:var(--warm-text-soft);margin:2px 0 6px;">'
+          + (en ? 'Charm' : '魅力') + ' +' + h.charm + '</div>'
+          + '<button class="btn' + (rich ? '' : ' secondary') + '" data-new-home-id="' + id + '" style="width:100%;padding:6px 8px;font-size:13px;"'
+          + (rich ? '' : ' disabled') + '>' + price + '</button></div>';
+      });
+      body += '</div>'
+        + '<div class="btn-row" style="margin-top:12px;"><button class="btn secondary" onclick="Farm.ui.hideModal()" style="width:100%;">'
+        + (en ? 'Close' : '关闭') + '</button></div>';
+      Farm.ui.showModal('<h2 class="modal-title">' + (en ? 'Build another house' : '再建一座') + '</h2>' + body);
+      const self = this;
+      document.querySelectorAll('[data-new-home-id]').forEach((btn) => {
+        btn.onclick = () => self._placeNewHome(parseInt(btn.getAttribute('data-new-home-id'), 10));
+      });
     },
 
     /* 我的家逐级手绘加装(2026-08-14)。只有一张房子贴图, 分级视觉全靠这里 ——
@@ -1496,13 +1598,20 @@
     _delChip(o) { const b = BUILDINGS[o.type], c = this._cell(o.gx + b.w - 1, o.gy), th = this._th(); return { x: c.x + this._tw() / 2 * 0.5, y: c.y - th * 0.2, r: Math.max(12, th * 0.5) }; },
     _addBuilding(type) {
       const b = BUILDINGS[type], en = this._lang() === 'en', cost = b.cost || 0;
-      // unique 建筑（我的家）全场限一座——已有就把镜头意义上的入口指回升级面板
+      if (type === 'home') {
+        const n = this._homes().length;
+        if (n >= HOME_CAP) {
+          if (Farm.ui && Farm.ui.toast) Farm.ui.toast(en ? 'House limit reached. Tap a house to remodel.' : '房子已经建满。点现有的房子可以改建。');
+          return;
+        }
+        if (n > 0) { this._openNewHomePanel(); return; }
+      }
+      // unique 建筑（菜摊）全场限一座
       if (b.unique) {
         const map = Farm.state.data.map || [];
         const at = map.findIndex((m) => m && m.type === type);
         if (at >= 0) {
-          if (type === 'home') this._openHomePanel(at);
-          else if (b.tap === 'stall_sale' && Farm.stall) Farm.stall.open();
+          if (b.tap === 'stall_sale' && Farm.stall) Farm.stall.open();
           return;
         }
       }
@@ -1763,6 +1872,20 @@
           }
           btn.style.opacity = capped ? '0.5' : (coins >= cost ? '1' : '0.55');
           return;
+        }
+        if (btn.dataset.type === 'home') {
+          const n = this._homes().length;
+          const cs = btn.querySelector('.palCost');
+          if (n >= HOME_CAP) {
+            if (cs) { cs.textContent = en ? '✓ MAX' : '✓ 已满'; cs.style.color = '#9a8f7d'; }
+            btn.style.opacity = '0.5';
+            return;
+          }
+          if (n > 0) {
+            if (cs) { cs.textContent = en ? 'Build another' : '再建一座'; cs.style.color = '#3a8c50'; }
+            btn.style.opacity = '1';
+            return;
+          }
         }
         const afford = coins >= cost;
         btn.style.opacity = afford ? '1' : '0.55';

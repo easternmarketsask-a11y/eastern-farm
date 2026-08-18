@@ -312,6 +312,9 @@ V2 (later): API connection to Clover POS for real-time validation.
 - 🔒 **我的家换图靠 `o.lv`**（2026-08-18）：深度排序若只克隆 `{ type, gx, gy }`，
   升级只改存档、地图永远画 1 级小宅。`_drawBuilding` 必须带 `lv`；
   `_homeSprite` 不要退回 `this._img.house`。
+  多座时每座自己的 `lv`，不要回落到「场上第一座」。
+- 🔒 **房子计价**（2026-08-18）：点现有房子=改建，只补与现款的差价（降档不退款）；
+  调色盘再建=按图册全价（农户小宅另建至少 300）。全场最多 4 座。
 
 ---
 

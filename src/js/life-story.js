@@ -19,7 +19,10 @@
     harvests: (s) => s.totalHarvests || 0,
     deliveries: (s) => s.totalDeliveries || 0,
     home_built: (s) => (s.map || []).some((m) => m && m.type === 'home') ? 1 : 0,
-    home_level: (s) => { const h = (s.map || []).find((m) => m && m.type === 'home'); return h ? (h.lv || 1) : 0; },
+    home_level: (s) => {
+      const lvs = (s.map || []).filter((m) => m && m.type === 'home').map((h) => h.lv || 1);
+      return lvs.length ? Math.max.apply(null, lvs) : 0;
+    },
     deco_count: (s) => (s.decorations || []).length,
     charm: () => (Farm.isoView && Farm.isoView._farmCharm) ? Farm.isoView._farmCharm() : 0,
     stall_sold: (s) => (s.stall && s.stall.sold) || 0,
@@ -66,7 +69,10 @@
       zh: (n) => '菜摊接待了第 ' + n + ' 位客人。', en: (n) => 'Customer #' + n + ' at the veggie stand.' },
     { k: 'deliver', vals: [25, 100], get: (s2) => s2.totalDeliveries || 0,
       zh: (n) => '第 ' + n + ' 次给东方超市送货。', en: (n) => 'Delivery #' + n + ' to Eastern Market.' },
-    { k: 'homelv', vals: [2, 3, 4, 5, 6, 7, 8], get: (s2) => { const h = (s2.map || []).find((m) => m && m.type === 'home'); return h ? (h.lv || 1) : 0; },
+    { k: 'homelv', vals: [2, 3, 4, 5, 6, 7, 8], get: (s2) => {
+      const lvs = (s2.map || []).filter((m) => m && m.type === 'home').map((h) => h.lv || 1);
+      return lvs.length ? Math.max.apply(null, lvs) : 0;
+    },
       zh: (n) => ({ 2:'家换成了：砖瓦农居。', 3:'家换成了：院落人家。', 4:'家换成了：乡绅别墅。', 5:'家换成了：花园洋房。', 6:'家换成了：泳池雅墅。', 7:'家换成了：湖景豪宅。', 8:'家换成了：东方庄园。' })[n] || '',
       en: (n) => ({ 2:'Moved into Brick Farmhouse.', 3:'Moved into Courtyard Home.', 4:'Moved into Country Villa.', 5:'Moved into Garden Manor.', 6:'Moved into Pool Villa.', 7:'Moved into Lakeside Mansion.', 8:'Moved into Eastern Estate.' })[n] || '' },
     { k: 'land', vals: [1, 2, 3, 4], get: (s2) => s2.landLevel || 0,
