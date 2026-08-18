@@ -209,15 +209,15 @@
     { zh: '院落人家', en: 'Courtyard Home',   cost: 3000,  needLv: 5,  charm: 160,  upkeep: 15,  stem: 'p_house_3', draw: 1.48, mansion: false },
     { zh: '乡绅别墅', en: 'Country Villa',    cost: 6000,  needLv: 7,  charm: 260,  upkeep: 30,  stem: 'p_house_4', draw: 1.75, mansion: false },
     { zh: '花园洋房', en: 'Garden Manor',     cost: 12000, needLv: 9,  charm: 400,  upkeep: 50,  stem: 'p_house_5', draw: 2.05, mansion: false },
-    { zh: '泳池雅墅', en: 'Pool Villa',       cost: 20000, needLv: 11, charm: 620,  upkeep: 90,  stem: 'p_house_6', draw: 2.35, mansion: true },
-    { zh: '湖景豪宅', en: 'Lakeside Mansion', cost: 36000, needLv: 14, charm: 920,  upkeep: 160, stem: 'p_house_7', draw: 2.70, mansion: true },
-    { zh: '东方庄园', en: 'Eastern Estate',   cost: 60000, needLv: 18, charm: 1400, upkeep: 250, stem: 'p_house_8', draw: 3.05, mansion: true },
+    { zh: '泳池雅墅', en: 'Pool Villa',       cost: 20000, needLv: 11, charm: 620,  upkeep: 90,  points: 20, stem: 'p_house_6', draw: 2.35, mansion: true },
+    { zh: '湖景豪宅', en: 'Lakeside Mansion', cost: 36000, needLv: 14, charm: 920,  upkeep: 160, points: 40, stem: 'p_house_7', draw: 2.70, mansion: true },
+    { zh: '东方庄园', en: 'Eastern Estate',   cost: 60000, needLv: 18, charm: 1400, upkeep: 250, points: 60, stem: 'p_house_8', draw: 3.05, mansion: true },
     { zh: '石墙农舍', en: 'Stone Hut',        cost: 1500,  needLv: 3,  charm: 95,   upkeep: 8,   stem: 'p_house_9', draw: 1.20, mansion: false },
     { zh: '青瓦小院', en: 'Grey-Tile Court',  cost: 3500,  needLv: 5,  charm: 175,  upkeep: 18,  stem: 'p_house_10', draw: 1.50, mansion: false },
     { zh: '双翼别墅', en: 'Twin-Wing Villa',  cost: 7000,  needLv: 7,  charm: 280,  upkeep: 35,  stem: 'p_house_11', draw: 1.80, mansion: false },
     { zh: '花廊洋房', en: 'Pergola Manor',    cost: 14000, needLv: 9,  charm: 430,  upkeep: 55,  stem: 'p_house_12', draw: 2.08, mansion: false },
-    { zh: '圆池雅墅', en: 'Round-Pool Villa', cost: 24000, needLv: 11, charm: 680,  upkeep: 100, stem: 'p_house_13', draw: 2.38, mansion: true },
-    { zh: '园林庄园', en: 'Garden Estate',    cost: 68000, needLv: 18, charm: 1500, upkeep: 280, stem: 'p_house_14', draw: 3.08, mansion: true },
+    { zh: '圆池雅墅', en: 'Round-Pool Villa', cost: 24000, needLv: 11, charm: 680,  upkeep: 100, points: 25, stem: 'p_house_13', draw: 2.38, mansion: true },
+    { zh: '园林庄园', en: 'Garden Estate',    cost: 68000, needLv: 18, charm: 1500, upkeep: 280, points: 80, stem: 'p_house_14', draw: 3.08, mansion: true },
   ];
   // EP-shop pets → painted iso animal sprites (replaces the emoji pet).
   const ANIMALS = { pet_chick: 'animal_chicken', pet_cat: 'animal_cat', pet_rabbit: 'animal_rabbit', decoration_dog: 'animal_dog', guard_dog: 'animal_dog' };
@@ -1134,8 +1134,28 @@
       const en = this._lang() === 'en';
       if (!o || o.type !== 'home' || !spec) return;
       if ((o.lv || 1) === houseId) return;
+      const needPts = spec.points || 0;
+      const loggedIn = !!(Farm.fbAuth && Farm.fbAuth.isLoggedIn && Farm.fbAuth.isLoggedIn());
+      if (needPts) {
+        if (!loggedIn) {
+          if (Farm.ui.toast) Farm.ui.toast(en ? 'Mansions use store points. Sign in first.' : '豪宅要用超市积分，请先登录。');
+          return;
+        }
+        if ((Farm.state.data.eastPoints || 0) < needPts) {
+          if (Farm.ui.toast) Farm.ui.toast(en ? 'Not enough store points' : '超市积分不足');
+          return;
+        }
+      }
       if (spec.cost > 0 && !Farm.state.spendCoins(spec.cost)) {
         if (Farm.ui.toast) Farm.ui.toast(en ? 'Not enough coins' : '农场币不足');
+        return;
+      }
+      if (needPts && !Farm.state.spendEastPoints(needPts, {
+        source: 'ep_shop:home_mansion',
+        description: '豪宅：' + spec.zh + ' / Mansion: ' + spec.en,
+      })) {
+        if (spec.cost > 0) Farm.state.addCoins(spec.cost);
+        if (Farm.ui.toast) Farm.ui.toast(en ? 'Not enough store points' : '超市积分不足');
         return;
       }
       o.lv = houseId;
@@ -1163,6 +1183,8 @@
       const curId = Math.min(Math.max(o.lv || 1, 1), HOME_LEVELS.length);
       const cur = HOME_LEVELS[curId - 1];
       const coins = Farm.state.data.coins || 0;
+      const pts = Farm.state.data.eastPoints || 0;
+      const loggedIn = !!(Farm.fbAuth && Farm.fbAuth.isLoggedIn && Farm.fbAuth.isLoggedIn());
       const face = (stem, px) => '<img src="' + this._homeStemUrl(stem)
         + '" alt="" style="width:' + px + 'px;height:' + px + 'px;object-fit:contain;'
         + 'filter:drop-shadow(0 3px 4px rgba(60,35,15,.2));"/>';
@@ -1184,14 +1206,17 @@
       HOME_LEVELS.forEach((h, i) => {
         const id = i + 1;
         const here = id === curId;
-        const rich = coins >= h.cost;
+        const needP = h.points || 0;
+        const rich = coins >= h.cost && (!needP || (loggedIn && pts >= needP));
         const tag = h.mansion ? (en ? 'Mansion' : '豪宅') : '';
         let action;
         if (here) action = '<div style="font-size:12px;color:var(--leaf-dark);">' + (en ? 'Living here' : '正在住') + '</div>';
-        else action = '<button class="btn' + (rich ? '' : ' secondary') + '" data-home-id="' + id + '" style="width:100%;padding:6px 8px;font-size:13px;"'
-          + (rich ? '' : ' disabled') + '>'
-          + (h.cost ? (h.cost.toLocaleString() + ' <span class="coin-icon"></span>') : (en ? 'Move in' : '入住'))
-          + '</button>';
+        else {
+          const price = (h.cost ? (h.cost.toLocaleString() + ' <span class="coin-icon"></span>') : (en ? 'Move in' : '入住'))
+            + (needP ? (' + ' + needP + ' <span class="points-icon"></span>') : '');
+          action = '<button class="btn' + (rich ? '' : ' secondary') + '" data-home-id="' + id + '" style="width:100%;padding:6px 8px;font-size:13px;"'
+            + (rich ? '' : ' disabled') + '>' + price + '</button>';
+        }
         body += '<div style="border:1.5px solid ' + (here ? 'var(--leaf-dark,#3a8c50)' : '#e8e0d4')
           + ';border-radius:12px;padding:8px 8px 10px;background:' + (here ? '#f4faf4' : '#fff') + ';text-align:center;">'
           + face(h.stem, 72)
