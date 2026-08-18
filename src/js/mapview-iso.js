@@ -130,10 +130,8 @@
   // cost = 农场币 to place (coins; East Points stay scarce for real rewards). charm =
   // 农场魅力 gained (derived ≈ cost/8) — a vanity progression to drive the build impulse.
   const BUILDINGS = {
-    // 我的家（2026-08-14 Chris:「能不能建造自己住的房子, 并且不断升级美化」）:
-    // 全场限一座, 点开有专属面板, 5 级升级线是金币经济的长期出口(合计 22500)。
-    // 只有一张房子贴图 → 分级视觉走「贴图 + 逐级手绘加装」(_drawHomeExtras):
-    // 花坛 → 暖窗灯+炊烟 → 彩旗 → 金色灯串, 尺寸也随级微涨。水塘同款手绘工艺。
+    // 我的家：全场限一座。2026-08-18 起每级换一张贴图、占地视觉变大。
+    // 碰撞仍是 2×2，避免旧存档挤爆邻格。更高档以后继续往 HOME_LEVELS 加。
     home: { img: 'house', w: 2, h: 2, sc: 2.3, zh: '我的家', en: 'My Home', tap: 'home', cost: 300, unique: true },
     barn: { img: 'barn', w: 2, h: 2, sc: 2.4, zh: '谷仓', en: 'Barn', tap: 'warehouse', cost: 350 },
     // 菜摊(类型名 house 是历史存档键, 不能改): 2026-08-14 二次定位 ——
@@ -206,11 +204,14 @@
   const PALETTE = ['home', 'barn', 'house', 'greenhouse', 'coop', 'well', 'tree', 'bush', 'lantern', 'fence', 'wheel', 'bridge'];
   // 我的家升级表: 每级的名字/升级价/玩家等级门槛/魅力值。lv 存在 map 对象上(o.lv)。
   const HOME_LEVELS = [
-    { zh: '温馨小家', en: 'Cozy Home',       cost: 0,     needLv: 1, charm: 40 },
-    { zh: '花园小屋', en: 'Garden Home',     cost: 1200,  needLv: 3, charm: 90 },
-    { zh: '暖灯之家', en: 'Lantern Home',    cost: 3000,  needLv: 5, charm: 160 },
-    { zh: '彩旗农舍', en: 'Festive House',   cost: 6000,  needLv: 7, charm: 260 },
-    { zh: '梦想庄园', en: 'Dream Estate',    cost: 12000, needLv: 9, charm: 400 },
+    { zh: '农户小宅', en: 'Farm Cottage',     cost: 0,     needLv: 1,  charm: 40,   stem: 'p_house_1', draw: 1.00, mansion: false },
+    { zh: '砖瓦农居', en: 'Brick Farmhouse',  cost: 1200,  needLv: 3,  charm: 90,   stem: 'p_house_2', draw: 1.22, mansion: false },
+    { zh: '院落人家', en: 'Courtyard Home',   cost: 3000,  needLv: 5,  charm: 160,  stem: 'p_house_3', draw: 1.48, mansion: false },
+    { zh: '乡绅别墅', en: 'Country Villa',    cost: 6000,  needLv: 7,  charm: 260,  stem: 'p_house_4', draw: 1.75, mansion: false },
+    { zh: '花园洋房', en: 'Garden Manor',     cost: 12000, needLv: 9,  charm: 400,  stem: 'p_house_5', draw: 2.05, mansion: false },
+    { zh: '泳池雅墅', en: 'Pool Villa',       cost: 20000, needLv: 11, charm: 620,  stem: 'p_house_6', draw: 2.35, mansion: true },
+    { zh: '湖景豪宅', en: 'Lakeside Mansion', cost: 36000, needLv: 14, charm: 920,  stem: 'p_house_7', draw: 2.70, mansion: true },
+    { zh: '东方庄园', en: 'Eastern Estate',   cost: 60000, needLv: 18, charm: 1400, stem: 'p_house_8', draw: 3.05, mansion: true },
   ];
   // EP-shop pets → painted iso animal sprites (replaces the emoji pet).
   const ANIMALS = { pet_chick: 'animal_chicken', pet_cat: 'animal_cat', pet_rabbit: 'animal_rabbit', decoration_dog: 'animal_dog', guard_dog: 'animal_dog' };
@@ -281,6 +282,7 @@
       this._cv = cv; this._ctx = cv.getContext('2d');
 
       Object.keys(ASSET_SRC).forEach((k) => { const im = new Image(); im.onload = () => { this._img[k] = im; this._bgKey = null; if (this._on) this.render(); }; im.src = ASSET_DIR + ASSET_SRC[k]; });   // _bgKey=null → re-render cached backdrop once the landscape/tiles finish loading
+      HOME_LEVELS.forEach((s) => { if (s.stem) this._lazyImg(s.stem); });
       this._undoForwardOnce();
       this._buildLayout();
       // ⚠️ 顺序：必须在 _buildLayout 之后（老存档的 plot 坐标在那里才补上），
@@ -1013,9 +1015,10 @@
         const cc = this._cell(o.gx + (b.w - 1) / 2, o.gy + (b.h - 1) / 2);
         const front = this._cell(o.gx + (b.w - 1), o.gy + (b.h - 1));
         const by = front.y + th / 2 + th * 0.18;
-        const im = this._img[b.img]; let w, h;
-        if (im && im.width) { const s = Math.min(b.w * tw * 0.92 * BLD / im.width, b.sc * th * 2.2 * BLD / im.height); w = im.width * s; h = im.height * s; }
-        else { w = b.w * tw * 1.06 * BLD; h = b.sc * th * 2.0 * BLD; }
+        const hz = o.type === 'home' ? this._homeDrawMul(o) : 1;
+        const im = o.type === 'home' ? this._homeSprite(o) : this._img[b.img]; let w, h;
+        if (im && im.width) { const s = Math.min(b.w * tw * 0.92 * BLD * hz / im.width, b.sc * th * 2.2 * BLD * hz / im.height); w = im.width * s; h = im.height * s; }
+        else { w = b.w * tw * 1.06 * BLD * hz; h = b.sc * th * 2.0 * BLD * hz; }
         if (px >= cc.x - w / 2 && px <= cc.x + w / 2 && py >= by - h && py <= by) return i;
       }
       const cell = this._screenToCell(px, py);
@@ -1063,37 +1066,68 @@
 
     /* 我的家面板: 当前级名 + 魅力 + 下一级预览与升级按钮。
        升级 = 变美(手绘加装逐级出现) + 魅力涨, 是金币的长期出口。 */
+    _homeSpec(o) {
+      const n = HOME_LEVELS.length;
+      const lv = Math.min(Math.max((o && o.lv) || 1, 1), n);
+      return HOME_LEVELS[lv - 1];
+    },
+    _homeSprite(o) {
+      const spec = this._homeSpec(o);
+      return this._lazyImg(spec.stem) || this._img.house;
+    },
+    _homeDrawMul(o) {
+      return (this._homeSpec(o).draw) || 1;
+    },
+    _homeStemUrl(stem) {
+      return ASSET_DIR + (stem || 'p_house') + '.webp';
+    },
+
     _openHomePanel(idx) {
       const o = (Farm.state.data.map || [])[idx];
       if (!o || o.type !== 'home' || !(Farm.ui && Farm.ui.showModal)) return;
       const en = this._lang() === 'en';
       const lv = Math.min(o.lv || 1, HOME_LEVELS.length);
       const cur = HOME_LEVELS[lv - 1], next = HOME_LEVELS[lv];
+      const goal = HOME_LEVELS[HOME_LEVELS.length - 1];
       const playerLv = Farm.state.data.level || 1;
-      const perks = en
-        ? ['A flower bed by the door', 'Warm window light & chimney smoke', 'Festive bunting on the eaves', 'Golden string lights at dusk']
-        : ['门前多一畦花坛', '暖黄窗灯 + 袅袅炊烟', '屋檐挂上节日彩旗', '入夜亮起金色灯串'];
-      // 面板头图用真实的房子贴图（与地图上那栋同一张），别再用 🏡 emoji 代表它
-      let body = '<div style="text-align:center;line-height:1;"><img src="' + ASSET_DIR + ASSET_SRC.house
-        + '" alt="" style="width:88px;height:88px;object-fit:contain;filter:drop-shadow(0 3px 4px rgba(60,35,15,.25));"/></div>'
+      const face = (stem, px) => '<img src="' + this._homeStemUrl(stem)
+        + '" alt="" style="width:' + px + 'px;height:' + px + 'px;object-fit:contain;'
+        + 'filter:drop-shadow(0 3px 4px rgba(60,35,15,.25));"/>';
+      let body = '<div style="text-align:center;line-height:1;">' + face(cur.stem, 132) + '</div>'
         + '<div style="text-align:center;font-family:var(--font-display);font-size:20px;margin-top:6px;">'
-        + (en ? cur.en : cur.zh) + ' <span style="font-family:var(--font-num);font-size:14px;color:var(--warm-text-soft);">Lv ' + lv + '/' + HOME_LEVELS.length + '</span></div>'
+        + (en ? cur.en : cur.zh)
+        + ' <span style="font-family:var(--font-num);font-size:14px;color:var(--warm-text-soft);">Lv ' + lv + '</span></div>'
         + '<div style="text-align:center;font-size:12.5px;color:var(--warm-text-soft);margin-top:4px;">'
         + (en ? 'Charm' : '魅力') + ' +' + cur.charm + '</div>';
       if (next) {
         const needMore = playerLv < next.needLv;
         const canPay = (Farm.state.data.coins || 0) >= next.cost;
-        body += '<div style="margin:14px 0 4px;padding:12px;border:1.5px dashed var(--border-soft);border-radius:12px;">'
-          + '<div style="font-size:13px;font-weight:600;">' + (en ? 'Next: ' : '下一级：') + (en ? next.en : next.zh) + '</div>'
-          + '<div style="font-size:12px;color:var(--warm-text-soft);margin-top:3px;">✨ ' + perks[lv - 1] + ' · ' + (en ? 'Charm' : '魅力') + ' +' + next.charm + '</div>'
-          + '</div>'
+        const tag = next.mansion
+          ? (en ? 'Mansion' : '豪宅')
+          : (en ? 'Next home' : '下一座');
+        body += '<div style="margin:14px 0 4px;padding:12px;border:1.5px dashed var(--border-soft);border-radius:12px;display:flex;gap:10px;align-items:center;">'
+          + face(next.stem, 72)
+          + '<div style="flex:1;min-width:0;text-align:left;">'
+          + '<div style="font-size:11px;color:var(--warm-text-soft);">' + tag + '</div>'
+          + '<div style="font-size:14px;font-weight:600;">' + (en ? next.en : next.zh) + '</div>'
+          + '<div style="font-size:12px;color:var(--warm-text-soft);margin-top:2px;">'
+          + (en ? 'Charm' : '魅力') + ' +' + next.charm + '</div></div></div>'
           + (needMore
             ? '<button class="btn secondary" disabled style="width:100%;">' + (en ? ('Unlocks at player Lv ' + next.needLv) : ('玩家 Lv ' + next.needLv + ' 解锁')) + '</button>'
             : '<button class="btn" id="homeUpgradeBtn" style="width:100%;" ' + (canPay ? '' : 'disabled') + '>'
               + (en ? 'Upgrade' : '升级') + ' · ' + next.cost + ' <span class="coin-icon"></span></button>');
       } else {
         body += '<div style="text-align:center;margin-top:12px;font-size:13px;color:var(--leaf-dark);">'
-          + (en ? 'Fully upgraded — the pride of the whole farm.' : '已是满级——全农场的骄傲。') + '</div>';
+          + (en ? 'Highest home we have for now. Bigger ones will come later.' : '这是现在最高的一档。更大的房子以后再加。') + '</div>';
+      }
+      if (lv < HOME_LEVELS.length && goal && goal !== next) {
+        body += '<div style="margin-top:10px;padding:10px 12px;background:#f7f3ea;border-radius:10px;display:flex;gap:8px;align-items:center;">'
+          + face(goal.stem, 56)
+          + '<div style="font-size:12.5px;line-height:1.35;text-align:left;">'
+          + '<div style="color:var(--warm-text-soft);">' + (en ? 'Goal' : '目标') + '</div>'
+          + '<div style="font-weight:600;">' + (en ? goal.en : goal.zh) + '</div>'
+          + '<div style="color:var(--warm-text-soft);">' + (en ? 'Pool, garden, moon gate.' : '泳池、花园、月洞门。') + '</div>'
+          + '</div></div>';
       }
       body += '<div class="btn-row" style="margin-top:12px;"><button class="btn secondary" onclick="Farm.ui.hideModal()" style="width:100%;">'
         + (en ? 'Close' : '关闭') + '</button></div>';
@@ -1108,7 +1142,7 @@
         if (Farm.ui.refreshHUD) Farm.ui.refreshHUD();
         if (Farm.ui.confettiBurst) Farm.ui.confettiBurst();
         this.render();
-        this._openHomePanel(idx);   // 面板原地刷新到新等级
+        this._openHomePanel(idx);
       };
     },
 
@@ -3419,11 +3453,10 @@
       // 按压反馈（audit B2 P2）：被按住的建筑以底边为锚缩到 94%（Hay Day 式
       // squash），与地块按压高亮同一套 _down/_up 生命周期。
       const pk = (!this._build && idx != null && idx === this._pressBuilding) ? 0.94 : 1;
-      // 我的家: 尺寸随等级微涨(满级 +14%), 升级看得见
-      const homeLv = (o.type === 'home' && idx != null && Farm.state.data.map[idx]) ? Math.min(Farm.state.data.map[idx].lv || 1, HOME_LEVELS.length) : 1;
-      const hz = o.type === 'home' ? (1 + 0.035 * (homeLv - 1)) : 1;
-      if (!this._blit(this._img[b.img], cc.x, by, b.w * tw * 0.92 * BLD * pk * hz, b.sc * th * 2.2 * BLD * pk * hz)) { ctx.fillStyle = '#c0392b'; ctx.fillRect(cc.x - tw * 0.4, by - th, tw * 0.8, th); }
-      if (o.type === 'home' && homeLv > 1 && !moving) this._drawHomeExtras(cc.x, by, b.w * tw * 0.92 * BLD * hz, b.sc * th * 2.2 * BLD * hz, homeLv);
+      // 我的家：每级换图 + 明显放大（碰撞仍 2×2）
+      const hz = o.type === 'home' ? this._homeDrawMul(o) : 1;
+      const him = o.type === 'home' ? this._homeSprite(o) : this._img[b.img];
+      if (!this._blit(him, cc.x, by, b.w * tw * 0.92 * BLD * pk * hz, b.sc * th * 2.2 * BLD * pk * hz)) { ctx.fillStyle = '#c0392b'; ctx.fillRect(cc.x - tw * 0.4, by - th, tw * 0.8, th); }
       if (o.type === 'house' && !moving) {
         this._drawShopSign(cc.x, by, b.w * tw * 0.92 * BLD, b.sc * th * 2.2 * BLD);
         /* 摊前的路人(2026-08-15 两轮定稿): 瘆人的是悬空的**头**(emoji 脸),

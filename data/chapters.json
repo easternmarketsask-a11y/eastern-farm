@@ -81,8 +81,8 @@
           "id": "c3_home2",
           "type": "home_level",
           "target": 2,
-          "zh": "家升级到「花园小屋」",
-          "en": "Home to Garden Home",
+          "zh": "家升级到「砖瓦农居」",
+          "en": "Home to Brick Farmhouse",
           "reward": 300
         },
         {
@@ -115,8 +115,8 @@
           "id": "c4_home4",
           "type": "home_level",
           "target": 4,
-          "zh": "家升级到「彩旗农舍」",
-          "en": "Home to Festive House",
+          "zh": "家升级到「乡绅别墅」",
+          "en": "Home to Country Villa",
           "reward": 500
         },
         {
@@ -148,17 +148,17 @@
     {
       "id": "ch5",
       "from_lv": 9,
-      "name_zh": "梦想庄园",
-      "name_en": "Dream Estate",
-      "letter_zh": "还记得你刚来时后院那块荒地吗？\n\n现在灯串在屋檐下亮着，客人沿着路来了又走，谁看了不说一句「这就是我想过的日子」。把家升到满级吧——你配得上一座梦想庄园。\n\n—— 小东",
-      "letter_en": "Remember that bare patch behind your house when you first arrived?\n\nNow string lights glow under the eaves and visitors come and go along the road. Everyone who sees it says 'that's the life I want.' Take your home to the top — you've earned the dream estate.\n\n— Xiaodong",
+      "name_zh": "花园洋房",
+      "name_en": "Garden Manor",
+      "letter_zh": "家已经像个院子了。下一座是带泳池的豪宅——那是农场主认真干活的目标之一。\n\n先把家升到花园洋房，路就打开了。\n\n—— 小东",
+      "letter_en": "The house already feels like a real yard. Next come the mansions with a pool — that's one of the things a farm owner works toward.\n\nGet to Garden Manor first. The road opens from there.\n\n— Xiaodong",
       "goals": [
         {
           "id": "c5_home5",
           "type": "home_level",
           "target": 5,
-          "zh": "家升到满级「梦想庄园」",
-          "en": "Home to Dream Estate",
+          "zh": "家升到「花园洋房」",
+          "en": "Home to Garden Manor",
           "reward": 800
         },
         {
@@ -202,6 +202,14 @@
           "zh": "菜摊累计接待 50 位路人",
           "en": "Serve 50 stand customers",
           "reward": 800
+        },
+        {
+          "id": "c6_estate",
+          "type": "home_level",
+          "target": 8,
+          "zh": "家升到「东方庄园」",
+          "en": "Home to Eastern Estate",
+          "reward": 2000
         }
       ]
     }

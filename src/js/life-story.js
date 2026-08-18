@@ -66,9 +66,9 @@
       zh: (n) => '菜摊接待了第 ' + n + ' 位客人。', en: (n) => 'Customer #' + n + ' at the veggie stand.' },
     { k: 'deliver', vals: [25, 100], get: (s2) => s2.totalDeliveries || 0,
       zh: (n) => '第 ' + n + ' 次给东方超市送货。', en: (n) => 'Delivery #' + n + ' to Eastern Market.' },
-    { k: 'homelv', vals: [2, 3, 4, 5], get: (s2) => { const h = (s2.map || []).find((m) => m && m.type === 'home'); return h ? (h.lv || 1) : 0; },
-      zh: (n) => ['', '', '家升级了：花园小屋。', '家升级了：暖灯之家，窗里有光。', '家升级了：彩旗农舍。', '家满级：梦想庄园。灯串亮起来的那晚很好看。'][n],
-      en: (n) => ['', '', 'Home upgraded: Garden Home.', 'Home upgraded: Lantern Home — light in the window.', 'Home upgraded: Festive House.', 'Home maxed: Dream Estate. The string lights were beautiful that night.'][n] },
+    { k: 'homelv', vals: [2, 3, 4, 5, 6, 7, 8], get: (s2) => { const h = (s2.map || []).find((m) => m && m.type === 'home'); return h ? (h.lv || 1) : 0; },
+      zh: (n) => ['', '', '家升级了：砖瓦农居。', '家升级了：院落人家。', '家升级了：乡绅别墅。', '家升级了：花园洋房。', '家升级了：泳池雅墅。', '家升级了：湖景豪宅。', '家升到东方庄园。'][n],
+      en: (n) => ['', '', 'Home upgraded: Brick Farmhouse.', 'Home upgraded: Courtyard Home.', 'Home upgraded: Country Villa.', 'Home upgraded: Garden Manor.', 'Home upgraded: Pool Villa.', 'Home upgraded: Lakeside Mansion.', 'Home reached Eastern Estate.'][n] },
     { k: 'land', vals: [1, 2, 3, 4], get: (s2) => s2.landLevel || 0,
       zh: (n) => '农场扩建到第 ' + n + ' 阶，地界又宽了。', en: (n) => 'Land expanded to level ' + n + '.' },
   ];
