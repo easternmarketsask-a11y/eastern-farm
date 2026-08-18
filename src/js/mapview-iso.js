@@ -1094,10 +1094,6 @@
       const en = this._lang() === 'en';
       if (!o || o.type !== 'home' || !spec) return;
       if ((o.lv || 1) === houseId) return;
-      if ((Farm.state.data.level || 1) < spec.needLv) {
-        if (Farm.ui.toast) Farm.ui.toast(en ? ('Unlocks at player Lv ' + spec.needLv) : ('玩家 Lv ' + spec.needLv + ' 解锁'));
-        return;
-      }
       if (spec.cost > 0 && !Farm.state.spendCoins(spec.cost)) {
         if (Farm.ui.toast) Farm.ui.toast(en ? 'Not enough coins' : '农场币不足');
         return;
@@ -1122,7 +1118,6 @@
       const en = this._lang() === 'en';
       const curId = Math.min(Math.max(o.lv || 1, 1), HOME_LEVELS.length);
       const cur = HOME_LEVELS[curId - 1];
-      const playerLv = Farm.state.data.level || 1;
       const coins = Farm.state.data.coins || 0;
       const face = (stem, px) => '<img src="' + this._homeStemUrl(stem)
         + '" alt="" style="width:' + px + 'px;height:' + px + 'px;object-fit:contain;'
@@ -1138,12 +1133,10 @@
       HOME_LEVELS.forEach((h, i) => {
         const id = i + 1;
         const here = id === curId;
-        const locked = playerLv < h.needLv;
         const rich = coins >= h.cost;
         const tag = h.mansion ? (en ? 'Mansion' : '豪宅') : '';
         let action;
         if (here) action = '<div style="font-size:12px;color:var(--leaf-dark);">' + (en ? 'Living here' : '正在住') + '</div>';
-        else if (locked) action = '<div style="font-size:12px;color:#888;">Lv ' + h.needLv + (en ? ' to unlock' : ' 解锁') + '</div>';
         else action = '<button class="btn' + (rich ? '' : ' secondary') + '" data-home-id="' + id + '" style="width:100%;padding:6px 8px;font-size:13px;"'
           + (rich ? '' : ' disabled') + '>'
           + (h.cost ? (h.cost.toLocaleString() + ' <span class="coin-icon"></span>') : (en ? 'Move in' : '入住'))
