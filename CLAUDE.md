@@ -315,7 +315,8 @@ V2 (later): API connection to Clover POS for real-time validation.
   多座时每座自己的 `lv`，不要回落到「场上第一座」。
 - 🔒 **地界只许放大**（2026-08-18）：`LAND_LEVELS_*` 每一档必须是旧矩形的超集，
   老存档的 map / plots / clearedCells 坐标一律不改。世界往东加格（COLS），
-  不往镜头前加空行（ROWS）。开垦菜地帽仍是 `EXTRA_PLOT_CAP=4`。
+  也往镜头前加格（ROWS，马路对面那片草甸）。乡路路心仍不能建。
+  开垦菜地帽仍是 `EXTRA_PLOT_CAP=4`。
 - 🔒 **房子计价**（2026-08-18）：点现有房子=改建，只补与现款的差价（降档不退款）；
   调色盘再建=按图册全价（农户小宅另建至少 300）。全场最多 4 座。
   图册分农舍 / 小院 / 洋房 / 豪宅四类卡片。章节 `home_level` 按造价档，不按图册序号。

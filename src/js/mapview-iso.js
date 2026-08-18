@@ -10,7 +10,7 @@
  * upright sprites placed on cells, depth-sorted back-to-front (gx+gy).
  */
 (function () {
-  const COLS = 28, ROWS = 16;      // 2026-08-18 往东扩 8 格给建造。不往镜头前加空行（构图：空地在山后）。
+  const COLS = 28, ROWS = 26;      // 东扩 8 格 + 往镜头前（马路对面）加 10 格。路心仍不能建。
   // Start zone origin. (The 2026-06-18 "forward move" to (6,6) was cancelled — Chris
   // preferred adapting via the new full-scene background instead. _undoForwardOnce()
   // shifts any save that got forwarded back to here.)
@@ -28,20 +28,21 @@
   // Pay-to-expand land. Each level's TOTAL owned rectangle (cells x1,y1..x2,y2).
   // 两套表：旧存档 landOrigin≠front 继续用 BACK（从山脚往镜头扩）。
   // 新农场 landOrigin=front：开局在镜头前，扩地往山上（y 变小）再往东。
-  // 🔒 每一档只许放大、不许缩小（老存档已建物不能掉出地界）。2026-08-18 东扩。
+  // 🔒 每一档只许放大、不许缩小（老存档已建物不能掉出地界）。
+  // 2026-08-18：东扩之后再往镜头前扩过乡路（y 变大 = 马路对面那片草甸）。
   const LAND_LEVELS_BACK = [
-    { x1: 0, y1: 0, x2: 14, y2: 12, coins: 0, points: 0 },
-    { x1: 0, y1: 0, x2: 18, y2: 13, coins: 800, points: 0 },
-    { x1: 0, y1: 0, x2: 22, y2: 14, coins: 1500, points: 0 },
-    { x1: 0, y1: 0, x2: 25, y2: 15, coins: 3000, points: 30 },
-    { x1: 0, y1: 0, x2: 27, y2: 15, coins: 6000, points: 50 },
+    { x1: 0, y1: 0, x2: 14, y2: 20, coins: 0, points: 0 },
+    { x1: 0, y1: 0, x2: 18, y2: 22, coins: 800, points: 0 },
+    { x1: 0, y1: 0, x2: 22, y2: 24, coins: 1500, points: 0 },
+    { x1: 0, y1: 0, x2: 25, y2: 25, coins: 3000, points: 30 },
+    { x1: 0, y1: 0, x2: 27, y2: 25, coins: 6000, points: 50 },
   ];
   const LAND_LEVELS_FRONT = [
-    { x1: 0, y1: 6, x2: 16, y2: 15, coins: 0, points: 0 },      // L0 开局就有东侧空地
-    { x1: 0, y1: 3, x2: 20, y2: 15, coins: 800, points: 0 },    // L1
-    { x1: 0, y1: 1, x2: 23, y2: 15, coins: 1500, points: 0 },   // L2
-    { x1: 0, y1: 0, x2: 25, y2: 15, coins: 3000, points: 30 },  // L3
-    { x1: 0, y1: 0, x2: 27, y2: 15, coins: 6000, points: 50 },  // L4 满图 28×16
+    { x1: 0, y1: 6, x2: 16, y2: 22, coins: 0, points: 0 },      // L0 含马路对面
+    { x1: 0, y1: 3, x2: 20, y2: 24, coins: 800, points: 0 },
+    { x1: 0, y1: 1, x2: 23, y2: 25, coins: 1500, points: 0 },
+    { x1: 0, y1: 0, x2: 25, y2: 25, coins: 3000, points: 30 },
+    { x1: 0, y1: 0, x2: 27, y2: 25, coins: 6000, points: 50 },  // L4 满图 28×26
   ];
   // 🔒 默认水塘 v2（2026-08-13 二次修正）：谷仓正前方**隔一整排草**。
   // v1 的 (6,6) 与谷仓底座 (6,5) 是相邻格——有机水塘的波浪轮廓一溢出就贴着
