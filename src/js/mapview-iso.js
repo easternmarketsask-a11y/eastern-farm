@@ -76,6 +76,8 @@
     p_house_5: 'p_house_5.webp', p_house_6: 'p_house_6.webp', p_house_7: 'p_house_7.webp', p_house_8: 'p_house_8.webp',
     p_house_9: 'p_house_9.webp', p_house_10: 'p_house_10.webp', p_house_11: 'p_house_11.webp', p_house_12: 'p_house_12.webp',
     p_house_13: 'p_house_13.webp', p_house_14: 'p_house_14.webp',
+    p_house_15: 'p_house_15.webp', p_house_16: 'p_house_16.webp', p_house_17: 'p_house_17.webp', p_house_18: 'p_house_18.webp',
+    p_house_19: 'p_house_19.webp', p_house_20: 'p_house_20.webp', p_house_21: 'p_house_21.webp', p_house_22: 'p_house_22.webp',
     deco_bush: 'deco_bush.webp', deco_lantern: 'deco_lantern.webp', deco_fence: 'deco_fence.webp', deco_wheel: 'deco_wheel.webp', deco_bridge: 'deco_bridge.webp',
     crop0: 'crop_qingcai_0.webp', crop1: 'crop_qingcai_1.webp', crop2: 'crop_qingcai_2.webp', crop3: 'crop_qingcai_3.webp',
     tile_grass: 'p_grass.webp', tile_grass_b: 'p_grass_b.webp', tile_grass_c: 'p_grass_c.webp',
@@ -208,21 +210,35 @@
   // 我的家图册。改建只收与现款的差价；另建一座收全价（农户小宅另建至少 cost=300）。
   // lv 存在每座 map 对象上。全场最多 HOME_CAP 座。
   const HOME_CAP = 4;
+  const HOME_CATS = [
+    { id: 'cottage', zh: '农舍', en: 'Cottages', face: 'p_house_1' },
+    { id: 'court', zh: '小院', en: 'Courtyards', face: 'p_house_17' },
+    { id: 'villa', zh: '洋房', en: 'Villas', face: 'p_house_5' },
+    { id: 'mansion', zh: '豪宅', en: 'Mansions', face: 'p_house_8' },
+  ];
   const HOME_LEVELS = [
-    { zh: '农户小宅', en: 'Farm Cottage',     cost: 0,     needLv: 1,  charm: 40,   upkeep: 0,   stem: 'p_house_1', draw: 1.00, mansion: false },
-    { zh: '砖瓦农居', en: 'Brick Farmhouse',  cost: 1200,  needLv: 3,  charm: 90,   upkeep: 8,   stem: 'p_house_2', draw: 1.22, mansion: false },
-    { zh: '院落人家', en: 'Courtyard Home',   cost: 3000,  needLv: 5,  charm: 160,  upkeep: 15,  stem: 'p_house_3', draw: 1.48, mansion: false },
-    { zh: '乡绅别墅', en: 'Country Villa',    cost: 6000,  needLv: 7,  charm: 260,  upkeep: 30,  stem: 'p_house_4', draw: 1.75, mansion: false },
-    { zh: '花园洋房', en: 'Garden Manor',     cost: 12000, needLv: 9,  charm: 400,  upkeep: 50,  stem: 'p_house_5', draw: 2.05, mansion: false },
-    { zh: '泳池雅墅', en: 'Pool Villa',       cost: 20000, needLv: 11, charm: 620,  upkeep: 90,  points: 100, stem: 'p_house_6', draw: 2.35, mansion: true },
-    { zh: '湖景豪宅', en: 'Lakeside Mansion', cost: 36000, needLv: 14, charm: 920,  upkeep: 160, points: 250, stem: 'p_house_7', draw: 2.70, mansion: true },
-    { zh: '东方庄园', en: 'Eastern Estate',   cost: 60000, needLv: 18, charm: 1400, upkeep: 250, points: 400, stem: 'p_house_8', draw: 3.05, mansion: true },
-    { zh: '石墙农舍', en: 'Stone Hut',        cost: 1500,  needLv: 3,  charm: 95,   upkeep: 8,   stem: 'p_house_9', draw: 1.20, mansion: false },
-    { zh: '青瓦小院', en: 'Grey-Tile Court',  cost: 3500,  needLv: 5,  charm: 175,  upkeep: 18,  stem: 'p_house_10', draw: 1.50, mansion: false },
-    { zh: '双翼别墅', en: 'Twin-Wing Villa',  cost: 7000,  needLv: 7,  charm: 280,  upkeep: 35,  stem: 'p_house_11', draw: 1.80, mansion: false },
-    { zh: '花廊洋房', en: 'Pergola Manor',    cost: 14000, needLv: 9,  charm: 430,  upkeep: 55,  stem: 'p_house_12', draw: 2.08, mansion: false },
-    { zh: '圆池雅墅', en: 'Round-Pool Villa', cost: 24000, needLv: 11, charm: 680,  upkeep: 100, points: 150, stem: 'p_house_13', draw: 2.38, mansion: true },
-    { zh: '园林庄园', en: 'Garden Estate',    cost: 68000, needLv: 18, charm: 1500, upkeep: 280, points: 500, stem: 'p_house_14', draw: 3.08, mansion: true },
+    { zh: '农户小宅', en: 'Farm Cottage',     cost: 0,     needLv: 1,  charm: 40,   upkeep: 0,   stem: 'p_house_1', draw: 1.00, mansion: false, cat: 'cottage' },
+    { zh: '砖瓦农居', en: 'Brick Farmhouse',  cost: 1200,  needLv: 3,  charm: 90,   upkeep: 8,   stem: 'p_house_2', draw: 1.22, mansion: false, cat: 'cottage' },
+    { zh: '院落人家', en: 'Courtyard Home',   cost: 3000,  needLv: 5,  charm: 160,  upkeep: 15,  stem: 'p_house_3', draw: 1.48, mansion: false, cat: 'court' },
+    { zh: '乡绅别墅', en: 'Country Villa',    cost: 6000,  needLv: 7,  charm: 260,  upkeep: 30,  stem: 'p_house_4', draw: 1.75, mansion: false, cat: 'villa' },
+    { zh: '花园洋房', en: 'Garden Manor',     cost: 12000, needLv: 9,  charm: 400,  upkeep: 50,  stem: 'p_house_5', draw: 2.05, mansion: false, cat: 'villa' },
+    { zh: '泳池雅墅', en: 'Pool Villa',       cost: 20000, needLv: 11, charm: 620,  upkeep: 90,  points: 100, stem: 'p_house_6', draw: 2.35, mansion: true, cat: 'mansion' },
+    { zh: '湖景豪宅', en: 'Lakeside Mansion', cost: 36000, needLv: 14, charm: 920,  upkeep: 160, points: 250, stem: 'p_house_7', draw: 2.70, mansion: true, cat: 'mansion' },
+    { zh: '东方庄园', en: 'Eastern Estate',   cost: 60000, needLv: 18, charm: 1400, upkeep: 250, points: 400, stem: 'p_house_8', draw: 3.05, mansion: true, cat: 'mansion' },
+    { zh: '石墙农舍', en: 'Stone Hut',        cost: 1500,  needLv: 3,  charm: 95,   upkeep: 8,   stem: 'p_house_9', draw: 1.20, mansion: false, cat: 'cottage' },
+    { zh: '青瓦小院', en: 'Grey-Tile Court',  cost: 3500,  needLv: 5,  charm: 175,  upkeep: 18,  stem: 'p_house_10', draw: 1.50, mansion: false, cat: 'court' },
+    { zh: '双翼别墅', en: 'Twin-Wing Villa',  cost: 7000,  needLv: 7,  charm: 280,  upkeep: 35,  stem: 'p_house_11', draw: 1.80, mansion: false, cat: 'villa' },
+    { zh: '花廊洋房', en: 'Pergola Manor',    cost: 14000, needLv: 9,  charm: 430,  upkeep: 55,  stem: 'p_house_12', draw: 2.08, mansion: false, cat: 'villa' },
+    { zh: '圆池雅墅', en: 'Round-Pool Villa', cost: 24000, needLv: 11, charm: 680,  upkeep: 100, points: 150, stem: 'p_house_13', draw: 2.38, mansion: true, cat: 'mansion' },
+    { zh: '园林庄园', en: 'Garden Estate',    cost: 68000, needLv: 18, charm: 1500, upkeep: 280, points: 500, stem: 'p_house_14', draw: 3.08, mansion: true, cat: 'mansion' },
+    { zh: '茅草暖屋', en: 'Thatched Cottage', cost: 800,   needLv: 1,  charm: 70,   upkeep: 5,   stem: 'p_house_15', draw: 1.08, mansion: false, cat: 'cottage' },
+    { zh: '木篱农舍', en: 'Timber Farmhouse', cost: 1800,  needLv: 3,  charm: 110,  upkeep: 10,  stem: 'p_house_16', draw: 1.25, mansion: false, cat: 'cottage' },
+    { zh: '四合小院', en: 'Siheyuan Court',   cost: 4200,  needLv: 5,  charm: 190,  upkeep: 20,  stem: 'p_house_17', draw: 1.55, mansion: false, cat: 'court' },
+    { zh: '竹影人家', en: 'Bamboo Home',      cost: 5000,  needLv: 5,  charm: 210,  upkeep: 22,  stem: 'p_house_18', draw: 1.58, mansion: false, cat: 'court' },
+    { zh: '黄墙洋楼', en: 'Ochre Villa',      cost: 8500,  needLv: 7,  charm: 310,  upkeep: 38,  stem: 'p_house_19', draw: 1.85, mansion: false, cat: 'villa' },
+    { zh: '玫瑰洋房', en: 'Rose Villa',       cost: 15500, needLv: 9,  charm: 460,  upkeep: 58,  stem: 'p_house_20', draw: 2.12, mansion: false, cat: 'villa' },
+    { zh: '白石宫墅', en: 'White Palace',     cost: 28000, needLv: 11, charm: 750,  upkeep: 110, points: 180, stem: 'p_house_21', draw: 2.45, mansion: true, cat: 'mansion' },
+    { zh: '金顶庄园', en: 'Golden Estate',    cost: 80000, needLv: 18, charm: 1700, upkeep: 300, points: 550, stem: 'p_house_22', draw: 3.20, mansion: true, cat: 'mansion' },
   ];
   // EP-shop pets → painted iso animal sprites (replaces the emoji pet).
   const ANIMALS = { pet_chick: 'animal_chicken', pet_cat: 'animal_cat', pet_rabbit: 'animal_rabbit', decoration_dog: 'animal_dog', guard_dog: 'animal_dog' };
@@ -1148,6 +1164,90 @@
     _homeStemUrl(stem) {
       return ASSET_DIR + (stem || 'p_house') + '.webp';
     },
+    // 章节目标按造价档，不按图册序号（石墙农舍 id=9 不能算作东方庄园）。
+    _homeTier(o) {
+      const c = (this._homeSpec(o).cost || 0);
+      if (c >= 60000) return 8;
+      if (c >= 36000) return 7;
+      if (c >= 20000) return 6;
+      if (c >= 12000) return 5;
+      if (c >= 6000) return 4;
+      if (c >= 3000) return 3;
+      if (c >= 1200) return 2;
+      return 1;
+    },
+    _homeFace(stem, px) {
+      return '<img src="' + this._homeStemUrl(stem)
+        + '" alt="" style="width:' + px + 'px;height:' + px + 'px;object-fit:contain;'
+        + 'filter:drop-shadow(0 3px 4px rgba(60,35,15,.2));"/>';
+    },
+    _homeIdsInCat(catId) {
+      const ids = [];
+      HOME_LEVELS.forEach((h, i) => { if (h.cat === catId) ids.push(i + 1); });
+      ids.sort((a, b) => (HOME_LEVELS[a - 1].cost || 0) - (HOME_LEVELS[b - 1].cost || 0));
+      return ids;
+    },
+    _homeCatCardsHtml(en, hereId) {
+      const here = hereId ? HOME_LEVELS[hereId - 1] : null;
+      let html = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">';
+      HOME_CATS.forEach((c) => {
+        const ids = this._homeIdsInCat(c.id);
+        const on = !!(here && here.cat === c.id);
+        let lo = Infinity, hi = 0;
+        ids.forEach((id) => {
+          const p = this._homePay(null, id).coins;
+          if (p < lo) lo = p;
+          if (p > hi) hi = p;
+        });
+        const range = !ids.length ? '' : (lo === hi ? lo.toLocaleString() : (lo.toLocaleString() + ' – ' + hi.toLocaleString()));
+        html += '<button type="button" data-home-cat="' + c.id + '" style="border:1.5px solid '
+          + (on ? 'var(--leaf-dark,#3a8c50)' : '#e8e0d4')
+          + ';border-radius:14px;padding:10px 8px 12px;background:' + (on ? '#f4faf4' : '#fff')
+          + ';text-align:center;cursor:pointer;font:inherit;color:inherit;">'
+          + this._homeFace(c.face, 88)
+          + '<div style="font-family:var(--font-display);font-size:18px;margin-top:4px;">'
+          + (en ? c.en : c.zh) + '</div>'
+          + '<div style="font-size:12px;color:var(--warm-text-soft);margin-top:3px;">'
+          + ids.length + (en ? ' homes' : ' 款') + '</div>'
+          + '<div style="font-size:12px;color:var(--warm-text-soft);margin-top:2px;">'
+          + range + ' <span class="coin-icon"></span></div></button>';
+      });
+      return html + '</div>';
+    },
+    _homeGridHtml(en, fromId, catId, hereId) {
+      const coins = Farm.state.data.coins || 0;
+      const pts = Farm.state.data.eastPoints || 0;
+      const loggedIn = !!(Farm.fbAuth && Farm.fbAuth.isLoggedIn && Farm.fbAuth.isLoggedIn());
+      const ids = this._homeIdsInCat(catId);
+      let html = '<div style="max-height:46vh;overflow-y:auto;display:grid;grid-template-columns:1fr 1fr;gap:8px;">';
+      ids.forEach((id) => {
+        const h = HOME_LEVELS[id - 1];
+        const here = hereId === id;
+        const payAmt = this._homePay(fromId, id);
+        const rich = coins >= payAmt.coins && (!payAmt.points || (loggedIn && pts >= payAmt.points));
+        const tag = h.mansion ? (en ? 'Mansion' : '豪宅') : '';
+        let action;
+        if (here) {
+          action = '<div style="font-size:12px;color:var(--leaf-dark);">' + (en ? 'This house' : '就是这栋') + '</div>';
+        } else {
+          const price = (!payAmt.coins && !payAmt.points)
+            ? (en ? 'Switch' : '换成这款')
+            : ((payAmt.coins ? (payAmt.coins.toLocaleString() + ' <span class="coin-icon"></span>') : '')
+              + (payAmt.points ? ((payAmt.coins ? ' + ' : '') + payAmt.points + ' <span class="points-icon"></span>') : ''));
+          action = '<button class="btn' + (rich ? '' : ' secondary') + '" data-home-id="' + id + '" style="width:100%;padding:6px 8px;font-size:13px;"'
+            + (rich ? '' : ' disabled') + '>' + price + '</button>';
+        }
+        html += '<div style="border:1.5px solid ' + (here ? 'var(--leaf-dark,#3a8c50)' : '#e8e0d4')
+          + ';border-radius:12px;padding:8px 8px 10px;background:' + (here ? '#f4faf4' : '#fff') + ';text-align:center;">'
+          + this._homeFace(h.stem, 72)
+          + '<div style="font-size:13px;font-weight:600;margin-top:4px;">' + (en ? h.en : h.zh) + '</div>'
+          + (tag ? '<div style="font-size:11px;color:#b45309;">' + tag + '</div>' : '')
+          + '<div style="font-size:11px;color:var(--warm-text-soft);margin:2px 0 6px;">'
+          + (en ? 'Charm' : '魅力') + ' +' + h.charm + '</div>'
+          + action + '</div>';
+      });
+      return html + '</div>';
+    },
 
     collectHomeUpkeep() {
       const d = Farm.state && Farm.state.data;
@@ -1201,7 +1301,7 @@
       if (Farm.ui.refreshHUD) Farm.ui.refreshHUD();
       if (Farm.ui.confettiBurst) Farm.ui.confettiBurst();
       this._focusHome(o);
-      this._openHomePanel(mapIdx);
+      this._openHomePanel(mapIdx, spec.cat);
     },
 
     _findHomeSpot() {
@@ -1244,10 +1344,10 @@
       if (Farm.ui.confettiBurst) Farm.ui.confettiBurst();
       this._refreshPaletteAfford();
       this._focusHome(rec);
-      this._openHomePanel(Farm.state.data.map.indexOf(rec));
+      this._openHomePanel(Farm.state.data.map.indexOf(rec), spec.cat);
     },
 
-    _openHomePanel(idx) {
+    _openHomePanel(idx, cat) {
       const o = (Farm.state.data.map || [])[idx];
       if (!o || o.type !== 'home' || !(Farm.ui && Farm.ui.showModal)) return;
       this.collectHomeUpkeep();
@@ -1255,13 +1355,8 @@
       const neglected = !!(Farm.state.data && Farm.state.data.homeNeglected);
       const curId = Math.min(Math.max(o.lv || 1, 1), HOME_LEVELS.length);
       const cur = HOME_LEVELS[curId - 1];
-      const coins = Farm.state.data.coins || 0;
-      const pts = Farm.state.data.eastPoints || 0;
-      const loggedIn = !!(Farm.fbAuth && Farm.fbAuth.isLoggedIn && Farm.fbAuth.isLoggedIn());
-      const face = (stem, px) => '<img src="' + this._homeStemUrl(stem)
-        + '" alt="" style="width:' + px + 'px;height:' + px + 'px;object-fit:contain;'
-        + 'filter:drop-shadow(0 3px 4px rgba(60,35,15,.2));"/>';
-      let body = '<div style="text-align:center;line-height:1;">' + face(cur.stem, 120) + '</div>'
+      const catDef = cat && HOME_CATS.find((c) => c.id === cat);
+      let body = '<div style="text-align:center;line-height:1;">' + this._homeFace(cur.stem, 120) + '</div>'
         + '<div style="text-align:center;font-family:var(--font-display);font-size:20px;margin-top:6px;">'
         + (en ? cur.en : cur.zh) + '</div>'
         + '<div style="text-align:center;font-size:12.5px;color:var(--warm-text-soft);margin-top:4px;">'
@@ -1271,83 +1366,63 @@
           ? '<button class="btn secondary" id="homePayUpkeep" style="width:100%;margin-top:8px;">'
             + (en ? ('Tend house · ' + (cur.upkeep || 0)) : ('打理一下 · ' + (cur.upkeep || 0)))
             + ' <span class="coin-icon"></span></button>'
-          : '')
-        + '<div style="margin:12px 0 8px;font-size:13px;font-weight:600;">'
-        + (en ? 'Remodel this house' : '改建这栋') + '</div>'
-        + '<div style="max-height:46vh;overflow-y:auto;display:grid;grid-template-columns:1fr 1fr;gap:8px;">';
-      HOME_LEVELS.forEach((h, i) => {
-        const id = i + 1;
-        const here = id === curId;
-        const payAmt = this._homePay(curId, id);
-        const rich = coins >= payAmt.coins && (!payAmt.points || (loggedIn && pts >= payAmt.points));
-        const tag = h.mansion ? (en ? 'Mansion' : '豪宅') : '';
-        let action;
-        if (here) action = '<div style="font-size:12px;color:var(--leaf-dark);">' + (en ? 'This house' : '就是这栋') + '</div>';
-        else {
-          const price = (!payAmt.coins && !payAmt.points)
-            ? (en ? 'Switch' : '换成这款')
-            : ((payAmt.coins ? (payAmt.coins.toLocaleString() + ' <span class="coin-icon"></span>') : '')
-              + (payAmt.points ? ((payAmt.coins ? ' + ' : '') + payAmt.points + ' <span class="points-icon"></span>') : ''));
-          action = '<button class="btn' + (rich ? '' : ' secondary') + '" data-home-id="' + id + '" style="width:100%;padding:6px 8px;font-size:13px;"'
-            + (rich ? '' : ' disabled') + '>' + price + '</button>';
-        }
-        body += '<div style="border:1.5px solid ' + (here ? 'var(--leaf-dark,#3a8c50)' : '#e8e0d4')
-          + ';border-radius:12px;padding:8px 8px 10px;background:' + (here ? '#f4faf4' : '#fff') + ';text-align:center;">'
-          + face(h.stem, 72)
-          + '<div style="font-size:13px;font-weight:600;margin-top:4px;">' + (en ? h.en : h.zh) + '</div>'
-          + (tag ? '<div style="font-size:11px;color:#b45309;">' + tag + '</div>' : '')
-          + '<div style="font-size:11px;color:var(--warm-text-soft);margin:2px 0 6px;">'
-          + (en ? 'Charm' : '魅力') + ' +' + h.charm + '</div>'
-          + action + '</div>';
-      });
-      body += '</div>'
-        + '<div class="btn-row" style="margin-top:12px;"><button class="btn secondary" onclick="Farm.ui.hideModal()" style="width:100%;">'
+          : '');
+      if (!catDef) {
+        body += '<div style="margin:12px 0 8px;font-size:13px;font-weight:600;">'
+          + (en ? 'Choose a type' : '选一类房子') + '</div>'
+          + this._homeCatCardsHtml(en, curId);
+      } else {
+        body += '<div style="margin:12px 0 8px;display:flex;align-items:center;justify-content:space-between;">'
+          + '<button type="button" id="homeCatBack" class="btn secondary" style="padding:4px 10px;font-size:13px;">'
+          + (en ? 'Types' : '返回分类') + '</button>'
+          + '<div style="font-size:13px;font-weight:600;">' + (en ? catDef.en : catDef.zh) + '</div>'
+          + '<span style="width:72px;"></span></div>'
+          + this._homeGridHtml(en, curId, cat, curId);
+      }
+      body += '<div class="btn-row" style="margin-top:12px;"><button class="btn secondary" onclick="Farm.ui.hideModal()" style="width:100%;">'
         + (en ? 'Close' : '关闭') + '</button></div>';
       Farm.ui.showModal('<h2 class="modal-title">' + (en ? 'My Home' : '我的家') + '</h2>' + body);
       const self = this;
+      document.querySelectorAll('[data-home-cat]').forEach((btn) => {
+        btn.onclick = () => self._openHomePanel(idx, btn.getAttribute('data-home-cat'));
+      });
       document.querySelectorAll('[data-home-id]').forEach((btn) => {
         btn.onclick = () => self._buyHome(idx, parseInt(btn.getAttribute('data-home-id'), 10));
       });
+      const back = document.getElementById('homeCatBack');
+      if (back) back.onclick = () => self._openHomePanel(idx);
       const pay = document.getElementById('homePayUpkeep');
-      if (pay) pay.onclick = () => { self.collectHomeUpkeep(); self._openHomePanel(idx); };
+      if (pay) pay.onclick = () => { self.collectHomeUpkeep(); self._openHomePanel(idx, cat); };
     },
 
-    _openNewHomePanel() {
+    _openNewHomePanel(cat) {
       if (!(Farm.ui && Farm.ui.showModal)) return;
       const en = this._lang() === 'en';
-      const coins = Farm.state.data.coins || 0;
-      const pts = Farm.state.data.eastPoints || 0;
-      const loggedIn = !!(Farm.fbAuth && Farm.fbAuth.isLoggedIn && Farm.fbAuth.isLoggedIn());
-      const face = (stem, px) => '<img src="' + this._homeStemUrl(stem)
-        + '" alt="" style="width:' + px + 'px;height:' + px + 'px;object-fit:contain;'
-        + 'filter:drop-shadow(0 3px 4px rgba(60,35,15,.2));"/>';
+      const catDef = cat && HOME_CATS.find((c) => c.id === cat);
       let body = '<div style="margin:0 0 8px;font-size:13px;color:var(--warm-text-soft);">'
-        + (en ? 'A new house costs the full catalog price. Remodel an existing one to pay only the difference.' : '新盖一座按图册全价。点场上已有的房子改建，只补差价。') + '</div>'
-        + '<div style="max-height:52vh;overflow-y:auto;display:grid;grid-template-columns:1fr 1fr;gap:8px;">';
-      HOME_LEVELS.forEach((h, i) => {
-        const id = i + 1;
-        const payAmt = this._homePay(null, id);
-        const rich = coins >= payAmt.coins && (!payAmt.points || (loggedIn && pts >= payAmt.points));
-        const tag = h.mansion ? (en ? 'Mansion' : '豪宅') : '';
-        const price = (payAmt.coins ? (payAmt.coins.toLocaleString() + ' <span class="coin-icon"></span>') : '')
-          + (payAmt.points ? ((payAmt.coins ? ' + ' : '') + payAmt.points + ' <span class="points-icon"></span>') : '');
-        body += '<div style="border:1.5px solid #e8e0d4;border-radius:12px;padding:8px 8px 10px;background:#fff;text-align:center;">'
-          + face(h.stem, 72)
-          + '<div style="font-size:13px;font-weight:600;margin-top:4px;">' + (en ? h.en : h.zh) + '</div>'
-          + (tag ? '<div style="font-size:11px;color:#b45309;">' + tag + '</div>' : '')
-          + '<div style="font-size:11px;color:var(--warm-text-soft);margin:2px 0 6px;">'
-          + (en ? 'Charm' : '魅力') + ' +' + h.charm + '</div>'
-          + '<button class="btn' + (rich ? '' : ' secondary') + '" data-new-home-id="' + id + '" style="width:100%;padding:6px 8px;font-size:13px;"'
-          + (rich ? '' : ' disabled') + '>' + price + '</button></div>';
-      });
-      body += '</div>'
-        + '<div class="btn-row" style="margin-top:12px;"><button class="btn secondary" onclick="Farm.ui.hideModal()" style="width:100%;">'
+        + (en ? 'A new house costs the full catalog price. Remodel an existing one to pay only the difference.' : '新盖一座按图册全价。点场上已有的房子改建，只补差价。') + '</div>';
+      if (!catDef) {
+        body += this._homeCatCardsHtml(en, 0);
+      } else {
+        body += '<div style="margin:0 0 8px;display:flex;align-items:center;justify-content:space-between;">'
+          + '<button type="button" id="homeCatBack" class="btn secondary" style="padding:4px 10px;font-size:13px;">'
+          + (en ? 'Types' : '返回分类') + '</button>'
+          + '<div style="font-size:13px;font-weight:600;">' + (en ? catDef.en : catDef.zh) + '</div>'
+          + '<span style="width:72px;"></span></div>'
+          + this._homeGridHtml(en, null, cat, 0).replace(/data-home-id="/g, 'data-new-home-id="');
+      }
+      body += '<div class="btn-row" style="margin-top:12px;"><button class="btn secondary" onclick="Farm.ui.hideModal()" style="width:100%;">'
         + (en ? 'Close' : '关闭') + '</button></div>';
       Farm.ui.showModal('<h2 class="modal-title">' + (en ? 'Build another house' : '再建一座') + '</h2>' + body);
       const self = this;
+      document.querySelectorAll('[data-home-cat]').forEach((btn) => {
+        btn.onclick = () => self._openNewHomePanel(btn.getAttribute('data-home-cat'));
+      });
       document.querySelectorAll('[data-new-home-id]').forEach((btn) => {
         btn.onclick = () => self._placeNewHome(parseInt(btn.getAttribute('data-new-home-id'), 10));
       });
+      const back = document.getElementById('homeCatBack');
+      if (back) back.onclick = () => self._openNewHomePanel();
     },
 
     /* 我的家逐级手绘加装(2026-08-14)。只有一张房子贴图, 分级视觉全靠这里 ——

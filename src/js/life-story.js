@@ -20,6 +20,13 @@
     deliveries: (s) => s.totalDeliveries || 0,
     home_built: (s) => (s.map || []).some((m) => m && m.type === 'home') ? 1 : 0,
     home_level: (s) => {
+      if (Farm.isoView && Farm.isoView._homeTier) {
+        let t = 0;
+        (s.map || []).forEach((m) => {
+          if (m && m.type === 'home') t = Math.max(t, Farm.isoView._homeTier(m));
+        });
+        return t;
+      }
       const lvs = (s.map || []).filter((m) => m && m.type === 'home').map((h) => h.lv || 1);
       return lvs.length ? Math.max.apply(null, lvs) : 0;
     },
@@ -70,6 +77,13 @@
     { k: 'deliver', vals: [25, 100], get: (s2) => s2.totalDeliveries || 0,
       zh: (n) => '第 ' + n + ' 次给东方超市送货。', en: (n) => 'Delivery #' + n + ' to Eastern Market.' },
     { k: 'homelv', vals: [2, 3, 4, 5, 6, 7, 8], get: (s2) => {
+      if (Farm.isoView && Farm.isoView._homeTier) {
+        let t = 0;
+        (s2.map || []).forEach((m) => {
+          if (m && m.type === 'home') t = Math.max(t, Farm.isoView._homeTier(m));
+        });
+        return t;
+      }
       const lvs = (s2.map || []).filter((m) => m && m.type === 'home').map((h) => h.lv || 1);
       return lvs.length ? Math.max.apply(null, lvs) : 0;
     },
