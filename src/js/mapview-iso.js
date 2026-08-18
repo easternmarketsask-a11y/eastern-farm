@@ -1109,11 +1109,6 @@
         d.homeUpkeepOn = today;
         d.homeNeglected = false;
         Farm.state.save();
-        if (Farm.ui && Farm.ui.toast) {
-          Farm.ui.toast(en
-            ? ('Home upkeep ' + fee + ' coins — ' + spec.en)
-            : ((spec.zh) + '今日维护 ' + fee + ' 币'), 2800);
-        }
         if (this._refreshPaletteCosts) this._refreshPaletteCosts();
         return;
       }
@@ -1121,9 +1116,7 @@
         d.homeNeglected = true;
         Farm.state.save();
         if (Farm.ui && Farm.ui.toast) {
-          Farm.ui.toast(en
-            ? 'Not enough coins for upkeep. Charm is halved until you pay.'
-            : '维护费不够，魅力先减半。有钱再补。', 3200);
+          Farm.ui.toast(en ? 'House upkeep skipped today.' : '今天房子先将就着。', 2200);
         }
       }
     },
@@ -1193,11 +1186,10 @@
         + (en ? cur.en : cur.zh) + '</div>'
         + '<div style="text-align:center;font-size:12.5px;color:var(--warm-text-soft);margin-top:4px;">'
         + (en ? 'Charm' : '魅力') + ' +' + (neglected ? Math.floor(cur.charm / 2) : cur.charm)
-        + (cur.upkeep ? ' · ' + (en ? ('Upkeep ' + cur.upkeep + '/day') : ('维护 ' + cur.upkeep + '/天')) : (en ? ' · No upkeep' : ' · 无需维护'))
         + '</div>'
         + (neglected
-          ? '<button class="btn" id="homePayUpkeep" style="width:100%;margin-top:8px;">'
-            + (en ? ('Pay today\'s upkeep · ' + (cur.upkeep || 0)) : ('补缴今日维护 · ' + (cur.upkeep || 0)))
+          ? '<button class="btn secondary" id="homePayUpkeep" style="width:100%;margin-top:8px;">'
+            + (en ? ('Tend house · ' + (cur.upkeep || 0)) : ('打理一下 · ' + (cur.upkeep || 0)))
             + ' <span class="coin-icon"></span></button>'
           : '')
         + '<div style="margin:12px 0 8px;font-size:13px;font-weight:600;">'
@@ -1223,9 +1215,7 @@
           + '<div style="font-size:13px;font-weight:600;margin-top:4px;">' + (en ? h.en : h.zh) + '</div>'
           + (tag ? '<div style="font-size:11px;color:#b45309;">' + tag + '</div>' : '')
           + '<div style="font-size:11px;color:var(--warm-text-soft);margin:2px 0 6px;">'
-          + (en ? 'Charm' : '魅力') + ' +' + h.charm
-          + (h.upkeep ? (en ? (' · ' + h.upkeep + '/day') : (' · 维护 ' + h.upkeep + '/天')) : '')
-          + '</div>'
+          + (en ? 'Charm' : '魅力') + ' +' + h.charm + '</div>'
           + action + '</div>';
       });
       body += '</div>'
