@@ -67,8 +67,8 @@
     { k: 'deliver', vals: [25, 100], get: (s2) => s2.totalDeliveries || 0,
       zh: (n) => '第 ' + n + ' 次给东方超市送货。', en: (n) => 'Delivery #' + n + ' to Eastern Market.' },
     { k: 'homelv', vals: [2, 3, 4, 5, 6, 7, 8], get: (s2) => { const h = (s2.map || []).find((m) => m && m.type === 'home'); return h ? (h.lv || 1) : 0; },
-      zh: (n) => ['', '', '家升级了：砖瓦农居。', '家升级了：院落人家。', '家升级了：乡绅别墅。', '家升级了：花园洋房。', '家升级了：泳池雅墅。', '家升级了：湖景豪宅。', '家升到东方庄园。'][n],
-      en: (n) => ['', '', 'Home upgraded: Brick Farmhouse.', 'Home upgraded: Courtyard Home.', 'Home upgraded: Country Villa.', 'Home upgraded: Garden Manor.', 'Home upgraded: Pool Villa.', 'Home upgraded: Lakeside Mansion.', 'Home reached Eastern Estate.'][n] },
+      zh: (n) => ({ 2:'家换成了：砖瓦农居。', 3:'家换成了：院落人家。', 4:'家换成了：乡绅别墅。', 5:'家换成了：花园洋房。', 6:'家换成了：泳池雅墅。', 7:'家换成了：湖景豪宅。', 8:'家换成了：东方庄园。' })[n] || '',
+      en: (n) => ({ 2:'Moved into Brick Farmhouse.', 3:'Moved into Courtyard Home.', 4:'Moved into Country Villa.', 5:'Moved into Garden Manor.', 6:'Moved into Pool Villa.', 7:'Moved into Lakeside Mansion.', 8:'Moved into Eastern Estate.' })[n] || '' },
     { k: 'land', vals: [1, 2, 3, 4], get: (s2) => s2.landLevel || 0,
       zh: (n) => '农场扩建到第 ' + n + ' 阶，地界又宽了。', en: (n) => 'Land expanded to level ' + n + '.' },
   ];

@@ -17,6 +17,12 @@ JOBS = [
     ("06-pool-villa.jpg", "p_house_6", 680),
     ("07-lakeside-mansion.jpg", "p_house_7", 740),
     ("08-eastern-estate.jpg", "p_house_8", 800),
+    ("09-stone-hut.jpg", "p_house_9", 420),
+    ("10-grey-courtyard.jpg", "p_house_10", 520),
+    ("11-twin-villa.jpg", "p_house_11", 580),
+    ("12-pergola-manor.jpg", "p_house_12", 620),
+    ("13-round-pool.jpg", "p_house_13", 680),
+    ("14-garden-estate.jpg", "p_house_14", 800),
 ]
 
 

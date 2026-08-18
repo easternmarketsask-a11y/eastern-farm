@@ -212,6 +212,12 @@
     { zh: '泳池雅墅', en: 'Pool Villa',       cost: 20000, needLv: 11, charm: 620,  stem: 'p_house_6', draw: 2.35, mansion: true },
     { zh: '湖景豪宅', en: 'Lakeside Mansion', cost: 36000, needLv: 14, charm: 920,  stem: 'p_house_7', draw: 2.70, mansion: true },
     { zh: '东方庄园', en: 'Eastern Estate',   cost: 60000, needLv: 18, charm: 1400, stem: 'p_house_8', draw: 3.05, mansion: true },
+    { zh: '石墙农舍', en: 'Stone Hut',        cost: 1500,  needLv: 3,  charm: 95,   stem: 'p_house_9', draw: 1.20, mansion: false },
+    { zh: '青瓦小院', en: 'Grey-Tile Court',  cost: 3500,  needLv: 5,  charm: 175,  stem: 'p_house_10', draw: 1.50, mansion: false },
+    { zh: '双翼别墅', en: 'Twin-Wing Villa',  cost: 7000,  needLv: 7,  charm: 280,  stem: 'p_house_11', draw: 1.80, mansion: false },
+    { zh: '花廊洋房', en: 'Pergola Manor',    cost: 14000, needLv: 9,  charm: 430,  stem: 'p_house_12', draw: 2.08, mansion: false },
+    { zh: '圆池雅墅', en: 'Round-Pool Villa', cost: 24000, needLv: 11, charm: 680,  stem: 'p_house_13', draw: 2.38, mansion: true },
+    { zh: '园林庄园', en: 'Garden Estate',    cost: 68000, needLv: 18, charm: 1500, stem: 'p_house_14', draw: 3.08, mansion: true },
   ];
   // EP-shop pets → painted iso animal sprites (replaces the emoji pet).
   const ANIMALS = { pet_chick: 'animal_chicken', pet_cat: 'animal_cat', pet_rabbit: 'animal_rabbit', decoration_dog: 'animal_dog', guard_dog: 'animal_dog' };
@@ -1082,68 +1088,83 @@
       return ASSET_DIR + (stem || 'p_house') + '.webp';
     },
 
+    _buyHome(mapIdx, houseId) {
+      const o = (Farm.state.data.map || [])[mapIdx];
+      const spec = HOME_LEVELS[houseId - 1];
+      const en = this._lang() === 'en';
+      if (!o || o.type !== 'home' || !spec) return;
+      if ((o.lv || 1) === houseId) return;
+      if ((Farm.state.data.level || 1) < spec.needLv) {
+        if (Farm.ui.toast) Farm.ui.toast(en ? ('Unlocks at player Lv ' + spec.needLv) : ('玩家 Lv ' + spec.needLv + ' 解锁'));
+        return;
+      }
+      if (spec.cost > 0 && !Farm.state.spendCoins(spec.cost)) {
+        if (Farm.ui.toast) Farm.ui.toast(en ? 'Not enough coins' : '农场币不足');
+        return;
+      }
+      o.lv = houseId;
+      if (Farm.lifeStory && Farm.lifeStory.record) {
+        Farm.lifeStory.record('homeid_' + houseId,
+          '家换成了：' + spec.zh + '。',
+          'Moved into ' + spec.en + '.');
+      }
+      Farm.state.save();
+      if (Farm.audio) Farm.audio.play('achievement');
+      if (Farm.ui.refreshHUD) Farm.ui.refreshHUD();
+      if (Farm.ui.confettiBurst) Farm.ui.confettiBurst();
+      this.render();
+      this._openHomePanel(mapIdx);
+    },
+
     _openHomePanel(idx) {
       const o = (Farm.state.data.map || [])[idx];
       if (!o || o.type !== 'home' || !(Farm.ui && Farm.ui.showModal)) return;
       const en = this._lang() === 'en';
-      const lv = Math.min(o.lv || 1, HOME_LEVELS.length);
-      const cur = HOME_LEVELS[lv - 1], next = HOME_LEVELS[lv];
-      const goal = HOME_LEVELS[HOME_LEVELS.length - 1];
+      const curId = Math.min(Math.max(o.lv || 1, 1), HOME_LEVELS.length);
+      const cur = HOME_LEVELS[curId - 1];
       const playerLv = Farm.state.data.level || 1;
+      const coins = Farm.state.data.coins || 0;
       const face = (stem, px) => '<img src="' + this._homeStemUrl(stem)
         + '" alt="" style="width:' + px + 'px;height:' + px + 'px;object-fit:contain;'
-        + 'filter:drop-shadow(0 3px 4px rgba(60,35,15,.25));"/>';
-      let body = '<div style="text-align:center;line-height:1;">' + face(cur.stem, 132) + '</div>'
+        + 'filter:drop-shadow(0 3px 4px rgba(60,35,15,.2));"/>';
+      let body = '<div style="text-align:center;line-height:1;">' + face(cur.stem, 120) + '</div>'
         + '<div style="text-align:center;font-family:var(--font-display);font-size:20px;margin-top:6px;">'
-        + (en ? cur.en : cur.zh)
-        + ' <span style="font-family:var(--font-num);font-size:14px;color:var(--warm-text-soft);">Lv ' + lv + '</span></div>'
+        + (en ? cur.en : cur.zh) + '</div>'
         + '<div style="text-align:center;font-size:12.5px;color:var(--warm-text-soft);margin-top:4px;">'
-        + (en ? 'Charm' : '魅力') + ' +' + cur.charm + '</div>';
-      if (next) {
-        const needMore = playerLv < next.needLv;
-        const canPay = (Farm.state.data.coins || 0) >= next.cost;
-        const tag = next.mansion
-          ? (en ? 'Mansion' : '豪宅')
-          : (en ? 'Next home' : '下一座');
-        body += '<div style="margin:14px 0 4px;padding:12px;border:1.5px dashed var(--border-soft);border-radius:12px;display:flex;gap:10px;align-items:center;">'
-          + face(next.stem, 72)
-          + '<div style="flex:1;min-width:0;text-align:left;">'
-          + '<div style="font-size:11px;color:var(--warm-text-soft);">' + tag + '</div>'
-          + '<div style="font-size:14px;font-weight:600;">' + (en ? next.en : next.zh) + '</div>'
-          + '<div style="font-size:12px;color:var(--warm-text-soft);margin-top:2px;">'
-          + (en ? 'Charm' : '魅力') + ' +' + next.charm + '</div></div></div>'
-          + (needMore
-            ? '<button class="btn secondary" disabled style="width:100%;">' + (en ? ('Unlocks at player Lv ' + next.needLv) : ('玩家 Lv ' + next.needLv + ' 解锁')) + '</button>'
-            : '<button class="btn" id="homeUpgradeBtn" style="width:100%;" ' + (canPay ? '' : 'disabled') + '>'
-              + (en ? 'Upgrade' : '升级') + ' · ' + next.cost + ' <span class="coin-icon"></span></button>');
-      } else {
-        body += '<div style="text-align:center;margin-top:12px;font-size:13px;color:var(--leaf-dark);">'
-          + (en ? 'Highest home we have for now. Bigger ones will come later.' : '这是现在最高的一档。更大的房子以后再加。') + '</div>';
-      }
-      if (lv < HOME_LEVELS.length && goal && goal !== next) {
-        body += '<div style="margin-top:10px;padding:10px 12px;background:#f7f3ea;border-radius:10px;display:flex;gap:8px;align-items:center;">'
-          + face(goal.stem, 56)
-          + '<div style="font-size:12.5px;line-height:1.35;text-align:left;">'
-          + '<div style="color:var(--warm-text-soft);">' + (en ? 'Goal' : '目标') + '</div>'
-          + '<div style="font-weight:600;">' + (en ? goal.en : goal.zh) + '</div>'
-          + '<div style="color:var(--warm-text-soft);">' + (en ? 'Pool, garden, moon gate.' : '泳池、花园、月洞门。') + '</div>'
-          + '</div></div>';
-      }
-      body += '<div class="btn-row" style="margin-top:12px;"><button class="btn secondary" onclick="Farm.ui.hideModal()" style="width:100%;">'
+        + (en ? 'Charm' : '魅力') + ' +' + cur.charm + '</div>'
+        + '<div style="margin:12px 0 8px;font-size:13px;font-weight:600;">'
+        + (en ? 'Choose a home' : '选一款房子') + '</div>'
+        + '<div style="max-height:46vh;overflow-y:auto;display:grid;grid-template-columns:1fr 1fr;gap:8px;">';
+      HOME_LEVELS.forEach((h, i) => {
+        const id = i + 1;
+        const here = id === curId;
+        const locked = playerLv < h.needLv;
+        const rich = coins >= h.cost;
+        const tag = h.mansion ? (en ? 'Mansion' : '豪宅') : '';
+        let action;
+        if (here) action = '<div style="font-size:12px;color:var(--leaf-dark);">' + (en ? 'Living here' : '正在住') + '</div>';
+        else if (locked) action = '<div style="font-size:12px;color:#888;">Lv ' + h.needLv + (en ? ' to unlock' : ' 解锁') + '</div>';
+        else action = '<button class="btn' + (rich ? '' : ' secondary') + '" data-home-id="' + id + '" style="width:100%;padding:6px 8px;font-size:13px;"'
+          + (rich ? '' : ' disabled') + '>'
+          + (h.cost ? (h.cost.toLocaleString() + ' <span class="coin-icon"></span>') : (en ? 'Move in' : '入住'))
+          + '</button>';
+        body += '<div style="border:1.5px solid ' + (here ? 'var(--leaf-dark,#3a8c50)' : '#e8e0d4')
+          + ';border-radius:12px;padding:8px 8px 10px;background:' + (here ? '#f4faf4' : '#fff') + ';text-align:center;">'
+          + face(h.stem, 72)
+          + '<div style="font-size:13px;font-weight:600;margin-top:4px;">' + (en ? h.en : h.zh) + '</div>'
+          + (tag ? '<div style="font-size:11px;color:#b45309;">' + tag + '</div>' : '')
+          + '<div style="font-size:11px;color:var(--warm-text-soft);margin:2px 0 6px;">'
+          + (en ? 'Charm' : '魅力') + ' +' + h.charm + '</div>'
+          + action + '</div>';
+      });
+      body += '</div>'
+        + '<div class="btn-row" style="margin-top:12px;"><button class="btn secondary" onclick="Farm.ui.hideModal()" style="width:100%;">'
         + (en ? 'Close' : '关闭') + '</button></div>';
       Farm.ui.showModal('<h2 class="modal-title">' + (en ? 'My Home' : '我的家') + '</h2>' + body);
-      const btn = document.getElementById('homeUpgradeBtn');
-      if (btn) btn.onclick = () => {
-        if (!next) return;
-        if (!Farm.state.spendCoins(next.cost)) { if (Farm.ui.toast) Farm.ui.toast(en ? 'Not enough coins' : '农场币不足'); return; }
-        o.lv = lv + 1;
-        Farm.state.save();
-        if (Farm.audio) Farm.audio.play('achievement');
-        if (Farm.ui.refreshHUD) Farm.ui.refreshHUD();
-        if (Farm.ui.confettiBurst) Farm.ui.confettiBurst();
-        this.render();
-        this._openHomePanel(idx);
-      };
+      const self = this;
+      document.querySelectorAll('[data-home-id]').forEach((btn) => {
+        btn.onclick = () => self._buyHome(idx, parseInt(btn.getAttribute('data-home-id'), 10));
+      });
     },
 
     /* 我的家逐级手绘加装(2026-08-14)。只有一张房子贴图, 分级视觉全靠这里 ——
