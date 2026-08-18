@@ -1037,8 +1037,8 @@
       }
       const link = this.inviteLink();
       const text = lang === 'en'
-        ? 'I\'m farming at Eastern Farm — join me and we both get ' + this.INVITE_BONUS + ' coins!'
-        : '我在东方农场种菜，点链接进来我们做邻居，你我各得 ' + this.INVITE_BONUS + ' 农场币！';
+        ? 'I farm at Eastern Farm. Open the link to be neighbors — we both get ' + this.INVITE_BONUS + ' coins. After you sign in, you can visit, water, and take a ripe crop.'
+        : '我在东方农场种菜。点链接进来我们做邻居，双方各得 ' + this.INVITE_BONUS + ' 农场币。登录后能串门、浇水，熟了的菜可以顺一棵。';
       if (navigator.share) {
         try { await navigator.share({ title: lang === 'en' ? 'Eastern Farm' : '东方农场', text: text, url: link }); } catch (_) {}
         return;

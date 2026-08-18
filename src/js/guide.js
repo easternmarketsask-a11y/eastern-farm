@@ -62,8 +62,8 @@
     },
     {
       icon: '🏘',
-      zh: { title: '串门 & 顺菜', body: '走访邻居能赚币，帮邻居浇水、点赞也有奖。农场到 <b>Lv7</b> 解锁「顺菜」，可以去邻居成熟的地里顺一把 😏' },
-      en: { title: 'Neighbors & mischief', body: 'Visit neighbors for coins; help and like them for more. Reach <b>Lv7</b> to unlock "borrowing" a crop from a neighbor\'s ripe plot 😏' },
+      zh: { title: '串门看邻居', body: '右下角<b>邻居</b>列出今天在线的人。走进去浇水或点赞；自己收过一次菜之后，可以在熟了的地里顺一棵。邀请好友，双方各得 200 农场币。' },
+      en: { title: 'Visit neighbors', body: 'Tap <b>Neighbors</b> (bottom-right) to see who is online today. Walk in to water or like. After you harvest once, you can take a ripe crop. Invite a friend — 200 coins each.' },
     },
     {
       icon: '🏮',

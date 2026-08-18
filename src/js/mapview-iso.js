@@ -335,6 +335,9 @@
       this._startLoop();
       this.render();
       this.collectHomeUpkeep();
+      if (Farm.fbAuth && Farm.fbAuth.isLoggedIn && Farm.fbAuth.isLoggedIn() && Farm.coach) {
+        setTimeout(() => { if (Farm.coach) Farm.coach.fire('first_neighbor'); }, 3800);
+      }
     },
 
     // One-time UNDO of the cancelled "forward move": any save that got shifted

@@ -135,13 +135,16 @@
 
       const neighborHTML = `
         <div class="daily-card daily-neighbor">
-          <div class="daily-card-title">🏘 ${lang === 'en' ? 'Visit Neighbors' : '邻居走访'}</div>
+          <div class="daily-card-title">🏘 ${lang === 'en' ? 'Neighbors' : '邻居'}</div>
           <div class="daily-card-body">
-            ${lang === 'en' ? `Visit neighbors who are online today (${visited}/3) → +40 <span class="coin-icon"></span>` : `走访今天在线的邻居 (${visited}/3) → +40 <span class="coin-icon"></span>`}
+            ${lang === 'en'
+              ? `See who is farming today. Visit (${visited}/3) → +40 <span class="coin-icon"></span>. Invite a friend — 200 coins each.`
+              : `看看今天谁在种菜。走访（${visited}/3）→ +40 <span class="coin-icon"></span>。邀请好友，双方各得 200 农场币。`}
           </div>
           <button class="daily-claim" id="dailyOpenNeighbors">
-            ${visitedComplete ? '✅ ' + (lang === 'en' ? 'Done' : '已完成') : '🚪 ' + (lang === 'en' ? 'Visit' : '去走访')}
+            ${visitedComplete ? '✅ ' + (lang === 'en' ? 'Open' : '打开') : '🚪 ' + (lang === 'en' ? 'Visit' : '去串门')}
           </button>
+          <button class="daily-claim" id="dailyInviteNeighbor" style="margin-top:8px;">📨 ${lang === 'en' ? 'Invite' : '邀请好友'}</button>
         </div>`;
 
       const cal = Farm.state.data.loginCalendar || { lastSignDate: '', dayIndex: 0 };
@@ -195,14 +198,20 @@
         Farm.neighbors._fetchToday().then((list) => {
           const card = document.querySelector('.daily-card.daily-neighbor');
           if (!card) return;
-          if (!list || list.length === 0) { card.remove(); return; }
-          const need = Math.min(3, list.length);
           const body = card.querySelector('.daily-card-body');
           const lang2 = Farm.state.data.language;
+          const n = (list && list.length) || 0;
+          const need = n ? Math.min(3, n) : 0;
           if (body) {
-            body.innerHTML = lang2 === 'en'
-              ? ('Visit neighbors online today (' + visited + '/' + need + ') → +40 <span class="coin-icon"></span>')
-              : ('走访今天在线的邻居（' + visited + '/' + need + '）→ +40 <span class="coin-icon"></span>');
+            if (n === 0) {
+              body.innerHTML = lang2 === 'en'
+                ? 'No one else is online yet. Invite a friend — 200 coins each.'
+                : '现在还没有别人在线。邀请好友，双方各得 200 农场币。';
+            } else {
+              body.innerHTML = lang2 === 'en'
+                ? ('See who is farming today. Visit (' + visited + '/' + need + ') → +40 <span class="coin-icon"></span>. Invite a friend — 200 coins each.')
+                : ('看看今天谁在种菜。走访（' + visited + '/' + need + '）→ +40 <span class="coin-icon"></span>。邀请好友，双方各得 200 农场币。');
+            }
           }
         }).catch(() => {});
       }
@@ -250,6 +259,10 @@
       const neighborBtn = $('dailyOpenNeighbors');
       if (neighborBtn) neighborBtn.onclick = () => {
         if (Farm.neighbors) Farm.neighbors.open();
+      };
+      const inviteBtn = $('dailyInviteNeighbor');
+      if (inviteBtn) inviteBtn.onclick = () => {
+        if (Farm.fbGameSync) Farm.fbGameSync.shareInvite();
       };
     },
 

@@ -32,6 +32,7 @@ FarmVille）都是免费入门 + 内购逼氪 —— **你往游戏里掏钱**�
 | `poster-phone-onart-04a.png` | 备选 A 天头店名 | 胶囊+店名在 logo 下，对联贴扫码栏 |
 | `poster-phone-onart-04b.png` | 备选 B 整块上移 | 标题对联全在天空，菜地全露 |
 | `poster-phone-onart-04c.png` | 备选 C 只上移店名 | 只有「东方农场」上天，胶囊+对联仍在下 |
+| `poster-phone-onart-05-community.png` | **社区宣传**（串门看邻居） | 朋友圈 / 微信群；构图同 04c，不覆盖店内主海报 |
 | `poster-phone-onart-04d.png` | 备选 D 对联上天 | 承诺句在天空，店名贴扫码栏 |
 | `poster-A4-onart.png` | A4 叠字 v1 | 保留 |
 | `poster-A4-onart-02.png` | A4 叠字现行 | 与手机 02 同一套字阶 |

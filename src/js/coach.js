@@ -29,8 +29,8 @@
                             en: 'Tap the coin card to exchange coins for store points.' },
     first_water:    { zh: '点生长中的地块浇水，成熟时间缩短 20%。',
                       en: 'Tap a growing plot to water it — 20% faster.' },
-    first_neighbor: { zh: '社区可拜访邻居、点赞，并获得农场币。',
-                      en: 'Visit neighbors to like, drop by, and earn coins.' },
+    first_neighbor: { zh: '右下「邻居」能看见今天谁在种菜。走进去可以浇水，熟了的菜可以顺一棵。',
+                      en: 'Tap Neighbors (bottom-right) to see who is farming today. Walk in to water, or take a ripe crop.' },
     steal_unlocked: { zh: '可以去邻居家点成熟的菜，顺走一棵放进谷仓。',
                       en: 'You can tap a ripe crop at a neighbor’s farm and take one to your barn.' },
   };
