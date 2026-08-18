@@ -204,20 +204,20 @@
   const PALETTE = ['home', 'barn', 'house', 'greenhouse', 'coop', 'well', 'tree', 'bush', 'lantern', 'fence', 'wheel', 'bridge'];
   // 我的家升级表: 每级的名字/升级价/玩家等级门槛/魅力值。lv 存在 map 对象上(o.lv)。
   const HOME_LEVELS = [
-    { zh: '农户小宅', en: 'Farm Cottage',     cost: 0,     needLv: 1,  charm: 40,   stem: 'p_house_1', draw: 1.00, mansion: false },
-    { zh: '砖瓦农居', en: 'Brick Farmhouse',  cost: 1200,  needLv: 3,  charm: 90,   stem: 'p_house_2', draw: 1.22, mansion: false },
-    { zh: '院落人家', en: 'Courtyard Home',   cost: 3000,  needLv: 5,  charm: 160,  stem: 'p_house_3', draw: 1.48, mansion: false },
-    { zh: '乡绅别墅', en: 'Country Villa',    cost: 6000,  needLv: 7,  charm: 260,  stem: 'p_house_4', draw: 1.75, mansion: false },
-    { zh: '花园洋房', en: 'Garden Manor',     cost: 12000, needLv: 9,  charm: 400,  stem: 'p_house_5', draw: 2.05, mansion: false },
-    { zh: '泳池雅墅', en: 'Pool Villa',       cost: 20000, needLv: 11, charm: 620,  stem: 'p_house_6', draw: 2.35, mansion: true },
-    { zh: '湖景豪宅', en: 'Lakeside Mansion', cost: 36000, needLv: 14, charm: 920,  stem: 'p_house_7', draw: 2.70, mansion: true },
-    { zh: '东方庄园', en: 'Eastern Estate',   cost: 60000, needLv: 18, charm: 1400, stem: 'p_house_8', draw: 3.05, mansion: true },
-    { zh: '石墙农舍', en: 'Stone Hut',        cost: 1500,  needLv: 3,  charm: 95,   stem: 'p_house_9', draw: 1.20, mansion: false },
-    { zh: '青瓦小院', en: 'Grey-Tile Court',  cost: 3500,  needLv: 5,  charm: 175,  stem: 'p_house_10', draw: 1.50, mansion: false },
-    { zh: '双翼别墅', en: 'Twin-Wing Villa',  cost: 7000,  needLv: 7,  charm: 280,  stem: 'p_house_11', draw: 1.80, mansion: false },
-    { zh: '花廊洋房', en: 'Pergola Manor',    cost: 14000, needLv: 9,  charm: 430,  stem: 'p_house_12', draw: 2.08, mansion: false },
-    { zh: '圆池雅墅', en: 'Round-Pool Villa', cost: 24000, needLv: 11, charm: 680,  stem: 'p_house_13', draw: 2.38, mansion: true },
-    { zh: '园林庄园', en: 'Garden Estate',    cost: 68000, needLv: 18, charm: 1500, stem: 'p_house_14', draw: 3.08, mansion: true },
+    { zh: '农户小宅', en: 'Farm Cottage',     cost: 0,     needLv: 1,  charm: 40,   upkeep: 0,   stem: 'p_house_1', draw: 1.00, mansion: false },
+    { zh: '砖瓦农居', en: 'Brick Farmhouse',  cost: 1200,  needLv: 3,  charm: 90,   upkeep: 8,   stem: 'p_house_2', draw: 1.22, mansion: false },
+    { zh: '院落人家', en: 'Courtyard Home',   cost: 3000,  needLv: 5,  charm: 160,  upkeep: 15,  stem: 'p_house_3', draw: 1.48, mansion: false },
+    { zh: '乡绅别墅', en: 'Country Villa',    cost: 6000,  needLv: 7,  charm: 260,  upkeep: 30,  stem: 'p_house_4', draw: 1.75, mansion: false },
+    { zh: '花园洋房', en: 'Garden Manor',     cost: 12000, needLv: 9,  charm: 400,  upkeep: 50,  stem: 'p_house_5', draw: 2.05, mansion: false },
+    { zh: '泳池雅墅', en: 'Pool Villa',       cost: 20000, needLv: 11, charm: 620,  upkeep: 90,  stem: 'p_house_6', draw: 2.35, mansion: true },
+    { zh: '湖景豪宅', en: 'Lakeside Mansion', cost: 36000, needLv: 14, charm: 920,  upkeep: 160, stem: 'p_house_7', draw: 2.70, mansion: true },
+    { zh: '东方庄园', en: 'Eastern Estate',   cost: 60000, needLv: 18, charm: 1400, upkeep: 250, stem: 'p_house_8', draw: 3.05, mansion: true },
+    { zh: '石墙农舍', en: 'Stone Hut',        cost: 1500,  needLv: 3,  charm: 95,   upkeep: 8,   stem: 'p_house_9', draw: 1.20, mansion: false },
+    { zh: '青瓦小院', en: 'Grey-Tile Court',  cost: 3500,  needLv: 5,  charm: 175,  upkeep: 18,  stem: 'p_house_10', draw: 1.50, mansion: false },
+    { zh: '双翼别墅', en: 'Twin-Wing Villa',  cost: 7000,  needLv: 7,  charm: 280,  upkeep: 35,  stem: 'p_house_11', draw: 1.80, mansion: false },
+    { zh: '花廊洋房', en: 'Pergola Manor',    cost: 14000, needLv: 9,  charm: 430,  upkeep: 55,  stem: 'p_house_12', draw: 2.08, mansion: false },
+    { zh: '圆池雅墅', en: 'Round-Pool Villa', cost: 24000, needLv: 11, charm: 680,  upkeep: 100, stem: 'p_house_13', draw: 2.38, mansion: true },
+    { zh: '园林庄园', en: 'Garden Estate',    cost: 68000, needLv: 18, charm: 1500, upkeep: 280, stem: 'p_house_14', draw: 3.08, mansion: true },
   ];
   // EP-shop pets → painted iso animal sprites (replaces the emoji pet).
   const ANIMALS = { pet_chick: 'animal_chicken', pet_cat: 'animal_cat', pet_rabbit: 'animal_rabbit', decoration_dog: 'animal_dog', guard_dog: 'animal_dog' };
@@ -311,6 +311,7 @@
       this._tick = setInterval(() => { if (document.hidden) return; this._syncSize(); this.render(); }, 1000);
       this._startLoop();
       this.render();
+      this.collectHomeUpkeep();
     },
 
     // One-time UNDO of the cancelled "forward move": any save that got shifted
@@ -1088,6 +1089,45 @@
       return ASSET_DIR + (stem || 'p_house') + '.webp';
     },
 
+    collectHomeUpkeep() {
+      const d = Farm.state && Farm.state.data;
+      if (!d || Farm.state._visitLock) return;
+      const o = (d.map || []).find((m) => m && m.type === 'home');
+      if (!o) return;
+      const spec = this._homeSpec(o);
+      const fee = spec.upkeep || 0;
+      const today = Farm.state.getDateString();
+      const en = this._lang() === 'en';
+      if (d.homeUpkeepOn === today && !d.homeNeglected) return;
+      if (fee <= 0) {
+        d.homeUpkeepOn = today;
+        d.homeNeglected = false;
+        Farm.state.save();
+        return;
+      }
+      if ((d.coins || 0) >= fee && Farm.state.spendCoins(fee)) {
+        d.homeUpkeepOn = today;
+        d.homeNeglected = false;
+        Farm.state.save();
+        if (Farm.ui && Farm.ui.toast) {
+          Farm.ui.toast(en
+            ? ('Home upkeep ' + fee + ' coins — ' + spec.en)
+            : ((spec.zh) + '今日维护 ' + fee + ' 币'), 2800);
+        }
+        if (this._refreshPaletteCosts) this._refreshPaletteCosts();
+        return;
+      }
+      if (!d.homeNeglected) {
+        d.homeNeglected = true;
+        Farm.state.save();
+        if (Farm.ui && Farm.ui.toast) {
+          Farm.ui.toast(en
+            ? 'Not enough coins for upkeep. Charm is halved until you pay.'
+            : '维护费不够，魅力先减半。有钱再补。', 3200);
+        }
+      }
+    },
+
     _buyHome(mapIdx, houseId) {
       const o = (Farm.state.data.map || [])[mapIdx];
       const spec = HOME_LEVELS[houseId - 1];
@@ -1099,6 +1139,8 @@
         return;
       }
       o.lv = houseId;
+      Farm.state.data.homeUpkeepOn = Farm.state.getDateString();
+      Farm.state.data.homeNeglected = false;
       if (Farm.lifeStory && Farm.lifeStory.record) {
         Farm.lifeStory.record('homeid_' + houseId,
           '家换成了：' + spec.zh + '。',
@@ -1115,7 +1157,9 @@
     _openHomePanel(idx) {
       const o = (Farm.state.data.map || [])[idx];
       if (!o || o.type !== 'home' || !(Farm.ui && Farm.ui.showModal)) return;
+      this.collectHomeUpkeep();
       const en = this._lang() === 'en';
+      const neglected = !!(Farm.state.data && Farm.state.data.homeNeglected);
       const curId = Math.min(Math.max(o.lv || 1, 1), HOME_LEVELS.length);
       const cur = HOME_LEVELS[curId - 1];
       const coins = Farm.state.data.coins || 0;
@@ -1126,7 +1170,14 @@
         + '<div style="text-align:center;font-family:var(--font-display);font-size:20px;margin-top:6px;">'
         + (en ? cur.en : cur.zh) + '</div>'
         + '<div style="text-align:center;font-size:12.5px;color:var(--warm-text-soft);margin-top:4px;">'
-        + (en ? 'Charm' : '魅力') + ' +' + cur.charm + '</div>'
+        + (en ? 'Charm' : '魅力') + ' +' + (neglected ? Math.floor(cur.charm / 2) : cur.charm)
+        + (cur.upkeep ? ' · ' + (en ? ('Upkeep ' + cur.upkeep + '/day') : ('维护 ' + cur.upkeep + '/天')) : (en ? ' · No upkeep' : ' · 无需维护'))
+        + '</div>'
+        + (neglected
+          ? '<button class="btn" id="homePayUpkeep" style="width:100%;margin-top:8px;">'
+            + (en ? ('Pay today\'s upkeep · ' + (cur.upkeep || 0)) : ('补缴今日维护 · ' + (cur.upkeep || 0)))
+            + ' <span class="coin-icon"></span></button>'
+          : '')
         + '<div style="margin:12px 0 8px;font-size:13px;font-weight:600;">'
         + (en ? 'Choose a home' : '选一款房子') + '</div>'
         + '<div style="max-height:46vh;overflow-y:auto;display:grid;grid-template-columns:1fr 1fr;gap:8px;">';
@@ -1147,7 +1198,9 @@
           + '<div style="font-size:13px;font-weight:600;margin-top:4px;">' + (en ? h.en : h.zh) + '</div>'
           + (tag ? '<div style="font-size:11px;color:#b45309;">' + tag + '</div>' : '')
           + '<div style="font-size:11px;color:var(--warm-text-soft);margin:2px 0 6px;">'
-          + (en ? 'Charm' : '魅力') + ' +' + h.charm + '</div>'
+          + (en ? 'Charm' : '魅力') + ' +' + h.charm
+          + (h.upkeep ? (en ? (' · ' + h.upkeep + '/day') : (' · 维护 ' + h.upkeep + '/天')) : '')
+          + '</div>'
           + action + '</div>';
       });
       body += '</div>'
@@ -1158,6 +1211,8 @@
       document.querySelectorAll('[data-home-id]').forEach((btn) => {
         btn.onclick = () => self._buyHome(idx, parseInt(btn.getAttribute('data-home-id'), 10));
       });
+      const pay = document.getElementById('homePayUpkeep');
+      if (pay) pay.onclick = () => { self.collectHomeUpkeep(); self._openHomePanel(idx); };
     },
 
     /* 我的家逐级手绘加装(2026-08-14)。只有一张房子贴图, 分级视觉全靠这里 ——
@@ -1685,7 +1740,11 @@
       let s = 0; (Farm.state.data.map || []).forEach((o) => {
         const b = BUILDINGS[o.type]; if (!b) return;
         // 我的家按等级计魅力(HOME_LEVELS.charm), 升级=美化, 魅力跟着涨
-        if (o.type === 'home') { s += (HOME_LEVELS[Math.min((o.lv || 1), HOME_LEVELS.length) - 1] || {}).charm || 40; return; }
+        if (o.type === 'home') {
+          const ch = (HOME_LEVELS[Math.min((o.lv || 1), HOME_LEVELS.length) - 1] || {}).charm || 40;
+          s += (Farm.state.data && Farm.state.data.homeNeglected) ? Math.floor(ch / 2) : ch;
+          return;
+        }
         s += charmOf(b);
       }); return s;
     },

@@ -76,6 +76,8 @@
     mapBuildSeen: false,        // has the player opened build mode once? (gates the 建造-button hint pulse)
     farmStyle: 'iso',           // chosen farm view: 'iso' (Hay Day) | 'topdown' (pixel) | 'classic' (vertical)
     extraPlots: 0,              // additional plots unlocked beyond the base 12 (max 4)
+    homeUpkeepOn: '',           // Sask date last paid; empty = not yet
+    homeNeglected: false,       // unpaid upkeep today → house charm halved
     clearedCells: {},           // {"gx,gy":1} 开垦出的地界外格子（老矩形地界不动）
     ownedShopItems: {},         // {itemId: count} consumables remaining (acceleration tickets etc.)
     theme: 'default',           // 'default' | 'spring' | 'summer' | 'autumn' | 'winter' | 'festival'
