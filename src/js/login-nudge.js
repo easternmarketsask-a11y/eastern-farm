@@ -56,10 +56,10 @@
       const html = `
         <div class="ln-modal">
           <div class="ln-emoji">🎁</div>
-          <h2 class="modal-title" style="margin-bottom:4px;">${en ? 'Sign in to save your farm' : '登录以保存农场'}</h2>
+          <h2 class="modal-title" style="margin-bottom:4px;">${en ? 'Sign in — keep your farm' : '登录，农场不会丢'}</h2>
           <p class="ln-body">${en
-            ? `Use your Eastern Market membership. Progress is saved to the cloud.`
-            : `使用东方超市会员登录，进度云端保存。`}${extra}</p>
+            ? `Sign in with your Eastern Market membership. Switch phones, your farm is still there.`
+            : `用东方超市会员登录。换手机，农场还在。`}${extra}</p>
           <div class="btn-row ln-actions">
             <button class="btn" id="lnSignIn">📱 ${bonusActive
               ? (en ? `Sign in · claim ${BONUS_COINS.toLocaleString()}` : `登录 · 领 ${BONUS_COINS.toLocaleString()} 币`)
