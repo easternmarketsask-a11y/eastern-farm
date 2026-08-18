@@ -107,9 +107,10 @@
     shanghai_miao: 'crop_qingcai',
     // 未单独重绘的叶菜/葱蒜走最近的油画贴图，避免成熟后飘 emoji
     qingcai: 'crop_qingcai', cai_xin: 'crop_choysum', bo_cai: 'crop_spinach',
-    you_mai_cai: 'crop_spinach', wa_wa_cai: 'crop_qingcai', da_bai_cai: 'crop_qingcai',
-    ji_mao_cai: 'crop_qingcai', tong_hao: 'crop_choysum', xian_cai: 'crop_spinach',
-    xi_lan_hua: 'crop_broccoli', wo_sun: 'crop_qingcai',
+    you_mai_cai: 'crop_youmai', wa_wa_cai: 'crop_wawa', da_bai_cai: 'crop_qingcai',
+    ji_mao_cai: 'crop_jimao', tong_hao: 'crop_jimao', xian_cai: 'crop_spinach',
+    wo_sun: 'crop_youmai',
+    xi_lan_hua: 'crop_broccoli',
     tw_cauliflower: 'crop_cauli',
     hu_luo_bo: 'crop_carrot', bai_luo_bo: 'crop_daikon',
     yu_mi: 'crop_corn', lian_ou: 'crop_lotus',
@@ -123,7 +124,7 @@
     osmanthus: 'crop_osmanthus',
     shan_yao: 'crop_yam', chun_sun: 'crop_bamboo',
     ye_zi: 'crop_coconut', liu_lian: 'crop_durian',
-    jing_cong: 'crop_chives', xiao_cong: 'crop_chives', jiu_huang: 'crop_chives',
+    jing_cong: 'crop_cong', xiao_cong: 'crop_chives', jiu_huang: 'crop_jiuhuang',
     ku_gua: 'crop_cucumber', fo_shou_gua: 'crop_cucumber', dong_gua: 'crop_cucumber',
   };
   // cost = 农场币 to place (coins; East Points stay scarce for real rewards). charm =
@@ -1749,6 +1750,11 @@
       this._stickyEnd();   // 进出建造模式都算「打开面板」→ 退出粘性连续种植
       this._build = !this._build;
       if (this._build && Farm.state.data && !Farm.state.data.mapBuildSeen) { Farm.state.data.mapBuildSeen = true; Farm.state.save(); if (this._buildPulse) { this._buildPulse.cancel(); this._buildPulse = null; } }
+      if (this._build && Farm.state.data && !Farm.state.data.mapMoveHintSeen) {
+        Farm.state.data.mapMoveHintSeen = true;
+        Farm.state.save();
+        if (Farm.ui && Farm.ui.toast) Farm.ui.toast(this._lang() === 'en' ? 'Hold a house or plot and drag to move it' : '按住房子或菜地拖一拖就能挪', 3600);
+      }
       if (this._build) {
         // Build mode goes FULLSCREEN: hide the bottom bars (Lv/XP, nav, install banner)
         // for max room; keep the top bar so the coin balance stays visible. Then zoom
@@ -2744,7 +2750,15 @@
       }
     },
     _drawTinyCottage(x, y) {
-      const ctx = this._ctx, th = this._th(), sc2 = th * 1.05;
+      const ctx = this._ctx, th = this._th(), im = this._img.house;
+      if (im && im.width && th > 8) {
+        const h = th * 1.85, s = h / im.height, w = im.width * s;
+        ctx.save(); ctx.globalAlpha = 0.78;
+        ctx.drawImage(im, x - w / 2, y - h + th * 0.12, w, h);
+        ctx.restore();
+        return;
+      }
+      const sc2 = th * 1.05;
       if (sc2 < 8) return;
       ctx.save();
       ctx.globalAlpha = 0.62;
@@ -2754,13 +2768,6 @@
       ctx.beginPath();
       ctx.moveTo(x - sc2 * 0.68, y - sc2 * 0.50); ctx.lineTo(x, y - sc2 * 1.0);
       ctx.lineTo(x + sc2 * 0.68, y - sc2 * 0.50); ctx.closePath(); ctx.fill();
-      ctx.fillStyle = '#8a6a44';
-      ctx.fillRect(x - sc2 * 0.12, y - sc2 * 0.34, sc2 * 0.24, sc2 * 0.34);
-      ctx.fillStyle = '#9c7a52';
-      ctx.fillRect(x + sc2 * 0.28, y - sc2 * 1.02, sc2 * 0.16, sc2 * 0.34);
-      ctx.fillStyle = 'rgba(245,245,240,0.6)';
-      ctx.beginPath(); ctx.arc(x + sc2 * 0.40, y - sc2 * 1.18, sc2 * 0.10, 0, 6.283); ctx.fill();
-      ctx.beginPath(); ctx.arc(x + sc2 * 0.50, y - sc2 * 1.34, sc2 * 0.14, 0, 6.283); ctx.fill();
       ctx.restore();
     },
     /* 矢量地面层: 半透明叠在背景画的草甸上, 让画的笔触透出来、色调自动融合。
@@ -3206,6 +3213,25 @@
     // 贴纸风矢量锁（视觉第2批）：替换 canvas fillText('🔒') —— emoji 在不同平台
     // 渲染彩色/黑白不一，矢量锁与 ui-icon sprite 同一套可可描边+金色语言。
     // (x,y)=锁整体中心，s=整体尺寸，alpha=透明度。
+    cropStem(id) { return ISO_CROPS[id] || null; },
+    _drawEgg(x, y, r) {
+      const ctx = this._ctx;
+      ctx.beginPath();
+      ctx.ellipse(x, y, r * 0.72, r, 0, 0, 6.283);
+      ctx.fillStyle = '#f6efe0'; ctx.fill();
+      ctx.strokeStyle = '#d4a04a'; ctx.lineWidth = Math.max(1, r * 0.12); ctx.stroke();
+      ctx.beginPath();
+      ctx.ellipse(x - r * 0.18, y - r * 0.22, r * 0.22, r * 0.14, -0.5, 0, 6.283);
+      ctx.fillStyle = 'rgba(255,255,255,0.55)'; ctx.fill();
+    },
+    _drawCoinMark(x, y, r) {
+      const ctx = this._ctx;
+      ctx.beginPath(); ctx.arc(x, y, r, 0, 6.283);
+      ctx.fillStyle = '#f6c945'; ctx.fill();
+      ctx.strokeStyle = '#c48a1a'; ctx.lineWidth = Math.max(1, r * 0.14); ctx.stroke();
+      ctx.beginPath(); ctx.arc(x, y, r * 0.55, 0, 6.283);
+      ctx.strokeStyle = 'rgba(255,248,220,0.7)'; ctx.lineWidth = Math.max(1, r * 0.08); ctx.stroke();
+    },
     _drawLock(x, y, s, alpha) {
       const ctx = this._ctx;
       ctx.save();
@@ -3250,7 +3276,7 @@
       const s = (th * (0.70 + grow * 0.62)) / 260;
       const w = im.width * s, h = im.height * s;
       const soilY = c.y + th * 0.10 - (ripe || 0);
-      const extra = ({ crop_carrot: 0.22, crop_daikon: 0.20, crop_yam: 0.24, crop_garlic: 0.10, crop_cucumber: 0.08, crop_ginger: 0.18, crop_taro: 0.08, crop_bamboo: 0.10 })[stem] || 0;
+      const extra = ({ crop_carrot: 0.22, crop_daikon: 0.20, crop_yam: 0.24, crop_garlic: 0.10, crop_cucumber: 0.08, crop_ginger: 0.18, crop_taro: 0.08, crop_bamboo: 0.10, crop_wawa: 0.14, crop_cong: 0.16, crop_jiuhuang: 0.16 })[stem] || 0;
       const bury = h * ((synth ? (0.28 - grow * 0.08) : 0.20) + extra);
       const topY = soilY - h + bury;
       ctx.save();
@@ -3312,12 +3338,8 @@
       const isoStem = ISO_CROPS[plot.crop];
       if (isoStem) {
         const drawn = this._drawIsoPlant(isoStem, fr, p, c, tw, th, ripe);
-        if (drawn != null) {
-          plantTopY = drawn;
-        } else {
-          this._drawBedCropArt(plot.crop, p, c, tw, th, ripe);
-          plantTopY = c.y - th * 1.05 - ripe;
-        }
+        if (drawn != null) plantTopY = drawn;
+        // 有油画株的菜：加载中留空一帧，绝不闪 SVG 菜篮
       } else {
         this._drawBedCropArt(plot.crop, p, c, tw, th, ripe);
         plantTopY = c.y - th * 1.05 - ripe;
@@ -3444,15 +3466,19 @@
             ctx.lineTo(bx2, byy2 + bh2 / 2 + fs2 * 0.42);
             ctx.lineTo(bx2 + fs2 * 0.3, byy2 + bh2 / 2 - 1);
             ctx.closePath(); ctx.fillStyle = 'rgba(255,252,240,0.97)'; ctx.fill();
-            // 内容: 菜 ×N 💰
             ctx.textBaseline = 'middle';
-            ctx.font = fs2 + 'px sans-serif';
-            ctx.fillText((def2 && def2.icon) || '🥬', bx2 - bw2 / 2 + fs2 * 0.62, byy2 + fs2 * 0.04);
+            const stem2 = ISO_CROPS[cu.crop];
+            const im2 = stem2 && this._lazyImg(stem2 + '_3');
+            const ix2 = bx2 - bw2 / 2 + fs2 * 0.18;
+            if (im2) ctx.drawImage(im2, ix2, byy2 - fs2 * 0.48, fs2 * 0.96, fs2 * 0.96);
+            else {
+              ctx.fillStyle = '#5aa04a';
+              ctx.beginPath(); ctx.ellipse(ix2 + fs2 * 0.42, byy2, fs2 * 0.32, fs2 * 0.38, 0, 0, 6.283); ctx.fill();
+            }
             ctx.font = '700 ' + (fs2 * 0.72) + 'px "Plus Jakarta Sans","Noto Sans SC",sans-serif';
             ctx.fillStyle = '#6d4c28';
             ctx.fillText(label2, bx2 - bw2 / 2 + fs2 * 1.2 + wTxt / 2, byy2 + fs2 * 0.05);
-            ctx.font = (fs2 * 0.66) + 'px sans-serif';
-            ctx.fillText('💰', bx2 + bw2 / 2 - fs2 * 0.5, byy2 + fs2 * 0.04);
+            this._drawCoinMark(bx2 + bw2 / 2 - fs2 * 0.42, byy2, fs2 * 0.30);
             ctx.textBaseline = 'alphabetic';
           }
         }
@@ -3462,7 +3488,17 @@
       // coop ready-to-collect indicator: a SMALL egg bubble nestled just above the
       // coop roof (was a big white orb floating high above → looked like a stray ball,
       // Chris 2026-06-18). Smaller + closer + gentle bob so it clearly belongs to the coop.
-      if (o.type === 'coop' && !this._build) { const real = Farm.state.data.map[idx]; if (real && this._coopReady(real)) { const t = Date.now() / 1000, bob = Math.sin(t * 2.5) * th * 0.05, r = th * 0.3, byy = by - b.sc * th * 1.05 * BLD + bob; ctx.beginPath(); ctx.arc(cc.x, byy, r, 0, Math.PI * 2); ctx.fillStyle = 'rgba(255,255,255,0.96)'; ctx.fill(); ctx.strokeStyle = 'rgba(230,160,32,0.95)'; ctx.lineWidth = Math.max(1.2, th * 0.05); ctx.stroke(); ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = (r * 1.3) + 'px sans-serif'; ctx.fillText('🥚', cc.x, byy + r * 0.05); ctx.textBaseline = 'alphabetic'; } }
+      if (o.type === 'coop' && !this._build) {
+        const real = Farm.state.data.map[idx];
+        if (real && this._coopReady(real)) {
+          const t = Date.now() / 1000, bob = Math.sin(t * 2.5) * th * 0.05, r = th * 0.28;
+          const byy = by - b.sc * th * 1.05 * BLD + bob;
+          ctx.beginPath(); ctx.arc(cc.x, byy, r * 1.15, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(255,252,240,0.94)'; ctx.fill();
+          ctx.strokeStyle = 'rgba(230,160,32,0.9)'; ctx.lineWidth = Math.max(1.2, th * 0.05); ctx.stroke();
+          this._drawEgg(cc.x, byy, r * 0.72);
+        }
+      }
       // 谷仓将满提示点（UX 第 2 批 #5）：仓储 ≥80% 时谷仓头顶一个黄色小圆点
       // （细白边），满仓变红。手法与鸡舍蛋泡一致（roof 上方锚点），数据直读
       // warehouse/warehouseCapacity（与 state.isWarehouseFull 同一口径，不另算）。
@@ -3676,33 +3712,65 @@
       for (let i = 0; i < 2; i++) { const cw = W * (0.26 + 0.07 * i), x = ((t * (5 + i * 3) + i * W * 0.55) % (W + cw * 1.4)) - cw * 0.7, y = H * (0.05 + 0.05 * i); this._cloud(x, y, cw, 0.22 - i * 0.07); }
       const season = (Farm.seasons && Farm.seasons.current) || monthSeason();
       if (season === 'autumn' || season === 'winter') {
-        const glyph = season === 'winter' ? '❄️' : '🍂', n = season === 'winter' ? 9 : 6;
-        ctx.save(); ctx.globalAlpha = 0.8; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        for (let i = 0; i < n; i++) { const sp = 9 + (i % 4) * 4, x = (i * 97.3) % W, sway = Math.sin(t * 0.5 + i) * 20, y = ((t * sp + i * 70) % (H + 40)) - 20; ctx.font = (th * 0.46) + 'px sans-serif'; ctx.fillText(glyph, x + sway, y); }
+        const n = season === 'winter' ? 9 : 6;
+        ctx.save();
+        for (let i = 0; i < n; i++) {
+          const sp = 9 + (i % 4) * 4, x = (i * 97.3) % W, sway = Math.sin(t * 0.5 + i) * 20;
+          const y = ((t * sp + i * 70) % (H + 40)) - 20, s = th * 0.18;
+          if (season === 'winter') {
+            ctx.globalAlpha = 0.72; ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.lineWidth = 1.2;
+            ctx.beginPath();
+            ctx.moveTo(x + sway - s, y); ctx.lineTo(x + sway + s, y);
+            ctx.moveTo(x + sway, y - s); ctx.lineTo(x + sway, y + s);
+            ctx.moveTo(x + sway - s * 0.7, y - s * 0.7); ctx.lineTo(x + sway + s * 0.7, y + s * 0.7);
+            ctx.moveTo(x + sway + s * 0.7, y - s * 0.7); ctx.lineTo(x + sway - s * 0.7, y + s * 0.7);
+            ctx.stroke();
+          } else {
+            ctx.globalAlpha = 0.7; ctx.fillStyle = '#c86a32';
+            ctx.beginPath(); ctx.ellipse(x + sway, y, s * 1.1, s * 0.55, 0.6, 0, 6.283); ctx.fill();
+          }
+        }
         ctx.restore();
       } else {
-        // spring/summer butterflies — 收敛（audit B2 P2：平面 emoji 蝴蝶悬浮在
-        // 天空/锁徽章上与手绘背景风格冲突）：3→2 只、尺寸 0.5→0.34、透明度
-        // 0.92→0.6，活动带下压到草地带（H*0.58~0.74），不再飘进天空。
-        ctx.save(); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.save();
         for (let i = 0; i < 2; i++) {
           const x = W * (0.28 + 0.4 * i) + Math.sin(t * 0.45 + i * 2) * W * 0.14 + Math.sin(t * 1.6 + i) * 12;
           const y = H * 0.66 + Math.cos(t * 0.62 + i * 2) * H * 0.08 + Math.sin(t * 3.0 + i) * 6;
-          const flutter = 0.78 + Math.abs(Math.sin(t * 6 + i)) * 0.32;
-          ctx.globalAlpha = 0.6; ctx.font = (th * 0.34 * flutter) + 'px sans-serif'; ctx.fillText('🦋', x, y);
+          const fl = 0.78 + Math.abs(Math.sin(t * 6 + i)) * 0.32;
+          const s = th * 0.16 * fl;
+          ctx.globalAlpha = 0.55;
+          ctx.fillStyle = i ? '#e8a050' : '#d478b0';
+          ctx.beginPath(); ctx.ellipse(x - s * 0.7, y, s, s * 0.55, -0.5, 0, 6.283); ctx.fill();
+          ctx.beginPath(); ctx.ellipse(x + s * 0.7, y, s, s * 0.55, 0.5, 0, 6.283); ctx.fill();
+          ctx.fillStyle = '#4a3629';
+          ctx.beginPath(); ctx.ellipse(x, y, s * 0.18, s * 0.45, 0, 0, 6.283); ctx.fill();
         }
         ctx.restore();
       }
     },
     _drawFestival() {
       const id = Farm.events && Farm.events.getActiveFestivalId && Farm.events.getActiveFestivalId(); if (!id) return;
-      const ctx = this._ctx, W = this._cssW(), t = Date.now() / 1000;
+      const ctx = this._ctx, W = this._cssW(), t = Date.now() / 1000, th = this._th();
       if (id === 'spring_festival') {
-        const n = Math.max(3, Math.floor(W / 64)); ctx.textAlign = 'center'; ctx.textBaseline = 'top'; ctx.font = '26px sans-serif';
-        for (let i = 0; i < n; i++) ctx.fillText('🏮', (i + 0.5) * (W / n), 1 + Math.sin(t * 1.2 + i) * 4);
+        const n = Math.max(3, Math.floor(W / 72));
+        for (let i = 0; i < n; i++) {
+          const x = (i + 0.5) * (W / n), y = 18 + Math.sin(t * 1.2 + i) * 4, s = th * 0.42;
+          ctx.fillStyle = '#c44536';
+          if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(x - s * 0.38, y, s * 0.76, s * 0.9, s * 0.2); ctx.fill(); }
+          else { ctx.fillRect(x - s * 0.38, y, s * 0.76, s * 0.9); }
+          ctx.fillStyle = '#f6c945';
+          ctx.fillRect(x - s * 0.42, y, s * 0.84, s * 0.14);
+          ctx.fillStyle = '#8a2a22';
+          ctx.fillRect(x - 1, y + s * 0.9, 2, s * 0.22);
+        }
       } else if (id === 'mid_autumn') {
-        const x = W - 48, y = 48; ctx.save(); ctx.globalAlpha = 0.5; ctx.beginPath(); ctx.arc(x, y, 45, 0, Math.PI * 2); ctx.fillStyle = 'rgba(255,245,200,0.55)'; ctx.fill(); ctx.restore();
-        ctx.font = '50px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('🌕', x, y);
+        const x = W - 56, y = 56;
+        ctx.save();
+        ctx.globalAlpha = 0.45; ctx.beginPath(); ctx.arc(x, y, 48, 0, Math.PI * 2); ctx.fillStyle = 'rgba(255,245,200,0.7)'; ctx.fill();
+        ctx.globalAlpha = 0.92; ctx.beginPath(); ctx.arc(x, y, 28, 0, Math.PI * 2); ctx.fillStyle = '#f3e0a0'; ctx.fill();
+        ctx.fillStyle = 'rgba(210,170,70,0.35)';
+        ctx.beginPath(); ctx.arc(x + 8, y - 4, 8, 0, 6.283); ctx.fill();
+        ctx.restore();
       }
     },
   };

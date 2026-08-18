@@ -259,7 +259,12 @@
       }
       body += '<div style="font-size:11.5px;color:var(--warm-text-soft);text-align:center;margin-top:10px;">'
         + (en ? 'Passersby pay above market price. Bulk sales still go via the barn.'
-              : '路人出价比超市高；大宗卖菜还是走谷仓。') + '</div>'
+              : '路人出价比超市高；大宗卖菜还是走谷仓。')
+        + (c && c.real
+          ? '<br>' + (en ? 'Looks like a neighbor — they are not actually here buying.'
+                        : '样子是邻居，不是他本人来下单。')
+          : '')
+        + '</div>'
         + '<div class="btn-row" style="margin-top:12px;"><button class="btn secondary" onclick="Farm.ui.hideModal()" style="width:100%;">'
         + (en ? 'Close' : '关闭') + '</button></div>';
       Farm.ui.showModal('<h2 class="modal-title">' + (en ? 'Veggie Stand' : '菜摊') + '</h2>' + body);

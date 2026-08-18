@@ -8,6 +8,10 @@
   // they have no dedicated art and would render as a generic sprout.
   function cropFace(c) {
     try {
+      const stem = Farm.isoView && Farm.isoView.cropStem && Farm.isoView.cropStem(c.id);
+      if (stem) {
+        return '<img class="crop-sprite" src="assets/images/map/' + stem + '_3.webp" width="32" height="32" style="display:block;object-fit:contain;" alt=""/>';
+      }
       if (!c.festival_only && Farm.cropArt && Farm.cropArt.icon) {
         const svg = Farm.cropArt.icon(c.id, 32);
         if (svg) return svg;

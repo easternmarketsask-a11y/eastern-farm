@@ -945,10 +945,14 @@
           ? (Farm.state.data.language === 'en' ? '🏪 You are now hidden from all rankings' : '🏪 已设为店主，不出现在任何排名中')
           : (Farm.state.data.language === 'en' ? 'Back in the rankings' : '已重新参与排名'), 2200);
       };
-    } else if (Farm.state.data.excludeFromRanking && !(Farm.fbAuth && Farm.fbAuth.isStoreOwner && Farm.fbAuth.isStoreOwner())) {
-      Farm.state.data.excludeFromRanking = false;
-      Farm.state.save();
-      if (Farm.fbGameSync) Farm.fbGameSync.push();
+    } else if (Farm.state.data.excludeFromRanking) {
+      const auth = Farm.fbAuth;
+      const docReady = !!(auth && auth.memberDoc);
+      if (docReady && auth.isStoreOwner && !auth.isStoreOwner()) {
+        Farm.state.data.excludeFromRanking = false;
+        Farm.state.save();
+        if (Farm.fbGameSync) Farm.fbGameSync.push();
+      }
     }
     document.getElementById('resetBtn').onclick = () => {
       if (confirm(Farm.i18n.t('settings_reset_confirm'))) {
