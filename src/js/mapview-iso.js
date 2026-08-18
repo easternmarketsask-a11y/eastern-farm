@@ -1753,7 +1753,7 @@
       if (this._build && Farm.state.data && !Farm.state.data.mapMoveHintSeen) {
         Farm.state.data.mapMoveHintSeen = true;
         Farm.state.save();
-        if (Farm.ui && Farm.ui.toast) Farm.ui.toast(this._lang() === 'en' ? 'Hold a building or plot, then drag' : '按住建筑或菜地，拖到想放的地方', 3200);
+        if (Farm.ui && Farm.ui.toast) Farm.ui.toast(this._lang() === 'en' ? 'Drag a building or plot to move it' : '拖动建筑或菜地即可调整位置', 3200);
       }
       if (this._build) {
         // Build mode goes FULLSCREEN: hide the bottom bars (Lv/XP, nav, install banner)

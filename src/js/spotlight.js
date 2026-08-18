@@ -138,7 +138,7 @@
         : '点这块发光的地，种下第一棵菜。';
       if (this._step === 1) return en
         ? 'It\'s ripe! Tap to harvest it into your barn.'
-        : '熟了。点一下收进谷仓。';
+        : '已成熟。点一下收入谷仓。';
       return en
         ? 'Tap the barn to sell your crop to Eastern Market for coins.'
         : '点谷仓，把菜卖给东方超市换农场币。';

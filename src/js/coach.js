@@ -13,26 +13,26 @@
  * 下方 TIPS 表，中英双语，便于 Chris 调措辞。
  */
 (function () {
-  // 文案：看了舒服，但不废话（CLAUDE.md 文案原则）。
+  // 文案：完整清楚，不口号化。2026-08-18 改软被否（「这一版改不如不改」）。
   const TIPS = {
-    first_plant:    { zh: '种好了。熟了会发光，点一下就收。',
-                      en: 'Planted. It’ll glow when ripe — tap to harvest.' },
-    first_mature:   { zh: '熟了。点发光的地，收进谷仓。',
-                      en: 'Ripe. Tap the glowing plot to harvest.' },
-    first_warehouse:{ zh: '菜在谷仓里。一次多卖给超市更划算。',
-                      en: 'It’s in the barn. Sell a batch to Eastern Market.' },
-    first_sell:     { zh: '卖掉就有农场币。每天第一单 +20%。',
-                      en: 'Selling earns coins. First sale each day: +20%.' },
-    warehouse_full: { zh: '谷仓满了。先卖掉，或扩建。',
-                      en: 'Barn is full. Sell, or expand it.' },
-    first_coins_exchange: { zh: '点左上角金币，能换成超市积分。',
-                            en: 'Tap the coin card to exchange for store points.' },
-    first_water:    { zh: '点还在长的地浇水，熟得快两成。',
-                      en: 'Tap a growing plot to water — 20% faster.' },
-    first_neighbor: { zh: '去社区串个门、点个赞，也有农场币。',
-                      en: 'Visit and like neighbors — you earn coins too.' },
-    steal_unlocked: { zh: '可以顺菜了。去邻居家点熟了的，带一棵回来。',
-                      en: 'You can grab now. Tap a ripe crop at a neighbor’s.' },
+    first_plant:    { zh: '已种下。成熟后地块会发光，点一下即可收获。',
+                      en: 'Planted. Ripe plots glow — tap to harvest.' },
+    first_mature:   { zh: '作物已成熟。点发光的地块收入谷仓。',
+                      en: 'A crop is ripe. Tap the glowing plot to harvest.' },
+    first_warehouse:{ zh: '收获进入谷仓。批量卖给东方超市更划算。',
+                      en: 'Harvests go to the barn. Sell a batch to Eastern Market.' },
+    first_sell:     { zh: '售出可得农场币。每日首单 +20%。',
+                      en: 'Sales earn coins. First sale of the day: +20%.' },
+    warehouse_full: { zh: '谷仓已满。请先出售，或扩建谷仓。',
+                      en: 'Barn is full. Sell first, or expand it.' },
+    first_coins_exchange: { zh: '点左上角金币，可将农场币兑换为超市积分。',
+                            en: 'Tap the coin card to exchange coins for store points.' },
+    first_water:    { zh: '点生长中的地块浇水，成熟时间缩短 20%。',
+                      en: 'Tap a growing plot to water it — 20% faster.' },
+    first_neighbor: { zh: '社区可拜访邻居、点赞，并获得农场币。',
+                      en: 'Visit neighbors to like, drop by, and earn coins.' },
+    steal_unlocked: { zh: '已解锁顺菜：在邻居家点成熟作物，可取回一棵。',
+                      en: 'Grabbing unlocked: tap a ripe crop at a neighbor’s to take one.' },
   };
 
   const coach = {
