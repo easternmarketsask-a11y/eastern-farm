@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#fdf8ee">
 <!-- 部署构建号（deploy.sh 每次注入 CACHE_VERSION 时间戳）。SW 新鲜度守卫据此
      判断本页是否已过期（见页尾脚本）。ef-dev = 未部署的本地版本。 -->
-<meta name="ef-build" content="ef-2608171814">
+<meta name="ef-build" content="ef-2608171854">
 
 <!-- ==================== PWA (add to home screen) ==================== -->
 <link rel="manifest" href="manifest.webmanifest">
@@ -105,6 +105,22 @@
      🔒 一个固定键、32 字符 —— 符合本项目 localStorage 的上界铁律
         （见 CLAUDE.md「浏览器存储与 Service Worker 铁律」）。
      ⚠️ 数的是设备不是自然人：清了存储 / 换手机 = 算新的一个，所以是**下限**。 */
+  /* 🏠 店主自己那台设备：不进客人计数（Chris 2026-08-18「计数请忽略我本人」）。
+     账号那边能按 uid 排除，但 Chris 常常没登录就打开看一眼 —— 那时他跟访客
+     长得一模一样，只能靠这台设备自报。
+     开：farm.easternmarket.ca/src/?owner=1   关：?owner=0
+     标记存本机，一次设置长期有效；后端把这类请求记到 owner_hits，
+     不混进访客数、也不丢掉（看得见「今天店主自己刷了几次」）。 */
+  var OKEY = 'ef_owner_device';
+  try {
+    var om = location.search.match(/[?&]owner=([01])/);
+    if (om) {
+      if (om[1] === '1') localStorage.setItem(OKEY, '1');
+      else localStorage.removeItem(OKEY);
+    }
+  } catch (_) {}
+  try { window.__efIsOwnerDevice = localStorage.getItem(OKEY) === '1'; } catch (_) { window.__efIsOwnerDevice = false; }
+
   var VKEY = 'ef_visitor_id';
   function visitorId() {
     try {
@@ -128,7 +144,8 @@
   window.__efTrack = function (ev) {
     try {
       var body = { event: ev };
-      if (window.__efVisitorId) body.visitor = window.__efVisitorId;
+      if (window.__efIsOwnerDevice) body.owner = true;
+      else if (window.__efVisitorId) body.visitor = window.__efVisitorId;
       fetch(TRACK_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

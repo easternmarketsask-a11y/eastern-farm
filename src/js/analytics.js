@@ -19,10 +19,12 @@
   function track(event) {
     try {
       var body = { event: event };
+      // 🏠 店主自己那台设备（?owner=1 设过）不进客人计数，后端记 owner_hits
+      if (window.__efIsOwnerDevice) body.owner = true;
       /* 👥 访客 id 由 index.html 的 <head> 内联段生成（那段跑得最早，
          open_attempt 就靠它发）。这里只**复用**，不自己再造一个 ——
          两处各生成一次的话，同一个人会被数成两个。 */
-      if (window.__efVisitorId) body.visitor = window.__efVisitorId;
+      else if (window.__efVisitorId) body.visitor = window.__efVisitorId;
       fetch(STOCKWISE_BASE + '/api/public/game-track', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
