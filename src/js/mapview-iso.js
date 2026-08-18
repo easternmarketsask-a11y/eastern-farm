@@ -72,6 +72,10 @@
   // references .webp only. WebP is supported by every browser this game targets.
   const ASSET_SRC = {
     barn: 'p_barn.webp', house: 'p_house.webp', greenhouse: 'p_greenhouse.webp', coop: 'p_coop.webp', well: 'p_well.webp', stall: 'p_stall.webp', tree: 'p_tree.webp',
+    p_house_1: 'p_house_1.webp', p_house_2: 'p_house_2.webp', p_house_3: 'p_house_3.webp', p_house_4: 'p_house_4.webp',
+    p_house_5: 'p_house_5.webp', p_house_6: 'p_house_6.webp', p_house_7: 'p_house_7.webp', p_house_8: 'p_house_8.webp',
+    p_house_9: 'p_house_9.webp', p_house_10: 'p_house_10.webp', p_house_11: 'p_house_11.webp', p_house_12: 'p_house_12.webp',
+    p_house_13: 'p_house_13.webp', p_house_14: 'p_house_14.webp',
     deco_bush: 'deco_bush.webp', deco_lantern: 'deco_lantern.webp', deco_fence: 'deco_fence.webp', deco_wheel: 'deco_wheel.webp', deco_bridge: 'deco_bridge.webp',
     crop0: 'crop_qingcai_0.webp', crop1: 'crop_qingcai_1.webp', crop2: 'crop_qingcai_2.webp', crop3: 'crop_qingcai_3.webp',
     tile_grass: 'p_grass.webp', tile_grass_b: 'p_grass_b.webp', tile_grass_c: 'p_grass_c.webp',
@@ -1080,7 +1084,9 @@
     },
     _homeSprite(o) {
       const spec = this._homeSpec(o);
-      return this._lazyImg(spec.stem) || this._img.house;
+      const im = this._img[spec.stem];
+      if (im instanceof Image) return im;
+      return this._lazyImg(spec.stem);
     },
     _homeDrawMul(o) {
       return (this._homeSpec(o).draw) || 1;
@@ -1503,7 +1509,8 @@
       tries.sort((p1, p2) => (Math.abs(p1[0] - c0x) + Math.abs(p1[1] - c0y)) - (Math.abs(p2[0] - c0x) + Math.abs(p2[1] - c0y)));
       for (const [gx, gy] of tries) if (this._footprintFree(gx, gy, type, -1)) {
         if (cost > 0 && !Farm.state.spendCoins(cost)) { if (Farm.ui && Farm.ui.toast) Farm.ui.toast(en ? 'Not enough coins' : '农场币不足'); return; }
-        (Farm.state.data.map = Farm.state.data.map || []).push({ type, gx, gy }); this._sel = Farm.state.data.map.length - 1;
+        const rec = { type, gx, gy }; if (type === 'home') rec.lv = 1;
+        (Farm.state.data.map = Farm.state.data.map || []).push(rec); this._sel = Farm.state.data.map.length - 1;
         Farm.state.save(); this.render();
         if (Farm.ui && Farm.ui.refreshHUD) Farm.ui.refreshHUD();
         this._refreshPaletteAfford();
