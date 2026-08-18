@@ -16,28 +16,24 @@
   // id → { zh, en }。措辞口语、友好、不说教（呼应 Chris 的语气偏好）。
   const TIPS = {
     // —— 核心循环 ——
-    first_plant:    { zh: '🌱 种下啦！耐心等一会儿，熟了的地会发光，点一下就能收。',
-                      en: '🌱 Planted! Give it time — ripe plots glow, just tap to harvest.' },
-    first_mature:   { zh: '🌟 有菜熟啦！点一下亮闪闪的地块就能收进谷仓。',
-                      en: '🌟 A crop is ripe! Tap the glowing plot to harvest it.' },
-    first_warehouse:{ zh: '📦 收的菜先进谷仓，攒一攒一次卖给东方超市更划算。',
-                      en: '📦 Harvests go to the barn — sell a batch to Eastern Market for more.' },
-    first_sell:     { zh: '🏪 卖菜赚农场币！每天第一笔还有 +20% 加成哦。',
-                      en: '🏪 Selling earns coins — your first sale each day gets +20%!' },
-    warehouse_full: { zh: '📦 谷仓满了～卖给东方超市清空，或点谷仓扩建。',
-                      en: '📦 Barn is full — sell to Eastern Market, or expand it.' },
-    // —— 货币 / 兑换 ——
-    first_coins_exchange: { zh: '🪙 农场币攒到一些啦！点左上角金币卡，可换成超市积分。',
-                            en: '🪙 Got some coins! Tap the coin card to swap them for store points.' },
-    // —— 打理 ——
-    first_water:    { zh: '💧 点生长中的地可以浇水，缩短 20% 成熟时间，免费的～',
-                      en: '💧 Tap a growing plot to water it — 20% faster, free!' },
-    // —— 社区 ——
-    first_neighbor: { zh: '🏘 去社区给邻居点赞、串门，还能赚农场币，热闹起来吧！',
-                      en: '🏘 Visit neighbors to like & drop by — earns coins too!' },
-    // —— 解锁（配合等级门槛）——
-    steal_unlocked: { zh: '🧺 解锁顺菜啦！去邻居家点熟了的菜，顺一棵回自己谷仓～',
-                      en: '🧺 Grabbing unlocked! Tap a ripe crop at a neighbor’s to take one home.' },
+    first_plant:    { zh: '已种下。成熟后地块会发光，点一下即可收获。',
+                      en: 'Planted. Ripe plots glow — tap to harvest.' },
+    first_mature:   { zh: '作物已成熟。点发光的地块收入谷仓。',
+                      en: 'A crop is ripe. Tap the glowing plot to harvest.' },
+    first_warehouse:{ zh: '收获进入谷仓。批量卖给东方超市更划算。',
+                      en: 'Harvests go to the barn. Sell a batch to Eastern Market.' },
+    first_sell:     { zh: '售出可得农场币。每日首单 +20%。',
+                      en: 'Sales earn coins. First sale of the day: +20%.' },
+    warehouse_full: { zh: '谷仓已满。请先出售，或扩建谷仓。',
+                      en: 'Barn is full. Sell first, or expand it.' },
+    first_coins_exchange: { zh: '点左上角金币，可将农场币兑换为超市积分。',
+                            en: 'Tap the coin card to exchange coins for store points.' },
+    first_water:    { zh: '点生长中的地块浇水，成熟时间缩短 20%。',
+                      en: 'Tap a growing plot to water it — 20% faster.' },
+    first_neighbor: { zh: '社区可拜访邻居、点赞，并获得农场币。',
+                      en: 'Visit neighbors to like, drop by, and earn coins.' },
+    steal_unlocked: { zh: '已解锁顺菜：在邻居家点成熟作物，可取回一棵。',
+                      en: 'Grabbing unlocked: tap a ripe crop at a neighbor’s to take one.' },
   };
 
   const coach = {

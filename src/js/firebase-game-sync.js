@@ -505,7 +505,7 @@
       if (givenToday.length >= DAILY_LIKE_CAP) {
         return { ok: false, reason: 'cap_reached', message: lang === 'en'
           ? 'Daily 5-like cap reached, come back tomorrow!'
-          : '今天 5 个赞都送完啦，明天再来吧！' };
+          : '今日点赞次数已用完' };
       }
       if (givenToday.includes(toUid)) {
         return { ok: false, reason: 'already_liked', message: lang === 'en'
@@ -629,7 +629,7 @@
       const done = claims.helpSentToday || [];
       if (done.length >= DAILY_HELP_CAP) {
         return { ok: false, reason: 'cap_reached', message: lang === 'en'
-          ? 'Daily help limit reached — come back tomorrow!' : '今天帮忙次数用完啦，明天再来！' };
+          ? 'Daily help limit reached' : '今日帮忙次数已用完' };
       }
       if (done.includes(toUid)) {
         return { ok: false, reason: 'already', message: lang === 'en'
@@ -666,7 +666,7 @@
       const sent = claims.stickersSentToday || [];
       if (sent.length >= DAILY_STICKER_CAP) {
         return { ok: false, reason: 'cap_reached', message: lang === 'en'
-          ? 'Daily sticker limit reached!' : '今天贴纸用完啦！' };
+          ? 'Daily sticker limit reached' : '今日贴纸次数已用完' };
       }
       const myUid = Farm.fbAuth && meId();
       if (!myUid) return { ok: false, reason: 'not_logged_in' };
@@ -888,7 +888,7 @@
       if (lastSent === today) {
         return { ok: false, reason: 'daily_cap', message: lang === 'en'
           ? 'You already sent a gift today. Try again tomorrow!'
-          : '今天的免费礼物已送，明天再来吧！' };
+          : '今日免费礼物已送出' };
       }
       const myUid = Farm.fbAuth && meId();
       if (!myUid) return { ok: false, reason: 'not_logged_in' };
@@ -1021,7 +1021,7 @@
     async shareInvite() {
       const lang = Farm.state.data.language || 'zh';
       if (!Farm.fbAuth || !Farm.fbAuth.isLoggedIn() || !meId()) {
-        Farm.ui.toast(lang === 'en' ? 'Sign in first to invite friends' : '先登录会员，邀请才能算上奖励哦', 2600);
+        Farm.ui.toast(lang === 'en' ? 'Sign in to invite friends' : '登录后即可邀请好友', 2600);
         return;
       }
       const link = this.inviteLink();
@@ -1034,7 +1034,7 @@
       }
       try {
         await navigator.clipboard.writeText(text + ' ' + link);
-        Farm.ui.toast(lang === 'en' ? '📨 Invite link copied — paste it to a friend!' : '📨 邀请链接已复制，发给朋友吧！', 2800);
+        Farm.ui.toast(lang === 'en' ? 'Invite link copied' : '邀请链接已复制', 2600);
       } catch (_) {
         Farm.ui.toast(link, 4000);
       }

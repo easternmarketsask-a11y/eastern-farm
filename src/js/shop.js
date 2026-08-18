@@ -123,7 +123,7 @@
       const level = Farm.state.data.level || 1;
       const pool = Farm.crops.all().filter(c => (c.unlock_level || 1) >= 10 && (c.unlock_level || 1) <= level);
       if (pool.length === 0) {
-        Farm.ui.toast(lang === 'en' ? 'Unlock a Lv10+ crop first' : '先解锁一种 Lv10+ 作物吧～');
+        Farm.ui.toast(lang === 'en' ? 'Unlock a Lv10+ crop first' : '请先解锁一种 Lv10+ 作物');
         if (Farm.audio) Farm.audio.play('error');
         return;
       }
@@ -401,7 +401,7 @@
         ? ('🌱 Planted ' + planted + ' plot' + (planted > 1 ? 's' : ''))
         : ('🌱 已种 ' + planted + ' 块');
       if (spent > 0) msg += lang === 'en' ? (' (seeds cost ' + coin + spent + ')') : ('（买种花费 ' + coin + spent + '）');
-      if (stoppedNoCoins) msg += lang === 'en' ? ' · coins ran out' : ' · 农场币不够啦';
+      if (stoppedNoCoins) msg += lang === 'en' ? ' · not enough coins' : ' · 农场币不足';
       Farm.ui.toast(msg, 3200);
     },
 
@@ -481,7 +481,7 @@
       const period = h < 5 ? '凌晨' : h < 9 ? '早上' : h < 12 ? '上午' : h < 14 ? '中午' : h < 18 ? '下午' : '晚上';
       const h12 = h % 12 === 0 ? 12 : h % 12;
       const tomorrow = eta.getDate() !== new Date().getDate() ? '明天' : '';
-      return ` · 预计${tomorrow}${period} ${h12}:${mm} 成熟，到点来收～`;
+      return ` · 预计${tomorrow}${period} ${h12}:${mm} 成熟`;
     } catch (_) { return ''; }
   }
 

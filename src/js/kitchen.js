@@ -97,7 +97,7 @@
           slotsHtml.push(`
             <button class="btn primary" data-kt-collect="${i}" style="flex:1;min-height:74px;">
               ${r.icon} ${lang === 'en' ? r.name_en : r.name_zh}<br>
-              <span style="font-size:13px;">✨ ${lang === 'en' ? 'Ready! Serve it' : '出锅啦！点我上菜'}</span>
+              <span style="font-size:13px;">✨ ${lang === 'en' ? 'Ready to serve' : '已完成，可上菜'}</span>
             </button>`);
         } else {
           const pct = 100 - Math.round(remain / this._cookMs(r) * 100);

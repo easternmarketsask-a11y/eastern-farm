@@ -1262,7 +1262,7 @@
     if (heroState.exhausted) {                   // 今日 2 次用完(服务器判定后置位)
       if (heroState.sig === 'exhausted') return;
       var e4 = heroShell('🎡 好礼大转盘',
-        '今天的 2 次机会用完啦 🎁 明天再来转，实物继续送',
+        '今日 2 次机会已用完。明天可再转，实物奖继续送。',
         '<button class="wc-hero-btn ghost" data-act="prizes">🎁 看我的奖品 · 兑奖码 ›</button>', 'exhausted');
       var bp0 = e4 && e4.querySelector('[data-act="prizes"]'); if (bp0) bp0.onclick = openMyPrizes;
       return;
@@ -1279,8 +1279,8 @@
         var sg = anyOpen ? 'played' : 'nomatch';
         if (heroState.sig === sg) return;
         var e5 = heroShell('🎡 好礼大转盘',
-          anyOpen ? '本轮开放的场次你都转过啦 🎉 下一轮对阵确定后自动开放'
-                  : '下一场淘汰赛对阵确定后，转盘自动开放，稍后再来 ⚽',
+          anyOpen ? '本轮场次均已转过。下一轮对阵确定后自动开放。'
+                  : '下一场淘汰赛对阵确定后，转盘将自动开放。',
           '<button class="wc-hero-btn ghost" data-act="prizes">🎁 看我的奖品 · 兑奖码 ›</button>', sg);
         var bp = e5 && e5.querySelector('[data-act="prizes"]'); if (bp) bp.onclick = openMyPrizes;
         return;

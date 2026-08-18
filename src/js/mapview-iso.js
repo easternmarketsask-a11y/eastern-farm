@@ -1332,7 +1332,7 @@
         if (Farm.audio) Farm.audio.play('tap');
         const r = await this._withRealState(() => Farm.fbGameSync.sendLike(info2.uid));
         if (Farm.ui && Farm.ui.toast) Farm.ui.toast(r && r.ok === false
-          ? (en ? 'Already liked today' : '今天已经赞过啦')
+          ? (en ? 'Already liked today' : '今日已赞过')
           : (en ? 'Liked! ❤️' : '已点赞 ❤️'), 2200);
       };
       document.getElementById('visitInteract').onclick = () => {
@@ -1353,7 +1353,7 @@
         this._visitHintShown = true;
         if (Farm.ui && Farm.ui.toast) Farm.ui.toast(en
           ? 'You are visiting — use the buttons below to interact'
-          : '正在别人家做客～想顺菜点下面「互动」', 3200);
+          : '正在拜访。顺菜请点下方「互动」', 3200);
       }
     },
 
@@ -1373,7 +1373,7 @@
       // must be able to afford it (农场币) — show the shortfall, nudge to earn more.
       if (cost > 0 && Farm.state.data.coins < cost) {
         const need = cost - Farm.state.data.coins;
-        if (Farm.ui && Farm.ui.toast) Farm.ui.toast(en ? ('Need ' + need + ' more coins — sell crops to earn!') : ('还差 ' + need + ' 农场币，去卖菜赚钱吧！'));
+        if (Farm.ui && Farm.ui.toast) Farm.ui.toast(en ? ('Need ' + need + ' more coins') : ('还差 ' + need + ' 农场币'));
         return;
       }
       const ctr = this._screenToCell(this._cssW() / 2, this._cssH() / 2);
@@ -1447,10 +1447,10 @@
         const c = this._cell(gx, gy), r = this._cv.getBoundingClientRect();
         if (Farm.ui && Farm.ui.floatText) Farm.ui.floatText('🌱 -' + cost, r.left + c.x - 16, r.top + c.y - this._th(), '#3a8c50');
         if (Farm.audio) Farm.audio.play('coin');
-        if (Farm.ui && Farm.ui.toast) Farm.ui.toast(en ? 'New plot ready — tap to plant!' : '新菜地开好啦 — 点它种菜！');
+        if (Farm.ui && Farm.ui.toast) Farm.ui.toast(en ? 'New plot ready' : '新菜地已就绪');
         return;
       }
-      if (Farm.ui && Farm.ui.toast) Farm.ui.toast(en ? 'No room on your land — expand first' : '地里没空位了，先扩地吧');
+      if (Farm.ui && Farm.ui.toast) Farm.ui.toast(en ? 'No free tile — expand land first' : '当前没有空位，请先扩地');
     },
     _adjacentOwned(gx, gy) {
       const dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]];
@@ -1589,7 +1589,7 @@
       const r = this._cv.getBoundingClientRect();
       if (Farm.ui && Farm.ui.floatText) Farm.ui.floatText('🪓 -' + cost, r.left + c.x - 16, r.top + c.y - this._th(), '#3a8c50');
       if (Farm.audio) Farm.audio.play('coin');
-      if (Farm.ui && Farm.ui.toast) Farm.ui.toast(en ? 'Land cleared — tap to plant!' : '开垦好了，点它种菜！');
+      if (Farm.ui && Farm.ui.toast) Farm.ui.toast(en ? 'Land cleared' : '开垦完成');
     },
     _coopReady(o) { return Date.now() - (o && o.eggAt || 0) >= COOP_INTERVAL; },
     _collectCoop(o, p) {
@@ -1599,7 +1599,7 @@
         if (Farm.ui && Farm.ui.refreshHUD) Farm.ui.refreshHUD();
         if (Farm.audio) Farm.audio.play('coin');
         if (p && Farm.ui && Farm.ui.floatText) { const r = this._cv.getBoundingClientRect(); Farm.ui.floatText('🥚 +' + COOP_REWARD, r.left + p.x - 16, r.top + p.y - 20, '#e8a020'); }
-        if (Farm.ui && Farm.ui.toast) Farm.ui.toast(en ? ('Collected eggs! +' + COOP_REWARD + ' coins') : ('收鸡蛋啦！+' + COOP_REWARD + ' 农场币'));
+        if (Farm.ui && Farm.ui.toast) Farm.ui.toast(en ? ('Eggs collected · +' + COOP_REWARD + ' coins') : ('已收取鸡蛋 · +' + COOP_REWARD + ' 农场币'));
         this.render();
       } else {
         const left = Math.ceil((COOP_INTERVAL - (Date.now() - (o.eggAt || 0))) / 60000);
@@ -1753,7 +1753,7 @@
       if (this._build && Farm.state.data && !Farm.state.data.mapMoveHintSeen) {
         Farm.state.data.mapMoveHintSeen = true;
         Farm.state.save();
-        if (Farm.ui && Farm.ui.toast) Farm.ui.toast(this._lang() === 'en' ? 'Hold a house or plot and drag to move it' : '按住房子或菜地拖一拖就能挪', 3600);
+        if (Farm.ui && Farm.ui.toast) Farm.ui.toast(this._lang() === 'en' ? 'Drag a building or plot to move it' : '拖动建筑或菜地即可调整位置', 3200);
       }
       if (this._build) {
         // Build mode goes FULLSCREEN: hide the bottom bars (Lv/XP, nav, install banner)
@@ -3175,13 +3175,13 @@
     _drawLockedLand() { this._landBadge = null; },
     _tryUnlockLand() {
       const next = this._nextLand();
-      if (!next) { if (Farm.ui && Farm.ui.toast) Farm.ui.toast(this._lang() === 'en' ? '🏆 Your farm is already at max size' : '🏆 农场已是最大啦'); return; }
+      if (!next) { if (Farm.ui && Farm.ui.toast) Farm.ui.toast(this._lang() === 'en' ? 'Land is fully unlocked' : '土地已全部解锁'); return; }
       /* 🔒 余额字段是 eastPoints（2026-08-15 审阅第 3 条）：存档里从来没有 totalPoints
          这个字段（那是 members 文档上的服务端缓存名），读它恒为 0 →
          L3(3000币+30点) / L4(6000币+50点) 永远提示「积分不够」，扩地后期整个是坏的。 */
       const en = this._lang() === 'en', haveC = Farm.state.data.coins, haveP = (Farm.state.data.eastPoints || 0);
       if (haveC < next.coins || (next.points && haveP < next.points)) {
-        if (Farm.ui && Farm.ui.toast) Farm.ui.toast(en ? 'Not enough to expand yet — keep farming!' : '钱/积分还不够，再攒攒！');
+        if (Farm.ui && Farm.ui.toast) Farm.ui.toast(en ? 'Not enough coins or points to expand' : '农场币或积分不足，暂无法扩地');
         return;
       }
       const go = () => {
@@ -3196,7 +3196,7 @@
         Farm.state.data.landLevel = this._landLevel() + 1; Farm.state.save();
         this._bgKey = null; if (Farm.ui && Farm.ui.refreshHUD) Farm.ui.refreshHUD();
         if (Farm.audio) Farm.audio.play('levelUp'); if (Farm.ui && Farm.ui.showConfetti) Farm.ui.showConfetti(30, 1800);
-        if (Farm.ui && Farm.ui.toast) Farm.ui.toast(en ? 'New land unlocked! 🎉' : '新土地解锁啦！🎉');
+        if (Farm.ui && Farm.ui.toast) Farm.ui.toast(en ? 'New land unlocked' : '新土地已解锁');
         this.render();
       };
       const cost = next.coins + ' <span class="coin-icon"></span>' + (next.points ? (' + ' + next.points + ' <span class="points-icon"></span>') : '');

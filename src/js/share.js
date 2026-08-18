@@ -231,7 +231,7 @@
       // ---- CTA + URL + address (bigger text) ----
       ctx.fillStyle = '#2a5c34';
       ctx.font = '700 26px ' + FD;
-      ctx.fillText('我在东方农场种菜啦！', W / 2, 616);
+      ctx.fillText('我在东方农场种菜', W / 2, 616);
       ctx.fillStyle = '#3a8c50';
       ctx.font = '700 16px ' + EN;
       ctx.fillText('Farming at Eastern Farm!', W / 2, 640);

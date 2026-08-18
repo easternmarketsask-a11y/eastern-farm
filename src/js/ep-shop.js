@@ -304,7 +304,7 @@
       const list = groups[this._shopTab] || [];
       const grid = list.length
         ? `<div class="ep-shop-grid">${list.map(it => this._cardHtml(it, lang)).join('')}</div>`
-        : `<div class="muted" style="text-align:center;padding:26px;">${EN ? 'Nothing here yet' : '这个分类暂时空着～'}</div>`;
+        : `<div class="muted" style="text-align:center;padding:26px;">${EN ? 'Nothing here yet' : '此分类暂无商品'}</div>`;
 
       const html = `
         <h2 class="modal-title">${EN ? 'Farm Shop' : '农场商城'}</h2>
@@ -334,9 +334,9 @@
           const r = this.buy(btn.dataset.buy);
           if (!r.ok) {
             Farm.ui.toast(r.reason === 'insufficient_coins' || r.reason === 'insufficient_ep'
-              ? (EN ? 'Not enough — keep farming!' : '余额不够，多卖点菜再来～')
+              ? (EN ? 'Not enough coins or points' : '余额不足')
               : r.reason === 'daily_cap'
-                ? (EN ? 'Daily limit reached — back tomorrow!' : '今天买够啦，明天再来～')
+                ? (EN ? 'Daily purchase limit reached' : '今日购买次数已满')
               : (EN ? 'Cannot buy' : '无法购买'), 2400);
             if (Farm.audio) Farm.audio.play('error');
             return;

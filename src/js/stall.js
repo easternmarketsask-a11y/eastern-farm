@@ -254,7 +254,7 @@
           + '</div>'
           + (enough
             ? '<button class="btn" id="stallSellBtn" style="width:100%;">' + (en ? 'Sell' : '卖给TA') + ' · +' + c.price + ' <span class="coin-icon"></span></button>'
-            : '<button class="btn secondary" disabled style="width:100%;">' + (en ? 'Not enough stock — grow some!' : '货不够 · 先去种点吧') + '</button>')
+            : '<button class="btn secondary" disabled style="width:100%;">' + (en ? 'Not enough stock' : '库存不足') + '</button>')
           + '</div>';
       }
       body += '<div style="font-size:11.5px;color:var(--warm-text-soft);text-align:center;margin-top:10px;">'

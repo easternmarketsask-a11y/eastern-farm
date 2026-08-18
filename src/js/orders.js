@@ -214,7 +214,7 @@
 
       const epLeft = this._epRemainingToday();
       const subtitle = list.length === 0
-        ? `<p class="modal-subtitle">${lang === 'en' ? 'Grow some crops first, then Eastern Market will start ordering.' : '先种点菜，东方超市就会开始下单啦。'}</p>`
+        ? `<p class="modal-subtitle">${lang === 'en' ? 'Grow crops first. Orders will follow.' : '先种植作物，订单随后出现。'}</p>`
         : `<p class="modal-subtitle">${lang === 'en'
             ? 'Deliver crops from your barn — orders pay more than bulk selling.'
             : '从谷仓交付东超要的菜——比直接卖更划算。'}</p>`;

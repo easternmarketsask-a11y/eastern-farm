@@ -360,7 +360,7 @@
           document.getElementById('neighborBody').innerHTML = `
             ${metricTabs}
             <p style="text-align:center;padding:30px 16px;color:var(--warm-text-soft);">
-              ${lang === 'en' ? 'No leaderboard data yet. Be the first farmer!' : '排行榜还没人，你来当第一名吧！'}
+              ${lang === 'en' ? 'No ranking data yet' : '暂无排行数据'}
             </p>
           `;
         } else {
@@ -558,7 +558,7 @@
         <div class="neighbor-greeting">"${greeting}"</div>
         <div class="neighbor-farm">${plotsHtml}</div>
         ${(isAI || realStealable)
-          ? `<div class="neighbor-steal-tip">${lang === 'en' ? '🧺 Tap a ripe crop to grab one for your barn' : '🧺 点熟了的菜，顺一棵回家～'}</div>`
+          ? `<div class="neighbor-steal-tip">${lang === 'en' ? 'Tap a ripe crop to take one' : '点成熟作物可取回一棵'}</div>`
           : (!stealUnlocked && fd.plots.some(p => p.cropId && p.stage >= 2)
               ? `<div class="neighbor-steal-tip" style="opacity:.85;">${lang === 'en' ? `🔒 Reach Lv${cfg.STEAL_UNLOCK_LEVEL || 7} to unlock grabbing crops` : `🔒 农场到 Lv${cfg.STEAL_UNLOCK_LEVEL || 7} 解锁顺菜`}</div>`
               : '')}

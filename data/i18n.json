@@ -30,17 +30,17 @@
     "plot_growing": { "zh": "生长中", "en": "Growing" },
     "plot_ready": { "zh": "可以收获了!", "en": "Ready to harvest!" },
 
-    "tending_water_done": { "zh": "本轮已浇过水啦", "en": "Already watered this round" },
-    "tending_water_mature": { "zh": "已经熟啦，直接收获吧", "en": "It's ripe — harvest it!" },
-    "tending_water_toast": { "zh": "💧 浇好水，长得更快啦！", "en": "💧 Watered — growing faster now!" },
-    "tending_fert_done": { "zh": "这块地已经施过肥啦", "en": "This plot is already fertilized" },
+    "tending_water_done": { "zh": "本轮已浇水", "en": "Already watered this round" },
+    "tending_water_mature": { "zh": "已成熟，可直接收获", "en": "Ripe — harvest it" },
+    "tending_water_toast": { "zh": "已浇水，成熟加快 20%", "en": "Watered — 20% faster" },
+    "tending_fert_done": { "zh": "这块地已施肥", "en": "This plot is already fertilized" },
     "tending_fert_none": { "zh": "没有化肥了，去商城买一袋吧", "en": "No fertilizer left — grab a bag in the shop" },
     "tending_fert_toast": { "zh": "🌟 施好肥，这块地收获翻倍！", "en": "🌟 Fertilized — this plot yields double!" },
 
     "steal_done": { "zh": "🧺 从 {name} 家顺了一棵，已入库", "en": "🧺 Grabbed one from {name}'s farm!" },
-    "steal_daily_cap": { "zh": "今天顺得够多啦，明天再来～", "en": "You've grabbed plenty today — back tomorrow!" },
-    "steal_target_cap": { "zh": "在这家就顺这么多啦，去别家逛逛～", "en": "Enough from this neighbor — visit others!" },
-    "steal_warehouse_full": { "zh": "谷仓满了，先去卖菜再来顺～", "en": "Barn's full — sell some crops first!" },
+    "steal_daily_cap": { "zh": "今日顺菜次数已用完", "en": "Daily grab limit reached" },
+    "steal_target_cap": { "zh": "这家已达上限，可换一家", "en": "Limit reached here — try another farm" },
+    "steal_warehouse_full": { "zh": "谷仓已满，请先出售", "en": "Barn is full — sell first" },
 
     "report_title": { "zh": "回家小报", "en": "While you were away" },
     "report_bad_header": { "zh": "小馋嘴来过", "en": "Little nibblers" },
@@ -51,7 +51,7 @@
     "report_help_coins": { "zh": "{name} 给你送了 {amount} 农场币", "en": "{name} sent you {amount} farm coins" },
     "report_caught": { "zh": "看家狗逮住了来串门的 {name}，TA 赔了你 1 棵{crop}！", "en": "Your dog caught {name} sneaking in — they left you 1 {crop}!" },
     "report_visit": { "zh": "{name} 来你农场逛过 🐾", "en": "{name} stopped by your farm 🐾" },
-    "report_visit_more": { "zh": "还有 {n} 位邻居也来逛过～", "en": "…and {n} more neighbors dropped by!" },
+    "report_visit_more": { "zh": "另有 {n} 位邻居到访", "en": "And {n} more neighbors visited" },
 
     "btn_plant": { "zh": "种植", "en": "Plant" },
     "btn_harvest": { "zh": "收获", "en": "Harvest" },
@@ -124,13 +124,13 @@
     "tutorial_step3_body": { "zh": "收的菜先进谷仓，攒一批后送到东方超市，换农场币和超市积分。", "en": "Harvested crops go to the barn. Deliver to Eastern Market for coins + Store Points." },
     "tutorial_btn_start": { "zh": "开始种菜 →", "en": "Start farming →" },
 
-    "toast_first_plant": { "zh": "🌱 种下第一棵菜！开张大吉 +10 农场币", "en": "🌱 Your first seed! +10 coins to start" },
-    "toast_first_harvest": { "zh": "🎉 第一次收获！进谷仓的菜可以送去东方超市", "en": "🎉 First harvest! Deliver from the barn to Eastern Market" },
+    "toast_first_plant": { "zh": "第一棵已种下 · +10 农场币", "en": "First crop planted · +10 coins" },
+    "toast_first_harvest": { "zh": "首次收获已入谷仓，可售予东方超市", "en": "First harvest is in the barn — sell to Eastern Market" },
 
     "harvest_status_ready": { "zh": "🌾 {n} 棵已熟可收", "en": "🌾 {n} ready to harvest" },
     "harvest_status_btn_all": { "zh": "全部收获", "en": "Harvest All" },
     "harvest_status_growing": { "zh": "⏳ 下一批 {time} 后成熟", "en": "⏳ Next batch ready in {time}" },
-    "harvest_status_empty": { "zh": "🌱 空地还空着，种点吧", "en": "🌱 Plant something!" }
+    "harvest_status_empty": { "zh": "还有空地可种", "en": "Empty plots available" }
   },
 
   "_storekeeper_pool_default_zh": [

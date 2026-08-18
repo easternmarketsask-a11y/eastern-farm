@@ -223,7 +223,7 @@
       const claims = Farm.state.data.dailyClaims;
       if (kind === 'like') {
         const given = claims.likesSentToday || [];
-        if (given.length >= 5) return { ok: false, reason: 'cap_reached', message: lang === 'en' ? 'Daily 5-like cap reached!' : '今天 5 个赞都送完啦！' };
+        if (given.length >= 5) return { ok: false, reason: 'cap_reached', message: lang === 'en' ? 'Daily like limit reached' : '今日点赞次数已用完' };
         if (given.includes(id)) return { ok: false, reason: 'already_liked', message: lang === 'en' ? 'Already liked today.' : '今天给 TA 点过赞了。' };
         claims.likesSentToday = given.concat([id]);
         this._rel(id).likedByMe = true;
@@ -233,7 +233,7 @@
       }
       if (kind === 'help') {
         const done = claims.helpSentToday || [];
-        if (done.length >= 5) return { ok: false, reason: 'cap_reached', message: lang === 'en' ? 'Daily help limit reached!' : '今天帮忙次数用完啦！' };
+        if (done.length >= 5) return { ok: false, reason: 'cap_reached', message: lang === 'en' ? 'Daily help limit reached' : '今日帮忙次数已用完' };
         if (done.includes(id)) return { ok: false, reason: 'already', message: lang === 'en' ? 'Already helped today.' : '今天已经帮过 TA 了。' };
         claims.helpSentToday = done.concat([id]);
         this._rel(id).helpedByMe = true;
@@ -243,7 +243,7 @@
       }
       // sticker
       const sent = claims.stickersSentToday || [];
-      if (sent.length >= 10) return { ok: false, reason: 'cap_reached', message: lang === 'en' ? 'Daily sticker limit reached!' : '今天贴纸用完啦！' };
+      if (sent.length >= 10) return { ok: false, reason: 'cap_reached', message: lang === 'en' ? 'Daily sticker limit reached' : '今日贴纸次数已用完' };
       claims.stickersSentToday = sent.concat([{ to: id, emoji: emoji || '👍' }]);
       Farm.state.addCoins(2);
       Farm.state.save();

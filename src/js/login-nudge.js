@@ -48,16 +48,18 @@
     _show() {
       const en = L() === 'en';
       const bonusActive = Farm.state.getDateString() <= BONUS_END;
-      const reward = bonusActive
-        ? (en ? `a <b>${BONUS_COINS.toLocaleString()}-coin</b> welcome gift (sign in, then add your email)` : `<b>${BONUS_COINS.toLocaleString()} 农场币</b>开局礼包（登录后留个邮箱就送）`)
-        : (en ? 'member rewards' : '会员奖励');
+      const extra = bonusActive
+        ? (en
+          ? ` Welcome gift: <b>${BONUS_COINS.toLocaleString()}</b> coins after you add an email.`
+          : ` 登录并填写邮箱后，可领取 <b>${BONUS_COINS.toLocaleString()}</b> 农场币。`)
+        : '';
       const html = `
         <div class="ln-modal">
           <div class="ln-emoji">🎁</div>
-          <h2 class="modal-title" style="margin-bottom:4px;">${en ? 'Sign in & keep your farm' : '登录，把农场存下来'}</h2>
+          <h2 class="modal-title" style="margin-bottom:4px;">${en ? 'Sign in to save your farm' : '登录以保存农场'}</h2>
           <p class="ln-body">${en
-            ? `You made your first sale! Sign in with your Eastern Market membership for ${reward} — and your farm saves to the cloud, so you never lose it (even on a new phone).`
-            : `你卖出第一笔啦！用东方超市会员登录，立得${reward}，进度还会云端保存——换手机也不丢。`}</p>
+            ? `Use your Eastern Market membership. Progress is saved to the cloud.`
+            : `使用东方超市会员登录，进度云端保存。`}${extra}</p>
           <div class="btn-row ln-actions">
             <button class="btn" id="lnSignIn">📱 ${bonusActive
               ? (en ? `Sign in · claim ${BONUS_COINS.toLocaleString()}` : `登录 · 领 ${BONUS_COINS.toLocaleString()} 币`)

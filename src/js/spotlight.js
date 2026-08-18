@@ -138,7 +138,7 @@
         : '点这块发光的地，种下第一棵菜。';
       if (this._step === 1) return en
         ? 'It\'s ripe! Tap to harvest it into your barn.'
-        : '熟啦！点一下收进谷仓。';
+        : '已成熟。点一下收入谷仓。';
       return en
         ? 'Tap the barn to sell your crop to Eastern Market for coins.'
         : '点谷仓，把菜卖给东方超市换农场币。';
@@ -282,7 +282,7 @@
       if (Farm.audio) Farm.audio.play('levelUp');
       Farm.ui.toast(L() === 'en'
         ? '🎉 You did it! Plant → Harvest → Sell. +50 coins'
-        : '🎉 学会啦！种 → 收 → 卖，就这么简单。+50 农场币', 3600);
+        : '种、收、卖。+50 农场币', 3200);
       if (Farm.ui.showConfetti) Farm.ui.showConfetti(36, 2400);
     },
   };

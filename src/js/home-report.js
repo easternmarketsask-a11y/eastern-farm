@@ -154,7 +154,7 @@
           ${badSection}
         </div>
         <div class="btn-row" style="margin-top:14px;">
-          <button class="btn" onclick="Farm.ui.hideModal()">${lang === 'en' ? 'Got it' : '知道啦'}</button>
+          <button class="btn" onclick="Farm.ui.hideModal()">${lang === 'en' ? 'OK' : '好的'}</button>
         </div>
       `;
       Farm.ui.showModal(html);

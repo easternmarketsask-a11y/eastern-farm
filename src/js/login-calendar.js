@@ -163,7 +163,7 @@
 
       const nextDay = alreadySignedToday ? null : (dayIndex + 1);
       let statusText = alreadySignedToday
-        ? (lang === 'en' ? "You've signed in today — come back tomorrow!" : '今天已签到，明天再来吧！')
+        ? (lang === 'en' ? 'Already signed in today' : '今日已签到')
         : (lang === 'en' ? `Day ${nextDay} ready to claim` : `第 ${nextDay} 天奖励可领取`);
       if (willRepair) {
         statusText += lang === 'en'
@@ -229,7 +229,7 @@
             ? '🩹 Weekly repair card used — yesterday is bridged, streak continues!'
             : '🩹 用掉本周补签卡，昨天帮你补上了，连签不断！', 3200), 1100);
         } else if (result.reset) {
-          Farm.ui.toast(lang === 'en' ? 'A fresh week begins!' : '新的一轮开始啦', 2600);
+          Farm.ui.toast(lang === 'en' ? 'A new week has started' : '新一周已开始', 2400);
         }
         // 签完直接收起（toast 已说明奖励）——不再回弹日历让用户多关一次
         // （Chris 2026-06-11：当天签过就不要再弹出）。

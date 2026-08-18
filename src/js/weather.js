@@ -163,7 +163,7 @@
           setTimeout(() => {
             if (Farm.ui) Farm.ui.toast(lang === 'en'
               ? '🌧 It\'s raining in Saskatoon — ' + n + ' plots watered for free!'
-              : '🌧 萨斯卡通下雨啦，' + n + ' 块地自动浇过水了！', 3500);
+              : '萨斯卡通降雨，已为 ' + n + ' 块地浇水', 3200);
           }, 1600);
           if (Farm.farm && Farm.farm.renderGrid) Farm.farm.renderGrid();
           if (Farm.harvestStatus) Farm.harvestStatus.render();

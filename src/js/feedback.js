@@ -203,7 +203,7 @@
       if (!res.ok || !data || !data.ok) {
         const reason = (data && (data.reason || data.detail)) || '';
         if (reason === 'rate_limited') {
-          if (Farm.ui) Farm.ui.toast(en() ? 'Too many notes today — try tomorrow' : '今天交得有点多，明天再写吧', 2600);
+          if (Farm.ui) Farm.ui.toast(en() ? 'Daily limit reached' : '今日提交次数已满', 2600);
         } else {
           if (Farm.ui) Farm.ui.toast(en()
             ? 'Could not reach the store. Try again in a minute.'

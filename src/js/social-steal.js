@@ -100,7 +100,7 @@
         return { ok: false, reason: 'locked',
           message: lang === 'en'
             ? `🔒 Reach Lv${socialConfig.STEAL_UNLOCK_LEVEL} to unlock grabbing crops`
-            : `🔒 农场到 Lv${socialConfig.STEAL_UNLOCK_LEVEL} 才解锁顺菜哦` };
+            : `农场达到 Lv${socialConfig.STEAL_UNLOCK_LEVEL} 后解锁顺菜` };
       }
       if ((victim.level || 1) < socialConfig.NEWBIE_PROTECT_LEVEL) {
         return { ok: false, reason: 'newbie_protected' };
@@ -112,7 +112,7 @@
         return { ok: false, reason: 'dog_cap',
           message: lang === 'en'
             ? '🐕 Their guard dog is watching — that\'s all you can grab here today.'
-            : '🐕 TA 家的狗盯得紧，今天这里就只能顺这么多啦' };
+            : '对方有看家犬，今日此处已达上限' };
       }
       const can = this.canStealFrom(victim.uid);
       if (!can.ok) return can;

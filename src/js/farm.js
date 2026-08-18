@@ -249,7 +249,7 @@
         Farm.ui.hideModal();
         this.renderGrid();
         if (Farm.audio) Farm.audio.play('achievement');
-        Farm.ui.toast(lang === 'en' ? '⚡ Mature! Tap to harvest.' : '⚡ 已成熟，点击收获！', 2200);
+        Farm.ui.toast(lang === 'en' ? 'Ripe — tap to harvest' : '已成熟，点一下收获', 2200);
       };
     },
 
