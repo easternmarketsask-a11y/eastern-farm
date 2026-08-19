@@ -213,6 +213,36 @@ else
     echo "—— 部署中止：新手引导挡住了它自己让人点的地方。这条静默失败，每个新玩家都撞。"
     exit 1
   fi
+
+  # 闸门 G: 「发送短信验证码」真的把号码发出去(约 8 秒)
+  # 2026-08-19 加（客人 Alicia 报的）：这个按钮曾经**永远发不出去** ——
+  # _sendCode 读的输入框只存在于上一屏，digits 恒为 0，每次都弹
+  # 「请输入 10 位手机号」然后 return。而这是 909 个没登录过的会员唯一的入口。
+  # 测试把 signInWithPhoneNumber 打桩，绝不真发短信。
+  echo "▶ 闸门 G: 短信验证码发送回归测试(约 8 秒)…"
+  $PYCMD -m http.server 8151 --bind 127.0.0.1 >/dev/null 2>&1 &
+  SMS_PID=$!
+  trap 'kill $SMS_PID 2>/dev/null || true' EXIT
+  sleep 1
+  SMS_OUT="$(mktemp)"
+  EF_MOBILE=1 node scripts/verify/cdp.mjs "http://127.0.0.1:8151/src/" "scripts/verify/sms-send-test.js" 200 >"$SMS_OUT" 2>/dev/null || true
+  kill $SMS_PID 2>/dev/null || true
+  trap - EXIT
+  if ! node -e '
+    const o = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
+    const r = o.evalResult;
+    if (!r) { console.error("✗ 短信发送测试没跑出结果"); process.exit(1); }
+    if (r.inconclusive) { console.log("  ⚠ " + r.inconclusive + "(不阻断)"); process.exit(0); }
+    if (r.failures && r.failures.length) {
+      console.error("✗ 发送短信验证码这一步是坏的:");
+      r.failures.forEach(f => console.error("  - " + f));
+      process.exit(1);
+    }
+    console.log("  ✓ 号码正确送到发送函数(" + r.sentTo + ")");
+  ' "$SMS_OUT"; then
+    echo "—— 部署中止：短信验证码发不出去。这挡住所有第一次登录的会员。"
+    exit 1
+  fi
 fi
 
 # 3. 提交未保存的改动(如果有;SW 版本注入保证至少有它)

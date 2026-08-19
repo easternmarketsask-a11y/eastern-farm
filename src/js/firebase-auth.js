@@ -1137,13 +1137,30 @@
       // hangs silently forever. We run the membership check IN PARALLEL.
       const lang = Farm.state.data.language;
       this._showError('');
-      const phoneEl = document.getElementById('authPhone');
-      const phoneRaw = (phoneEl && phoneEl.value) || '';
-      const digits = this._phoneDigits(phoneRaw);
+      /* 🔴 号码取自 this._currentPhoneE164，**不许再读 #authPhone**（2026-08-19 修）
+         --------------------------------------------------------------------
+         原来这里读 `#authPhone` 输入框，而那个框只存在于**上一屏**（输手机号）。
+         2026-08-12 把流程拆成两屏之后（拆的理由见 _renderLoginModal 顶部：iOS
+         手势不能被 await 吃掉），验证码这一屏就没有它了 → `digits.length` 恒为 0
+         → 永远走进下面那句错误提示并 return。
+
+         **后果：短信验证码从来发不出去。** 屏幕上一边写着「将发送到 (639)
+         476-8553」，一边红字说「请输入 10 位手机号」—— 号码明明已经在手上。
+         客人 Alicia 2026-08-19 报的就是这个，她只能关掉窗口以游客身份进游戏。
+         而这条路是 909 个从没登录过的会员**唯一**的入口。
+
+         ⚠️ 这里是同步取值，不能改成 await —— 下面 signInWithPhoneNumber 之前
+         有任何 await 都会吃掉 iOS 的用户手势，reCAPTCHA 会静默挂死。 */
+      const raw = this._phoneDigits(this._currentPhoneE164 || '');
+      // _currentPhoneE164 形如 +13064768553 → 去掉国家码 1，只留 10 位
+      const digits = (raw.length === 11 && raw[0] === '1') ? raw.slice(1) : raw;
       if (digits.length !== 10) {
+        // 走到这里说明上一屏的号码丢了（正常流程不会）。不要叫人往一个
+        // **这屏上根本不存在**的输入框里打字 —— 把他送回能输入的那一屏。
         this._showError(lang === 'en'
-          ? 'Please enter your 10-digit Canadian number (area code + number).'
-          : '请输入店里登记的 10 位手机号（区号+号码，例如 3061234567）。');
+          ? 'Please enter your phone number again.'
+          : '请重新输入手机号。');
+        this._go('phone');
         return;
       }
       if (!this._recaptcha) {
