@@ -1201,6 +1201,20 @@
       this._clampCam();
       this.render();
     },
+    // 选中图册里的房子后关窗，镜头对着新房，让建造效果露出来。
+    _revealBuiltHome(o, spec, isNew) {
+      const en = this._lang() === 'en';
+      if (Farm.ui && Farm.ui.hideModal) Farm.ui.hideModal();
+      this._focusHome(o);
+      if (Farm.audio) Farm.audio.play('achievement');
+      if (Farm.ui && Farm.ui.refreshHUD) Farm.ui.refreshHUD();
+      if (Farm.ui && Farm.ui.confettiBurst) Farm.ui.confettiBurst();
+      if (Farm.ui && Farm.ui.toast) {
+        Farm.ui.toast(isNew
+          ? (en ? ('Built a new ' + spec.en + '.') : ('新盖了一座：' + spec.zh + '。'))
+          : (en ? ('Moved into ' + spec.en + '.') : ('家换成了：' + spec.zh + '。')), 2600);
+      }
+    },
     _homeSprite(o) {
       const spec = this._homeSpec(o);
       const im = this._img[spec.stem];
@@ -1361,11 +1375,7 @@
           'Moved into ' + spec.en + '.');
       }
       Farm.state.save();
-      if (Farm.audio) Farm.audio.play('achievement');
-      if (Farm.ui.refreshHUD) Farm.ui.refreshHUD();
-      if (Farm.ui.confettiBurst) Farm.ui.confettiBurst();
-      this._focusHome(o);
-      this._openHomePanel(mapIdx, spec.cat);
+      this._revealBuiltHome(o, spec, false);
     },
 
     _findHomeSpot(wh, exceptIdx, near) {
@@ -1441,12 +1451,8 @@
           'Built a new ' + spec.en + '.');
       }
       Farm.state.save();
-      if (Farm.audio) Farm.audio.play('achievement');
-      if (Farm.ui.refreshHUD) Farm.ui.refreshHUD();
-      if (Farm.ui.confettiBurst) Farm.ui.confettiBurst();
       this._refreshPaletteAfford();
-      this._focusHome(rec);
-      this._openHomePanel(Farm.state.data.map.indexOf(rec), spec.cat);
+      this._revealBuiltHome(rec, spec, true);
     },
 
     _openHomePanel(idx, cat) {
