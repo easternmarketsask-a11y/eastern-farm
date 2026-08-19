@@ -61,6 +61,11 @@
       en: { title: 'Come back daily', body: 'Daily <b>sign-in</b> (7-day streak = big prize), daily <b>tasks</b>, and a daily <b>lottery wheel</b>. Five minutes a day pays off.' },
     },
     {
+      icon: '🚗',
+      zh: { title: '停自己的车', body: '点右下角<b>建造</b>，选<b>汽车</b>。农用、家用、越野、豪华都能换。点停好的车可以换款，只补差价。' },
+      en: { title: 'Park a car', body: 'Tap <b>Build</b> (bottom-right), then <b>Car</b>. Utility, family, off-road and luxury are in the catalog. Tap a parked car to change it — you pay only the difference.' },
+    },
+    {
       icon: '🏘',
       zh: { title: '串门看邻居', body: '右下角<b>邻居</b>列出今天在线的人。走进去浇水或点赞；自己收过一次菜之后，可以在熟了的地里顺一棵。邀请好友，双方各得 200 农场币。' },
       en: { title: 'Visit neighbors', body: 'Tap <b>Neighbors</b> (bottom-right) to see who is online today. Walk in to water or like. After you harvest once, you can take a ripe crop. Invite a friend — 200 coins each.' },

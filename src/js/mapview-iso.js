@@ -80,6 +80,12 @@
     p_house_13: 'p_house_13.webp', p_house_14: 'p_house_14.webp',
     p_house_15: 'p_house_15.webp', p_house_16: 'p_house_16.webp', p_house_17: 'p_house_17.webp', p_house_18: 'p_house_18.webp',
     p_house_19: 'p_house_19.webp', p_house_20: 'p_house_20.webp', p_house_21: 'p_house_21.webp', p_house_22: 'p_house_22.webp',
+    p_house_23: 'p_house_23.webp', p_house_24: 'p_house_24.webp', p_house_25: 'p_house_25.webp', p_house_26: 'p_house_26.webp',
+    p_house_27: 'p_house_27.webp', p_house_28: 'p_house_28.webp', p_house_29: 'p_house_29.webp', p_house_30: 'p_house_30.webp',
+    p_car_1: 'p_car_1.webp', p_car_2: 'p_car_2.webp', p_car_3: 'p_car_3.webp', p_car_4: 'p_car_4.webp',
+    p_car_5: 'p_car_5.webp', p_car_6: 'p_car_6.webp', p_car_7: 'p_car_7.webp', p_car_8: 'p_car_8.webp',
+    p_car_9: 'p_car_9.webp', p_car_10: 'p_car_10.webp', p_car_11: 'p_car_11.webp', p_car_12: 'p_car_12.webp',
+    p_car_13: 'p_car_13.webp', p_car_14: 'p_car_14.webp', p_car_15: 'p_car_15.webp', p_car_16: 'p_car_16.webp',
     deco_bush: 'deco_bush.webp', deco_lantern: 'deco_lantern.webp', deco_fence: 'deco_fence.webp', deco_wheel: 'deco_wheel.webp', deco_bridge: 'deco_bridge.webp',
     crop0: 'crop_qingcai_0.webp', crop1: 'crop_qingcai_1.webp', crop2: 'crop_qingcai_2.webp', crop3: 'crop_qingcai_3.webp',
     tile_grass: 'p_grass.webp', tile_grass_b: 'p_grass_b.webp', tile_grass_c: 'p_grass_c.webp',
@@ -141,6 +147,7 @@
     // 我的家：可多座（HOME_CAP）。占地按档次（农舍 2×2 → 豪宅 7×7），见 HOME_LEVELS.w/h。
     // 点房子=改建补差价；调色盘再建=付全价。这里的 2×2 只是农户小宅默认。
     home: { img: 'house', w: 2, h: 2, sc: 2.3, zh: '我的家', en: 'My Home', tap: 'home', cost: 300 },
+    car: { img: 'p_car_1', w: 2, h: 2, sc: 1.85, zh: '汽车', en: 'Car', tap: 'car', cost: 200 },
     barn: { img: 'barn', w: 2, h: 2, sc: 2.4, zh: '谷仓', en: 'Barn', tap: 'warehouse', cost: 350 },
     // 菜摊(类型名 house 是历史存档键, 不能改): 2026-08-14 二次定位 ——
     // Chris:「摊位看起来就是菜摊, 干脆作为菜摊用, 卖菜给路人; 种子店不需要实体」。
@@ -209,7 +216,7 @@
   const FARM_DY = -70;          // −150 (up)   … 0 … +150 (down), pixels
   // 'stall' 2026-08-14 从面板下架: 摊位贴图现在是种子店的专属形象, 再卖同款
   // 装饰摊 = 两个一样的摊分不清哪个能买种子。已放置的照常渲染不受影响。
-  const PALETTE = ['home', 'barn', 'house', 'greenhouse', 'coop', 'well', 'tree', 'bush', 'lantern', 'fence', 'wheel', 'bridge'];
+  const PALETTE = ['home', 'car', 'barn', 'house', 'greenhouse', 'coop', 'well', 'tree', 'bush', 'lantern', 'fence', 'wheel', 'bridge'];
   // 我的家图册。改建只收与现款的差价；另建一座收全价（农户小宅另建至少 cost=300）。
   // lv 存在每座 map 对象上。全场最多 HOME_CAP 座。
   const HOME_CAP = 4;
@@ -244,6 +251,39 @@
     { zh: '玫瑰洋房', en: 'Rose Villa',       cost: 15500, needLv: 9,  charm: 460,  upkeep: 58,  stem: 'p_house_20', w: 5, h: 5, draw: 1.52, mansion: false, cat: 'villa' },
     { zh: '白石宫墅', en: 'White Palace',     cost: 28000, needLv: 11, charm: 750,  upkeep: 110, points: 180, stem: 'p_house_21', w: 7, h: 7, draw: 1.62, mansion: true, cat: 'mansion' },
     { zh: '金顶庄园', en: 'Golden Estate',    cost: 80000, needLv: 18, charm: 1700, upkeep: 300, points: 550, stem: 'p_house_22', w: 7, h: 7, draw: 1.90, mansion: true, cat: 'mansion' },
+    { zh: '欧式石屋', en: 'Stone Cottage',    cost: 1000,  needLv: 1,  charm: 80,   upkeep: 6,   stem: 'p_house_23', w: 2, h: 2, draw: 1.34, mansion: false, cat: 'cottage' },
+    { zh: '木屋木舍', en: 'Alpine Chalet',    cost: 1600,  needLv: 3,  charm: 105,  upkeep: 10,  stem: 'p_house_24', w: 2, h: 2, draw: 1.40, mansion: false, cat: 'cottage' },
+    { zh: '砖庭小院', en: 'Brick Court',      cost: 3800,  needLv: 5,  charm: 180,  upkeep: 18,  stem: 'p_house_25', w: 4, h: 4, draw: 1.38, mansion: false, cat: 'court' },
+    { zh: '乔治联排', en: 'Georgian House',   cost: 4800,  needLv: 5,  charm: 205,  upkeep: 22,  stem: 'p_house_26', w: 4, h: 4, draw: 1.44, mansion: false, cat: 'court' },
+    { zh: '意式别墅', en: 'Italian Villa',    cost: 9000,  needLv: 7,  charm: 320,  upkeep: 40,  stem: 'p_house_27', w: 5, h: 5, draw: 1.46, mansion: false, cat: 'villa' },
+    { zh: '法式庄园', en: 'French Manor',     cost: 16000, needLv: 9,  charm: 470,  upkeep: 60,  stem: 'p_house_28', w: 5, h: 5, draw: 1.54, mansion: false, cat: 'villa' },
+    { zh: '尖塔城堡', en: 'Chateau',          cost: 32000, needLv: 11, charm: 820,  upkeep: 120, points: 200, stem: 'p_house_29', w: 7, h: 7, draw: 1.66, mansion: true, cat: 'mansion' },
+    { zh: '巴洛克宫', en: 'Baroque Palace',   cost: 72000, needLv: 18, charm: 1580, upkeep: 290, points: 480, stem: 'p_house_30', w: 7, h: 7, draw: 1.86, mansion: true, cat: 'mansion' },
+  ];
+  const CAR_CAP = 2;
+  const CAR_CATS = [
+    { id: 'utility', zh: '农用', en: 'Utility', face: 'p_car_1' },
+    { id: 'family', zh: '家用', en: 'Family', face: 'p_car_5' },
+    { id: 'offroad', zh: '越野', en: 'Off-road', face: 'p_car_9' },
+    { id: 'luxury', zh: '豪华', en: 'Luxury', face: 'p_car_16' },
+  ];
+  const CAR_LEVELS = [
+    { zh: '旧皮卡', en: 'Old Pickup',       cost: 0,     charm: 20,  stem: 'p_car_1',  w: 2, h: 2, draw: 1.22, cat: 'utility' },
+    { zh: '农用斗车', en: 'Dump Truck',     cost: 1200,  charm: 45,  stem: 'p_car_2',  w: 2, h: 2, draw: 1.28, cat: 'utility' },
+    { zh: '厢式货车', en: 'Box Van',        cost: 2400,  charm: 70,  stem: 'p_car_3',  w: 2, h: 2, draw: 1.30, cat: 'utility' },
+    { zh: '冷藏送货车', en: 'Reefer Truck', cost: 3800,  charm: 95,  stem: 'p_car_4',  w: 2, h: 2, draw: 1.32, cat: 'utility' },
+    { zh: '代步轿车', en: 'Family Sedan',   cost: 4500,  charm: 110, stem: 'p_car_5',  w: 2, h: 2, draw: 1.26, cat: 'family' },
+    { zh: '两厢小车', en: 'Hatchback',      cost: 5800,  charm: 130, stem: 'p_car_6',  w: 2, h: 2, draw: 1.24, cat: 'family' },
+    { zh: '家用旅行车', en: 'Station Wagon', cost: 7200, charm: 155, stem: 'p_car_7',  w: 2, h: 2, draw: 1.32, cat: 'family' },
+    { zh: '七座家用', en: 'Family MPV',     cost: 9000,  charm: 180, stem: 'p_car_8',  w: 2, h: 2, draw: 1.30, cat: 'family' },
+    { zh: '郊野SUV', en: 'Crossover',       cost: 11000, charm: 210, stem: 'p_car_9',  w: 3, h: 2, draw: 1.28, cat: 'offroad' },
+    { zh: '皮卡越野', en: 'Off-road Pickup', cost: 13500, charm: 240, stem: 'p_car_10', w: 3, h: 2, draw: 1.32, cat: 'offroad' },
+    { zh: '硬派越野', en: 'Trail Jeep',     cost: 16000, charm: 270, stem: 'p_car_11', w: 3, h: 2, draw: 1.30, cat: 'offroad' },
+    { zh: '豪华SUV', en: 'Luxury SUV',      cost: 20000, charm: 320, stem: 'p_car_12', w: 3, h: 2, draw: 1.36, cat: 'offroad' },
+    { zh: '黑色礼车', en: 'Black Sedan',    cost: 24000, charm: 360, points: 80,  stem: 'p_car_13', w: 3, h: 2, draw: 1.34, cat: 'luxury' },
+    { zh: '红色跑车', en: 'Red Convertible', cost: 34000, charm: 430, points: 140, stem: 'p_car_14', w: 3, h: 2, draw: 1.32, cat: 'luxury' },
+    { zh: '加长礼车', en: 'Limo',           cost: 46000, charm: 520, points: 220, stem: 'p_car_15', w: 4, h: 2, draw: 1.38, cat: 'luxury' },
+    { zh: '东方典藏', en: 'Eastern Classic', cost: 62000, charm: 640, points: 350, stem: 'p_car_16', w: 3, h: 2, draw: 1.40, cat: 'luxury' },
   ];
   // EP-shop pets → painted iso animal sprites (replaces the emoji pet).
   const ANIMALS = { pet_chick: 'animal_chicken', pet_cat: 'animal_cat', pet_rabbit: 'animal_rabbit', decoration_dog: 'animal_dog', guard_dog: 'animal_dog' };
@@ -315,6 +355,7 @@
 
       Object.keys(ASSET_SRC).forEach((k) => { const im = new Image(); im.onload = () => { this._img[k] = im; this._bgKey = null; if (this._on) this.render(); }; im.src = ASSET_DIR + ASSET_SRC[k]; });   // _bgKey=null → re-render cached backdrop once the landscape/tiles finish loading
       HOME_LEVELS.forEach((s) => { if (s.stem) this._lazyImg(s.stem); });
+      CAR_LEVELS.forEach((s) => { if (s.stem) this._lazyImg(s.stem); });
       this._undoForwardOnce();
       this._buildLayout();
       // ⚠️ 顺序：必须在 _buildLayout 之后（老存档的 plot 坐标在那里才补上），
@@ -724,7 +765,7 @@
       if (ids.length === 2) { const [a, b] = ids.map(k => this._pointers[k]); this._pinch = { dist: Math.hypot(a.x - b.x, a.y - b.y) || 1, zoom: this._zoom }; this._drag = null; this._moving = null; this._painting = false; this._pressCell = null; this._pressBuilding = -1; return; }
       if (this._build && this._editMode === 'terrain') { const c = this._screenToCell(p.x, p.y); this._painting = true; this._paintCell(c.gx, c.gy); return; }
       if (this._build) {
-        if (this._sel >= 0) { const ch = this._delChip((Farm.state.data.map)[this._sel]); if (Math.hypot(p.x - ch.x, p.y - ch.y) <= ch.r) { const o = Farm.state.data.map[this._sel], b = BUILDINGS[o.type]; let refund = b ? Math.round((b.cost || 0) / 2) : 0; if (o.type === 'home') { const spec = this._homeSpec(o); refund = Math.round(Math.max(BUILDINGS.home.cost || 300, spec.cost || 0) / 2); } Farm.state.data.map.splice(this._sel, 1); this._sel = -1; if (refund > 0) { Farm.state.addCoins(refund); if (Farm.ui && Farm.ui.refreshHUD) Farm.ui.refreshHUD(); if (Farm.ui && Farm.ui.toast) Farm.ui.toast(this._lang() === 'en' ? ('Removed — refunded ' + refund + ' coins') : ('已移除 — 退回 ' + refund + ' 农场币')); } this._refreshPaletteAfford(); Farm.state.save(); this.render(); return; } }
+        if (this._sel >= 0) { const ch = this._delChip((Farm.state.data.map)[this._sel]); if (Math.hypot(p.x - ch.x, p.y - ch.y) <= ch.r) { const o = Farm.state.data.map[this._sel], b = BUILDINGS[o.type]; let refund = b ? Math.round((b.cost || 0) / 2) : 0; if (o.type === 'home') { const spec = this._homeSpec(o); refund = Math.round(Math.max(BUILDINGS.home.cost || 300, spec.cost || 0) / 2); } if (o.type === 'car') { const spec = this._carSpec(o); refund = Math.round(Math.max(BUILDINGS.car.cost || 200, spec.cost || 0) / 2); } Farm.state.data.map.splice(this._sel, 1); this._sel = -1; if (refund > 0) { Farm.state.addCoins(refund); if (Farm.ui && Farm.ui.refreshHUD) Farm.ui.refreshHUD(); if (Farm.ui && Farm.ui.toast) Farm.ui.toast(this._lang() === 'en' ? ('Removed — refunded ' + refund + ' coins') : ('已移除 — 退回 ' + refund + ' 农场币')); } this._refreshPaletteAfford(); Farm.state.save(); this.render(); return; } }
         // Grab by the VISIBLE sprite (generous), not the tiny footprint cell — on a
         // phone you tap the building/decoration you see, which sits above its cell.
         const phit = this._plotAtPoint(p.x, p.y);
@@ -893,7 +934,7 @@
       const hit = this._plotAtPoint(p.x, p.y);
       if (hit) { this._tapCell(hit.gx, hit.gy); return; }
       const bidx = this._buildingAtPoint(p.x, p.y);
-      if (bidx >= 0) { this._stickyEnd(); const o = Farm.state.data.map[bidx], b = BUILDINGS[o.type]; if (o.type === 'coop') { this._collectCoop(o, p); } else if (b.tap === 'home') { this._openHomePanel(bidx); } else if (b.tap === 'stall_sale' && Farm.stall) { Farm.stall.open(); } else if (b.tap === 'warehouse' && Farm.warehouse && Farm.warehouse.open) Farm.warehouse.open(); else if (b.tap === 'shop' && Farm.shop && Farm.shop.open) Farm.shop.open(); else if (Farm.ui && Farm.ui.toast) Farm.ui.toast(this._lang() === 'en' ? b.en : b.zh); return; }
+      if (bidx >= 0) { this._stickyEnd(); const o = Farm.state.data.map[bidx], b = BUILDINGS[o.type]; if (o.type === 'coop') { this._collectCoop(o, p); } else if (b.tap === 'home') { this._openHomePanel(bidx); } else if (b.tap === 'car') { this._openCarPanel(bidx); } else if (b.tap === 'stall_sale' && Farm.stall) { Farm.stall.open(); } else if (b.tap === 'warehouse' && Farm.warehouse && Farm.warehouse.open) Farm.warehouse.open(); else if (b.tap === 'shop' && Farm.shop && Farm.shop.open) Farm.shop.open(); else if (Farm.ui && Farm.ui.toast) Farm.ui.toast(this._lang() === 'en' ? b.en : b.zh); return; }
       this._tapCell(c.gx, c.gy);
     },
     // Frontmost plot whose on-screen sprite box contains (px,py). Planted plots get
@@ -1029,8 +1070,9 @@
       const map = (Farm.state.data.map) || [];
       let w, h;
       if (wh && wh.w && wh.h) { w = wh.w; h = wh.h; }
-      else if (type === 'home' && exceptIdx >= 0 && map[exceptIdx]) {
-        const s = this._homeWh(map[exceptIdx]); w = s.w; h = s.h;
+      else if ((type === 'home' || type === 'car') && exceptIdx >= 0 && map[exceptIdx]) {
+        const s = type === 'car' ? this._carWh(map[exceptIdx]) : this._homeWh(map[exceptIdx]);
+        w = s.w; h = s.h;
       } else {
         const b = BUILDINGS[type]; if (!b) return false; w = b.w; h = b.h;
       }
@@ -1071,8 +1113,8 @@
         const cc = this._cell(o.gx + (b.w - 1) / 2, o.gy + (b.h - 1) / 2);
         const front = this._cell(o.gx + (b.w - 1), o.gy + (b.h - 1));
         const by = front.y + th / 2 + th * 0.18;
-        const hz = o.type === 'home' ? this._homeDrawMul(o) : 1;
-        const im = o.type === 'home' ? this._homeSprite(o) : this._img[b.img]; let w, h;
+        const hz = o.type === 'home' ? this._homeDrawMul(o) : (o.type === 'car' ? this._carDrawMul(o) : 1);
+        const im = o.type === 'home' ? this._homeSprite(o) : (o.type === 'car' ? this._carSprite(o) : this._img[b.img]); let w, h;
         if (im && im.width) { const s = Math.min(b.w * tw * 0.92 * BLD * hz / im.width, b.sc * th * 2.2 * BLD * hz / im.height); w = im.width * s; h = im.height * s; }
         else { w = b.w * tw * 1.06 * BLD * hz; h = b.sc * th * 2.0 * BLD * hz; }
         if (px >= cc.x - w / 2 && px <= cc.x + w / 2 && py >= by - h && py <= by) return i;
@@ -1137,10 +1179,16 @@
       if (!o) return null;
       const b = BUILDINGS[o.type];
       if (!b) return null;
-      if (o.type !== 'home') return b;
-      const wh = this._homeWh(o);
-      if (wh.w === b.w && wh.h === b.h) return b;
-      return { img: b.img, w: wh.w, h: wh.h, sc: b.sc, zh: b.zh, en: b.en, tap: b.tap, cost: b.cost };
+      if (o.type === 'home') {
+        const wh = this._homeWh(o);
+        if (wh.w === b.w && wh.h === b.h) return b;
+        return { img: b.img, w: wh.w, h: wh.h, sc: b.sc, zh: b.zh, en: b.en, tap: b.tap, cost: b.cost };
+      }
+      if (o.type === 'car') {
+        const wh = this._carWh(o);
+        return { img: b.img, w: wh.w, h: wh.h, sc: b.sc, zh: b.zh, en: b.en, tap: b.tap, cost: b.cost };
+      }
+      return b;
     },
     _homeFacePx(cat, slot) {
       const step = cat === 'mansion' ? 3 : cat === 'villa' ? 2 : cat === 'court' ? 1 : 0;
@@ -1150,6 +1198,240 @@
     },
     _homes() {
       return ((Farm.state.data && Farm.state.data.map) || []).filter((m) => m && m.type === 'home');
+    },
+    _cars() {
+      return ((Farm.state.data && Farm.state.data.map) || []).filter((m) => m && m.type === 'car');
+    },
+    _carSpec(o) {
+      const n = CAR_LEVELS.length;
+      const lv = Math.min(Math.max((typeof o === 'number' ? o : ((o && o.lv) || 1)), 1), n);
+      return CAR_LEVELS[lv - 1];
+    },
+    _carWh(o) {
+      const spec = this._carSpec(o);
+      return { w: (spec && spec.w) || 2, h: (spec && spec.h) || 2 };
+    },
+    _carSprite(o) {
+      const spec = this._carSpec(o);
+      const im = this._img[spec.stem];
+      if (im instanceof Image) return im;
+      return this._lazyImg(spec.stem);
+    },
+    _carDrawMul(o) {
+      return (this._carSpec(o).draw) || 1;
+    },
+    _carPay(fromId, toId) {
+      const n = CAR_LEVELS.length;
+      const to = CAR_LEVELS[Math.min(Math.max(toId || 1, 1), n) - 1];
+      const place = BUILDINGS.car.cost || 200;
+      if (fromId == null) {
+        return { coins: Math.max(place, to.cost || 0), points: to.points || 0 };
+      }
+      const from = CAR_LEVELS[Math.min(Math.max(fromId || 1, 1), n) - 1];
+      return {
+        coins: Math.max(0, (to.cost || 0) - (from.cost || 0)),
+        points: Math.max(0, (to.points || 0) - (from.points || 0)),
+      };
+    },
+    _carFacePx(cat, slot) {
+      const step = cat === 'luxury' ? 3 : cat === 'offroad' ? 2 : cat === 'family' ? 1 : 0;
+      if (slot === 'panel') return 104 + step * 14;
+      if (slot === 'cat') return 76 + step * 10;
+      return 64 + step * 12;
+    },
+    _carIdsInCat(catId) {
+      const ids = [];
+      CAR_LEVELS.forEach((h, i) => { if (h.cat === catId) ids.push(i + 1); });
+      ids.sort((a, b) => (CAR_LEVELS[a - 1].cost || 0) - (CAR_LEVELS[b - 1].cost || 0));
+      return ids;
+    },
+    _carCatCardsHtml(en, hereId) {
+      const here = hereId ? CAR_LEVELS[hereId - 1] : null;
+      let html = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">';
+      CAR_CATS.forEach((c) => {
+        const ids = this._carIdsInCat(c.id);
+        const on = !!(here && here.cat === c.id);
+        let lo = Infinity, hi = 0;
+        ids.forEach((id) => {
+          const p = this._carPay(null, id).coins;
+          if (p < lo) lo = p;
+          if (p > hi) hi = p;
+        });
+        const range = !ids.length ? '' : (lo === hi ? lo.toLocaleString() : (lo.toLocaleString() + ' – ' + hi.toLocaleString()));
+        html += '<button type="button" data-car-cat="' + c.id + '" style="border:1.5px solid '
+          + (on ? 'var(--leaf-dark,#3a8c50)' : '#e8e0d4')
+          + ';border-radius:14px;padding:10px 8px 12px;background:' + (on ? '#f4faf4' : '#fff')
+          + ';text-align:center;cursor:pointer;font:inherit;color:inherit;">'
+          + this._homeFace(c.face, this._carFacePx(c.id, 'cat'))
+          + '<div style="font-family:var(--font-display);font-size:18px;margin-top:4px;">'
+          + (en ? c.en : c.zh) + '</div>'
+          + '<div style="font-size:12px;color:var(--warm-text-soft);margin-top:3px;">'
+          + ids.length + (en ? ' cars' : ' 款') + '</div>'
+          + '<div style="font-size:12px;color:var(--warm-text-soft);margin-top:2px;">'
+          + range + ' <span class="coin-icon"></span></div></button>';
+      });
+      return html + '</div>';
+    },
+    _carGridHtml(en, fromId, catId, hereId) {
+      const coins = Farm.state.data.coins || 0;
+      const pts = Farm.state.data.eastPoints || 0;
+      const loggedIn = !!(Farm.fbAuth && Farm.fbAuth.isLoggedIn && Farm.fbAuth.isLoggedIn());
+      const ids = this._carIdsInCat(catId);
+      let html = '<div style="max-height:46vh;overflow-y:auto;display:grid;grid-template-columns:1fr 1fr;gap:8px;">';
+      ids.forEach((id) => {
+        const h = CAR_LEVELS[id - 1];
+        const here = hereId === id;
+        const payAmt = this._carPay(fromId, id);
+        const rich = coins >= payAmt.coins && (!payAmt.points || (loggedIn && pts >= payAmt.points));
+        let action;
+        if (here) {
+          action = '<div style="font-size:12px;color:var(--leaf-dark);">' + (en ? 'This car' : '就是这辆') + '</div>';
+        } else {
+          const price = (!payAmt.coins && !payAmt.points)
+            ? (en ? 'Switch' : '换成这款')
+            : ((payAmt.coins ? (payAmt.coins.toLocaleString() + ' <span class="coin-icon"></span>') : '')
+              + (payAmt.points ? ((payAmt.coins ? ' + ' : '') + payAmt.points + ' <span class="points-icon"></span>') : ''));
+          action = '<button class="btn' + (rich ? '' : ' secondary') + '" data-car-id="' + id + '" style="width:100%;padding:6px 8px;font-size:13px;"'
+            + (rich ? '' : ' disabled') + '>' + price + '</button>';
+        }
+        html += '<div style="border:1.5px solid ' + (here ? 'var(--leaf-dark,#3a8c50)' : '#e8e0d4')
+          + ';border-radius:12px;padding:8px 8px 10px;background:' + (here ? '#f4faf4' : '#fff') + ';text-align:center;">'
+          + this._homeFace(h.stem, this._carFacePx(h.cat, 'grid'))
+          + '<div style="font-size:13px;font-weight:600;margin-top:4px;">' + (en ? h.en : h.zh) + '</div>'
+          + '<div style="font-size:11px;color:var(--warm-text-soft);margin:2px 0 6px;">'
+          + (en ? 'Charm' : '魅力') + ' +' + h.charm + ' · ' + h.w + '×' + h.h + '</div>'
+          + action + '</div>';
+      });
+      return html + '</div>';
+    },
+    _revealBuiltCar(o, spec, isNew) {
+      const en = this._lang() === 'en';
+      if (Farm.ui && Farm.ui.hideModal) Farm.ui.hideModal();
+      this._focusHome(o);
+      if (Farm.audio) Farm.audio.play('achievement');
+      if (Farm.ui && Farm.ui.refreshHUD) Farm.ui.refreshHUD();
+      if (Farm.ui && Farm.ui.confettiBurst) Farm.ui.confettiBurst();
+      if (Farm.ui && Farm.ui.toast) {
+        Farm.ui.toast(isNew
+          ? (en ? ('Parked a ' + spec.en + '.') : ('停好了一辆：' + spec.zh + '。'))
+          : (en ? ('Switched to ' + spec.en + '.') : ('换成了：' + spec.zh + '。')), 2600);
+      }
+    },
+    _buyCar(mapIdx, carId) {
+      const o = (Farm.state.data.map || [])[mapIdx];
+      const spec = CAR_LEVELS[carId - 1];
+      if (!o || o.type !== 'car' || !spec) return;
+      if ((o.lv || 1) === carId) return;
+      const en = this._lang() === 'en';
+      const wh = this._carWh(carId);
+      let gx = o.gx, gy = o.gy;
+      if (!this._footprintFree(gx, gy, 'car', mapIdx, wh)) {
+        const from = this._carWh(o);
+        const spot = this._findHomeSpot(wh, mapIdx, { gx: o.gx, gy: o.gy, _fromW: from.w, _fromH: from.h }, 'car');
+        if (!spot) {
+          if (Farm.ui.toast) Farm.ui.toast(en
+            ? ('Need a clear ' + wh.w + '×' + wh.h + ' plot. Move crops or buildings first.')
+            : ('这辆车要 ' + wh.w + '×' + wh.h + ' 格空地。先把旁边的菜地或建筑挪开。'));
+          return;
+        }
+        gx = spot.gx; gy = spot.gy;
+      }
+      const pay = this._carPay(o.lv || 1, carId);
+      if (!this._spendHomePay(pay, '换车：' + spec.zh + ' / Car: ' + spec.en)) return;
+      o.lv = carId;
+      o.gx = gx; o.gy = gy;
+      Farm.state.save();
+      this._revealBuiltCar(o, spec, false);
+    },
+    _placeNewCar(carId) {
+      const spec = CAR_LEVELS[carId - 1];
+      const en = this._lang() === 'en';
+      if (!spec) return;
+      if (this._cars().length >= CAR_CAP) {
+        if (Farm.ui.toast) Farm.ui.toast(en ? 'Car limit reached. Tap a car to change it.' : '车子已经停满。点现有的车可以换款。');
+        return;
+      }
+      const wh = this._carWh(carId);
+      const spot = this._findHomeSpot(wh, -1, null, 'car');
+      if (!spot) {
+        if (Farm.ui.toast) Farm.ui.toast(en
+          ? ('Need a clear ' + wh.w + '×' + wh.h + ' plot')
+          : ('需要 ' + wh.w + '×' + wh.h + ' 格空地'));
+        return;
+      }
+      const pay = this._carPay(null, carId);
+      if (!this._spendHomePay(pay, '买车：' + spec.zh + ' / Car: ' + spec.en)) return;
+      const rec = { type: 'car', gx: spot.gx, gy: spot.gy, lv: carId };
+      (Farm.state.data.map = Farm.state.data.map || []).push(rec);
+      Farm.state.save();
+      this._refreshPaletteAfford();
+      this._revealBuiltCar(rec, spec, true);
+    },
+    _openCarPanel(idx, cat) {
+      const o = (Farm.state.data.map || [])[idx];
+      if (!o || o.type !== 'car' || !(Farm.ui && Farm.ui.showModal)) return;
+      const en = this._lang() === 'en';
+      const curId = Math.min(Math.max(o.lv || 1, 1), CAR_LEVELS.length);
+      const cur = CAR_LEVELS[curId - 1];
+      const catDef = cat && CAR_CATS.find((c) => c.id === cat);
+      let body = '<div style="text-align:center;line-height:1;">' + this._homeFace(cur.stem, this._carFacePx(cur.cat, 'panel')) + '</div>'
+        + '<div style="text-align:center;font-family:var(--font-display);font-size:20px;margin-top:6px;">'
+        + (en ? cur.en : cur.zh) + '</div>'
+        + '<div style="text-align:center;font-size:12.5px;color:var(--warm-text-soft);margin-top:4px;">'
+        + (en ? 'Charm' : '魅力') + ' +' + cur.charm + ' · ' + cur.w + '×' + cur.h + '</div>';
+      if (!catDef) {
+        body += '<div style="margin:12px 0 8px;font-size:13px;font-weight:600;">'
+          + (en ? 'Choose a type' : '选一类车') + '</div>'
+          + this._carCatCardsHtml(en, curId);
+      } else {
+        body += '<div style="margin:12px 0 8px;display:flex;align-items:center;justify-content:space-between;">'
+          + '<button type="button" id="carCatBack" class="btn secondary" style="padding:4px 10px;font-size:13px;">'
+          + (en ? 'Types' : '返回分类') + '</button>'
+          + '<div style="font-size:13px;font-weight:600;">' + (en ? catDef.en : catDef.zh) + '</div>'
+          + '<span style="width:72px;"></span></div>'
+          + this._carGridHtml(en, curId, cat, curId);
+      }
+      body += '<div class="btn-row" style="margin-top:12px;"><button class="btn secondary" onclick="Farm.ui.hideModal()" style="width:100%;">'
+        + (en ? 'Close' : '关闭') + '</button></div>';
+      Farm.ui.showModal('<h2 class="modal-title">' + (en ? 'My Car' : '我的车') + '</h2>' + body);
+      const self = this;
+      document.querySelectorAll('[data-car-cat]').forEach((btn) => {
+        btn.onclick = () => self._openCarPanel(idx, btn.getAttribute('data-car-cat'));
+      });
+      document.querySelectorAll('[data-car-id]').forEach((btn) => {
+        btn.onclick = () => self._buyCar(idx, parseInt(btn.getAttribute('data-car-id'), 10));
+      });
+      const back = document.getElementById('carCatBack');
+      if (back) back.onclick = () => self._openCarPanel(idx);
+    },
+    _openNewCarPanel(cat) {
+      if (!(Farm.ui && Farm.ui.showModal)) return;
+      const en = this._lang() === 'en';
+      const catDef = cat && CAR_CATS.find((c) => c.id === cat);
+      let body = '<div style="margin:0 0 8px;font-size:13px;color:var(--warm-text-soft);">'
+        + (en ? 'A new car costs the full catalog price. Change an existing one to pay only the difference.' : '新停一辆按图册全价。点场上已有的车换款，只补差价。') + '</div>';
+      if (!catDef) {
+        body += this._carCatCardsHtml(en, 0);
+      } else {
+        body += '<div style="margin:0 0 8px;display:flex;align-items:center;justify-content:space-between;">'
+          + '<button type="button" id="carCatBack" class="btn secondary" style="padding:4px 10px;font-size:13px;">'
+          + (en ? 'Types' : '返回分类') + '</button>'
+          + '<div style="font-size:13px;font-weight:600;">' + (en ? catDef.en : catDef.zh) + '</div>'
+          + '<span style="width:72px;"></span></div>'
+          + this._carGridHtml(en, null, cat, 0).replace(/data-car-id="/g, 'data-new-car-id="');
+      }
+      body += '<div class="btn-row" style="margin-top:12px;"><button class="btn secondary" onclick="Farm.ui.hideModal()" style="width:100%;">'
+        + (en ? 'Close' : '关闭') + '</button></div>';
+      Farm.ui.showModal('<h2 class="modal-title">' + (en ? 'Park another car' : '再停一辆') + '</h2>' + body);
+      const self = this;
+      document.querySelectorAll('[data-car-cat]').forEach((btn) => {
+        btn.onclick = () => self._openNewCarPanel(btn.getAttribute('data-car-cat'));
+      });
+      document.querySelectorAll('[data-new-car-id]').forEach((btn) => {
+        btn.onclick = () => self._placeNewCar(parseInt(btn.getAttribute('data-new-car-id'), 10));
+      });
+      const back = document.getElementById('carCatBack');
+      if (back) back.onclick = () => self._openNewCarPanel();
     },
     // fromId 有值 = 改建补差价；null = 另建付全价（不低于落成价）。
     _homePay(fromId, toId) {
@@ -1378,9 +1660,10 @@
       this._revealBuiltHome(o, spec, false);
     },
 
-    _findHomeSpot(wh, exceptIdx, near) {
+    _findHomeSpot(wh, exceptIdx, near, type) {
       const w = (wh && wh.w) || 2, h = (wh && wh.h) || 2;
       const ex = exceptIdx == null ? -1 : exceptIdx;
+      const kind = type || 'home';
       let c0x, c0y;
       if (near && Number.isInteger(near.gx) && Number.isInteger(near.gy)) {
         if (near._fromW && near._fromH) {
@@ -1404,7 +1687,7 @@
         const k = gx + ',' + gy;
         if (seen[k]) continue;
         seen[k] = 1;
-        if (this._footprintFree(gx, gy, 'home', ex, size)) return { gx, gy };
+        if (this._footprintFree(gx, gy, kind, ex, size)) return { gx, gy };
       }
       return null;
     },
@@ -1844,6 +2127,15 @@
         }
         if (n > 0) { this._openNewHomePanel(); return; }
       }
+      if (type === 'car') {
+        const n = this._cars().length;
+        if (n >= CAR_CAP) {
+          if (Farm.ui && Farm.ui.toast) Farm.ui.toast(en ? 'Car limit reached. Tap a car to change it.' : '车子已经停满。点现有的车可以换款。');
+          return;
+        }
+        this._openNewCarPanel();
+        return;
+      }
       // unique 建筑（菜摊）全场限一座
       if (b.unique) {
         const map = Farm.state.data.map || [];
@@ -1868,7 +2160,7 @@
       tries.sort((p1, p2) => (Math.abs(p1[0] - c0x) + Math.abs(p1[1] - c0y)) - (Math.abs(p2[0] - c0x) + Math.abs(p2[1] - c0y)));
       for (const [gx, gy] of tries) if (this._footprintFree(gx, gy, type, -1)) {
         if (cost > 0 && !Farm.state.spendCoins(cost)) { if (Farm.ui && Farm.ui.toast) Farm.ui.toast(en ? 'Not enough coins' : '农场币不足'); return; }
-        const rec = { type, gx, gy }; if (type === 'home') rec.lv = 1;
+        const rec = { type, gx, gy }; if (type === 'home' || type === 'car') rec.lv = 1;
         (Farm.state.data.map = Farm.state.data.map || []).push(rec); this._sel = Farm.state.data.map.length - 1;
         Farm.state.save(); this.render();
         if (Farm.ui && Farm.ui.refreshHUD) Farm.ui.refreshHUD();
@@ -2129,6 +2421,20 @@
             return;
           }
         }
+        if (btn.dataset.type === 'car') {
+          const n = this._cars().length;
+          const cs = btn.querySelector('.palCost');
+          if (n >= CAR_CAP) {
+            if (cs) { cs.textContent = en ? '✓ MAX' : '✓ 已满'; cs.style.color = '#9a8f7d'; }
+            btn.style.opacity = '0.5';
+            return;
+          }
+          if (n > 0) {
+            if (cs) { cs.textContent = en ? 'Park another' : '再停一辆'; cs.style.color = '#3a8c50'; }
+            btn.style.opacity = '1';
+            return;
+          }
+        }
         const afford = coins >= cost;
         btn.style.opacity = afford ? '1' : '0.55';
         const cs = btn.querySelector('.palCost'); if (cs) cs.style.color = afford ? '#3a8c50' : '#e8522a';
@@ -2142,6 +2448,10 @@
         if (o.type === 'home') {
           const ch = (HOME_LEVELS[Math.min((o.lv || 1), HOME_LEVELS.length) - 1] || {}).charm || 40;
           s += (Farm.state.data && Farm.state.data.homeNeglected) ? Math.floor(ch / 2) : ch;
+          return;
+        }
+        if (o.type === 'car') {
+          s += (CAR_LEVELS[Math.min((o.lv || 1), CAR_LEVELS.length) - 1] || {}).charm || 20;
           return;
         }
         s += charmOf(b);
@@ -3944,9 +4254,9 @@
       const pk = (!this._build && idx != null && idx === this._pressBuilding) ? 0.94 : 1;
       // 我的家：每级换图，占地与 draw 都按档次（农舍 2×2 → 豪宅 7×7）。等级读场上那条记录，不信克隆。
       const rec = (idx != null && Farm.state.data && Farm.state.data.map) ? Farm.state.data.map[idx] : null;
-      const homeO = (o.type === 'home' && rec) ? rec : o;
-      const hz = o.type === 'home' ? this._homeDrawMul(homeO) : 1;
-      const him = o.type === 'home' ? this._homeSprite(homeO) : this._img[b.img];
+      const homeO = ((o.type === 'home' || o.type === 'car') && rec) ? rec : o;
+      const hz = o.type === 'home' ? this._homeDrawMul(homeO) : (o.type === 'car' ? this._carDrawMul(homeO) : 1);
+      const him = o.type === 'home' ? this._homeSprite(homeO) : (o.type === 'car' ? this._carSprite(homeO) : this._img[b.img]);
       if (!this._blit(him, cc.x, by, b.w * tw * 0.92 * BLD * pk * hz, b.sc * th * 2.2 * BLD * pk * hz)) { ctx.fillStyle = '#c0392b'; ctx.fillRect(cc.x - tw * 0.4, by - th, tw * 0.8, th); }
       if (o.type === 'house' && !moving) {
         this._drawShopSign(cc.x, by, b.w * tw * 0.92 * BLD, b.sc * th * 2.2 * BLD);

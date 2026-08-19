@@ -31,7 +31,7 @@ https://farm.easternmarket.ca
 - `promo/poster-phone-onart-06-house.png`
 - `promo/poster-phone-onart-07-cars.png`
 
-⚠️ 汽车海报可以发，**停车换车还没接到游戏里**。客人扫码进农场暂时找不到车。要先上车再说。
+汽车：点右下角「建造」→「汽车」。农用/家用/越野/豪华从图册里选。点停好的车可以换款。
 
 ---
 
