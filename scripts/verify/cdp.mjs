@@ -93,6 +93,20 @@ try {
   await cdp.send('Log.enable', {}, sessionId);
   await cdp.send('Page.enable', {}, sessionId);
 
+  /* 📱 手机视口（EF_MOBILE=1）。默认桌面 —— 但**客人 100% 在手机上**，
+     而这个游戏是等距画布 + 底部 dock，窄屏下的布局跟桌面完全是两回事。
+     桌面下看着好好的引导，在 390px 上可能整个在屏幕外。
+     默认值＝iPhone 竖屏（390×844，DPR 3）。 */
+  if (process.env.EF_MOBILE === '1') {
+    await cdp.send('Emulation.setDeviceMetricsOverride', {
+      width: parseInt(process.env.EF_W || '390', 10),
+      height: parseInt(process.env.EF_H || '844', 10),
+      deviceScaleFactor: 3,
+      mobile: true,
+    }, sessionId);
+    await cdp.send('Emulation.setTouchEmulationEnabled', { enabled: true }, sessionId);
+  }
+
   /* 🔒 验证跑动绝不许写进真实埋点计数器（2026-08-17 加）
      ------------------------------------------------------------------
      起因：拿这些脚本对**生产站**跑验证时，每跑一次就往 Chris 后台漏斗里加

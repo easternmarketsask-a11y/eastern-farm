@@ -183,6 +183,36 @@ else
     echo "—— 部署中止：登录流程有屏打不开或按钮没绑。别绕过，这直接挡住所有会员。"
     exit 1
   fi
+
+  # 闸门 F: 新手引导指的那块地，手机上真的点得到(约 6 秒)
+  # 2026-08-19 加：引导气泡曾压在它自己让你点的地块上(pointer-events:auto)，
+  # 玩家照着点毫无反应 —— 7 天 423 次打开，走完引导 0 次。
+  # 🔒 必须手机视口：气泡有上/下两种摆法，桌面走「下方」分支一切正常，
+  #    正是它长期没被发现的原因，而 100% 的真实顾客在手机上。
+  echo "▶ 闸门 F: 新手引导可点性回归测试(手机视口，约 6 秒)…"
+  $PYCMD -m http.server 8149 --bind 127.0.0.1 >/dev/null 2>&1 &
+  TUT_PID=$!
+  trap 'kill $TUT_PID 2>/dev/null || true' EXIT
+  sleep 1
+  TUT_OUT="$(mktemp)"
+  EF_MOBILE=1 node scripts/verify/cdp.mjs "http://127.0.0.1:8149/src/" "scripts/verify/tutorial-tap-test.js" 200 >"$TUT_OUT" 2>/dev/null || true
+  kill $TUT_PID 2>/dev/null || true
+  trap - EXIT
+  if ! node -e '
+    const o = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
+    const r = o.evalResult;
+    if (!r) { console.error("✗ 引导可点性测试没跑出结果"); process.exit(1); }
+    if (r.inconclusive) { console.log("  ⚠ " + r.inconclusive + "(不阻断)"); process.exit(0); }
+    if (r.failures && r.failures.length) {
+      console.error("✗ 新手引导指的地方点不到:");
+      r.failures.forEach(f => console.error("  - " + f));
+      process.exit(1);
+    }
+    console.log("  ✓ 引导目标可点(命中 " + r.hitAtTarget + ")");
+  ' "$TUT_OUT"; then
+    echo "—— 部署中止：新手引导挡住了它自己让人点的地方。这条静默失败，每个新玩家都撞。"
+    exit 1
+  fi
 fi
 
 # 3. 提交未保存的改动(如果有;SW 版本注入保证至少有它)
