@@ -76,10 +76,11 @@ def phone(art_path, out_stem, zh1, zh2, en_line, couplet='bottom'):
 
     bar_top = H - 390
     if couplet == 'sky':
-        kick_y = name_y + 200
-        zh1_y = kick_y + 68
-        zh2_y = zh1_y + 78
-        en_y = zh2_y + 78
+        tight = len(zh2) > 10
+        kick_y = name_y + (152 if tight else 200)
+        zh1_y = kick_y + (54 if tight else 68)
+        zh2_y = zh1_y + (66 if tight else 78)
+        en_y = zh2_y + (62 if tight else 78)
     else:
         en_y = bar_top - 50
         zh2_y = en_y - 102
@@ -112,16 +113,16 @@ def main():
           '盖自己的家', '农舍到豪宅都能换',
           'BUILD A HOME  ·  COTTAGE TO ESTATE', couplet='sky')
     phone(cars_art, 'poster-phone-onart-07-cars',
-          '农场主可以有车', '皮卡到礼车自己挑',
-          'PARK A CAR  ·  PICKUP TO COLLECTOR', couplet='sky')
+          '在农场', '心仪的汽车和房子同样重要',
+          'THE CAR MATTERS AS MUCH AS THE HOUSE', couplet='sky')
 
     # Square cards: crop the tall art toward the subject (less sky).
     square(house_art, '03b-house', 140,
            '盖自己的家，农舍到豪宅都能换',
            'Build a home. Cottage to estate.')
     square(cars_art, '07-cars', 220,
-           '农场主可以有车，皮卡到礼车自己挑',
-           'Park a car. Pickup to collector.')
+           '在农场，心仪的汽车和房子同样重要',
+           'The car matters as much as the house.')
 
 
 if __name__ == '__main__':

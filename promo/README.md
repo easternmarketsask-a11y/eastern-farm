@@ -36,7 +36,7 @@ FarmVille）都是免费入门 + 内购逼氪 —— **你往游戏里掏钱**�
 | `poster-phone-onart-06-house.png` | **盖房子**竖版 | 微信群 / 朋友圈，带扫码 |
 | `poster-phone-onart-07-cars.png` | **汽车**竖版 | 微信群 / 朋友圈，带扫码。游戏内停车尚未上线 |
 | `feature-cards/01`–`06` | **功能小图 1080×1080** | 微信一条一图。积分、店里的菜、盖房子、串门、邀请、小东订单 |
-| `feature-cards/03b-house` / `07-cars` | 房子新图 / 汽车 | 一条一图。汽车功能尚未进游戏 |
+| `feature-cards/03b-house` / `07-cars` | 房子新图 / 汽车 | 一条一图。汽车文案：在农场，心仪的汽车和房子同样重要。停车尚未进游戏 |
 | `poster-phone-onart-04d.png` | 备选 D 对联上天 | 承诺句在天空，店名贴扫码栏 |
 | `poster-A4-onart.png` | A4 叠字 v1 | 保留 |
 | `poster-A4-onart-02.png` | A4 叠字现行 | 与手机 02 同一套字阶 |
