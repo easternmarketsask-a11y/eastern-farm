@@ -138,7 +138,7 @@
   // cost = 农场币 to place (coins; East Points stay scarce for real rewards). charm =
   // 农场魅力 gained (derived ≈ cost/8) — a vanity progression to drive the build impulse.
   const BUILDINGS = {
-    // 我的家：可多座（HOME_CAP）。占地按档次（农舍 2×2 → 豪宅 5×5），见 HOME_LEVELS.w/h。
+    // 我的家：可多座（HOME_CAP）。占地按档次（农舍 2×2 → 豪宅 7×7），见 HOME_LEVELS.w/h。
     // 点房子=改建补差价；调色盘再建=付全价。这里的 2×2 只是农户小宅默认。
     home: { img: 'house', w: 2, h: 2, sc: 2.3, zh: '我的家', en: 'My Home', tap: 'home', cost: 300 },
     barn: { img: 'barn', w: 2, h: 2, sc: 2.4, zh: '谷仓', en: 'Barn', tap: 'warehouse', cost: 350 },
@@ -220,30 +220,30 @@
     { id: 'mansion', zh: '豪宅', en: 'Mansions', face: 'p_house_8' },
   ];
   // 占地按档次递增，贴图铺满这块地（Chris 2026-08-18：档次越高越大，尺寸不能省）。
-  // 农舍 2×2 · 小院 3×3 · 洋房 4×4 · 豪宅 5×5。draw 是在占地盒子上再略放大（屋檐探出格外）。
+  // 农舍 2×2 · 小院 4×4 · 洋房 5×5 · 豪宅 7×7。draw 是在占地盒子上再略放大（屋檐探出格外）。
   const HOME_LEVELS = [
     { zh: '农户小宅', en: 'Farm Cottage',     cost: 0,     needLv: 1,  charm: 40,   upkeep: 0,   stem: 'p_house_1',  w: 2, h: 2, draw: 1.28, mansion: false, cat: 'cottage' },
     { zh: '砖瓦农居', en: 'Brick Farmhouse',  cost: 1200,  needLv: 3,  charm: 90,   upkeep: 8,   stem: 'p_house_2',  w: 2, h: 2, draw: 1.38, mansion: false, cat: 'cottage' },
-    { zh: '院落人家', en: 'Courtyard Home',   cost: 3000,  needLv: 5,  charm: 160,  upkeep: 15,  stem: 'p_house_3',  w: 3, h: 3, draw: 1.32, mansion: false, cat: 'court' },
-    { zh: '乡绅别墅', en: 'Country Villa',    cost: 6000,  needLv: 7,  charm: 260,  upkeep: 30,  stem: 'p_house_4',  w: 4, h: 4, draw: 1.36, mansion: false, cat: 'villa' },
-    { zh: '花园洋房', en: 'Garden Manor',     cost: 12000, needLv: 9,  charm: 400,  upkeep: 50,  stem: 'p_house_5',  w: 4, h: 4, draw: 1.48, mansion: false, cat: 'villa' },
-    { zh: '泳池雅墅', en: 'Pool Villa',       cost: 20000, needLv: 11, charm: 620,  upkeep: 90,  points: 100, stem: 'p_house_6',  w: 5, h: 5, draw: 1.52, mansion: true, cat: 'mansion' },
-    { zh: '湖景豪宅', en: 'Lakeside Mansion', cost: 36000, needLv: 14, charm: 920,  upkeep: 160, points: 250, stem: 'p_house_7',  w: 5, h: 5, draw: 1.68, mansion: true, cat: 'mansion' },
-    { zh: '东方庄园', en: 'Eastern Estate',   cost: 60000, needLv: 18, charm: 1400, upkeep: 250, points: 400, stem: 'p_house_8',  w: 5, h: 5, draw: 1.82, mansion: true, cat: 'mansion' },
+    { zh: '院落人家', en: 'Courtyard Home',   cost: 3000,  needLv: 5,  charm: 160,  upkeep: 15,  stem: 'p_house_3',  w: 4, h: 4, draw: 1.32, mansion: false, cat: 'court' },
+    { zh: '乡绅别墅', en: 'Country Villa',    cost: 6000,  needLv: 7,  charm: 260,  upkeep: 30,  stem: 'p_house_4',  w: 5, h: 5, draw: 1.36, mansion: false, cat: 'villa' },
+    { zh: '花园洋房', en: 'Garden Manor',     cost: 12000, needLv: 9,  charm: 400,  upkeep: 50,  stem: 'p_house_5',  w: 5, h: 5, draw: 1.48, mansion: false, cat: 'villa' },
+    { zh: '泳池雅墅', en: 'Pool Villa',       cost: 20000, needLv: 11, charm: 620,  upkeep: 90,  points: 100, stem: 'p_house_6',  w: 7, h: 7, draw: 1.52, mansion: true, cat: 'mansion' },
+    { zh: '湖景豪宅', en: 'Lakeside Mansion', cost: 36000, needLv: 14, charm: 920,  upkeep: 160, points: 250, stem: 'p_house_7',  w: 7, h: 7, draw: 1.68, mansion: true, cat: 'mansion' },
+    { zh: '东方庄园', en: 'Eastern Estate',   cost: 60000, needLv: 18, charm: 1400, upkeep: 250, points: 400, stem: 'p_house_8',  w: 7, h: 7, draw: 1.82, mansion: true, cat: 'mansion' },
     { zh: '石墙农舍', en: 'Stone Hut',        cost: 1500,  needLv: 3,  charm: 95,   upkeep: 8,   stem: 'p_house_9',  w: 2, h: 2, draw: 1.36, mansion: false, cat: 'cottage' },
-    { zh: '青瓦小院', en: 'Grey-Tile Court',  cost: 3500,  needLv: 5,  charm: 175,  upkeep: 18,  stem: 'p_house_10', w: 3, h: 3, draw: 1.36, mansion: false, cat: 'court' },
-    { zh: '双翼别墅', en: 'Twin-Wing Villa',  cost: 7000,  needLv: 7,  charm: 280,  upkeep: 35,  stem: 'p_house_11', w: 4, h: 4, draw: 1.40, mansion: false, cat: 'villa' },
-    { zh: '花廊洋房', en: 'Pergola Manor',    cost: 14000, needLv: 9,  charm: 430,  upkeep: 55,  stem: 'p_house_12', w: 4, h: 4, draw: 1.50, mansion: false, cat: 'villa' },
-    { zh: '圆池雅墅', en: 'Round-Pool Villa', cost: 24000, needLv: 11, charm: 680,  upkeep: 100, points: 150, stem: 'p_house_13', w: 5, h: 5, draw: 1.56, mansion: true, cat: 'mansion' },
-    { zh: '园林庄园', en: 'Garden Estate',    cost: 68000, needLv: 18, charm: 1500, upkeep: 280, points: 500, stem: 'p_house_14', w: 5, h: 5, draw: 1.84, mansion: true, cat: 'mansion' },
+    { zh: '青瓦小院', en: 'Grey-Tile Court',  cost: 3500,  needLv: 5,  charm: 175,  upkeep: 18,  stem: 'p_house_10', w: 4, h: 4, draw: 1.36, mansion: false, cat: 'court' },
+    { zh: '双翼别墅', en: 'Twin-Wing Villa',  cost: 7000,  needLv: 7,  charm: 280,  upkeep: 35,  stem: 'p_house_11', w: 5, h: 5, draw: 1.40, mansion: false, cat: 'villa' },
+    { zh: '花廊洋房', en: 'Pergola Manor',    cost: 14000, needLv: 9,  charm: 430,  upkeep: 55,  stem: 'p_house_12', w: 5, h: 5, draw: 1.50, mansion: false, cat: 'villa' },
+    { zh: '圆池雅墅', en: 'Round-Pool Villa', cost: 24000, needLv: 11, charm: 680,  upkeep: 100, points: 150, stem: 'p_house_13', w: 7, h: 7, draw: 1.56, mansion: true, cat: 'mansion' },
+    { zh: '园林庄园', en: 'Garden Estate',    cost: 68000, needLv: 18, charm: 1500, upkeep: 280, points: 500, stem: 'p_house_14', w: 7, h: 7, draw: 1.84, mansion: true, cat: 'mansion' },
     { zh: '茅草暖屋', en: 'Thatched Cottage', cost: 800,   needLv: 1,  charm: 70,   upkeep: 5,   stem: 'p_house_15', w: 2, h: 2, draw: 1.32, mansion: false, cat: 'cottage' },
     { zh: '木篱农舍', en: 'Timber Farmhouse', cost: 1800,  needLv: 3,  charm: 110,  upkeep: 10,  stem: 'p_house_16', w: 2, h: 2, draw: 1.42, mansion: false, cat: 'cottage' },
-    { zh: '四合小院', en: 'Siheyuan Court',   cost: 4200,  needLv: 5,  charm: 190,  upkeep: 20,  stem: 'p_house_17', w: 3, h: 3, draw: 1.40, mansion: false, cat: 'court' },
-    { zh: '竹影人家', en: 'Bamboo Home',      cost: 5000,  needLv: 5,  charm: 210,  upkeep: 22,  stem: 'p_house_18', w: 3, h: 3, draw: 1.42, mansion: false, cat: 'court' },
-    { zh: '黄墙洋楼', en: 'Ochre Villa',      cost: 8500,  needLv: 7,  charm: 310,  upkeep: 38,  stem: 'p_house_19', w: 4, h: 4, draw: 1.42, mansion: false, cat: 'villa' },
-    { zh: '玫瑰洋房', en: 'Rose Villa',       cost: 15500, needLv: 9,  charm: 460,  upkeep: 58,  stem: 'p_house_20', w: 4, h: 4, draw: 1.52, mansion: false, cat: 'villa' },
-    { zh: '白石宫墅', en: 'White Palace',     cost: 28000, needLv: 11, charm: 750,  upkeep: 110, points: 180, stem: 'p_house_21', w: 5, h: 5, draw: 1.62, mansion: true, cat: 'mansion' },
-    { zh: '金顶庄园', en: 'Golden Estate',    cost: 80000, needLv: 18, charm: 1700, upkeep: 300, points: 550, stem: 'p_house_22', w: 5, h: 5, draw: 1.90, mansion: true, cat: 'mansion' },
+    { zh: '四合小院', en: 'Siheyuan Court',   cost: 4200,  needLv: 5,  charm: 190,  upkeep: 20,  stem: 'p_house_17', w: 4, h: 4, draw: 1.40, mansion: false, cat: 'court' },
+    { zh: '竹影人家', en: 'Bamboo Home',      cost: 5000,  needLv: 5,  charm: 210,  upkeep: 22,  stem: 'p_house_18', w: 4, h: 4, draw: 1.42, mansion: false, cat: 'court' },
+    { zh: '黄墙洋楼', en: 'Ochre Villa',      cost: 8500,  needLv: 7,  charm: 310,  upkeep: 38,  stem: 'p_house_19', w: 5, h: 5, draw: 1.42, mansion: false, cat: 'villa' },
+    { zh: '玫瑰洋房', en: 'Rose Villa',       cost: 15500, needLv: 9,  charm: 460,  upkeep: 58,  stem: 'p_house_20', w: 5, h: 5, draw: 1.52, mansion: false, cat: 'villa' },
+    { zh: '白石宫墅', en: 'White Palace',     cost: 28000, needLv: 11, charm: 750,  upkeep: 110, points: 180, stem: 'p_house_21', w: 7, h: 7, draw: 1.62, mansion: true, cat: 'mansion' },
+    { zh: '金顶庄园', en: 'Golden Estate',    cost: 80000, needLv: 18, charm: 1700, upkeep: 300, points: 550, stem: 'p_house_22', w: 7, h: 7, draw: 1.90, mansion: true, cat: 'mansion' },
   ];
   // EP-shop pets → painted iso animal sprites (replaces the emoji pet).
   const ANIMALS = { pet_chick: 'animal_chicken', pet_cat: 'animal_cat', pet_rabbit: 'animal_rabbit', decoration_dog: 'animal_dog', guard_dog: 'animal_dog' };
@@ -3936,7 +3936,7 @@
       // 按压反馈（audit B2 P2）：被按住的建筑以底边为锚缩到 94%（Hay Day 式
       // squash），与地块按压高亮同一套 _down/_up 生命周期。
       const pk = (!this._build && idx != null && idx === this._pressBuilding) ? 0.94 : 1;
-      // 我的家：每级换图，占地与 draw 都按档次（农舍 2×2 → 豪宅 5×5）。等级读场上那条记录，不信克隆。
+      // 我的家：每级换图，占地与 draw 都按档次（农舍 2×2 → 豪宅 7×7）。等级读场上那条记录，不信克隆。
       const rec = (idx != null && Farm.state.data && Farm.state.data.map) ? Farm.state.data.map[idx] : null;
       const homeO = (o.type === 'home' && rec) ? rec : o;
       const hz = o.type === 'home' ? this._homeDrawMul(homeO) : 1;
