@@ -486,9 +486,32 @@
           body: JSON.stringify({ phone: digits }),
         });
         data = await r.json().catch(() => null);
-        if (!r.ok) throw new Error((data && data.detail) || 'HTTP ' + r.status);
+        if (!r.ok) {
+          /* 🔴 服务器答了话就**照实转述**，别一律说「连不上服务器」（2026-08-19 修）
+             ------------------------------------------------------------------
+             原来 !r.ok 直接扔进下面那个 catch，于是 429（太频繁）和 503（发信
+             失败）统统显示成「连接不上服务器，请重试。」——
+             ① 那是假话：服务器好好的，是它拒绝了这次请求；
+             ② 更糟的是那句「请重试」，客人一retry 就撞进 60 秒限流，
+                日志实测就是 503 → 429 → 429 → 429 然后放弃。
+             客人 2026-08-19 报的就是这个（当时后端因为服务账号缺
+             firebaseauth.admin 权限，发信全挂 503）。 */
+          const detail = (data && typeof data.detail === 'string') ? data.detail.trim() : '';
+          if (r.status === 429) {
+            this._showError(en ? 'Too many tries. Please wait a minute and try again.'
+                               : '刚试过了，请等一分钟再试。');
+          } else if (detail) {
+            this._showError(detail);
+          } else {
+            this._showError(en ? 'Something went wrong on our side. Please try again shortly.'
+                               : '我们这边出了点问题，请稍后再试。');
+          }
+          if (btn) { btn.disabled = false; btn.textContent = en ? 'Continue' : '继续'; }
+          return;
+        }
       } catch (e) {
-        // 🔒 请求失败绝不能显示成「你不是会员」——那是把一个错误的事实告诉顾客
+        /* 只有 fetch 本身失败（真的连不上/断网）才说连不上。
+           🔒 请求失败绝不能显示成「你不是会员」——那是把一个错误的事实告诉顾客 */
         this._showError(en ? 'Could not reach the server. Please try again.' : '连接不上服务器，请重试。');
         if (btn) { btn.disabled = false; btn.textContent = en ? 'Continue' : '继续'; }
         return;
