@@ -138,7 +138,8 @@
   // cost = 农场币 to place (coins; East Points stay scarce for real rewards). charm =
   // 农场魅力 gained (derived ≈ cost/8) — a vanity progression to drive the build impulse.
   const BUILDINGS = {
-    // 我的家：可多座（HOME_CAP）。碰撞仍 2×2。点房子=改建补差价；调色盘再建=付全价。
+    // 我的家：可多座（HOME_CAP）。占地按档次（农舍 2×2 → 豪宅 5×5），见 HOME_LEVELS.w/h。
+    // 点房子=改建补差价；调色盘再建=付全价。这里的 2×2 只是农户小宅默认。
     home: { img: 'house', w: 2, h: 2, sc: 2.3, zh: '我的家', en: 'My Home', tap: 'home', cost: 300 },
     barn: { img: 'barn', w: 2, h: 2, sc: 2.4, zh: '谷仓', en: 'Barn', tap: 'warehouse', cost: 350 },
     // 菜摊(类型名 house 是历史存档键, 不能改): 2026-08-14 二次定位 ——
@@ -218,29 +219,31 @@
     { id: 'villa', zh: '洋房', en: 'Villas', face: 'p_house_5' },
     { id: 'mansion', zh: '豪宅', en: 'Mansions', face: 'p_house_8' },
   ];
+  // 占地按档次递增，贴图铺满这块地（Chris 2026-08-18：档次越高越大，尺寸不能省）。
+  // 农舍 2×2 · 小院 3×3 · 洋房 4×4 · 豪宅 5×5。draw 是在占地盒子上再略放大（屋檐探出格外）。
   const HOME_LEVELS = [
-    { zh: '农户小宅', en: 'Farm Cottage',     cost: 0,     needLv: 1,  charm: 40,   upkeep: 0,   stem: 'p_house_1', draw: 1.00, mansion: false, cat: 'cottage' },
-    { zh: '砖瓦农居', en: 'Brick Farmhouse',  cost: 1200,  needLv: 3,  charm: 90,   upkeep: 8,   stem: 'p_house_2', draw: 1.22, mansion: false, cat: 'cottage' },
-    { zh: '院落人家', en: 'Courtyard Home',   cost: 3000,  needLv: 5,  charm: 160,  upkeep: 15,  stem: 'p_house_3', draw: 1.48, mansion: false, cat: 'court' },
-    { zh: '乡绅别墅', en: 'Country Villa',    cost: 6000,  needLv: 7,  charm: 260,  upkeep: 30,  stem: 'p_house_4', draw: 1.75, mansion: false, cat: 'villa' },
-    { zh: '花园洋房', en: 'Garden Manor',     cost: 12000, needLv: 9,  charm: 400,  upkeep: 50,  stem: 'p_house_5', draw: 2.05, mansion: false, cat: 'villa' },
-    { zh: '泳池雅墅', en: 'Pool Villa',       cost: 20000, needLv: 11, charm: 620,  upkeep: 90,  points: 100, stem: 'p_house_6', draw: 2.35, mansion: true, cat: 'mansion' },
-    { zh: '湖景豪宅', en: 'Lakeside Mansion', cost: 36000, needLv: 14, charm: 920,  upkeep: 160, points: 250, stem: 'p_house_7', draw: 2.70, mansion: true, cat: 'mansion' },
-    { zh: '东方庄园', en: 'Eastern Estate',   cost: 60000, needLv: 18, charm: 1400, upkeep: 250, points: 400, stem: 'p_house_8', draw: 3.05, mansion: true, cat: 'mansion' },
-    { zh: '石墙农舍', en: 'Stone Hut',        cost: 1500,  needLv: 3,  charm: 95,   upkeep: 8,   stem: 'p_house_9', draw: 1.20, mansion: false, cat: 'cottage' },
-    { zh: '青瓦小院', en: 'Grey-Tile Court',  cost: 3500,  needLv: 5,  charm: 175,  upkeep: 18,  stem: 'p_house_10', draw: 1.50, mansion: false, cat: 'court' },
-    { zh: '双翼别墅', en: 'Twin-Wing Villa',  cost: 7000,  needLv: 7,  charm: 280,  upkeep: 35,  stem: 'p_house_11', draw: 1.80, mansion: false, cat: 'villa' },
-    { zh: '花廊洋房', en: 'Pergola Manor',    cost: 14000, needLv: 9,  charm: 430,  upkeep: 55,  stem: 'p_house_12', draw: 2.08, mansion: false, cat: 'villa' },
-    { zh: '圆池雅墅', en: 'Round-Pool Villa', cost: 24000, needLv: 11, charm: 680,  upkeep: 100, points: 150, stem: 'p_house_13', draw: 2.38, mansion: true, cat: 'mansion' },
-    { zh: '园林庄园', en: 'Garden Estate',    cost: 68000, needLv: 18, charm: 1500, upkeep: 280, points: 500, stem: 'p_house_14', draw: 3.08, mansion: true, cat: 'mansion' },
-    { zh: '茅草暖屋', en: 'Thatched Cottage', cost: 800,   needLv: 1,  charm: 70,   upkeep: 5,   stem: 'p_house_15', draw: 1.08, mansion: false, cat: 'cottage' },
-    { zh: '木篱农舍', en: 'Timber Farmhouse', cost: 1800,  needLv: 3,  charm: 110,  upkeep: 10,  stem: 'p_house_16', draw: 1.25, mansion: false, cat: 'cottage' },
-    { zh: '四合小院', en: 'Siheyuan Court',   cost: 4200,  needLv: 5,  charm: 190,  upkeep: 20,  stem: 'p_house_17', draw: 1.55, mansion: false, cat: 'court' },
-    { zh: '竹影人家', en: 'Bamboo Home',      cost: 5000,  needLv: 5,  charm: 210,  upkeep: 22,  stem: 'p_house_18', draw: 1.58, mansion: false, cat: 'court' },
-    { zh: '黄墙洋楼', en: 'Ochre Villa',      cost: 8500,  needLv: 7,  charm: 310,  upkeep: 38,  stem: 'p_house_19', draw: 1.85, mansion: false, cat: 'villa' },
-    { zh: '玫瑰洋房', en: 'Rose Villa',       cost: 15500, needLv: 9,  charm: 460,  upkeep: 58,  stem: 'p_house_20', draw: 2.12, mansion: false, cat: 'villa' },
-    { zh: '白石宫墅', en: 'White Palace',     cost: 28000, needLv: 11, charm: 750,  upkeep: 110, points: 180, stem: 'p_house_21', draw: 2.45, mansion: true, cat: 'mansion' },
-    { zh: '金顶庄园', en: 'Golden Estate',    cost: 80000, needLv: 18, charm: 1700, upkeep: 300, points: 550, stem: 'p_house_22', draw: 3.20, mansion: true, cat: 'mansion' },
+    { zh: '农户小宅', en: 'Farm Cottage',     cost: 0,     needLv: 1,  charm: 40,   upkeep: 0,   stem: 'p_house_1',  w: 2, h: 2, draw: 1.28, mansion: false, cat: 'cottage' },
+    { zh: '砖瓦农居', en: 'Brick Farmhouse',  cost: 1200,  needLv: 3,  charm: 90,   upkeep: 8,   stem: 'p_house_2',  w: 2, h: 2, draw: 1.38, mansion: false, cat: 'cottage' },
+    { zh: '院落人家', en: 'Courtyard Home',   cost: 3000,  needLv: 5,  charm: 160,  upkeep: 15,  stem: 'p_house_3',  w: 3, h: 3, draw: 1.32, mansion: false, cat: 'court' },
+    { zh: '乡绅别墅', en: 'Country Villa',    cost: 6000,  needLv: 7,  charm: 260,  upkeep: 30,  stem: 'p_house_4',  w: 4, h: 4, draw: 1.36, mansion: false, cat: 'villa' },
+    { zh: '花园洋房', en: 'Garden Manor',     cost: 12000, needLv: 9,  charm: 400,  upkeep: 50,  stem: 'p_house_5',  w: 4, h: 4, draw: 1.48, mansion: false, cat: 'villa' },
+    { zh: '泳池雅墅', en: 'Pool Villa',       cost: 20000, needLv: 11, charm: 620,  upkeep: 90,  points: 100, stem: 'p_house_6',  w: 5, h: 5, draw: 1.52, mansion: true, cat: 'mansion' },
+    { zh: '湖景豪宅', en: 'Lakeside Mansion', cost: 36000, needLv: 14, charm: 920,  upkeep: 160, points: 250, stem: 'p_house_7',  w: 5, h: 5, draw: 1.68, mansion: true, cat: 'mansion' },
+    { zh: '东方庄园', en: 'Eastern Estate',   cost: 60000, needLv: 18, charm: 1400, upkeep: 250, points: 400, stem: 'p_house_8',  w: 5, h: 5, draw: 1.82, mansion: true, cat: 'mansion' },
+    { zh: '石墙农舍', en: 'Stone Hut',        cost: 1500,  needLv: 3,  charm: 95,   upkeep: 8,   stem: 'p_house_9',  w: 2, h: 2, draw: 1.36, mansion: false, cat: 'cottage' },
+    { zh: '青瓦小院', en: 'Grey-Tile Court',  cost: 3500,  needLv: 5,  charm: 175,  upkeep: 18,  stem: 'p_house_10', w: 3, h: 3, draw: 1.36, mansion: false, cat: 'court' },
+    { zh: '双翼别墅', en: 'Twin-Wing Villa',  cost: 7000,  needLv: 7,  charm: 280,  upkeep: 35,  stem: 'p_house_11', w: 4, h: 4, draw: 1.40, mansion: false, cat: 'villa' },
+    { zh: '花廊洋房', en: 'Pergola Manor',    cost: 14000, needLv: 9,  charm: 430,  upkeep: 55,  stem: 'p_house_12', w: 4, h: 4, draw: 1.50, mansion: false, cat: 'villa' },
+    { zh: '圆池雅墅', en: 'Round-Pool Villa', cost: 24000, needLv: 11, charm: 680,  upkeep: 100, points: 150, stem: 'p_house_13', w: 5, h: 5, draw: 1.56, mansion: true, cat: 'mansion' },
+    { zh: '园林庄园', en: 'Garden Estate',    cost: 68000, needLv: 18, charm: 1500, upkeep: 280, points: 500, stem: 'p_house_14', w: 5, h: 5, draw: 1.84, mansion: true, cat: 'mansion' },
+    { zh: '茅草暖屋', en: 'Thatched Cottage', cost: 800,   needLv: 1,  charm: 70,   upkeep: 5,   stem: 'p_house_15', w: 2, h: 2, draw: 1.32, mansion: false, cat: 'cottage' },
+    { zh: '木篱农舍', en: 'Timber Farmhouse', cost: 1800,  needLv: 3,  charm: 110,  upkeep: 10,  stem: 'p_house_16', w: 2, h: 2, draw: 1.42, mansion: false, cat: 'cottage' },
+    { zh: '四合小院', en: 'Siheyuan Court',   cost: 4200,  needLv: 5,  charm: 190,  upkeep: 20,  stem: 'p_house_17', w: 3, h: 3, draw: 1.40, mansion: false, cat: 'court' },
+    { zh: '竹影人家', en: 'Bamboo Home',      cost: 5000,  needLv: 5,  charm: 210,  upkeep: 22,  stem: 'p_house_18', w: 3, h: 3, draw: 1.42, mansion: false, cat: 'court' },
+    { zh: '黄墙洋楼', en: 'Ochre Villa',      cost: 8500,  needLv: 7,  charm: 310,  upkeep: 38,  stem: 'p_house_19', w: 4, h: 4, draw: 1.42, mansion: false, cat: 'villa' },
+    { zh: '玫瑰洋房', en: 'Rose Villa',       cost: 15500, needLv: 9,  charm: 460,  upkeep: 58,  stem: 'p_house_20', w: 4, h: 4, draw: 1.52, mansion: false, cat: 'villa' },
+    { zh: '白石宫墅', en: 'White Palace',     cost: 28000, needLv: 11, charm: 750,  upkeep: 110, points: 180, stem: 'p_house_21', w: 5, h: 5, draw: 1.62, mansion: true, cat: 'mansion' },
+    { zh: '金顶庄园', en: 'Golden Estate',    cost: 80000, needLv: 18, charm: 1700, upkeep: 300, points: 550, stem: 'p_house_22', w: 5, h: 5, draw: 1.90, mansion: true, cat: 'mansion' },
   ];
   // EP-shop pets → painted iso animal sprites (replaces the emoji pet).
   const ANIMALS = { pet_chick: 'animal_chicken', pet_cat: 'animal_cat', pet_rabbit: 'animal_rabbit', decoration_dog: 'animal_dog', guard_dog: 'animal_dog' };
@@ -319,6 +322,7 @@
       this._migratePond();
       this._repairPlotsOnWater();
       this._repairDecoOverlaps();
+      this._ensureHomeFootprints();
       this._resize();
       window.addEventListener('resize', () => { this._resize(); this._clampCam(); this.render(); });
       cv.addEventListener('pointerdown', (e) => this._down(e));
@@ -384,7 +388,7 @@
       const taken = {};
       (d.plots || []).forEach((p) => { if (Number.isInteger(p.gx)) taken[p.gx + ',' + p.gy] = 1; });
       (d.map || []).forEach((o) => {
-        const b = BUILDINGS[o.type]; const w = b ? b.w : 1, h = b ? b.h : 1;
+        const b = this._bldgOf(o); const w = b ? b.w : 1, h = b ? b.h : 1;
         for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) taken[(o.gx + x) + ',' + (o.gy + y)] = 1;
       });
       (d.decorations || []).forEach((o) => { if (Number.isInteger(o.gx)) taken[o.gx + ',' + o.gy] = 1; });
@@ -565,7 +569,7 @@
       for (let i = 0; i < plots.length; i++) acc(this._plotGX(i), this._plotGY(i));
       const map = Farm.state.data.map || [];
       for (const o of map) {
-        const b = BUILDINGS[o.type]; const w = b ? b.w : 1, h = b ? b.h : 1; acc(o.gx, o.gy); acc(o.gx + w - 1, o.gy + h - 1);
+        const b = this._bldgOf(o); const w = b ? b.w : 1, h = b ? b.h : 1; acc(o.gx, o.gy); acc(o.gx + w - 1, o.gy + h - 1);
         // 菜摊前站着等的路人（_drawBuilding 里画在 gy+2.15 的路上）也算进镜头，
         // 否则摊子贴着屏幕左缘时，路人和「×2 💰」求购气泡被切在画外（2026-08-15 截图实证）
         if (o.type === 'house') acc(o.gx + 1, o.gy + 2);
@@ -767,7 +771,7 @@
         const c = this._screenToCell(p.x, p.y);
         if (this._moving.kind === 'deco') { this._moving.gx = c.gx; this._moving.gy = c.gy; this._moving.valid = this._decoCellFree(c.gx, c.gy, this._moving.idx); }
         else if (this._moving.kind === 'plot') { this._moving.gx = c.gx; this._moving.gy = c.gy; this._moving.valid = this._cellFreeForPlotMove(c.gx, c.gy, this._moving.idx); }
-        else { const o = Farm.state.data.map[this._moving.idx], b = BUILDINGS[o.type]; const gx = c.gx - (b.w >> 1), gy = c.gy - (b.h >> 1); this._moving.gx = gx; this._moving.gy = gy; this._moving.valid = this._footprintFree(gx, gy, o.type, this._moving.idx); }
+        else { const o = Farm.state.data.map[this._moving.idx], b = this._bldgOf(o); const gx = c.gx - (b.w >> 1), gy = c.gy - (b.h >> 1); this._moving.gx = gx; this._moving.gy = gy; this._moving.valid = this._footprintFree(gx, gy, o.type, this._moving.idx); }
         this.render(); return;
       }
       if (this._drag) {
@@ -1021,12 +1025,23 @@
       return !!(Farm.state.data && Farm.state.data.clearedCells && Farm.state.data.clearedCells[gx + ',' + gy]);
     },
     _nextLand() { const t = this._landTable(), lv = this._landLevel(); return lv + 1 < t.length ? t[lv + 1] : null; },
-    _footprintFree(gx, gy, type, exceptIdx) {
-      const b = BUILDINGS[type];
-      if (gx < 0 || gy < 0 || gx + b.w > COLS || gy + b.h > ROWS) return false;
-      const plotCells = this._plotCellSet(), occ = {}, map = (Farm.state.data.map) || [], t = this._terrain();
-      for (let i = 0; i < map.length; i++) { if (i === exceptIdx) continue; const o = map[i], ob = BUILDINGS[o.type]; if (!ob) continue; for (let y = 0; y < ob.h; y++) for (let x = 0; x < ob.w; x++) occ[(o.gx + x) + ',' + (o.gy + y)] = 1; }
-      for (let y = 0; y < b.h; y++) for (let x = 0; x < b.w; x++) {
+    _footprintFree(gx, gy, type, exceptIdx, wh) {
+      const map = (Farm.state.data.map) || [];
+      let w, h;
+      if (wh && wh.w && wh.h) { w = wh.w; h = wh.h; }
+      else if (type === 'home' && exceptIdx >= 0 && map[exceptIdx]) {
+        const s = this._homeWh(map[exceptIdx]); w = s.w; h = s.h;
+      } else {
+        const b = BUILDINGS[type]; if (!b) return false; w = b.w; h = b.h;
+      }
+      if (gx < 0 || gy < 0 || gx + w > COLS || gy + h > ROWS) return false;
+      const plotCells = this._plotCellSet(), occ = {}, t = this._terrain();
+      for (let i = 0; i < map.length; i++) {
+        if (i === exceptIdx) continue;
+        const o = map[i], ob = this._bldgOf(o); if (!ob) continue;
+        for (let y = 0; y < ob.h; y++) for (let x = 0; x < ob.w; x++) occ[(o.gx + x) + ',' + (o.gy + y)] = 1;
+      }
+      for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
         const k = (gx + x) + ',' + (gy + y);
         if (!this._ownedCell(gx + x, gy + y) || plotCells[k] || occ[k] || t[k] === 'water') return false;
         if (this._onRoad(gx + x, gy + y)) return false;
@@ -1038,7 +1053,10 @@
     },
     _buildingAt(gx, gy) {
       const map = (Farm.state.data.map) || []; let best = -1, bg = -1;
-      for (let i = 0; i < map.length; i++) { const o = map[i], b = BUILDINGS[o.type]; if (!b) continue; if (gx >= o.gx && gx < o.gx + b.w && gy >= o.gy && gy < o.gy + b.h && o.gy >= bg) { best = i; bg = o.gy; } }
+      for (let i = 0; i < map.length; i++) {
+        const o = map[i], b = this._bldgOf(o); if (!b) continue;
+        if (gx >= o.gx && gx < o.gx + b.w && gy >= o.gy && gy < o.gy + b.h && o.gy >= bg) { best = i; bg = o.gy; }
+      }
       return best;
     },
     // Frontmost building whose ACTUAL drawn sprite box contains (px,py). Buildings
@@ -1047,7 +1065,7 @@
     _buildingAtPoint(px, py) {
       const map = (Farm.state.data.map) || [], tw = this._tw(), th = this._th();
       const list = [];
-      for (let i = 0; i < map.length; i++) { const b = BUILDINGS[map[i].type]; if (b) list.push({ o: map[i], i, b }); }
+      for (let i = 0; i < map.length; i++) { const b = this._bldgOf(map[i]); if (b) list.push({ o: map[i], i, b }); }
       list.sort((a, c) => (c.o.gx + c.b.w + c.o.gy + c.b.h) - (a.o.gx + a.b.w + a.o.gy + a.b.h));   // frontmost first
       for (const { o, i, b } of list) {
         const cc = this._cell(o.gx + (b.w - 1) / 2, o.gy + (b.h - 1) / 2);
@@ -1109,6 +1127,27 @@
       const lv = Math.min(Math.max((o && o.lv) || 1, 1), n);
       return HOME_LEVELS[lv - 1];
     },
+    _homeWh(o) {
+      const spec = (typeof o === 'number')
+        ? HOME_LEVELS[Math.min(Math.max(o, 1), HOME_LEVELS.length) - 1]
+        : this._homeSpec(o);
+      return { w: (spec && spec.w) || 2, h: (spec && spec.h) || 2 };
+    },
+    _bldgOf(o) {
+      if (!o) return null;
+      const b = BUILDINGS[o.type];
+      if (!b) return null;
+      if (o.type !== 'home') return b;
+      const wh = this._homeWh(o);
+      if (wh.w === b.w && wh.h === b.h) return b;
+      return { img: b.img, w: wh.w, h: wh.h, sc: b.sc, zh: b.zh, en: b.en, tap: b.tap, cost: b.cost };
+    },
+    _homeFacePx(cat, slot) {
+      const step = cat === 'mansion' ? 3 : cat === 'villa' ? 2 : cat === 'court' ? 1 : 0;
+      if (slot === 'panel') return 104 + step * 18;
+      if (slot === 'cat') return 76 + step * 12;
+      return 64 + step * 14;
+    },
     _homes() {
       return ((Farm.state.data && Farm.state.data.map) || []).filter((m) => m && m.type === 'home');
     },
@@ -1155,7 +1194,7 @@
       return true;
     },
     _focusHome(o) {
-      const hb = BUILDINGS.home;
+      const hb = this._bldgOf(o) || BUILDINGS.home;
       const hc = this._cell(o.gx + (hb.w - 1) / 2, o.gy + (hb.h - 1) / 2);
       this._camX += hc.x - this._cssW() / 2;
       this._camY += hc.y - this._cssH() * 0.55;
@@ -1214,7 +1253,7 @@
           + (on ? 'var(--leaf-dark,#3a8c50)' : '#e8e0d4')
           + ';border-radius:14px;padding:10px 8px 12px;background:' + (on ? '#f4faf4' : '#fff')
           + ';text-align:center;cursor:pointer;font:inherit;color:inherit;">'
-          + this._homeFace(c.face, 88)
+          + this._homeFace(c.face, this._homeFacePx(c.id, 'cat'))
           + '<div style="font-family:var(--font-display);font-size:18px;margin-top:4px;">'
           + (en ? c.en : c.zh) + '</div>'
           + '<div style="font-size:12px;color:var(--warm-text-soft);margin-top:3px;">'
@@ -1249,11 +1288,11 @@
         }
         html += '<div style="border:1.5px solid ' + (here ? 'var(--leaf-dark,#3a8c50)' : '#e8e0d4')
           + ';border-radius:12px;padding:8px 8px 10px;background:' + (here ? '#f4faf4' : '#fff') + ';text-align:center;">'
-          + this._homeFace(h.stem, 72)
+          + this._homeFace(h.stem, this._homeFacePx(h.cat, 'grid'))
           + '<div style="font-size:13px;font-weight:600;margin-top:4px;">' + (en ? h.en : h.zh) + '</div>'
           + (tag ? '<div style="font-size:11px;color:#b45309;">' + tag + '</div>' : '')
           + '<div style="font-size:11px;color:var(--warm-text-soft);margin:2px 0 6px;">'
-          + (en ? 'Charm' : '魅力') + ' +' + h.charm + '</div>'
+          + (en ? 'Charm' : '魅力') + ' +' + h.charm + ' · ' + h.w + '×' + h.h + '</div>'
           + action + '</div>';
       });
       return html + '</div>';
@@ -1296,9 +1335,24 @@
       const spec = HOME_LEVELS[houseId - 1];
       if (!o || o.type !== 'home' || !spec) return;
       if ((o.lv || 1) === houseId) return;
+      const en = this._lang() === 'en';
+      const wh = this._homeWh(houseId);
+      let gx = o.gx, gy = o.gy;
+      if (!this._footprintFree(gx, gy, 'home', mapIdx, wh)) {
+        const from = this._homeWh(o);
+        const spot = this._findHomeSpot(wh, mapIdx, { gx: o.gx, gy: o.gy, _fromW: from.w, _fromH: from.h });
+        if (!spot) {
+          if (Farm.ui.toast) Farm.ui.toast(en
+            ? ('Need a clear ' + wh.w + '×' + wh.h + ' plot. Move crops or buildings first.')
+            : ('这栋房子要 ' + wh.w + '×' + wh.h + ' 格空地。先把旁边的菜地或建筑挪开。'));
+          return;
+        }
+        gx = spot.gx; gy = spot.gy;
+      }
       const pay = this._homePay(o.lv || 1, houseId);
       if (!this._spendHomePay(pay, '改建：' + spec.zh + ' / Remodel: ' + spec.en)) return;
       o.lv = houseId;
+      o.gx = gx; o.gy = gy;
       Farm.state.data.homeUpkeepOn = Farm.state.getDateString();
       Farm.state.data.homeNeglected = false;
       if (Farm.lifeStory && Farm.lifeStory.record) {
@@ -1314,15 +1368,50 @@
       this._openHomePanel(mapIdx, spec.cat);
     },
 
-    _findHomeSpot() {
-      const b = BUILDINGS.home;
-      const ctr = this._screenToCell(this._cssW() / 2, this._cssH() / 2);
-      const c0x = ctr.gx - (b.w >> 1), c0y = ctr.gy - (b.h >> 1);
+    _findHomeSpot(wh, exceptIdx, near) {
+      const w = (wh && wh.w) || 2, h = (wh && wh.h) || 2;
+      const ex = exceptIdx == null ? -1 : exceptIdx;
+      let c0x, c0y;
+      if (near && Number.isInteger(near.gx) && Number.isInteger(near.gy)) {
+        if (near._fromW && near._fromH) {
+          const cx = near.gx + (near._fromW - 1) / 2;
+          const cy = near.gy + (near._fromH - 1) / 2;
+          c0x = Math.round(cx - (w - 1) / 2);
+          c0y = Math.round(cy - (h - 1) / 2);
+        } else {
+          c0x = near.gx; c0y = near.gy;
+        }
+      } else {
+        const ctr = this._screenToCell(this._cssW() / 2, this._cssH() / 2);
+        c0x = ctr.gx - (w >> 1); c0y = ctr.gy - (h >> 1);
+      }
       const tries = [[c0x, c0y]];
-      for (let gy = 0; gy + b.h <= ROWS; gy++) for (let gx = 0; gx + b.w <= COLS; gx++) tries.push([gx, gy]);
+      for (let gy = 0; gy + h <= ROWS; gy++) for (let gx = 0; gx + w <= COLS; gx++) tries.push([gx, gy]);
       tries.sort((p1, p2) => (Math.abs(p1[0] - c0x) + Math.abs(p1[1] - c0y)) - (Math.abs(p2[0] - c0x) + Math.abs(p2[1] - c0y)));
-      for (const [gx, gy] of tries) if (this._footprintFree(gx, gy, 'home', -1)) return { gx, gy };
+      const seen = {};
+      const size = { w, h };
+      for (const [gx, gy] of tries) {
+        const k = gx + ',' + gy;
+        if (seen[k]) continue;
+        seen[k] = 1;
+        if (this._footprintFree(gx, gy, 'home', ex, size)) return { gx, gy };
+      }
       return null;
+    },
+    _ensureHomeFootprints() {
+      const map = (Farm.state.data.map) || [];
+      let moved = false;
+      for (let i = 0; i < map.length; i++) {
+        const o = map[i];
+        if (!o || o.type !== 'home') continue;
+        const wh = this._homeWh(o);
+        if (this._footprintFree(o.gx, o.gy, 'home', i, wh)) continue;
+        const spot = this._findHomeSpot(wh, i, { gx: o.gx, gy: o.gy, _fromW: 2, _fromH: 2 });
+        if (spot && (spot.gx !== o.gx || spot.gy !== o.gy)) {
+          o.gx = spot.gx; o.gy = spot.gy; moved = true;
+        }
+      }
+      if (moved && !this._visit && Farm.state.save) Farm.state.save();
     },
     _placeNewHome(houseId) {
       const spec = HOME_LEVELS[houseId - 1];
@@ -1332,9 +1421,12 @@
         if (Farm.ui.toast) Farm.ui.toast(en ? 'House limit reached. Tap a house to remodel.' : '房子已经建满。点现有的房子可以改建。');
         return;
       }
-      const spot = this._findHomeSpot();
+      const wh = this._homeWh(houseId);
+      const spot = this._findHomeSpot(wh);
       if (!spot) {
-        if (Farm.ui.toast) Farm.ui.toast(en ? 'No room' : '没有空位了');
+        if (Farm.ui.toast) Farm.ui.toast(en
+          ? ('Need a clear ' + wh.w + '×' + wh.h + ' plot')
+          : ('需要 ' + wh.w + '×' + wh.h + ' 格空地'));
         return;
       }
       const pay = this._homePay(null, houseId);
@@ -1366,11 +1458,12 @@
       const curId = Math.min(Math.max(o.lv || 1, 1), HOME_LEVELS.length);
       const cur = HOME_LEVELS[curId - 1];
       const catDef = cat && HOME_CATS.find((c) => c.id === cat);
-      let body = '<div style="text-align:center;line-height:1;">' + this._homeFace(cur.stem, 120) + '</div>'
+      let body = '<div style="text-align:center;line-height:1;">' + this._homeFace(cur.stem, this._homeFacePx(cur.cat, 'panel')) + '</div>'
         + '<div style="text-align:center;font-family:var(--font-display);font-size:20px;margin-top:6px;">'
         + (en ? cur.en : cur.zh) + '</div>'
         + '<div style="text-align:center;font-size:12.5px;color:var(--warm-text-soft);margin-top:4px;">'
         + (en ? 'Charm' : '魅力') + ' +' + (neglected ? Math.floor(cur.charm / 2) : cur.charm)
+        + ' · ' + cur.w + '×' + cur.h
         + '</div>'
         + (neglected
           ? '<button class="btn secondary" id="homePayUpkeep" style="width:100%;margin-top:8px;">'
@@ -1578,6 +1671,7 @@
         this._pcs = null; this._pcsN = -1;       // 地块格缓存按 plots.length 判断, 必须手动失效
         this._bgKey = null;
         this._buildLayout();
+        this._ensureHomeFootprints();
         this._sel = -1; this._moving = null; this._blockedCell = null;
         document.body.classList.add('visit-mode');
         this._buildVisitUI(info);
@@ -1733,7 +1827,7 @@
       }
     },
 
-    _delChip(o) { const b = BUILDINGS[o.type], c = this._cell(o.gx + b.w - 1, o.gy), th = this._th(); return { x: c.x + this._tw() / 2 * 0.5, y: c.y - th * 0.2, r: Math.max(12, th * 0.5) }; },
+    _delChip(o) { const b = this._bldgOf(o) || BUILDINGS[o.type], c = this._cell(o.gx + b.w - 1, o.gy), th = this._th(); return { x: c.x + this._tw() / 2 * 0.5, y: c.y - th * 0.2, r: Math.max(12, th * 0.5) }; },
     _addBuilding(type) {
       const b = BUILDINGS[type], en = this._lang() === 'en', cost = b.cost || 0;
       if (type === 'home') {
@@ -2203,7 +2297,7 @@
         minU = Math.min(minU, u); maxU = Math.max(maxU, u); minV = Math.min(minV, v); maxV = Math.max(maxV, v);
       };
       for (let i = 0; i < plots.length; i++) add(this._plotGX(i), this._plotGY(i));
-      (Farm.state.data.map || []).forEach((o) => { const b = BUILDINGS[o.type]; if (b) { add(o.gx, o.gy); add(o.gx + b.w - 1, o.gy + b.h - 1); } });
+      (Farm.state.data.map || []).forEach((o) => { const b = this._bldgOf(o); if (b) { add(o.gx, o.gy); add(o.gx + b.w - 1, o.gy + b.h - 1); } });
       if (minx === Infinity) { minx = 0; miny = 0; maxx = COLS - 1; maxy = ROWS - 1; add(0, 0); add(COLS - 1, ROWS - 1); add(COLS - 1, 0); add(0, ROWS - 1); }
       minx -= 2; miny -= 2; maxx += 2; maxy += 2;   // empty-land margin to drop things into
       const span = (maxx - minx) + (maxy - miny);
@@ -3518,10 +3612,10 @@
       }
       const map = (Farm.state.data.map) || [];
       for (let i = 0; i < map.length; i++) {
-        const o = map[i], b = BUILDINGS[o.type]; if (!b) continue;
+        const o = map[i], b = this._bldgOf(o); if (!b) continue;
         const mv = this._moving && this._moving.kind === 'building' && this._moving.idx === i;
         const gx = mv ? this._moving.gx : o.gx, gy = mv ? this._moving.gy : o.gy;
-        // 必须带 lv：_homeSprite / _homeDrawMul 靠它换图换尺寸。只传 type+坐标会永远画 1 级。
+        // 必须带 lv：_homeSprite / _homeDrawMul / _bldgOf 靠它换图换尺寸。只传 type+坐标会永远画 1 级。
         draws.push({ d: (gx + gy) + (b.w - 1) + (b.h - 1) + 0.5, fn: () => this._drawBuilding({ type: o.type, gx, gy, lv: o.lv }, b, mv, i) });
       }
       const nowW = Date.now();
@@ -3546,7 +3640,7 @@
         const m = this._moving;
         let mx, my;
         if (m.kind === 'building') {
-          const bb = BUILDINGS[(Farm.state.data.map[m.idx] || {}).type];
+          const bb = this._bldgOf(Farm.state.data.map[m.idx] || {});
           const mid = this._cell(m.gx + (bb ? (bb.w - 1) / 2 : 0), m.gy + (bb ? (bb.h - 1) / 2 : 0));
           mx = mid.x; my = mid.y;
         } else { const c2 = this._cell(m.gx, m.gy); mx = c2.x; my = c2.y; }
@@ -3842,7 +3936,7 @@
       // 按压反馈（audit B2 P2）：被按住的建筑以底边为锚缩到 94%（Hay Day 式
       // squash），与地块按压高亮同一套 _down/_up 生命周期。
       const pk = (!this._build && idx != null && idx === this._pressBuilding) ? 0.94 : 1;
-      // 我的家：每级换图 + 明显放大（碰撞仍 2×2）。等级读场上那条记录，不信克隆。
+      // 我的家：每级换图，占地与 draw 都按档次（农舍 2×2 → 豪宅 5×5）。等级读场上那条记录，不信克隆。
       const rec = (idx != null && Farm.state.data && Farm.state.data.map) ? Farm.state.data.map[idx] : null;
       const homeO = (o.type === 'home' && rec) ? rec : o;
       const hz = o.type === 'home' ? this._homeDrawMul(homeO) : 1;
@@ -3947,7 +4041,7 @@
     _decoCells() {
       const occ = {}, plots = Farm.state.data.plots || [];
       for (let i = 0; i < plots.length; i++) occ[this._plotGX(i) + ',' + this._plotGY(i)] = 1;
-      (Farm.state.data.map || []).forEach((o) => { const b = BUILDINGS[o.type]; if (!b) return; for (let y = 0; y < b.h; y++) for (let x = 0; x < b.w; x++) occ[(o.gx + x) + ',' + (o.gy + y)] = 1; });
+      (Farm.state.data.map || []).forEach((o) => { const b = this._bldgOf(o); if (!b) return; for (let y = 0; y < b.h; y++) for (let x = 0; x < b.w; x++) occ[(o.gx + x) + ',' + (o.gy + y)] = 1; });
       const t = Farm.state.data.mapTerrain || {}; Object.keys(t).forEach((k) => { if (t[k] === 'water') occ[k] = 1; });
       const road = this._roadSet();
       Object.keys(road).forEach((k) => { occ[k] = 1; });
