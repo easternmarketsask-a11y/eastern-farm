@@ -6,8 +6,8 @@
  *   2. None mature, some growing → "⏳ 下一批 X 后成熟" (earliest remaining time)
  *   3. Nothing planted at all    → "🌱 地都空着，种点什么吧"
  *
- * Reuses Farm.farm.harvestPlot() for the actual harvest logic (single source
- * of truth — this module only orchestrates looping + UI).
+ * Iso 农场：点胶囊走农户排队摘（enqueueHarvestAll），摘完才进仓。
+ * 其它视图仍直接循环 Farm.farm.harvestPlot()。
  */
 (function() {
   const harvestStatus = {
@@ -108,6 +108,25 @@
     // is full — a light "silo full" toast is shown below (the sell/expand
     // decision modal stays behind the status pill's「去卖货」action).
     harvestAll() {
+      if (Farm.isoView && Farm.isoView.active && Farm.isoView.active()
+          && Farm.farmer && Farm.farmer.enqueueHarvestAll) {
+        const iso = Farm.isoView;
+        const plots = Farm.state.data.plots || [];
+        let start = -1, best = Infinity;
+        const a = Farm.farmer._actor && Farm.farmer._actor();
+        const fx = (a && a.gx != null) ? a.gx : 0;
+        const fy = (a && a.gy != null) ? a.gy : 0;
+        for (let i = 0; i < plots.length; i++) {
+          const p = plots[i];
+          if (!p || !p.unlocked || !p.crop || !Farm.crops.isMature(p)) continue;
+          const dx = iso._plotGX(i) - fx, dy = iso._plotGY(i) - fy;
+          const d = dx * dx + dy * dy;
+          if (start < 0 || d < best) { best = d; start = i; }
+        }
+        if (start >= 0) Farm.farmer.enqueueHarvestAll(start);
+        if (Farm.audio) Farm.audio.play('tap');
+        return;
+      }
       const plots = Farm.state.data.plots;
       let picked = 0;
       let blockedByFull = false;
