@@ -4,7 +4,7 @@
 
 **Goal:** 农场上出现 9 款油画小人，会走、会浇水、会收获、会在菜摊前站着。
 
-**Architecture:** 新模块 `src/js/farmer.js` 管人设表、look 哈希、内存演员状态机、精灵表切帧。`mapview-iso.js` 只负责画和点选挂钩。浇水/收获仍走现有 `tending.waterPlot` / `farm.harvestPlot`，成功后再叫 `Farm.farmer.play(plotIdx, 'water'|'harvest')`。贴图按需加载，不进 SW 预缓存。
+**Architecture:** 新模块 `src/js/farmer.js` 管人设表、look 哈希、内存演员状态机、精灵表切帧。`mapview-iso.js` 只负责画和点选挂钩。点熟菜 / 点浇水只把任务推进队列；人走到并播完动作后才调用 `farm.harvestPlot` / `tending.waterPlot`。贴图按需加载，不进 SW 预缓存。
 
 **Tech Stack:** vanilla JS；canvas iso；WebP 精灵表；PIL 抠底拼表。
 
@@ -15,7 +15,7 @@
 - `USE_PAINTED_BG=false`
 - 不搬 `landOrigin` / `map` / `plots` / `clearedCells`
 - 不造假名、不上照片、不恢复乡路行人
-- 浇水/收获数值立刻生效；人随后演戏
+- 浇水/收获：人做完动作才生效；连点进队列，不是只做最后一块
 - 新号默认 `farmerLook=2`；匿名路人 look=1
 - 贴图不进 `service-worker.js` 的 PRECACHE（只把新 JS 模块加进去）
 - 文案完整句，不卖萌
@@ -188,7 +188,7 @@ git commit -m "九款农户精灵表（走浇摘站）"
 - Modify: `src/js/mapview-iso.js` `render()` 深度排序里画农户；`_startLoop` 已有，farmer.tick(dt) 挂在 render 开头
 
 **Produces:**
-- `Farm.farmer.play(plotIdx, 'water'|'harvest')` 把 task 设成该地块
+- `Farm.farmer.enqueue(plotIdx, 'water'|'harvest')` 推进队列（同地不重复）
 - 闲逛：随机可走格，走过去，idle 2–4 秒
 - `_cellFreeForFarmer(gx,gy)`：owned，不是菜地，不是建筑，不是水
 
@@ -206,16 +206,17 @@ git commit -m "农户出现在农场上，闲时走走停停"
 
 ---
 
-### Task 6: 挂钩浇水 / 收获
+### Task 6: 挂钩浇水 / 收获（做完才生效）
 
 **Files:**
-- Modify: `src/js/farm.js` `harvestPlot` 在 `result.ok` 之后 `Farm.farmer.play(plotIdx, 'harvest')`
-- Modify: `src/js/tending.js` `waterPlot` 在 `r.ok` 之后 `Farm.farmer.play(plotIdx, 'water')`
-- 拜访路径 `_visitPlotTap` **不要** 调 `Farm.farmer.play`
+- Modify: `src/js/mapview-iso.js` 点熟菜：`Farm.farmer.enqueue(idx, 'harvest')`，**不要**当场 `harvestPlot`
+- Modify: `src/js/farm.js` 打理窗浇水按钮：enqueue water，**不要**当场 `waterPlot`（`harvestPlot` / `waterPlot` 本体仍只负责数值，由 farmer 在动作结束时调用）
+- 拜访路径 `_visitPlotTap` **不要** enqueue
 
-- [ ] **Step 1: 仓满失败不 play。**
-- [ ] **Step 2: play 只改内存 task；连点覆盖 task（last-write-wins）。**
-- [ ] **Step 3: 截图或肉眼：点熟菜人走过去摘；打理浇水人走过去浇。Commit。**
+- [ ] **Step 1: enqueue 时菜还长在地里。** 动作最后一帧才调 `harvestPlot` / `waterPlot`。
+- [ ] **Step 2: 连点进队列，同地不重复。** 走到时仓满 / 已不可浇 → 跳过这项，做下一项。
+- [ ] **Step 3: 连击时间戳用进仓时刻，不是点地时刻。**
+- [ ] **Step 4: 截图：点熟菜时地里还有菜，人摘完才进仓。Commit。**
 
 ```
 git commit -m "浇水和收获成功后农户演戏"
@@ -265,7 +266,7 @@ Commit 修掉的洞。部署走 `deploy.sh`，且 `git status` + `git branch --s
 | lookFromUid 哈希 | 1 |
 | 闲逛可走/不可走 | 5 |
 | 收获/浇水挂钩真实函数 | 6 |
-| 连点 last-write-wins | 6 |
+| 做完动作才进仓/浇上；连点队列 | 6 |
 | 精灵表格式与抠底 | 4 |
 | 不进 SW 预缓存（图） | 4, 1 只加 js |
 | 摊前 + 拜访 | 7 |
