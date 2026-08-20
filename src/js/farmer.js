@@ -191,7 +191,49 @@
   }
 
   function plotPos(iso, plotIdx) {
-    return { gx: iso._plotGX(plotIdx) + 0.15, gy: iso._plotGY(plotIdx) + 0.35 };
+    const gx = iso._plotGX(plotIdx), gy = iso._plotGY(plotIdx);
+    const dirs = [[0, 1], [1, 1], [-1, 1], [1, 0], [-1, 0], [0, -1]];
+    for (let i = 0; i < dirs.length; i++) {
+      const x = gx + dirs[i][0], y = gy + dirs[i][1];
+      if (cellWalkable(iso, x, y)) return { gx: x, gy: y + 0.12 };
+    }
+    return { gx: gx + 0.2, gy: gy + 0.9 };
+  }
+
+  function enqueueWaterAll(startIdx) {
+    const iso = Farm.isoView;
+    if (!iso || (Farm.state && Farm.state._visitLock)) return false;
+    const plots = (Farm.state.data && Farm.state.data.plots) || [];
+    const wet = [];
+    for (let i = 0; i < plots.length; i++) {
+      if (plots[i] && Farm.tending && Farm.tending.canWater && Farm.tending.canWater(plots[i])) wet.push(i);
+    }
+    if (!wet.length) return false;
+    const dist = (a, b) => {
+      const dx = iso._plotGX(a) - iso._plotGX(b);
+      const dy = iso._plotGY(a) - iso._plotGY(b);
+      return dx * dx + dy * dy;
+    };
+    const left = wet.slice();
+    const order = [];
+    let cur = (startIdx != null && left.indexOf(startIdx) >= 0) ? startIdx : left[0];
+    while (left.length) {
+      const at = left.indexOf(cur);
+      if (at >= 0) left.splice(at, 1);
+      order.push(cur);
+      if (!left.length) break;
+      let best = left[0], bd = Infinity;
+      for (let k = 0; k < left.length; k++) {
+        const d = dist(cur, left[k]);
+        if (d < bd) { bd = d; best = left[k]; }
+      }
+      cur = best;
+    }
+    let n = 0;
+    for (let i = 0; i < order.length; i++) {
+      if (enqueue(order[i], 'water')) n++;
+    }
+    return n > 0;
   }
 
   function finishJob(iso) {
@@ -206,6 +248,9 @@
       if (Farm.farm && Farm.farm.harvestPlot) {
         const ev = iso._fakeEvt ? iso._fakeEvt(iso._plotGX(job.plotIdx), iso._plotGY(job.plotIdx)) : null;
         Farm.farm.harvestPlot(job.plotIdx, ev);
+      }
+      if (Farm.state && Farm.state.isWarehouseFull && Farm.state.isWarehouseFull()) {
+        A.queue = A.queue.filter((j) => j.kind !== 'harvest');
       }
     } else if (job.kind === 'water') {
       if (Farm.tending && Farm.tending.waterPlot) Farm.tending.waterPlot(job.plotIdx);
@@ -276,6 +321,8 @@
       const p = plotPos(iso, A.job.plotIdx);
       if (A.anim === 'walk') {
         if (moveToward(dt, p.gx, p.gy)) {
+          const pgx = iso._plotGX(A.job.plotIdx);
+          A.face = pgx >= A.gx ? 'r' : 'l';
           A.anim = A.job.kind;
           A.frameT = 0;
         }
@@ -317,7 +364,7 @@
     const im = sheet(look);
     const th = iso._th();
     const spec = specOf(look);
-    const h = th * (spec.child ? 1.15 : 1.55);
+    const h = th * (spec.child ? 1.45 : 2.05);
     if (im && im.width) {
       const cw = im.width / SHEET_COLS, ch = im.height / SHEET_ROWS;
       const row = ANIMS[anim] || 0;
@@ -408,6 +455,7 @@
     applyLook: applyLook,
     enqueue: enqueue,
     enqueueHarvestAll: enqueueHarvestAll,
+    enqueueWaterAll: enqueueWaterAll,
     tick: tick,
     depthDraw: depthDraw,
     drawGuest: drawGuest,

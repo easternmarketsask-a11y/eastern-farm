@@ -204,6 +204,38 @@
       const visited = Farm.state.data.dailyClaims.neighborsVisited || [];
       const likesRemaining = Farm.fbGameSync ? Farm.fbGameSync.likesRemaining() : 0;
 
+      /* 🔒 待激活账号（邮箱注册、还没到店激活）先不开社交（2026-08-20）。
+         串门/互偷/点赞的每日上限都是按账号算的，而邮箱注册零成本 —— 一个人
+         开五个小号刷自己的大号是几分钟的事。激活要报手机号，那才是真的闸。
+         ⚠️ 文案照实说「激活之后就能串门」，不是「无权限」。这是又一个把人
+            推进店门的理由，不是惩罚。 */
+      if (Farm.fbAuth && Farm.fbAuth.memberDoc && Farm.fbAuth.memberDoc._pending) {
+        const en = lang === 'en';
+        Farm.ui.showModal(`
+          <h2 class="modal-title">${en ? '🏘 Community' : '🏘 邻居广场'}</h2>
+          <div style="padding:20px 16px;text-align:center;">
+            <div style="font-size:44px;margin-bottom:12px;">🏡</div>
+            <div style="font-size:14.5px;line-height:1.7;color:var(--warm-text);margin-bottom:10px;">
+              ${en
+                ? 'Visiting neighbours opens up once your member card is set up.'
+                : '办好会员卡之后就能串门了。'}
+            </div>
+            <div style="font-size:12.5px;color:var(--warm-text-soft);line-height:1.65;margin-bottom:16px;">
+              ${en
+                ? 'Give us your phone number next time you shop — it takes a few seconds at the till, and the points you have earned land on your card at the same time.'
+                : '下次来店里报一下手机号，收银台几秒钟就好 —— 你攒的超市积分也会同时到账。'}
+            </div>
+            <div style="font-size:12px;color:var(--warm-text-soft);line-height:1.6;">
+              133-412 Willowgrove Square<br>${en ? 'Mon–Sat 10am–6:30pm' : '周一至周六 10am–6:30pm'}
+            </div>
+            <button class="btn" style="width:100%;margin-top:16px;" onclick="Farm.ui.hideModal()">
+              ${en ? 'Got it' : '知道了'}
+            </button>
+          </div>
+        `);
+        return;
+      }
+
       // Reciprocal privacy: if user opted out of being visible, they
       // also can't browse other neighbors (no lurking allowed).
       if (Farm.state.data.visibleToNeighbors === false) {

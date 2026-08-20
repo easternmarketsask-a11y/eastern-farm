@@ -35,10 +35,15 @@
   const BACKFILL_CAP = 100;
 
   // Limited-time "Welcome to the game" bonus for store members on their
-  // FIRST login to the farm. Awarded as 3,000 farm coins (equivalent to
-  // 300 EP via the 10:1 exchange, ≈ $0.30 real cost). Member-doc-scoped
-  // flag (gameSignupBonusGivenAt) prevents re-claim across devices and
-  // localStorage wipes.
+  // FIRST login to the farm. Awarded as 3,000 farm coins.
+  //
+  // 💰 成本（2026-08-20 订正，原注释写的 $0.30 **差了 10 倍**）：
+  //    3,000 农场币 → 10:1 兑换 → 300 超市积分。而 500 积分换「满$50 减$5」，
+  //    所以 1 积分 ≈ 面值 1 分钱 → 300 积分 ≈ **$3.00**，不是 $0.30。
+  //    定任何新奖励前都会引用这个换算，别再把它当 $0.30 用。
+  //
+  // Member-doc-scoped flag (gameSignupBonusGivenAt) prevents re-claim across
+  // devices and localStorage wipes.
   const GAME_SIGNUP_BONUS_COINS = 3000;
   const GAME_SIGNUP_BONUS_END = '2026-08-31';
 
@@ -137,7 +142,21 @@
         });
         _applyServerResponseToLocal(resp);
         _notePointsOutcome(0, true);
-        return { synced: true, eventId, new_balance: resp.new_balance };
+        // 待激活账号：把最新的待领取数额同步到本地 memberDoc，
+        // 否则积分面板显示的是上次拉取时的旧数。
+        if (resp.pending && Farm.fbAuth && Farm.fbAuth.memberDoc) {
+          Farm.fbAuth.memberDoc.pendingPoints = Number(resp.pendingPoints || 0);
+          if (resp.pendingCap) Farm.fbAuth.memberDoc.pendingCap = Number(resp.pendingCap);
+        }
+        /* credited 是**实际记上的分数**（待激活账号有总额封顶，可能少于请求值，
+           甚至是 0）。调用方靠它退还没换到分的那部分农场币 ——
+           照扣币不给分＝偷东西（spec 不变量 5）。
+           会员那条路不下发这个字段，undefined 时按「全额记上」处理，行为不变。 */
+        return {
+          synced: true, eventId, new_balance: resp.new_balance,
+          credited: (typeof resp.credited === 'number') ? resp.credited : amount,
+          pending: !!resp.pending,
+        };
       } catch (e) {
         _notePointsOutcome(e.code, false);
         // 429 = daily cap, 422 = validation, 401/403/404 = auth/endpoint → don't queue (would just fail again)
@@ -269,6 +288,18 @@
       const today = Farm.state.getDateString();
       if (today > GAME_SIGNUP_BONUS_END) return;
 
+      /* 🔒 **待激活账号不发**（2026-08-20）。他们是邮箱注册、还没到店激活的人：
+         正好满足开屏那句「登录 + 留邮箱」，不显式排除就是给从没来过店的人
+         每人白送 3000 币（面值 ≈$3，见 spec §5.6）。
+         ⚠️ 靠「没有会员档所以事务返回 false」隐式挡住是不够的 —— 那是**静默**
+            不发，而开屏白纸黑字承诺过。承诺了不兑现又不解释，顾客只会觉得
+            这游戏骗人（本函数下面 no_email 那一段就是为这个写的）。
+            所以这里明说：激活之后就送。 */
+      if (Farm.fbAuth && Farm.fbAuth.memberDoc && Farm.fbAuth.memberDoc._pending) {
+        setTimeout(() => this._showBonusNeedsActivationModal(GAME_SIGNUP_BONUS_COINS), 600);
+        return;
+      }
+
       /* 🔒 必须用 memberDocId()，不是 Auth UID（2026-08-15 审阅第 7 条）
          店内会员文档 id 常常是 ru_*，与 Auth UID 不同 —— 拿 uid 去取文档多半不存在，
          事务直接返回 false，于是**真会员反而领不到**开屏承诺的 3000 农场币，
@@ -315,6 +346,26 @@
 
       // Short delay so any login modal closes first
       setTimeout(() => this._showSignupBonusModal(GAME_SIGNUP_BONUS_COINS), 400);
+    },
+
+    /* 待激活账号：礼包等激活。说清楚「什么时候能拿到」，不是一句「暂不可领」。
+       这一屏同时是把人推进店门的钩子 —— 他手里已经有个具体的东西在等他。 */
+    _showBonusNeedsActivationModal(amount) {
+      const en = Farm.state.data.language === 'en';
+      Farm.ui.showModal(`
+        <h2 class="modal-title">${en ? 'Your gift is waiting' : '礼包给你留着'}</h2>
+        <p style="text-align:center;font-size:15px;line-height:1.7;margin:14px 0;">
+          ${en
+            ? `Give us your phone number next time you shop and we'll set up your member card on the spot — <b>${amount.toLocaleString()} farm coins</b> and the store points you've earned land right away.`
+            : `下次来店里报一下手机号，收银员当场帮你办好会员卡 —— <b>${amount.toLocaleString()} 农场币</b>和你攒下的超市积分立刻到账。`}
+        </p>
+        <p style="text-align:center;font-size:12.5px;color:var(--warm-text-soft);line-height:1.6;">
+          133-412 Willowgrove Square<br>${en ? 'Mon–Sat 10am–6:30pm' : '周一至周六 10am–6:30pm'}
+        </p>
+        <button class="btn" style="width:100%;margin-top:14px;" onclick="Farm.ui.hideModal()">
+          ${en ? 'Got it' : '知道了'}
+        </button>
+      `);
     },
 
     /* 有资格但没留邮箱 —— 告诉他差一步，别静默不发。

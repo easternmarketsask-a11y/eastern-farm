@@ -949,6 +949,27 @@
       // the coins so the player isn't charged for points they didn't get.
       if (result.sync && result.sync.then) {
         result.sync.then((res) => {
+          /* 待激活账号有**总额**封顶：服务端可能只记一部分（甚至 0），
+             而且是 **200 成功**返回，不走下面那条 429 分支。
+             不按实际记上的分退币的话，币扣了分没给 —— 就是偷东西
+             （spec 不变量 5，2026-08-20）。 */
+          if (res && res.synced && typeof res.credited === 'number' && res.credited < epAmount) {
+            const refund = (epAmount - res.credited) * 10;
+            if (refund > 0) {
+              this.data.coins += refund;
+              this.save();
+              if (window.Farm && Farm.ui && Farm.ui.refreshHUD) Farm.ui.refreshHUD();
+              const lg = this.data.language;
+              if (window.Farm && Farm.ui) {
+                Farm.ui.toast(res.credited === 0
+                  ? (lg === 'en' ? 'Points are already full — coins returned'
+                                 : '待领取积分已攒满，农场币已退回')
+                  : (lg === 'en' ? `Only ${res.credited} points fit — the rest of your coins are back`
+                                 : `只换进了 ${res.credited} 分，其余农场币已退回`), 3500);
+              }
+            }
+            return;
+          }
           if (res && res.rejected && res.code === 429) {
             this.data.coins += coinAmt;
             this.save();

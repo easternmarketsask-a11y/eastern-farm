@@ -90,6 +90,13 @@
         // can still browse the community (unlike visibleToNeighbors=false,
         // which also blinds the owner). Set via the owner toggle in settings.
         excludeFromRanking: !!(s.excludeFromRanking && Farm.fbAuth && Farm.fbAuth.isStoreOwner && Farm.fbAuth.isStoreOwner()),
+        /* 🔒 待激活账号（邮箱注册、还没到店激活）不进邻居世界（2026-08-20）。
+           串门/互偷/点赞的每日上限都是**按账号**算的，而邮箱注册没有成本 ——
+           一个人开五个小号刷自己的大号，几分钟的事。激活要报手机号，
+           手机号是有限的，那才是真正的闸。
+           取值口径与 excludeFromRanking 一样：写在公开档上，各处池子统一过滤。 */
+        pendingActivation: !!(Farm.fbAuth && Farm.fbAuth.memberDoc
+                              && Farm.fbAuth.memberDoc._pending),
         // Claimed limited-time promos (per-account guard against local reset).
         promoClaims: s.promoClaims || {},
         // Farm snapshot for real-member visits + stealing (spec 2026-06-11):
@@ -450,6 +457,7 @@
           if (d.id === meUid) return;
           if (stats.visibleToNeighbors === false) return;
           if (stats.excludeFromRanking === true) return;
+          if (stats.pendingActivation === true) return;   // 待激活账号不进邻居世界
           if (!stats.level) return;
           pool.push({ uid: d.id, doc: data });
         });
@@ -728,7 +736,8 @@
           const data = d.data();
           const stats = data.gameStats || {};
           if (stats.visibleToNeighbors === false) return;
-          if (stats.excludeFromRanking === true) return;  // store owner out of rankings
+          if (stats.excludeFromRanking === true) return;
+          if (stats.pendingActivation === true) return;   // 待激活账号不进邻居世界  // store owner out of rankings
           if (!stats.level) return;
           // Weekly board: only count players whose counter is for THIS week.
           if (metric === 'weekly') {
@@ -782,6 +791,7 @@
           const s = d.data().gameStats || {};
           if (s.visibleToNeighbors === false) return;
           if (s.excludeFromRanking === true) return;  // store owner not counted above me
+          if (s.pendingActivation === true) return;   // 待激活账号不参与排名
           if (metric === 'weekly' && s.weekId !== curWeek) return;
           above++;
         });

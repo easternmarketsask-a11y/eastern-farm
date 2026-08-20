@@ -33,7 +33,38 @@
       const ep = s.eastPoints;
       const coins = s.coins;
 
-      const balanceHTML = `
+      /* 🔒 待激活账号（邮箱注册、还没到店激活）的口径是「**待领取**」，
+         不是「你的超市积分」—— 他还不是会员，那些分还没进任何账户。
+         把没兑现的说成已有的，是这条设计里最容易失信的一处。
+         封顶数由后端下发（pendingCap），不在前端写死。 */
+      const pm = (Farm.fbAuth && Farm.fbAuth.memberDoc) || {};
+      const pending = !!pm._pending;
+      const pendPts = Number(pm.pendingPoints || 0);
+      const pendCap = Number(pm.pendingCap || 0);
+      const pendFull = pendCap > 0 && pendPts >= pendCap;
+
+      const balanceHTML = pending ? `
+        <div class="ep-overview">
+          <div class="ep-overview-balance">
+            <div class="ep-overview-label">${lang === 'en' ? 'Held for you' : '待领取'}</div>
+            <div class="ep-overview-value"><span class="points-icon"></span> ${pendPts.toLocaleString()}${pendCap ? ` / ${pendCap.toLocaleString()}` : ''}</div>
+            <div class="ep-overview-note">
+              ${pendFull
+                ? (lang === 'en'
+                    ? "That's the most we hold — come collect them"
+                    : '已经攒满了，到店就能领')
+                : (lang === 'en'
+                    ? 'Give us your phone in store and these land on your member card'
+                    : '到店报一下手机号，这些就到你的会员卡上')}
+            </div>
+            <div class="ep-overview-sync-note">
+              ${lang === 'en'
+                ? '133-412 Willowgrove Square · Mon–Sat 10am–6:30pm'
+                : '133-412 Willowgrove Square · 周一至周六 10am–6:30pm'}
+            </div>
+          </div>
+        </div>
+      ` : `
         <div class="ep-overview">
           <div class="ep-overview-balance">
             <div class="ep-overview-label">${lang === 'en' ? 'Your Store Points' : '您的超市积分'}</div>
