@@ -484,8 +484,6 @@
     const lang = (Farm.state && Farm.state.data && Farm.state.data.language) || 'zh';
     // 图标是 index.html 内嵌 sprite 的 symbol id（视觉升级第1批：chrome 不再用 emoji）。
     const items = [
-      { a: 'shop', icon: 'shop', zh: '商店', en: 'Shop' },
-      { a: 'tasks', icon: 'tasks', zh: '任务', en: 'Tasks' },
       { a: 'orders', icon: 'orders', zh: '小东订单', en: 'Orders' },
       { a: 'storeRewards', icon: 'receipt', zh: '领取到店奖励', en: 'Store Rewards' },
       { a: 'story', icon: 'story', zh: '农场人生', en: 'My Story' },
@@ -820,12 +818,13 @@
         </label>
         <div class="settings-card-hint" style="margin-top:12px;">${lang === 'en' ? 'Farm look' : '农户形象'}</div>
         <div class="settings-card-hint">${lang === 'en' ? 'This is how you look on the farm.' : '这是你在农场里走动的样子。'}</div>
-        <div id="farmerLookGrid" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:8px;">
+        <div id="farmerLookGrid" class="farmer-look-grid">
           ${(Farm.farmer && Farm.farmer.LOOKS ? Farm.farmer.LOOKS : []).map((lk) => {
             const on = (Farm.farmer.clampLook(Farm.state.data.farmerLook) === lk.id);
-            return '<button type="button" class="farmer-look-btn" data-look="' + lk.id + '" style="border:1.5px solid ' + (on ? 'var(--leaf-dark,#3a8c50)' : '#e8e0d4') + ';border-radius:12px;padding:8px 4px 10px;background:' + (on ? '#f4faf4' : '#fff') + ';cursor:pointer;font:inherit;color:inherit;">'
-              + '<div style="width:56px;height:64px;margin:0 auto;background:#f3efe6 url(assets/images/farmers/p_farmer_' + lk.id + '.webp) 0 0 / 600% 400% no-repeat;background-position:0 0;border-radius:8px;"></div>'
-              + '<div style="font-size:12px;margin-top:4px;">' + (lang === 'en' ? lk.en : lk.zh) + '</div></button>';
+            const face = Farm.farmer.previewStyle ? Farm.farmer.previewStyle(lk.id) : '';
+            return '<button type="button" class="farmer-look-btn' + (on ? ' is-on' : '') + '" data-look="' + lk.id + '">'
+              + '<div class="farmer-look-face" style="' + face + '"></div>'
+              + '<div class="farmer-look-name">' + (lang === 'en' ? lk.en : lk.zh) + '</div></button>';
           }).join('')}
         </div>
       </div>

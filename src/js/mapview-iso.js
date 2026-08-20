@@ -2990,11 +2990,11 @@
       this._diamond(c.x, cy, w, h);
       ctx.stroke();
       // 框内垄土（略内收，露出一圈木沿）
-      const iw = w * 0.78, ih = h * 0.76;
+      const iw = w * 0.86, ih = h * 0.82;
       this._diamond(c.x, cy + th * 0.01, iw, ih);
-      const r0 = Math.round((empty ? 176 : 164) + tint * 10);
-      const g0 = Math.round((empty ? 112 : 100) + tint * 6);
-      const b0 = Math.round(56 + tint * 4);
+      const r0 = Math.round((empty ? 142 : 148) + tint * 8);
+      const g0 = Math.round((empty ? 86 : 90) + tint * 5);
+      const b0 = Math.round(40 + tint * 3);
       const r1 = Math.round(86 + tint * 6), g1 = Math.round(50 + tint * 4), b1 = 22;
       const soil = ctx.createLinearGradient(c.x - iw * 0.4, cy - ih * 0.3, c.x + iw * 0.25, cy + ih * 0.4);
       soil.addColorStop(0, 'rgb(' + r0 + ',' + g0 + ',' + b0 + ')');
@@ -3676,7 +3676,7 @@
           // 基色: 农场内亮耕作金绿, 镜头前围裙同色（油画是一整片草甸）
           let rr, gg, bb2;
           const patch = Math.sin(gx * 0.52 + gy * 0.37) * 7 + Math.sin(gx * 0.19 - gy * 0.24) * 5;
-          const stripe = ((gx + gy) & 1) ? -0.35 : 0;
+          const stripe = (owned || apron) ? 0 : (((gx + gy) & 1) ? -0.35 : 0);
           const nzIn = (r1 - 0.5) * 6;
           let fr = 170 + patch + stripe + nzIn, fg = 172 + patch * 0.7 + stripe + nzIn * 0.6, fb = 54 + patch * 0.3 + stripe * 0.45 + nzIn * 0.35;
           if (inWorld && !owned && !apron) { fr = 96 + nzIn; fg = 122 + nzIn * 0.6; fb = 52 + nzIn * 0.3; }
@@ -3701,7 +3701,8 @@
             bb2 = bb2 * (1 - fade) + 80 * fade;
           }
           ctx.fillStyle = 'rgb(' + (rr | 0) + ',' + (gg | 0) + ',' + (bb2 | 0) + ')';
-          ctx.globalAlpha = dHl < 1.15 ? Math.max(0.12, (dHl - 0.7) / 0.45) : 0.55;
+          const tileA = (owned || apron) ? 0.08 : 0.40;
+          ctx.globalAlpha = dHl < 1.15 ? Math.max(0.08, (dHl - 0.7) / 0.45 * tileA) : tileA;
           ctx.beginPath();
           ctx.ellipse(c.x, c.y, tw * 0.78, th * 0.68, 0, 0, 6.283);
           ctx.fill();
@@ -3742,8 +3743,8 @@
     _drawGoldenHour(W, H) {
       const ctx = this._ctx;
       const g = ctx.createRadialGradient(W * 0.14, H * 0.06, 0, W * 0.14, H * 0.06, Math.max(W, H) * 1.15);
-      g.addColorStop(0, 'rgba(255,208,130,0.38)');
-      g.addColorStop(0.34, 'rgba(255,176,96,0.16)');
+      g.addColorStop(0, 'rgba(255,208,130,0.44)');
+      g.addColorStop(0.34, 'rgba(255,176,96,0.18)');
       g.addColorStop(1, 'rgba(48,42,22,0.07)');
       ctx.fillStyle = g;
       ctx.fillRect(0, 0, W, H);

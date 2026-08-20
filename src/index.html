@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#fdf8ee">
 <!-- 部署构建号（deploy.sh 每次注入 CACHE_VERSION 时间戳）。SW 新鲜度守卫据此
      判断本页是否已过期（见页尾脚本）。ef-dev = 未部署的本地版本。 -->
-<meta name="ef-build" content="ef-2608201619">
+<meta name="ef-build" content="ef-2608201621">
 
 <!-- ==================== PWA (add to home screen) ==================== -->
 <link rel="manifest" href="manifest.webmanifest">
@@ -588,43 +588,7 @@
        a bok choy) — same soft rounded style as the crop art. -->
   <div id="storekeeper" class="storekeeper">
     <div class="storekeeper-avatar" aria-hidden="true">
-      <!-- Friendly Eastern Market grocer — clean circular avatar badge (green cap +
-           apron, warm smile). Redesigned 2026-06-18 for a professional, approachable look. -->
-      <svg viewBox="0 0 100 100">
-        <defs><clipPath id="skClip"><circle cx="50" cy="50" r="50"/></clipPath></defs>
-        <g clip-path="url(#skClip)">
-          <circle cx="50" cy="50" r="50" fill="#eaf6df"/>
-          <!-- shoulders + shirt -->
-          <path d="M14 101 Q 16 80 36 73 L 64 73 Q 84 80 86 101 Z" fill="#fbf6ec"/>
-          <!-- apron (brand green) + straps -->
-          <path d="M36 101 L 36 79 Q 50 73 64 79 L 64 101 Z" fill="#3a8c50"/>
-          <path d="M44 79 L 49 73 M56 79 L 51 73" stroke="#2f7343" stroke-width="2" stroke-linecap="round"/>
-          <rect x="43" y="86" width="14" height="10" rx="2.5" fill="#2f7343"/>
-          <!-- neck -->
-          <path d="M44 62 L 56 62 L 56 72 Q 50 76 44 72 Z" fill="#f0c098"/>
-          <!-- ears -->
-          <circle cx="29" cy="45" r="5" fill="#f6c79e"/>
-          <circle cx="71" cy="45" r="5" fill="#f6c79e"/>
-          <!-- face -->
-          <circle cx="50" cy="44" r="22" fill="#f9d0a7"/>
-          <!-- side hair -->
-          <path d="M28 46 Q 27 30 34 26 L 36 40 Q 31 40 28 46 Z" fill="#5b4329"/>
-          <path d="M72 46 Q 73 30 66 26 L 64 40 Q 69 40 72 46 Z" fill="#5b4329"/>
-          <!-- cap dome + brim -->
-          <path d="M29 33 Q 31 15 50 15 Q 69 15 71 33 Q 50 27 29 33 Z" fill="#3a8c50"/>
-          <path d="M27 33 Q 50 40 73 33 L 73 30 Q 50 36 27 30 Z" fill="#2f7343"/>
-          <circle cx="50" cy="16.5" r="2.3" fill="#2f7343"/>
-          <!-- eyes (with highlight) + smile + blush -->
-          <circle cx="42.5" cy="45" r="3.3" fill="#4a3526"/>
-          <circle cx="57.5" cy="45" r="3.3" fill="#4a3526"/>
-          <circle cx="43.7" cy="43.8" r="1.1" fill="#fff"/>
-          <circle cx="58.7" cy="43.8" r="1.1" fill="#fff"/>
-          <path d="M42 52 Q 50 59 58 52" stroke="#bd6e3e" stroke-width="2.6" fill="none" stroke-linecap="round"/>
-          <ellipse cx="36" cy="51" rx="3.6" ry="2.4" fill="#ff9e84" opacity="0.5"/>
-          <ellipse cx="64" cy="51" rx="3.6" ry="2.4" fill="#ff9e84" opacity="0.5"/>
-        </g>
-        <circle cx="50" cy="50" r="48.5" fill="none" stroke="#ffffff" stroke-width="3"/>
-      </svg>
+      <div class="farmer-look-face storekeeper-face" title="小东"></div>
     </div>
     <div class="storekeeper-bubble" id="storekeeperBubble">
       点击棕色的地块种下第一粒种子。

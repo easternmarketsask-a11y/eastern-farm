@@ -42,6 +42,16 @@
   function specOf(id) {
     return LOOKS[clampLook(id) - 1];
   }
+  // 设置九宫格 / 小东头像共用。表是 6 列 × 5 行；写成 400% 会从格子底下漏出下一行的头。
+  function previewStyle(look, anim) {
+    const id = clampLook(look);
+    const row = ANIMS[anim] || 0;
+    const yPct = SHEET_ROWS <= 1 ? 0 : (row / (SHEET_ROWS - 1)) * 100;
+    return 'background-image:url(' + DIR + 'p_farmer_' + id + '.webp);'
+      + 'background-size:' + (SHEET_COLS * 100) + '% ' + (SHEET_ROWS * 100) + '%;'
+      + 'background-position:0 ' + yPct + '%;'
+      + 'background-repeat:no-repeat;';
+  }
 
   const _img = {};
   function sheet(id) {
@@ -678,6 +688,9 @@
     onEnterVisit: onEnterVisit,
     onExitVisit: onExitVisit,
     sheet: sheet,
+    SHEET_COLS: SHEET_COLS,
+    SHEET_ROWS: SHEET_ROWS,
+    previewStyle: previewStyle,
     _actor: function () { return A; },
   };
 })();
