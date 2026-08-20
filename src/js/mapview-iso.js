@@ -10,7 +10,7 @@
  * upright sprites placed on cells, depth-sorted back-to-front (gx+gy).
  */
 (function () {
-  const COLS = 28, ROWS = 26;      // 东扩 8 格 + 往镜头前（马路对面）加 10 格。路心仍不能建。
+  const COLS = 28, ROWS = 26;      // 东扩 8 格 + 往镜头前加 10 格。
   // Start zone origin. (The 2026-06-18 "forward move" to (6,6) was cancelled — Chris
   // preferred adapting via the new full-scene background instead. _undoForwardOnce()
   // shifts any save that got forwarded back to here.)
@@ -64,6 +64,9 @@
     ['6,7', '5,8', '6,8', '7,8', '6,9'],             // v2(十字→四瓣, 不真实)
   ];
   const USE_PAINTED_BG = false;   // 2026-08-14 程序化世界上线; true = 回滚旧照片背景
+  // 2026-08-19 Chris:「土路看着奇怪，默认不要」。关掉后不画、不挡格、
+  // 也不再沿路走人。建造里玩家自己刷的「小路」不受影响。true = 恢复乡路。
+  const SHOW_COUNTRY_ROAD = false;
   // 2026-08-15 宣传图同款光色：左上侧光、金色黄昏、草地偏暖黄绿。
   // 只改程序化调色/影子方向，不引入位图背景（USE_PAINTED_BG 铁律照旧）。
   const GRASS_A = '#7eaa3d', GRASS_B = '#72963a', GRASS_EDGE = 'rgba(60,90,40,0.18)';
@@ -3283,7 +3286,7 @@
          ② 路口道具: 木指路牌 + 红邮箱(有地址 = 有人住)
          ③ 远处邻居: 两户带炊烟的小屋剪影(不是独居荒野)
          全部画进相机缓存, 30fps 帧零成本; 位置世界锚定, 跟地形采样联动。 */
-      this._drawCountryRoad(fit);
+      if (SHOW_COUNTRY_ROAD) this._drawCountryRoad(fit);
       this._drawFarNeighbors(fit);
     },
     /* 乡路锚点(格子坐标, 世界锚定) —— 2026-08-14 动态化:
@@ -3321,6 +3324,7 @@
       return this._cell(g.gx, g.gy);
     },
     _roadClearSet() {
+      if (!SHOW_COUNTRY_ROAD) return {};
       // 路两侧各约 1 格不种树，乡路从林子里穿出来
       const s = {};
       for (let i = 0; i <= 48; i++) {
@@ -3335,6 +3339,7 @@
       return s;
     },
     _roadCenterSet() {
+      if (!SHOW_COUNTRY_ROAD) return {};
       const s = {};
       for (let i = 0; i <= 48; i++) {
         const p = this._roadWorld(i / 48);
@@ -3344,6 +3349,7 @@
     },
     // 乡路路心：建筑/水塘/菜地/装饰都不能占。缓存跟摊位走。
     _roadSet() {
+      if (!SHOW_COUNTRY_ROAD) return {};
       const st = (Farm.state.data.map || []).find((m) => m && m.type === 'house');
       const key = st ? (st.gx + ',' + st.gy) : '-';
       if (this._roadSetKey === key && this._roadSetCache) return this._roadSetCache;
@@ -3353,6 +3359,7 @@
     },
     _onRoad(gx, gy) { return !!this._roadSet()[gx + ',' + gy]; },
     _drawRoadSurface(fit) {
+      if (!SHOW_COUNTRY_ROAD) return;
       const ctx = this._ctx, tw = this._tw();
       const N = 46;
       const passes = [
@@ -3380,6 +3387,7 @@
       ctx.globalAlpha = 1;
     },
     _drawCountryRoad(fit) {
+      if (!SHOW_COUNTRY_ROAD) return;
       const tw = this._tw(), th = this._th();
       this._drawRoadSurface(fit);
       // 路口道具: 指路牌立在路中段的路边(路尽头会被菜摊挡住——截图实证);
@@ -3432,7 +3440,7 @@
        不落存档、不进缓存 —— 活的帧才画, 一个 emoji 的成本。
        它回答的是「路人从哪来」: 你先看见有人沿路走, 之后摊前才有人买菜。 */
     _drawRoadWalker() {
-      if (this._build || this._visit) return;
+      if (!SHOW_COUNTRY_ROAD || this._build || this._visit) return;
       const now = Date.now();
       if (!this._walkerNextAt) this._walkerNextAt = now + 30e3;   // 进图 30 秒后来第一位
       if (!this._walker && now >= this._walkerNextAt) {
@@ -3863,7 +3871,7 @@
       // 有机水塘的波浪轮廓天然会溢出水格边界一点；先画水塘再画地块，溢出的
       // 水沿被土床盖住 = 岸线自然贴着田边，绝不会出现「水漫到菜地上」。
       this._drawPond(waterCells);
-      this._drawRoadSurface();   // 路面盖住水塘溢出，乡路永远在水上面
+      this._drawRoadSurface();   // 开着乡路时，路面盖住水塘溢出
       this._drawGardenPatch();
       this._drawUnifiedField();
       for (const tI of groundTiles) this._tileImg(tI.key, tI.c);

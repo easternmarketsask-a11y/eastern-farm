@@ -314,7 +314,8 @@ V2 (later): API connection to Clover POS for real-time validation.
   多座时每座自己的 `lv`，不要回落到「场上第一座」。
 - 🔒 **地界只许放大**（2026-08-18）：`LAND_LEVELS_*` 每一档必须是旧矩形的超集，
   老存档的 map / plots / clearedCells 坐标一律不改。世界往东加格（COLS），
-  也往镜头前加格（ROWS，马路对面那片草甸）。乡路路心仍不能建。
+  也往镜头前加格（ROWS，镜头前那片草甸）。默认不画程序化乡路（2026-08-19 Chris）；
+  玩家在建造里刷的小路仍在。`SHOW_COUNTRY_ROAD=true` 可恢复旧乡路。
   开垦菜地帽仍是 `EXTRA_PLOT_CAP=4`。
 - 🔒 **房子计价**（2026-08-18）：点现有房子=改建，只补与现款的差价（降档不退款）；
   调色盘再建=按图册全价（农户小宅另建至少 300）。全场最多 4 座。
@@ -328,11 +329,12 @@ See `docs/GAME-DESIGN.md` for full spec. TL;DR:
 
 - **Warm cozy color palette**: cream backgrounds, soft greens, earthy browns,
   warm accent reds (matching Eastern Market brand)
-- **程序化世界（2026-08-14 起）**：天空/远山/云杉林线/薄雾/草地/乡路全部
+- **程序化世界（2026-08-14 起）**：天空/远山/云杉林线/薄雾/草地全部
   canvas 程序化绘制，与农场物件同一套世界坐标（`_cell()`）——任何缩放都
   清晰、贴合是构造保证。旧照片背景 `hd_bg.webp` 已退役但资产保留，
   `mapview-iso.js` 里 `USE_PAINTED_BG=true` 可一键回滚。别再往世界里
-  引入「不懂格子」的整幅位图
+  引入「不懂格子」的整幅位图。默认不画乡路（`SHOW_COUNTRY_ROAD=false`，
+  2026-08-19）；不要把土路加回默认开局。
 - **金色黄昏光（2026-08-15）**：程序化天空/草地/林影对齐宣传插画
   （`promo/keyart-farm-*.jpg`）——左上侧光、暖黄绿草地、云杉往右下拉长影。
   只改调色和影子方向，不换位图。别把天空改回冷薄荷绿。
