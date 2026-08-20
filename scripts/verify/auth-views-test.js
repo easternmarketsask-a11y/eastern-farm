@@ -32,6 +32,12 @@
     ['forgot',    ['authForgotBtn', 'forgotIdent']],
     ['email',     ['authEmailStartBtn', 'addEmail']],
     ['emailcode', ['authEmailConfirmBtn', 'emailCode']],
+    // 非会员注册三屏（2026-08-20）。notmember 那屏没有主按钮 id，
+    // 它的两个按钮都是 data-auth-go 跳转（由下面的通用绑定接管），
+    // 所以只检查文案容器在不在。
+    ['notmember',  []],
+    ['regemail',   ['authRegStartBtn', 'regEmail', 'regName']],
+    ['regcode',    ['authRegConfirmBtn', 'regCode', 'regPw']],
   ];
 
   for (const [view, ids] of SCREENS) {

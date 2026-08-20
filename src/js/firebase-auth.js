@@ -353,7 +353,27 @@
         clearTimeout(timer);
         if (!r.ok) return null;
         const d = await r.json().catch(() => null);
-        if (!d || !d.linked) return null;
+        if (!d) return null;
+
+        /* 「邮箱注册、待到店激活」的玩家（2026-08-20）：还不是会员，但已经是
+           一个有名有姓、有云存档、在攒积分的账号 —— 不能当游客处理。
+           🔒 积分口径是「**待领取**」，不是「你的积分」。没兑现的不许说成已有的，
+              所以这里带上 `_pending`，显示层据它换措辞。 */
+        if (!d.linked && d.pending) {
+          return {
+            id: null,
+            name: d.name || '',
+            totalPoints: 0,                       // 会员积分是 0，他还不是会员
+            pendingPoints: Number(d.pendingPoints || 0),
+            pendingCap: Number(d.pendingCap || 0),
+            activationCode: d.activationCode || '',
+            hasEmail: true,                       // 注册这条路必然验过邮箱
+            _pending: true,
+            _fromWhoami: true,
+            _verified: false,
+          };
+        }
+        if (!d.linked) return null;
         // 拼成 memberDoc 的形状，后面的代码（memberDocId / _syncLocalBalance /
         // 「欢迎回来，XXX」）就都不用改
         /* ⚠️ hasEmail 必须带过来 —— whoami **不回邮箱地址**（隐私），所以
@@ -478,6 +498,13 @@
         forgot: [en ? 'Forgot password' : '忘记密码', ''],
         email:  [en ? 'Add your email' : '添加邮箱', ''],
         emailcode: [en ? 'Enter the code' : '输入验证码', ''],
+        /* 非会员注册（2026-08-20）。标题说的是「这一步在问什么」，
+           不写「第 2 步 / 共 3 步」—— 进度条会让人觉得还早着呢，
+           而这条路本来就短。 */
+        notmember: [en ? 'Not a member yet?' : '还不是会员？', ''],
+        regemail: [en ? 'Leave your email' : '留个邮箱',
+                   en ? "You'll use it to sign in" : '以后用它登录'],
+        regcode: [en ? 'Check your email' : '查收验证码', ''],
       }[view] || ['', ''];
 
       const body = {
@@ -490,6 +517,9 @@
         forgot: () => this._renderForgotView(lang, rememberedIdent),
         email:  () => this._renderEmailAddView(lang),
         emailcode: () => this._renderEmailCodeView(lang),
+        notmember: () => this._renderNotMemberView(lang),
+        regemail: () => this._renderRegEmailView(lang),
+        regcode: () => this._renderRegCodeView(lang),
       }[view]();
 
       const html = `
@@ -640,12 +670,12 @@
       if (!data) return 'fallthrough';
 
       if (!data.found) {
-        // ⚠️ 不说「号码不存在」—— 对真会员那是假话（可能只是号码换了）。
-        // 沿用既有那套「到店免费办理」的文案。
-        this._showError(en
-          ? 'This phone is not registered at our store.\nPlease visit 133-412 Willowgrove Square to sign up (free).\nMon–Sat 10am–6:30pm · (306) 244-5522'
-          : '此手机号未在店内登记。\n请光临本店免费办理：\n📍 133-412 Willowgrove Square\n🕐 周一至周六 10am–6:30pm\n☎️ (306) 244-5522');
+        /* 以前这里是个句号：「未在店内登记，请到店办理」，说完就没了。
+           现在给一条能走下去的路 —— 留个邮箱先玩，攒的积分记成「待领取」，
+           到店报手机号就到账（2026-08-20）。
+           ⚠️ 仍然不说「这个号不存在」：对真会员那是假话（可能只是换了号）。 */
         resetBtn();
+        this._go('notmember');
         return 'handled';
       }
 
@@ -653,6 +683,169 @@
       this._confirmDigits = digits;
       this._go('confirm');
       return 'handled';
+    },
+
+    /* ═══ 非会员注册（2026-08-20 Chris 定）═════════════════════════════
+       spec: stockwise_final/docs/superpowers/specs/
+             2026-08-20-guest-signup-activate-in-store-design.md
+
+       留个邮箱先玩 → 攒的积分记「待领取」→ 到店报手机号就到账、同时成为会员。
+
+       🔒 注册**不建会员档**（后端写 pending_members）。members 是收银台扫的
+          身份表，往里灌从没来过店的人 = 收银员查人时要从陌生名字里翻。 */
+    _renderNotMemberView(lang) {
+      const en = lang === 'en';
+      return `
+        <div class="auth-notmember">
+          <p class="auth-notmember-lead">${en
+            ? 'That number is not registered at our store yet. You can still play — leave an email and start now.'
+            : '这个号码还没在店里登记。不影响你现在就玩 —— 留个邮箱就能开始。'}</p>
+          <p class="auth-notmember-sub">${en
+            ? 'Points you earn are held for you. Give us your phone next time you shop and they land on your member card.'
+            : '你挣的超市积分会先替你存着。下次来店里报一下手机号，就到你的会员卡上。'}</p>
+        </div>
+        <button class="btn auth-primary" data-auth-go="regemail">${en ? 'Sign up with email' : '用邮箱注册'}</button>
+        <button class="auth-ghost" data-auth-go="phone">${en ? 'Re-enter my number' : '重新输手机号'}</button>
+        <p class="auth-notmember-store">${en
+          ? 'Prefer in person? Sign up free at 133-412 Willowgrove Square · Mon–Sat 10am–6:30pm'
+          : '也可以到店免费办理 · 133-412 Willowgrove Square · 周一至周六 10am–6:30pm'}</p>
+      `;
+    },
+
+    _renderRegEmailView(lang) {
+      const en = lang === 'en';
+      return `
+        <div class="auth-field">
+          <label class="auth-label" for="regEmail">${en ? 'Email' : '邮箱'}</label>
+          <input type="email" id="regEmail" class="auth-input" autocomplete="email"
+                 placeholder="you@example.com"/>
+        </div>
+        <div class="auth-field">
+          <label class="auth-label" for="regName">
+            ${en ? 'What should we call you?' : '怎么称呼你'}
+            ${this._info('regNameInfo', en
+              ? 'This is the name on your farmhouse that neighbours see. Not your legal name.'
+              : '这个名字挂在你的小屋上给邻居看，不是身份证上的名字。')}
+          </label>
+          <input type="text" id="regName" class="auth-input" maxlength="20"
+                 placeholder="${en ? 'e.g. Nicole' : '例如：小美'}"/>
+        </div>
+        <button class="btn auth-primary" id="authRegStartBtn">${en ? 'Send code' : '发送验证码'}</button>
+        <button class="auth-ghost" data-auth-go="notmember">${Farm.i18n.t('btn_back') || (en ? 'Back' : '返回')}</button>
+      `;
+    },
+
+    _renderRegCodeView(lang) {
+      const en = lang === 'en';
+      const to = this._regSentTo
+        ? `<p class="auth-sent-line">${en ? 'Sent to' : '已发送到'} <b>${this._regSentTo}</b></p>` : '';
+      return `
+        ${to}
+        <div class="auth-field">
+          <input type="tel" id="regCode" class="auth-code-input"
+                 inputmode="numeric" autocomplete="one-time-code" maxlength="6"
+                 placeholder="------" aria-label="${en ? 'Verification code' : '验证码'}"/>
+        </div>
+        <div class="auth-field">
+          <label class="auth-label" for="regPw">${en ? 'Set a password' : '设置密码'}</label>
+          <input type="password" id="regPw" class="auth-input" autocomplete="new-password"
+                 placeholder="${en ? 'At least 6 characters' : '至少 6 位'}"/>
+        </div>
+        <button class="btn auth-primary" id="authRegConfirmBtn">${en ? 'Start playing' : '开始玩'}</button>
+        <button class="auth-ghost" data-auth-go="regemail">${en ? 'Use a different email' : '换个邮箱'}</button>
+      `;
+    },
+
+    /** 注册第 1 步：查占用 → 发验证码。 */
+    async _registerStart() {
+      const lang = Farm.state.data.language;
+      const en = lang === 'en';
+      this._showError('');
+      const email = ((document.getElementById('regEmail') || {}).value || '').trim();
+      const name = ((document.getElementById('regName') || {}).value || '').trim();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        this._showError(en ? 'Please enter a valid email.' : '请输入正确的邮箱地址。');
+        return;
+      }
+      const btn = document.getElementById('authRegStartBtn');
+      const reset = () => { if (btn) { btn.disabled = false; btn.textContent = en ? 'Send code' : '发送验证码'; } };
+      if (btn) { btn.disabled = true; btn.textContent = en ? 'Sending…' : '发送中…'; }
+
+      // 需要一个身份才能调后端。没登录就匿名登录一个 —— 与「手机号直接进」同一套；
+      // 注册成功后同一个 uid 就带上邮箱+密码凭据（已实测 uid 不变，存档不分家）。
+      try {
+        if (!Farm.fb.auth.currentUser) await Farm.fb.auth.signInAnonymously();
+      } catch (e) {
+        this._showError(en ? 'Could not reach the server. Please try again.' : '连接不上服务器，请重试。');
+        reset();
+        return;
+      }
+      try {
+        const idToken = await Farm.fb.auth.currentUser.getIdToken();
+        const r = await fetch(STOCKWISE_BASE + '/api/public/member-auth/register/start', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + idToken },
+          body: JSON.stringify({ email, displayName: name }),
+        });
+        const d = await r.json().catch(() => null);
+        if (!r.ok) throw new Error((d && d.detail) || 'HTTP ' + r.status);
+        this._regSentTo = (d && d.sentTo) || email;
+        this._regName = name;
+        this._go('regcode');
+      } catch (e) {
+        // 后端把「这个邮箱已经是会员了」这类都写在 detail 里 —— 直接用它，
+        // 换成笼统的「失败」顾客就不知道该怎么办了。
+        this._showError(String((e && e.message) || '')
+          || (en ? 'Could not send. Please try again.' : '发送失败，请重试。'));
+        reset();
+      }
+    },
+
+    /** 注册第 2 步：验码 + 设密码 → 建待激活档 → 进游戏。 */
+    async _registerConfirm() {
+      const lang = Farm.state.data.language;
+      const en = lang === 'en';
+      this._showError('');
+      const code = ((document.getElementById('regCode') || {}).value || '').trim();
+      const pw = (document.getElementById('regPw') || {}).value || '';
+      if (code.length !== 6) {
+        this._showError(en ? 'Enter the 6-digit code.' : '请输入 6 位验证码。');
+        return;
+      }
+      if (pw.length < 6) {
+        this._showError(en ? 'Password must be at least 6 characters.' : '密码至少 6 位。');
+        return;
+      }
+      const btn = document.getElementById('authRegConfirmBtn');
+      const reset = () => { if (btn) { btn.disabled = false; btn.textContent = en ? 'Start playing' : '开始玩'; } };
+      if (btn) { btn.disabled = true; btn.textContent = en ? 'One moment…' : '请稍候…'; }
+
+      const user = Farm.fb.auth.currentUser;
+      if (!user) {
+        this._showError(en ? 'Session expired. Please start again.' : '会话已过期，请重新开始。');
+        this._go('regemail');
+        return;
+      }
+      try {
+        const idToken = await user.getIdToken();
+        const r = await fetch(STOCKWISE_BASE + '/api/public/member-auth/register/confirm', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + idToken },
+          body: JSON.stringify({ code, password: pw, displayName: this._regName || '' }),
+        });
+        const d = await r.json().catch(() => null);
+        if (!r.ok) throw new Error((d && d.detail) || 'HTTP ' + r.status);
+        // 密码是后端 admin SDK 写到这个 uid 上的，客户端的 user 对象还是旧的 ——
+        // reload 一次让 providerData 说实话（与 _setCredentials 同一个理由）。
+        try { await user.reload(); } catch (_) {}
+        try { localStorage.setItem(IDENT_KEY, (d && d.loginEmail) || ''); } catch (_) {}
+      } catch (e) {
+        this._showError(String((e && e.message) || '')
+          || (en ? 'Could not save. Please try again.' : '保存失败，请重试。'));
+        reset();
+        return;
+      }
+      this._onLoginSuccess(lang);
     },
 
     /* 「是你吗？」——这一屏的全部作用是接住**打错一位数**。
@@ -943,6 +1136,28 @@
           btn.setAttribute('aria-expanded', String(!open));
         };
       });
+
+      if (view === 'regemail') {
+        const b = document.getElementById('authRegStartBtn');
+        if (b) b.onclick = () => this._registerStart();
+        ['regEmail', 'regName'].forEach(id => {
+          const el = document.getElementById(id);
+          if (el) el.onkeydown = (e) => { if (e.key === 'Enter') this._registerStart(); };
+        });
+        const first = document.getElementById('regEmail');
+        if (first) setTimeout(() => first.focus(), 100);
+      }
+
+      if (view === 'regcode') {
+        const b = document.getElementById('authRegConfirmBtn');
+        if (b) b.onclick = () => this._registerConfirm();
+        ['regCode', 'regPw'].forEach(id => {
+          const el = document.getElementById(id);
+          if (el) el.onkeydown = (e) => { if (e.key === 'Enter') this._registerConfirm(); };
+        });
+        const first = document.getElementById('regCode');
+        if (first) setTimeout(() => first.focus(), 100);
+      }
 
       if (view === 'login') {
         const identEl = document.getElementById('authIdent');
@@ -1687,9 +1902,14 @@
           || (this.currentUser && this.currentUser.displayName)
           || (lang === 'en' ? 'Member' : '会员');
         const safeName = String(name).replace(/[<>"&]/g, '');
+        /* 刚注册的人说「欢迎回来」是假话 —— 他第一次来。
+           待激活账号（_pending）走另一句。 */
+        const fresh = !!(this.memberDoc && this.memberDoc._pending);
         const msg = lang === 'en'
-          ? `🌱 Welcome back, ${safeName} 🎉`
-          : `🌱 欢迎回来，${safeName} 🎉`;
+          ? (fresh ? `🌱 Welcome to Eastern Farm, ${safeName} 🎉`
+                   : `🌱 Welcome back, ${safeName} 🎉`)
+          : (fresh ? `🌱 欢迎来到东方农场，${safeName} 🎉`
+                   : `🌱 欢迎回来，${safeName} 🎉`);
         Farm.ui.toast(msg, 3000);
       }, 400);
     },
@@ -1699,6 +1919,7 @@
       const lang = Farm.state.data.language;
       const m = this.memberDoc || {};
       const name = m.name || this.currentUser.displayName || (lang === 'en' ? 'Member' : '会员');
+      const pending = !!m._pending;
       const totalPoints = m.totalPoints || 0;
       const lifetimePoints = m.lifetimePoints || 0;
       // Game-side level + title — replaces the fake store tier
@@ -1710,13 +1931,25 @@
         <h2 class="modal-title">${safeName}</h2>
         <div style="text-align:center;margin:12px 0;">
           <div style="font-size:14px;color:var(--leaf-dark);font-weight:600;">🌱 ${lang === 'en' ? 'Lv ' : 'Lv '}${gameLv}${titleStr ? ' · ' + titleStr : ''}</div>
+          ${pending ? `
+          <!-- 🔒 待激活账号：口径是「待领取」，不是「你的积分」。
+               他还不是会员，说「已与会员账户同步」就是假话。 -->
+          <div style="font-size:24px;font-weight:700;color:var(--purple-points);margin-top:6px;"><span class="points-icon"></span> ${(m.pendingPoints || 0).toLocaleString()}</div>
+          <div style="font-size:11px;color:var(--warm-text-soft);">
+            ${lang === 'en' ? 'Held for you' : '待领取'}
+          </div>
+          <div style="font-size:11px;color:var(--leaf-dark);margin-top:4px;font-weight:600;">
+            ${lang === 'en'
+              ? 'Give us your phone in store — these land on your member card'
+              : '到店报一下手机号，就到你的会员卡上'}
+          </div>` : `
           <div style="font-size:24px;font-weight:700;color:var(--purple-points);margin-top:6px;"><span class="points-icon"></span> ${totalPoints.toLocaleString()}</div>
           <div style="font-size:11px;color:var(--warm-text-soft);">
             ${lang === 'en' ? 'Lifetime: ' : '累积: '}${lifetimePoints.toLocaleString()}
           </div>
           <div style="font-size:11px;color:var(--warm-text-soft);margin-top:4px;">
             ${lang === 'en' ? 'Synced with Eastern Market account' : '已与东方超市会员账户同步'}
-          </div>
+          </div>`}
         </div>
         <button class="btn" id="memberShareBtn" style="width:100%;margin-bottom:8px;">📸 ${lang === 'en' ? 'Share my farm' : '晒我的农场'}</button>
         <button class="btn secondary" id="memberSettingsBtn" style="width:100%;margin-bottom:8px;">⚙️ ${Farm.i18n.t('settings_title')}</button>
