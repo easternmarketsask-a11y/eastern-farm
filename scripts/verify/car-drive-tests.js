@@ -35,5 +35,49 @@
   const p5 = Farm.pathfind.find(2, 2, 2, 2, open);
   T('P5 原地返回单点路径', !!p5 && p5.length === 1 && p5[0].gx === 2 && p5[0].gy === 2);
 
+  // ---- 第 2 组：点空地走过去 ----
+  // 走真实入口进农场：直接 remove 开屏会跳过 isoView.init()，_on 永远是 false，
+  // 那样测的就不是玩家看到的那个农场了。
+  for (let i = 0; i < 60; i++) { if (document.getElementById('splashStart')) break; await sleep(150); }
+  const startBtn = document.getElementById('splashStart');
+  if (startBtn) startBtn.click();
+  Farm.state.data.tutorialV1Done = true;
+  for (let i = 0; i < 80; i++) { if (Farm.isoView && Farm.isoView._on) break; await sleep(150); }
+  try { if (Farm.ui && Farm.ui.hideModal) Farm.ui.hideModal(); } catch (e) {}
+  const iso = Farm.isoView;
+  T('G-init 农场视图已就绪', iso._on === true);
+  T('G0 goTo 已导出', typeof Farm.farmer.goTo === 'function');
+
+  if (typeof Farm.farmer.goTo === 'function') {
+    const actor = Farm.farmer._actor();
+    for (let i = 0; i < 40 && actor.gx == null; i++) { Farm.farmer.tick(iso); await sleep(100); }
+    const ob = iso._ownedBounds();
+    const free = Farm.farmer.walkableFor(iso, 1, 1);
+    let dest = null;
+    for (let y = ob.y2; y >= ob.y1 && !dest; y--) {
+      for (let x = ob.x2; x >= ob.x1; x--) {
+        if (free(x, y) && (Math.abs(x - actor.gx) + Math.abs(y - actor.gy)) > 3) { dest = { gx: x, gy: y }; break; }
+      }
+    }
+    T('G1 找得到一个远处空地', !!dest);
+    if (dest) {
+      const from = { gx: actor.gx, gy: actor.gy };
+      T('G2 goTo 返回 true', Farm.farmer.goTo(dest.gx, dest.gy) === true);
+      T('G3 路径已算出且不穿障碍', !!actor.path && actor.path.length > 1
+        && actor.path.every((s) => free(s.gx, s.gy)));
+      await sleep(1200);
+      T('G4 人真的动了', Math.abs(actor.gx - from.gx) + Math.abs(actor.gy - from.gy) > 0.3);
+    }
+
+    // 建造模式下不许走
+    iso._build = true;
+    T('G5 建造模式点空地无效', Farm.farmer.goTo(ob.x1, ob.y1) === false);
+    iso._build = false;
+    // 拜访模式下不许走
+    Farm.state._visitLock = true;
+    T('G6 拜访模式点空地无效', Farm.farmer.goTo(ob.x1, ob.y1) === false);
+    Farm.state._visitLock = false;
+  }
+
   return { failures };
 })()

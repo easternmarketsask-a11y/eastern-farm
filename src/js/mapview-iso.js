@@ -979,7 +979,14 @@
     // 粘性连续种植的退出点（UX 第 2 批 #2）：tap 到任何「非空地」目标都静默退出
     _stickyEnd() { if (Farm.shop && Farm.shop.stickyEnd) Farm.shop.stickyEnd(); },
     _tapCell(gx, gy) {
-      const idx = this._cellToPlot[gx + ',' + gy]; if (idx == null) { this._stickyEnd(); return; }
+      // 空地（不是菜地）→ 派人走过去 / 开过去。2026-08-20 之前这里是直接 return，
+      // 点空地毫无反应，所以「点哪儿去哪儿」不跟任何现有操作抢点击。
+      const idx = this._cellToPlot[gx + ',' + gy];
+      if (idx == null) {
+        this._stickyEnd();
+        if (Farm.farmer && Farm.farmer.goTo) Farm.farmer.goTo(gx, gy);
+        return;
+      }
       const plot = Farm.state.data.plots[idx];
       if (!plot || !plot.unlocked) {
         this._stickyEnd();

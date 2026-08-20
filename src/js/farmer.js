@@ -62,6 +62,7 @@
       look: clampLook(look), gx: null, gy: null, face: 'r',
       anim: 'idle', frameT: 0, pause: 0,
       queue: [], job: null, visitHold: null,
+      path: null, pathI: 0, driving: null,
     };
   }
 
@@ -151,6 +152,49 @@
     if (iso._buildingAt(x, y) >= 0) return false;
     const t = iso._terrain()[x + ',' + y];
     if (t === 'water') return false;
+    return true;
+  }
+
+  /* 可走判据工厂。人是 1x1；车占 w×h，必须整个车身都放得下 —— 只查锚点那一格
+     的话，3×2 的豪华 SUV 会从两格宽的缝里挤过去。 */
+  function walkableFor(iso, w, h) {
+    const cw = Math.max(1, w | 0), ch = Math.max(1, h | 0);
+    if (cw === 1 && ch === 1) return (x, y) => cellWalkable(iso, x, y);
+    return (x, y) => {
+      for (let dy = 0; dy < ch; dy++) {
+        for (let dx = 0; dx < cw; dx++) if (!cellWalkable(iso, x + dx, y + dy)) return false;
+      }
+      return true;
+    };
+  }
+
+  // 驾驶中车占几格；没在开车时按 1x1（就是人自己）。
+  function carSize() {
+    if (A.driving == null) return { w: 1, h: 1 };
+    const iso = Farm.isoView;
+    const o = (Farm.state.data.map || [])[A.driving];
+    if (!iso || !o || !iso._carWh) return { w: 1, h: 1 };
+    return iso._carWh(o);
+  }
+  // 驾驶中的速度；没在开车就是走路速度。
+  function moveSpeed() { return WALK_SPEED; }
+
+  function goTo(gx, gy) {
+    const iso = Farm.isoView;
+    if (!iso || !iso._on) return false;
+    if (iso._build) return false;                           // 建造模式不抢点击
+    if (Farm.state && Farm.state._visitLock) return false;  // 别人的农场不是你的地
+    if (A.gx == null) spawnAt(iso);
+    const size = carSize();
+    const free = walkableFor(iso, size.w, size.h);
+    const path = Farm.pathfind.find(A.gx, A.gy, gx, gy, free);
+    if (!path || path.length < 1) return false;
+    A.queue = [];
+    A.job = { kind: 'goto', gx: gx, gy: gy };
+    A.path = path;
+    A.pathI = 1;                                            // path[0] 是起点，从下一格开始走
+    A.anim = 'walk';
+    A.pause = 0;
     return true;
   }
 
@@ -326,11 +370,11 @@
     return true;
   }
 
-  function moveToward(dt, tx, ty) {
+  function moveToward(dt, tx, ty, speed) {
     const dx = tx - A.gx, dy = ty - A.gy;
     const dist = Math.hypot(dx, dy);
     if (dist < 0.08) { A.gx = tx; A.gy = ty; return true; }
-    const step = WALK_SPEED * dt;
+    const step = (speed || WALK_SPEED) * dt;
     if (step >= dist) { A.gx = tx; A.gy = ty; return true; }
     A.gx += dx / dist * step;
     A.gy += dy / dist * step;
@@ -372,6 +416,20 @@
 
     if (!A.job && A.queue.length) {
       while (A.queue.length && !startJob(iso, A.queue.shift())) { /* skip stale */ }
+    }
+
+    if (A.job && A.job.kind === 'goto') {
+      A.anim = 'walk';
+      const path = A.path;
+      if (!path || A.pathI >= path.length) {
+        A.job = null; A.path = null; A.anim = 'idle';
+        A.pause = IDLE_PAUSE[0] + Math.random() * (IDLE_PAUSE[1] - IDLE_PAUSE[0]);
+        if (Farm.farmer._onArrive) Farm.farmer._onArrive();
+        return;
+      }
+      const step = path[A.pathI];
+      if (moveToward(dt, step.gx, step.gy, moveSpeed())) A.pathI++;
+      return;
     }
 
     if (A.job && (A.job.kind === 'harvest' || A.job.kind === 'water' || A.job.kind === 'plant')) {
@@ -511,6 +569,9 @@
     specOf: specOf,
     applyLook: applyLook,
     enqueue: enqueue,
+    goTo: goTo,
+    walkableFor: walkableFor,
+    _onArrive: null,
     enqueueHarvestAll: enqueueHarvestAll,
     enqueueWaterAll: enqueueWaterAll,
     enqueuePlantAll: enqueuePlantAll,
