@@ -278,6 +278,35 @@ else
     echo "—— 部署中止：顾客登录会踩到问题。这类 bug 不报错，客人只会默默走掉。"
     exit 1
   fi
+
+  # 闸门 I: 开车去任意地方(约 35 秒)
+  # 2026-08-20 加：寻路一坏，人就从水塘和房子里穿过去；停车落盘一坏，
+  # 开完车刷新就弹回原位。两者都不抛异常 —— 闸门 B 的冒烟看不见。
+  # 这一关还钉住两个「只有真开起来才暴露」的坑：车自己是 building
+  # (不排除就寻路起点失败)、闲逛逻辑会把整辆车挪走。
+  echo "▶ 闸门 I: 开车/寻路回归测试(约 35 秒)…"
+  $PYCMD -m http.server 8155 --bind 127.0.0.1 >/dev/null 2>&1 &
+  CAR_PID=$!
+  trap 'kill $CAR_PID 2>/dev/null || true' EXIT
+  sleep 1
+  CAR_OUT="$(mktemp)"
+  EF_MOBILE=1 EF_CDP_TIMEOUT=120000 node scripts/verify/cdp.mjs "http://127.0.0.1:8155/src/" "scripts/verify/car-drive-tests.js" 45000 >"$CAR_OUT" 2>/dev/null || true
+  kill $CAR_PID 2>/dev/null || true
+  trap - EXIT
+  if ! node -e '
+    const o = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
+    const r = o.evalResult;
+    if (!r || !r.failures) { console.error("✗ 开车测试没跑出结果(evalResult=" + JSON.stringify(r) + ")"); process.exit(1); }
+    if (r.failures.length) {
+      console.error("✗ 开车/寻路是坏的:");
+      r.failures.forEach(f => console.error("  - " + f));
+      process.exit(1);
+    }
+    console.log("  ✓ 寻路 + 上下车 + 停车落盘全过");
+  ' "$CAR_OUT"; then
+    echo "—— 部署中止：人会穿墙，或者车停的位置存不进档。"
+    exit 1
+  fi
 fi
 
 # 3. 提交未保存的改动(如果有;SW 版本注入保证至少有它)
