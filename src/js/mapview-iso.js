@@ -1391,11 +1391,22 @@
       const curId = Math.min(Math.max(o.lv || 1, 1), CAR_LEVELS.length);
       const cur = CAR_LEVELS[curId - 1];
       const catDef = cat && CAR_CATS.find((c) => c.id === cat);
+      const driving = !!(Farm.farmer && Farm.farmer.drivingIdx && Farm.farmer.drivingIdx() === idx);
+      const canRide = !this._build && !(Farm.state && Farm.state._visitLock);
+      const rideBtn = canRide
+        ? '<button class="btn" id="carRideBtn" style="width:100%;margin:10px 0 0;">'
+          + (driving ? (en ? '🚶 Get out' : '🚶 下车') : (en ? '🚗 Get in' : '🚗 上车')) + '</button>'
+          + '<div style="text-align:center;font-size:12px;color:var(--warm-text-soft);margin-top:6px;">'
+          + (driving ? (en ? 'Tap anywhere on the farm to drive there.' : '点农场上任意一处，车就开过去。')
+                     : (en ? 'Get in, then tap anywhere on the farm to drive there.' : '上车后点农场上任意一处，车就开过去。'))
+          + '</div>'
+        : '';
       let body = '<div style="text-align:center;line-height:1;">' + this._homeFace(cur.stem, this._carFacePx(cur.cat, 'panel')) + '</div>'
         + '<div style="text-align:center;font-family:var(--font-display);font-size:20px;margin-top:6px;">'
         + (en ? cur.en : cur.zh) + '</div>'
         + '<div style="text-align:center;font-size:12.5px;color:var(--warm-text-soft);margin-top:4px;">'
-        + (en ? 'Charm' : '魅力') + ' +' + cur.charm + ' · ' + cur.w + '×' + cur.h + '</div>';
+        + (en ? 'Charm' : '魅力') + ' +' + cur.charm + ' · ' + cur.w + '×' + cur.h + '</div>'
+        + rideBtn;
       if (!catDef) {
         body += '<div style="margin:12px 0 8px;font-size:13px;font-weight:600;">'
           + (en ? 'Choose a type' : '选一类车') + '</div>'
@@ -1420,6 +1431,12 @@
       });
       const back = document.getElementById('carCatBack');
       if (back) back.onclick = () => self._openCarPanel(idx);
+      const rb = document.getElementById('carRideBtn');
+      if (rb) rb.onclick = () => {
+        if (Farm.audio) Farm.audio.play('tap');
+        if (driving) Farm.farmer.unboard(); else Farm.farmer.board(idx);
+        Farm.ui.hideModal();
+      };
     },
     _openNewCarPanel(cat) {
       if (!(Farm.ui && Farm.ui.showModal)) return;
@@ -3939,7 +3956,10 @@
       for (let i = 0; i < map.length; i++) {
         const o = map[i], b = this._bldgOf(o); if (!b) continue;
         const mv = this._moving && this._moving.kind === 'building' && this._moving.idx === i;
-        const gx = mv ? this._moving.gx : o.gx, gy = mv ? this._moving.gy : o.gy;
+        // 正在被开的那辆车按 actor 的实时位置画（跟 _moving 同一个套路）
+        const dv = (Farm.farmer && Farm.farmer.carPos) ? Farm.farmer.carPos(i) : null;
+        const gx = mv ? this._moving.gx : (dv ? dv.gx : o.gx);
+        const gy = mv ? this._moving.gy : (dv ? dv.gy : o.gy);
         // 必须带 lv：_homeSprite / _homeDrawMul / _bldgOf 靠它换图换尺寸。只传 type+坐标会永远画 1 级。
         draws.push({ d: (gx + gy) + (b.w - 1) + (b.h - 1) + 0.5, fn: () => this._drawBuilding({ type: o.type, gx, gy, lv: o.lv }, b, mv, i) });
       }

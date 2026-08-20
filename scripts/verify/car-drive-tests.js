@@ -79,5 +79,39 @@
     Farm.state._visitLock = false;
   }
 
+  // ---- 第 3 组：上车 / 开车 / 车速 ----
+  T('C0 board/unboard 已导出',
+    typeof Farm.farmer.board === 'function' && typeof Farm.farmer.unboard === 'function');
+
+  // 造一辆车：直接塞进 map（走 _placeNewCar 要花钱，测试不该依赖余额）
+  const spot = iso._findHomeSpot(iso._carWh(1), -1, null, 'car');
+  T('C1 有地方停车', !!spot);
+  if (spot && typeof Farm.farmer.board === 'function') {
+    Farm.state.data.map.push({ type: 'car', gx: spot.gx, gy: spot.gy, lv: 1 });
+    const carIdx = Farm.state.data.map.length - 1;
+
+    T('C2 上车成功', Farm.farmer.board(carIdx) === true);
+    T('C3 驾驶态记住了这辆车', Farm.farmer.drivingIdx() === carIdx);
+    await sleep(300);
+
+    T('C4 驾驶中车位跟着人走', !!Farm.farmer.carPos(carIdx));
+    T('C5 没在开的车不给实时位置', Farm.farmer.carPos(carIdx + 999) === null);
+
+    const drivingSpeed = Farm.farmer._speedNow();
+    T('C6 开车比走路快', drivingSpeed > 2.2);
+    T('C7 农用车是 4.4', Math.abs(drivingSpeed - 4.4) < 0.001);
+
+    Farm.state.data.map[carIdx].lv = 16;
+    T('C8 豪华车是 9.0', Math.abs(Farm.farmer._speedNow() - 9.0) < 0.001);
+    Farm.state.data.map[carIdx].lv = 1;
+
+    T('C9 下车成功', Farm.farmer.unboard() === true);
+    T('C10 下车后不再是驾驶态', Farm.farmer.drivingIdx() === null);
+    const a2 = Farm.farmer._actor();
+    T('C11 下车后人站在能走的格子上', Farm.farmer.walkableFor(iso, 1, 1)(Math.round(a2.gx), Math.round(a2.gy)));
+
+    Farm.state.data.map.splice(carIdx, 1);
+  }
+
   return { failures };
 })()

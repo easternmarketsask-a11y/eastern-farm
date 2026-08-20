@@ -88,6 +88,7 @@
   function enqueue(plotIdx, kind, cropId) {
     if (!kind || (kind !== 'harvest' && kind !== 'water' && kind !== 'plant')) return false;
     if (Farm.state && Farm.state._visitLock) return false;
+    if (A.driving != null) unboard();   // 派农活就自动下车，不把人困在车上
     const iso = Farm.isoView;
     if (!iso || plotIdx == null) return false;
     const plots = (Farm.state.data && Farm.state.data.plots) || [];
@@ -168,16 +169,70 @@
     };
   }
 
+  /* 🔒 车款价差 = 速度差（Chris 2026-08-20 定）。除此之外车没有别的属性。
+     四档写死一张表：调数值不用动逻辑。 */
+  const CAR_SPEED = { utility: 4.4, family: 6.0, offroad: 7.5, luxury: 9.0 };
+
+  function drivingCar() {
+    if (A.driving == null) return null;
+    const o = ((Farm.state.data && Farm.state.data.map) || [])[A.driving];
+    return (o && o.type === 'car') ? o : null;
+  }
   // 驾驶中车占几格；没在开车时按 1x1（就是人自己）。
   function carSize() {
-    if (A.driving == null) return { w: 1, h: 1 };
-    const iso = Farm.isoView;
-    const o = (Farm.state.data.map || [])[A.driving];
-    if (!iso || !o || !iso._carWh) return { w: 1, h: 1 };
+    const o = drivingCar(), iso = Farm.isoView;
+    if (!o || !iso || !iso._carWh) return { w: 1, h: 1 };
     return iso._carWh(o);
   }
   // 驾驶中的速度；没在开车就是走路速度。
-  function moveSpeed() { return WALK_SPEED; }
+  function moveSpeed() {
+    const o = drivingCar(), iso = Farm.isoView;
+    if (!o || !iso || !iso._carSpec) return WALK_SPEED;
+    return CAR_SPEED[iso._carSpec(o).cat] || WALK_SPEED;
+  }
+
+  function board(mapIdx) {
+    const iso = Farm.isoView;
+    if (!iso || !iso._on || iso._build) return false;
+    if (Farm.state && Farm.state._visitLock) return false;
+    const o = (Farm.state.data.map || [])[mapIdx];
+    if (!o || o.type !== 'car') return false;
+    if (A.gx == null) spawnAt(iso);
+    A.queue = [];                     // 点了上车就立刻去；手上的农活不留半截
+    A.job = null; A.path = null;
+    A.driving = mapIdx;
+    // 人此刻站在车外：把 actor 挪到车的锚点，视觉上就是坐进去（≤1 格的位移）
+    A.gx = o.gx; A.gy = o.gy;
+    A.anim = 'idle';
+    if (iso.render) iso.render();
+    return true;
+  }
+
+  function unboard() {
+    const iso = Farm.isoView;
+    const o = drivingCar();
+    A.driving = null;
+    A.job = null; A.path = null; A.anim = 'idle';
+    if (!iso || !o) return true;
+    // 人落在车旁第一个能站的格子；四周都站不了就退回车的锚点（不至于卡死）
+    const free = walkableFor(iso, 1, 1);
+    const wh = iso._carWh(o);
+    const ring = [];
+    for (let x = o.gx - 1; x <= o.gx + wh.w; x++) { ring.push([x, o.gy - 1]); ring.push([x, o.gy + wh.h]); }
+    for (let y = o.gy; y < o.gy + wh.h; y++) { ring.push([o.gx - 1, y]); ring.push([o.gx + wh.w, y]); }
+    A.gx = o.gx; A.gy = o.gy;
+    for (let i = 0; i < ring.length; i++) {
+      if (free(ring[i][0], ring[i][1])) { A.gx = ring[i][0]; A.gy = ring[i][1]; break; }
+    }
+    if (iso.render) iso.render();
+    return true;
+  }
+
+  function drivingIdx() { return A.driving; }
+  function carPos(mapIdx) {
+    if (A.driving == null || A.driving !== mapIdx) return null;
+    return { gx: A.gx, gy: A.gy };
+  }
 
   function goTo(gx, gy) {
     const iso = Farm.isoView;
@@ -513,6 +568,7 @@
 
   function depthDraw(iso) {
     if (A.gx == null) return null;
+    if (A.driving != null) return null;   // 人在车里，车自己会被画出来
     const fi = frameIndex();
     const gx = A.gx, gy = A.gy, look = A.look, anim = A.anim, face = A.face;
     return {
@@ -571,6 +627,11 @@
     enqueue: enqueue,
     goTo: goTo,
     walkableFor: walkableFor,
+    board: board,
+    unboard: unboard,
+    drivingIdx: drivingIdx,
+    carPos: carPos,
+    _speedNow: moveSpeed,
     _onArrive: null,
     enqueueHarvestAll: enqueueHarvestAll,
     enqueueWaterAll: enqueueWaterAll,
