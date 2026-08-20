@@ -356,7 +356,11 @@
         if (!d || !d.linked) return null;
         // 拼成 memberDoc 的形状，后面的代码（memberDocId / _syncLocalBalance /
         // 「欢迎回来，XXX」）就都不用改
+        /* ⚠️ hasEmail 必须带过来 —— whoami **不回邮箱地址**（隐私），所以
+           `hasRealEmail()` 只能靠这个布尔判断。漏了它，走这条路进来的人
+           每次都会被再问一遍「留个邮箱」，哪怕他上周刚留过。 */
         return { id: d.memberId, name: d.name || '', totalPoints: d.points || 0,
+                 hasEmail: typeof d.hasEmail === 'boolean' ? d.hasEmail : undefined,
                  _fromWhoami: true, _verified: !!d.verified };
       } catch (e) {
         // 🔒 读不到 ≠ 不是会员。返回 null 只是这次没拿到，下次启动会再试；
@@ -1271,8 +1275,13 @@
       // 提醒条慢慢补 —— 补没补上只有这个数看得见（login 与它的差就是登录了却仍
       // 拿不到礼包的人）。
       if (Farm.track) Farm.track('email_set');
-      // 本地会员档里的邮箱也跟上，提醒条才会立刻消失（不用等下次拉取）
-      if (this.memberDoc) this.memberDoc.email = this._pendingEmail || this.memberDoc.email;
+      // 本地会员档里的邮箱也跟上，提醒条才会立刻消失（不用等下次拉取）。
+      // ⚠️ hasEmail 也要一起翻 —— hasRealEmail() 现在优先看它（whoami 只回布尔），
+      //    只改 email 的话提醒条会赖着不走。
+      if (this.memberDoc) {
+        this.memberDoc.email = this._pendingEmail || this.memberDoc.email;
+        this.memberDoc.hasEmail = true;
+      }
       this.refreshEmailNudge();
       // 邮箱是发 3000 农场币的条件，补上后立刻再试一次（事务幂等，重复调安全）
       try {
@@ -1615,6 +1624,14 @@
        能收信的地址，算成有邮箱就等于永远不提醒、订单通知也永远发不出去。 */
     hasRealEmail() {
       const m = this.memberDoc || {};
+      /* 🔒 先看 hasEmail（2026-08-20 线上实测抓到）。
+         走「手机号直接进」的人，memberDoc 来自 `/whoami` —— 而 whoami 出于
+         隐私**只回 hasEmail 布尔，不回邮箱地址**。只看 m.email 的话，这批人
+         全被判成「没留过邮箱」，于是每次进来都被再问一遍「留个邮箱」，
+         哪怕他上周刚留过。实测就是这样：测试会员明明有邮箱，还是被送进补邮箱屏。
+         后端 `_has_real_email()` 与下面这行是同一口径（都排除假邮箱域），
+         改一边要一起改。 */
+      if (typeof m.hasEmail === 'boolean') return m.hasEmail;
       const mail = String(m.email || '').trim().toLowerCase();
       return !!mail && !mail.endsWith('@phone.easternmarket.ca');
     },
