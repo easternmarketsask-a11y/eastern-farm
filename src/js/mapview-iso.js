@@ -659,8 +659,8 @@
         const fitWMax = (W * 1.05) / screenW;
         this._zoom = Math.max(ZMIN, Math.min(ZMAX, fitH, Math.max(minTap, Math.min(zComp, fitWMax))));
       } else {
-        // 横屏 / 桌面：维持原「包围盒宽约占视口宽 65%」构图，不动。
-        const fitW = (W * 0.65) / screenW;
+        // 横屏 / 桌面：包围盒约占视口宽。宽屏电脑吃满一点，别让农场缩在中间一小块。
+        const fitW = (W * (W >= 900 ? 0.78 : 0.65)) / screenW;
         this._zoom = Math.max(ZMIN, Math.min(ZMAX, Math.min(Math.max(fitW, minTap), fitH)));
       }
       const u = (minU + maxU) / 2, v = (minV + maxV) / 2;

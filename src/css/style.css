@@ -121,6 +121,14 @@ body {
   box-shadow: 0 0 40px rgba(139, 90, 60, 0.1);
   overflow: hidden;           /* prevent whole-page scroll; only #farm scrolls */
 }
+/* 电脑/宽屏：铺满窗口，不再缩成居中的 480px 手机栏（2026-08-20 Chris）。
+   手机竖屏宽度本身 <480，这条不影响。 */
+@media (min-width: 700px) {
+  #app {
+    max-width: none;
+    box-shadow: none;
+  }
+}
 /* Layout invariant: fixed top + bottom chrome, scrollable middle.
  * Every direct child of #app is `flex-shrink: 0` by default; only the
  * farm grid region gets flex: 1 + overflow-y: auto. */
@@ -2343,6 +2351,16 @@ body.mapmode #warehouseBtn { display: none !important; }
 body.modal-open #bottombar { display: none; }
 
 /* 极窄屏兜底：dock 内边距与字号再收一点（触控 min-height 不缩） */
+@media (min-width: 700px) {
+  #bottombar {
+    left: 80px;
+    right: 120px;
+    max-width: 340px;
+    padding: 6px 10px;
+  }
+  .action-btn { min-height: 56px; }
+  .action-label { font-size: 12px; }
+}
 @media (max-width: 375px) {
   #bottombar { padding: 4px 4px; gap: 0; }
   .action-label { font-size: 9.5px; letter-spacing: 0; }
@@ -4727,9 +4745,11 @@ body.modal-open .pwa-install-banner { display: none; }
   z-index: 9; background: none; padding: 0; width: 52px; height: 52px;
   border-radius: 50%; box-shadow: 0 3px 10px rgba(0,0,0,0.22);
 }
-/* 桌面/平板：#app 是居中的 480px 一栏，小东头像要贴这一栏的左下角，不是整个
-   浏览器窗口的左下角（2026-08-15 1280px 实测它孤零零挂在屏幕最左边） */
-@media (min-width: 481px) { .storekeeper { left: calc(50% - 240px + 10px); } }
+/* 480–699px：#app 仍是居中 480 栏，小东贴这一栏左下，不是窗口最左边。
+   ≥700px 铺满窗口后回到 left:10px（与手机一致）。 */
+@media (min-width: 481px) and (max-width: 699px) {
+  .storekeeper { left: calc(50% - 240px + 10px); }
+}
 .storekeeper .storekeeper-avatar { width: 52px; height: 52px; }
 .storekeeper .storekeeper-bubble, .storekeeper .storekeeper-bubble::before { display: none !important; }
 .storekeeper .storekeeper-badge { left: auto; right: -2px; top: -2px; }
