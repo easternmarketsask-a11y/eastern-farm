@@ -113,5 +113,55 @@
     Farm.state.data.map.splice(carIdx, 1);
   }
 
-  return { failures };
+  // ---- 第 4 组：停车落盘 ----
+  const dbg = {};
+  const spot2 = iso._findHomeSpot(iso._carWh(1), -1, null, 'car');
+  if (spot2) {
+    Farm.state.data.map.push({ type: 'car', gx: spot2.gx, gy: spot2.gy, lv: 1 });
+    const ci = Farm.state.data.map.length - 1;
+    const before = { gx: spot2.gx, gy: spot2.gy };
+    Farm.farmer.board(ci);
+    await sleep(300);
+
+    const wh1 = iso._carWh(1);
+    const carFree = Farm.farmer.walkableFor(iso, wh1.w, wh1.h);
+    const ob2 = iso._ownedBounds();
+    // 取「够远但最近」的合法车位：无头 Chrome 的 rAF 被节流得厉害，横穿整个农场
+    // 要跑一分钟，闸门等不起。验证「车会移动并落盘」不需要长途。
+    let far = null, farD = Infinity;
+    for (let y = ob2.y1; y <= ob2.y2; y++) {
+      for (let x = ob2.x1; x <= ob2.x2; x++) {
+        const d = Math.abs(x - before.gx) + Math.abs(y - before.gy);
+        if (d > 4 && d < farD && carFree(x, y)) { farD = d; far = { gx: x, gy: y }; }
+      }
+    }
+    T('D1 找得到一个够远的停车点', !!far);
+    if (far) {
+      const A0 = Farm.farmer._actor();
+      dbg.before = before; dbg.far = far; dbg.carIdx = ci;
+      dbg.actorBeforeGoto = { gx: A0.gx, gy: A0.gy, driving: Farm.farmer.drivingIdx() };
+      dbg.gotoRet = Farm.farmer.goTo(far.gx, far.gy);
+      dbg.pathLen = A0.path ? A0.path.length : null;
+      // rAF 在无头/后台标签里会被节流到几乎不跑，主动驱动 tick 才测得到移动。
+      for (let i = 0; i < 120 && Farm.farmer.drivingIdx() !== null; i++) {
+        Farm.farmer.tick(iso);
+        await sleep(130);
+      }
+      dbg.actorAfter = { gx: A0.gx, gy: A0.gy, pathI: A0.pathI, job: A0.job ? A0.job.kind : null,
+                         driving: Farm.farmer.drivingIdx() };
+      const rec = Farm.state.data.map[ci];
+      dbg.carRec = { gx: rec.gx, gy: rec.gy };
+      T('D2 车真的换了停车位', rec.gx !== before.gx || rec.gy !== before.gy);
+      T('D3 停的位置是合法车位', iso._footprintFree(rec.gx, rec.gy, 'car', ci, iso._carWh(rec)));
+      T('D4 到了自动下车', Farm.farmer.drivingIdx() === null);
+      const saved = JSON.parse(localStorage.getItem('eastern_farm_save_v1') || '{}');
+      const savedCar = (saved.map || []).filter((m) => m && m.type === 'car').pop();
+      T('D5 新车位进了存档', !!savedCar && savedCar.gx === rec.gx && savedCar.gy === rec.gy);
+      T('D6 存档里没有驾驶态', JSON.stringify(saved).indexOf('"driving"') === -1);
+    }
+    Farm.state.data.map.splice(ci, 1);
+    Farm.state.save();
+  }
+
+  return { failures, dbg };
 })()

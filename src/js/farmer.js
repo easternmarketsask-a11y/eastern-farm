@@ -146,11 +146,14 @@
     return n > 0;
   }
 
-  function cellWalkable(iso, gx, gy) {
+  /* exceptIdx：把 map 里的某一条当作「不存在」。开车时必须排除车自己 ——
+     车本身就是一个 building，不排除的话它脚下那格永远不可走，寻路起点直接失败。 */
+  function cellWalkable(iso, gx, gy, exceptIdx) {
     const x = Math.round(gx), y = Math.round(gy);
     if (!iso._inBounds(x, y) || !iso._ownedCell(x, y)) return false;
     if (iso._plotCellSet()[x + ',' + y]) return false;
-    if (iso._buildingAt(x, y) >= 0) return false;
+    const b = iso._buildingAt(x, y);
+    if (b >= 0 && !(exceptIdx != null && b === exceptIdx)) return false;
     const t = iso._terrain()[x + ',' + y];
     if (t === 'water') return false;
     return true;
@@ -158,12 +161,12 @@
 
   /* 可走判据工厂。人是 1x1；车占 w×h，必须整个车身都放得下 —— 只查锚点那一格
      的话，3×2 的豪华 SUV 会从两格宽的缝里挤过去。 */
-  function walkableFor(iso, w, h) {
+  function walkableFor(iso, w, h, exceptIdx) {
     const cw = Math.max(1, w | 0), ch = Math.max(1, h | 0);
-    if (cw === 1 && ch === 1) return (x, y) => cellWalkable(iso, x, y);
+    if (cw === 1 && ch === 1) return (x, y) => cellWalkable(iso, x, y, exceptIdx);
     return (x, y) => {
       for (let dy = 0; dy < ch; dy++) {
-        for (let dx = 0; dx < cw; dx++) if (!cellWalkable(iso, x + dx, y + dy)) return false;
+        for (let dx = 0; dx < cw; dx++) if (!cellWalkable(iso, x + dx, y + dy, exceptIdx)) return false;
       }
       return true;
     };
@@ -228,6 +231,37 @@
     return true;
   }
 
+  /* 到站：车停在合法车位并写进存档，然后人下车。
+     🔒 停车点必须过 _footprintFree —— 走的判据只保证「车身格子能通行」，
+     而停车还不能压路面/装饰，也不能和别的建筑重叠。开到的那格停不下时，
+     从近到远找最近的合法车位，人再走完最后几步。 */
+  function arriveGoto() {
+    const iso = Farm.isoView;
+    if (A.driving == null || !iso) return;
+    const idx = A.driving;
+    const o = ((Farm.state.data && Farm.state.data.map) || [])[idx];
+    if (!o || o.type !== 'car') { A.driving = null; return; }
+    const wh = iso._carWh(o);
+    const ax = Math.round(A.gx), ay = Math.round(A.gy);
+    let px = null, py = null;
+    if (iso._footprintFree(ax, ay, 'car', idx, wh)) { px = ax; py = ay; }
+    else {
+      for (let r = 1; r <= 6 && px == null; r++) {
+        for (let dy = -r; dy <= r && px == null; dy++) {
+          for (let dx = -r; dx <= r; dx++) {
+            if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+            if (iso._footprintFree(ax + dx, ay + dy, 'car', idx, wh)) { px = ax + dx; py = ay + dy; break; }
+          }
+        }
+      }
+    }
+    if (px == null) { px = o.gx; py = o.gy; }   // 实在没地方停 → 停回原位，不丢车
+    o.gx = px; o.gy = py;
+    A.gx = px; A.gy = py;
+    unboard();
+    if (Farm.state && Farm.state.save) Farm.state.save();
+  }
+
   function drivingIdx() { return A.driving; }
   function carPos(mapIdx) {
     if (A.driving == null || A.driving !== mapIdx) return null;
@@ -241,7 +275,7 @@
     if (Farm.state && Farm.state._visitLock) return false;  // 别人的农场不是你的地
     if (A.gx == null) spawnAt(iso);
     const size = carSize();
-    const free = walkableFor(iso, size.w, size.h);
+    const free = walkableFor(iso, size.w, size.h, A.driving);
     const path = Farm.pathfind.find(A.gx, A.gy, gx, gy, free);
     if (!path || path.length < 1) return false;
     A.queue = [];
@@ -469,6 +503,9 @@
 
     A.frameT += dt;
 
+    // 车停着等指令，不自己乱逛 —— 闲逛逻辑是给人写的，驾驶中它会把整辆车挪走。
+    if (A.driving != null && !A.job) { A.anim = 'idle'; return; }
+
     if (!A.job && A.queue.length) {
       while (A.queue.length && !startJob(iso, A.queue.shift())) { /* skip stale */ }
     }
@@ -479,7 +516,7 @@
       if (!path || A.pathI >= path.length) {
         A.job = null; A.path = null; A.anim = 'idle';
         A.pause = IDLE_PAUSE[0] + Math.random() * (IDLE_PAUSE[1] - IDLE_PAUSE[0]);
-        if (Farm.farmer._onArrive) Farm.farmer._onArrive();
+        if (A.driving != null) arriveGoto();
         return;
       }
       const step = path[A.pathI];
@@ -632,7 +669,6 @@
     drivingIdx: drivingIdx,
     carPos: carPos,
     _speedNow: moveSpeed,
-    _onArrive: null,
     enqueueHarvestAll: enqueueHarvestAll,
     enqueueWaterAll: enqueueWaterAll,
     enqueuePlantAll: enqueuePlantAll,
