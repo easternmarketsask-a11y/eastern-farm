@@ -14,8 +14,8 @@
     { id: 8, zh: '奶奶', en: 'Grandmother', child: false, shirt: '#d8c4a0', pants: '#6a5a48' },
     { id: 9, zh: '店员', en: 'Shop apron', child: false, shirt: '#2f7343', pants: '#3d4a6a' },
   ];
-  const SHEET_COLS = 6, SHEET_ROWS = 4;
-  const ANIMS = { idle: 0, walk: 1, water: 2, harvest: 3 };
+  const SHEET_COLS = 6, SHEET_ROWS = 5;
+  const ANIMS = { idle: 0, walk: 1, water: 2, harvest: 3, plant: 4 };
   const FPS = 8;
   const WALK_SPEED = 2.2;     // cells / second
   const IDLE_PAUSE = [2, 4];
@@ -84,14 +84,17 @@
     if (Farm.isoView && Farm.isoView.render) Farm.isoView.render();
   }
 
-  function enqueue(plotIdx, kind) {
-    if (!kind || (kind !== 'harvest' && kind !== 'water')) return false;
+  function enqueue(plotIdx, kind, cropId) {
+    if (!kind || (kind !== 'harvest' && kind !== 'water' && kind !== 'plant')) return false;
     if (Farm.state && Farm.state._visitLock) return false;
     const iso = Farm.isoView;
     if (!iso || plotIdx == null) return false;
     const plots = (Farm.state.data && Farm.state.data.plots) || [];
     const plot = plots[plotIdx];
-    if (!plot || !plot.unlocked || !plot.crop) return false;
+    if (!plot || !plot.unlocked) return false;
+    if (kind === 'plant') {
+      if (plot.crop || !cropId) return false;
+    } else if (!plot.crop) return false;
     if (kind === 'harvest' && !(Farm.crops && Farm.crops.isMature && Farm.crops.isMature(plot))) return false;
     if (kind === 'water' && Farm.tending && Farm.tending.canWater && !Farm.tending.canWater(plot)) return false;
     const cap = plots.filter((p) => p && p.unlocked).length || 12;
@@ -100,7 +103,7 @@
     for (let i = 0; i < A.queue.length; i++) {
       if (A.queue[i].plotIdx === plotIdx && A.queue[i].kind === kind) return false;
     }
-    A.queue.push({ plotIdx: plotIdx, kind: kind });
+    A.queue.push({ plotIdx: plotIdx, kind: kind, cropId: cropId || null });
     A.pause = 0;
     return true;
   }
@@ -236,6 +239,42 @@
     return n > 0;
   }
 
+  function enqueuePlantAll(cropId, startIdx) {
+    const iso = Farm.isoView;
+    if (!iso || !cropId || (Farm.state && Farm.state._visitLock)) return false;
+    const plots = (Farm.state.data && Farm.state.data.plots) || [];
+    const empty = [];
+    for (let i = 0; i < plots.length; i++) {
+      if (plots[i] && plots[i].unlocked && !plots[i].crop) empty.push(i);
+    }
+    if (!empty.length) return false;
+    const dist = (a, b) => {
+      const dx = iso._plotGX(a) - iso._plotGX(b);
+      const dy = iso._plotGY(a) - iso._plotGY(b);
+      return dx * dx + dy * dy;
+    };
+    const left = empty.slice();
+    const order = [];
+    let cur = (startIdx != null && left.indexOf(startIdx) >= 0) ? startIdx : left[0];
+    while (left.length) {
+      const at = left.indexOf(cur);
+      if (at >= 0) left.splice(at, 1);
+      order.push(cur);
+      if (!left.length) break;
+      let best = left[0], bd = Infinity;
+      for (let k = 0; k < left.length; k++) {
+        const d = dist(cur, left[k]);
+        if (d < bd) { bd = d; best = left[k]; }
+      }
+      cur = best;
+    }
+    let n = 0;
+    for (let i = 0; i < order.length; i++) {
+      if (enqueue(order[i], 'plant', cropId)) n++;
+    }
+    return n > 0;
+  }
+
   function finishJob(iso) {
     const job = A.job;
     A.job = null;
@@ -254,13 +293,31 @@
       }
     } else if (job.kind === 'water') {
       if (Farm.tending && Farm.tending.waterPlot) Farm.tending.waterPlot(job.plotIdx);
+    } else if (job.kind === 'plant' && job.cropId && Farm.shop && Farm.shop._plantOne) {
+      if ((Farm.state.data.seeds[job.cropId] || 0) <= 0) {
+        if (!(Farm.shop._buyOneForPlanting && Farm.shop._buyOneForPlanting(job.cropId))) {
+          A.queue = A.queue.filter((j) => !(j.kind === 'plant' && j.cropId === job.cropId));
+          if (Farm.ui && Farm.ui.toast) Farm.ui.toast(Farm.i18n ? Farm.i18n.t('toast_not_enough_coins') : '农场币不足');
+          return;
+        }
+      }
+      const r = Farm.shop._plantOne(job.plotIdx, job.cropId);
+      if (r && r.ok) {
+        if (Farm.farm && Farm.farm.renderGrid) Farm.farm.renderGrid();
+        if (Farm.harvestStatus) Farm.harvestStatus.render();
+        if (Farm.audio) Farm.audio.play('plant');
+        if (Farm.ui && Farm.ui.refreshHUD) Farm.ui.refreshHUD();
+      }
     }
   }
 
   function startJob(iso, job) {
     const plots = (Farm.state.data && Farm.state.data.plots) || [];
     const plot = plots[job.plotIdx];
-    if (!plot || !plot.crop) return false;
+    if (!plot) return false;
+    if (job.kind === 'plant') {
+      if (plot.crop || !job.cropId) return false;
+    } else if (!plot.crop) return false;
     if (job.kind === 'harvest' && !(Farm.crops && Farm.crops.isMature && Farm.crops.isMature(plot))) return false;
     if (job.kind === 'water' && Farm.tending && Farm.tending.canWater && !Farm.tending.canWater(plot)) return false;
     A.job = job;
@@ -317,7 +374,7 @@
       while (A.queue.length && !startJob(iso, A.queue.shift())) { /* skip stale */ }
     }
 
-    if (A.job && (A.job.kind === 'harvest' || A.job.kind === 'water')) {
+    if (A.job && (A.job.kind === 'harvest' || A.job.kind === 'water' || A.job.kind === 'plant')) {
       const p = plotPos(iso, A.job.plotIdx);
       if (A.anim === 'walk') {
         if (moveToward(dt, p.gx, p.gy)) {
@@ -326,7 +383,7 @@
           A.anim = A.job.kind;
           A.frameT = 0;
         }
-      } else if (A.anim === 'harvest' || A.anim === 'water') {
+      } else if (A.anim === 'harvest' || A.anim === 'water' || A.anim === 'plant') {
         if (A.frameT >= SHEET_COLS / FPS) finishJob(iso);
       }
       return;
@@ -354,7 +411,7 @@
 
   function frameIndex() {
     const n = SHEET_COLS;
-    if (A.anim === 'harvest' || A.anim === 'water') {
+    if (A.anim === 'harvest' || A.anim === 'water' || A.anim === 'plant') {
       return Math.min(n - 1, Math.floor(A.frameT * FPS));
     }
     return Math.floor(A.frameT * FPS) % n;
@@ -456,6 +513,7 @@
     enqueue: enqueue,
     enqueueHarvestAll: enqueueHarvestAll,
     enqueueWaterAll: enqueueWaterAll,
+    enqueuePlantAll: enqueuePlantAll,
     tick: tick,
     depthDraw: depthDraw,
     drawGuest: drawGuest,

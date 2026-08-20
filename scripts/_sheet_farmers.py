@@ -11,7 +11,7 @@ SESS = os.path.join(
 OUT = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
                    'src', 'assets', 'images', 'farmers')
 CELL_W, CELL_H = 128, 160
-COLS, ROWS = 6, 4
+COLS, ROWS = 6, 5
 
 # look id -> session jpg numbers
 IDLE = {1: 222, 2: 206, 3: 220, 4: 209, 5: 217, 6: 218, 7: 223, 8: 229, 9: 221}
@@ -19,6 +19,7 @@ WALK_A = {1: 225, 2: 214, 3: 224, 4: 226, 5: 228, 6: 230, 7: 227, 8: 229, 9: 231
 WALK_B = {1: 235, 2: 216, 3: 233, 4: 234, 5: 236, 6: 238, 7: 232, 8: 237, 9: 239}
 WATER = {1: 243, 2: 210, 3: 242, 4: 240, 5: 246, 6: 245, 7: 241, 8: 247, 9: 244}
 HARVEST = {1: 250, 2: 215, 3: 251, 4: 248, 5: 255, 6: 253, 7: 249, 8: 254, 9: 252}
+PLANT = {1: 257, 2: 258, 3: 259, 4: 260, 5: 262, 6: 264, 7: 261, 8: 263, 9: 265}
 
 
 def is_bg(r, g, b, br, bg, bb, tol):
@@ -121,10 +122,12 @@ def main():
         b = load_cell(WALK_B[look])
         w = load_cell(WATER[look])
         h = load_cell(HARVEST[look])
+        p = load_cell(PLANT[look])
         walk = [a, b, a, b, a, b]
         wat = [idle, w, w, w, w, idle]
         har = [idle, h, h, h, h, idle]
-        pack(look, [[idle], walk, wat, har])
+        plt = [idle, p, p, p, p, idle]
+        pack(look, [[idle], walk, wat, har, plt])
     print('done')
 
 

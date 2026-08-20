@@ -306,6 +306,12 @@
         const p = Farm.state.data.plots[pending];
         if (p && p.unlocked && !p.crop) {
           this._pendingPlotIdx = null;
+          if (Farm.isoView && Farm.isoView.active && Farm.isoView.active()
+              && Farm.farmer && Farm.farmer.enqueue && Farm.farmer.enqueue(pending, 'plant', cropId)) {
+            Farm.ui.hideModal();
+            this._stickyStart(cropId, 400);
+            return;
+          }
           const r = this._plantOne(pending, cropId);
           if (r.ok) {
             Farm.ui.hideModal();
@@ -433,6 +439,12 @@
         if (card.classList.contains('locked')) return;
         card.onclick = () => {
           const cropId = card.dataset.cropId;
+          if (Farm.isoView && Farm.isoView.active && Farm.isoView.active()
+              && Farm.farmer && Farm.farmer.enqueue && Farm.farmer.enqueue(plotIdx, 'plant', cropId)) {
+            Farm.ui.hideModal();
+            this._stickyStart(cropId, 400);
+            return;
+          }
           const result = this._plantOne(plotIdx, cropId);
           if (!result.ok) {
             Farm.ui.toast(Farm.i18n.t('toast_not_enough_seeds'));
@@ -504,6 +516,18 @@
       const lang = Farm.state.data.language;
       const def = Farm.crops.get(cropId);
       if (!def) return;
+      if (Farm.isoView && Farm.isoView.active && Farm.isoView.active()
+          && Farm.farmer && Farm.farmer.enqueuePlantAll) {
+        const n = Farm.farmer.enqueuePlantAll(cropId);
+        if (!n) {
+          Farm.ui.toast(lang === 'en' ? 'No empty plots to plant' : '没有可种的空地');
+          if (Farm.audio) Farm.audio.play('error');
+          return;
+        }
+        Farm.ui.hideModal();
+        this._stickyStart(cropId, 400);
+        return;
+      }
       const plots = Farm.state.data.plots || [];
       let planted = 0, spent = 0, stoppedNoCoins = false;
       for (let i = 0; i < plots.length; i++) {
@@ -584,6 +608,11 @@
           this.stickyEnd();
           return true;   // tap 已消费（给了失败反馈，不再弹选种器）
         }
+      }
+      if (Farm.isoView && Farm.isoView.active && Farm.isoView.active()
+          && Farm.farmer && Farm.farmer.enqueue && Farm.farmer.enqueue(plotIdx, 'plant', cropId)) {
+        this._stickyTouch();
+        return true;
       }
       const r = this._plantOne(plotIdx, cropId);
       if (!r.ok) { this.stickyEnd(); return false; }
