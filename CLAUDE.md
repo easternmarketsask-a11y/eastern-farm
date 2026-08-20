@@ -335,6 +335,10 @@ See `docs/GAME-DESIGN.md` for full spec. TL;DR:
   `mapview-iso.js` 里 `USE_PAINTED_BG=true` 可一键回滚。别再往世界里
   引入「不懂格子」的整幅位图。默认不画乡路（`SHOW_COUNTRY_ROAD=false`，
   2026-08-19）；不要把土路加回默认开局。
+- **农户形象（2026-08-20）**：场上是油画小人 9 款（设置 → 农场显示），
+  走 / 浇水 / 收获 / 摊前站着。新号默认女农户。不造假名、不上照片。
+  贴图按需加载，不进 SW 预缓存。规格：
+  `docs/superpowers/specs/2026-08-20-painted-farmers-design.md`
 - **金色黄昏光（2026-08-15）**：程序化天空/草地/林影对齐宣传插画
   （`promo/keyart-farm-*.jpg`）——左上侧光、暖黄绿草地、云杉往右下拉长影。
   只改调色和影子方向，不换位图。别把天空改回冷薄荷绿。
