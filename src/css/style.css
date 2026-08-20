@@ -3812,16 +3812,19 @@ body.modal-open #bottombar { display: none; }
 .ep-shop-bal-chip.points { background: linear-gradient(180deg,#f4e8ff,#e3cbff); color: #6d3fa0; }
 
 /* Category tabs */
+/* 🔒 2026-08-20：商店页签一律换行全露，禁止改回一行横滑。
+   2026-08-19「统一店面」把 7 个页签塞进一条隐藏了滚动条的横滑条：
+   390px 手机上可视 306px vs 内容 442px，只露得出前 4 个，
+   扩建 / 房子 / 汽车 三个在屏幕外，而 scrollbar-width:none 让它连
+   「右边还有」的提示都没有 —— Chris 因此以为「商店里没有汽车」。
+   导航不该藏：宁可弹窗高 40px，也不能让入口看不见。 */
 .ep-shop-tabs {
   display: flex;
   gap: 6px;
   margin-bottom: 14px;
-  overflow-x: auto;
-  flex-wrap: nowrap;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
+  flex-wrap: wrap;
+  justify-content: center;
 }
-.ep-shop-tabs::-webkit-scrollbar { display: none; }
 .ep-shop-tab {
   flex: 0 0 auto;
   min-width: 58px;
