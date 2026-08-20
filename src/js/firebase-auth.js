@@ -536,6 +536,12 @@
     },
 
     _go(view) {
+      /* 漏斗第 2 段：从分岔屏点进注册屏 = 「看到了 → 愿意试」，第一道坎。
+         打在 _go 里而不是按钮上：那两个按钮走的是通用 data-auth-go 跳转，
+         没有各自的 onclick 可挂。 */
+      if (view === 'regemail' && this._view === 'notmember' && Farm.track) {
+        Farm.track('signup_open');
+      }
       this._view = view;
       this._renderLoginModal();
     },
@@ -675,6 +681,9 @@
            到店报手机号就到账（2026-08-20）。
            ⚠️ 仍然不说「这个号不存在」：对真会员那是假话（可能只是换了号）。 */
         resetBtn();
+        // 漏斗第 1 段：有多少人撞到「这个号没登记」并看到了那条出路。
+        // 没有这个数就不知道后面每一段漏了多少人。
+        if (Farm.track) Farm.track('signup_fork_seen');
         this._go('notmember');
         return 'handled';
       }
@@ -791,6 +800,7 @@
         if (!r.ok) throw new Error((d && d.detail) || 'HTTP ' + r.status);
         this._regSentTo = (d && d.sentTo) || email;
         this._regName = name;
+        if (Farm.track) Farm.track('signup_code_sent');   // 漏斗第 3 段
         this._go('regcode');
       } catch (e) {
         // 后端把「这个邮箱已经是会员了」这类都写在 detail 里 —— 直接用它，
@@ -838,6 +848,7 @@
         // 密码是后端 admin SDK 写到这个 uid 上的，客户端的 user 对象还是旧的 ——
         // reload 一次让 providerData 说实话（与 _setCredentials 同一个理由）。
         try { await user.reload(); } catch (_) {}
+        if (Farm.track) Farm.track('signup_done');        // 漏斗第 4 段
         try { localStorage.setItem(IDENT_KEY, (d && d.loginEmail) || ''); } catch (_) {}
       } catch (e) {
         this._showError(String((e && e.message) || '')
