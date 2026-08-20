@@ -117,7 +117,7 @@
 
       const shopHTML = `
         <button class="btn ep-shop-link" id="openEpShopBtn">
-          🛍️ ${lang === 'en' ? 'Open Shop' : '打开商城'}
+          🛍️ ${lang === 'en' ? 'Open Shop' : '打开商店'}
         </button>
         <div style="font-size:11px;color:var(--warm-text-soft);text-align:center;margin-top:8px;line-height:1.5;">
           ${lang === 'en'
@@ -187,7 +187,8 @@
         setTimeout(() => this.open(), 600);
       };
       document.getElementById('openEpShopBtn').onclick = () => {
-        if (Farm.epShop) Farm.epShop.open();
+        if (Farm.shop) Farm.shop.open('consumable');
+        else if (Farm.epShop) Farm.epShop.open();
       };
     },
 
@@ -253,7 +254,7 @@
       const exBtn = document.getElementById('coinInfoExchange');
       if (exBtn) exBtn.onclick = () => this.open();          // 兑换面板里有币↔积分双向兑换
       const shopBtn = document.getElementById('coinInfoShop');
-      if (shopBtn) shopBtn.onclick = () => { if (Farm.epShop) Farm.epShop.open(); };
+      if (shopBtn) shopBtn.onclick = () => { if (Farm.shop) Farm.shop.open(); else if (Farm.epShop) Farm.epShop.open(); };
     },
   };
 

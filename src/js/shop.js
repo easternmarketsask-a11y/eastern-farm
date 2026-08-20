@@ -1,5 +1,6 @@
 /**
- * shop.js — Seed shop. Modal showing all unlocked crops, buy with coins.
+ * shop.js — Official shop. Bottom-dock 商店 opens this hub.
+ * Tabs: seeds, items, decor, pets, land, homes, cars.
  * Also handles "plant seed into specific plot" flow.
  */
 (function() {
@@ -25,29 +26,81 @@
     _stickySeed: null,     // 粘性连续种植：当前连种的种子 id（null = 未激活）
     _stickyTimer: null,    // 8 秒无操作自动退出的计时器
     _pendingPlotIdx: null, // 无种子从选种器跳进商店时记下的原地块（买完自动种回）
+    _shopTab: 'seeds',
+    _homeCat: null,
+    _carCat: null,
 
-    open() {
+    open(tab) {
+      if (typeof tab === 'string') {
+        if (tab !== this._shopTab) {
+          if (tab !== 'homes') this._homeCat = null;
+          if (tab !== 'cars') this._carCat = null;
+        }
+        this._shopTab = tab;
+      }
       const lang = Farm.state.data.language;
+      const EN = lang === 'en';
+      const coins = (Farm.state.data.coins || 0).toLocaleString();
+      const pts = (Farm.state.data.eastPoints || 0).toLocaleString();
+      const tabs = [
+        { key: 'seeds', icon: '🌱', zh: '种子', en: 'Seeds' },
+        { key: 'consumable', icon: '⚡', zh: '道具', en: 'Items' },
+        { key: 'decoration', icon: '🎍', zh: '装饰', en: 'Decor' },
+        { key: 'pet', icon: '🐾', zh: '宠物', en: 'Pets' },
+        { key: 'upgrade', icon: '🏞', zh: '扩建', en: 'Land' },
+        { key: 'homes', icon: '🏠', zh: '房子', en: 'Homes' },
+        { key: 'cars', icon: '🚗', zh: '汽车', en: 'Cars' },
+      ];
+      if (!tabs.some((t) => t.key === this._shopTab)) this._shopTab = 'seeds';
+      const tabsHtml = tabs.map((t) =>
+        '<button class="ep-shop-tab' + (t.key === this._shopTab ? ' active' : '') + '" data-shop-tab="' + t.key + '">'
+        + '<span class="ep-shop-tab-icon">' + t.icon + '</span>' + (EN ? t.en : t.zh)
+        + '</button>'
+      ).join('');
+      const body = this._tabBody(this._shopTab, lang);
+      const html = `
+        <h2 class="modal-title">${Farm.i18n.t('shop_title')}</h2>
+        <p class="modal-subtitle">${Farm.i18n.t('shop_subtitle')}</p>
+        <div class="ep-shop-balance">
+          <span class="ep-shop-bal-chip coins"><span class="coin-icon"></span> ${coins}</span>
+          <span class="ep-shop-bal-chip points"><span class="points-icon"></span> ${pts}</span>
+        </div>
+        <div class="ep-shop-tabs">${tabsHtml}</div>
+        <div id="shopHubBody">${body}</div>
+        <div class="btn-row" style="margin-top:12px;">
+          <button class="btn secondary" onclick="Farm.ui.hideModal()">${Farm.i18n.t('btn_close')}</button>
+        </div>
+      `;
+      Farm.ui.showModal(html);
+      document.querySelectorAll('[data-shop-tab]').forEach((btn) => {
+        btn.onclick = () => { if (Farm.audio) Farm.audio.play('tap'); this.open(btn.dataset.shopTab); };
+      });
+      this._bindTab(this._shopTab);
+    },
+
+    _tabBody(tab, lang) {
+      if (tab === 'seeds') return this._seedsBody(lang);
+      if (tab === 'homes') return this._homesBody(lang);
+      if (tab === 'cars') return this._carsBody(lang);
+      return this._epBody(tab, lang);
+    },
+
+    _seedsBody(lang) {
       const nameKey = lang === 'en' ? 'name_en' : 'name_zh';
       const playerLevel = Farm.state.data.level;
       const allCrops = Farm.crops.all();
       const activeFestival = Farm.events && Farm.events.getActiveFestivalId();
-
       let cropsToShow = [...allCrops];
-      // Add festival-only crops for active festival
       if (activeFestival) {
-        Object.values(Farm.crops.festivalCrops).forEach(fc => {
+        Object.values(Farm.crops.festivalCrops).forEach((fc) => {
           if (fc.festival_only === activeFestival) cropsToShow.push(fc);
         });
       }
-
       const specialId = Farm.daily ? Farm.daily.getSpecialSeedId() : null;
       const coin = '<span class="coin-icon"></span>';
       const seedPriceLabel = lang === 'en' ? 'Seed price' : '种子价格';
-      // 高级种子袋（B5 小额金币水槽）：500 币随机 3 颗你已解锁的 Lv10+ 种子。
-      // 只在够格（已解锁至少一种 Lv10+ 作物）时出现，避免袋子空转。
       const PREMIUM_BAG_COST = 500;
-      const bagEligible = allCrops.some(c => (c.unlock_level || 1) >= 10 && (c.unlock_level || 1) <= playerLevel);
+      const bagEligible = allCrops.some((c) => (c.unlock_level || 1) >= 10 && (c.unlock_level || 1) <= playerLevel);
       const bagCard = bagEligible ? `
         <div class="seed-card" data-action="premium-bag" style="border:1.5px dashed var(--sun-gold,#e8b93c);background:linear-gradient(180deg,#fffdf3,#fff8e3);">
           <span class="seed-icon">🎁</span>
@@ -59,60 +112,143 @@
             </div>
           </div>
         </div>` : '';
-      const html = `
-        <h2 class="modal-title">${Farm.i18n.t('shop_title')}</h2>
-        <p class="modal-subtitle">${Farm.i18n.t('shop_subtitle')}</p>
-        <div class="seed-list">
-          ${bagCard}
-          ${cropsToShow.map(c => {
-            const locked = c.unlock_level > playerLevel;
-            const owned = Farm.state.data.seeds[c.id] || 0;
-            const isSpecial = !locked && c.id === specialId;
-            const price = isSpecial ? Farm.daily.discountedSeedCost(c.id) : c.seed_cost;
-            // Shop card shows ONLY seed price (what player pays). Sell price
-            // belongs on the plant-picker card instead — different context,
-            // different number to highlight (Chris's UX direction).
-            const priceCell = isSpecial
-              ? `<span class="seed-cost"><span class="seed-label">${seedPriceLabel}</span><span class="seed-value"><s style="color:#bbb;font-weight:400;">${coin}${c.seed_cost}</s> <strong style="color:var(--barn-red);">${coin}${price}</strong></span></span>`
-              : `<span class="seed-cost"><span class="seed-label">${seedPriceLabel}</span><span class="seed-value">${coin}${c.seed_cost}</span></span>`;
-            const specialBadge = isSpecial
-              ? '<div class="seed-special-badge">⭐ ' + (lang === 'en' ? 'TODAY -50%' : '今日 -50%') + '</div>'
-              : '';
-            const statusCell = locked
-              ? `<span style="color:#999;">Lv ${c.unlock_level}</span>`
-              : `<span class="seed-owned">× ${owned}</span>`;
-            return `
-              <div class="seed-card ${locked ? 'locked' : ''} ${isSpecial ? 'special' : ''}" data-crop-id="${c.id}" data-action="buy">
-                ${specialBadge}
-                <span class="seed-icon">${cropFace(c)}</span>
-                <div>
-                  <div class="seed-name">${c[nameKey]}</div>
-                  <div class="seed-meta">
-                    ${priceCell}
-                    <span class="seed-chips"><span class="seed-time">⏱${formatMinutes(c.grow_minutes)}</span>${statusCell}</span>
-                  </div>
-                </div>
+      const cards = cropsToShow.map((c) => {
+        const locked = c.unlock_level > playerLevel;
+        const owned = Farm.state.data.seeds[c.id] || 0;
+        const isSpecial = !locked && c.id === specialId;
+        const price = isSpecial ? Farm.daily.discountedSeedCost(c.id) : c.seed_cost;
+        const priceCell = isSpecial
+          ? `<span class="seed-cost"><span class="seed-label">${seedPriceLabel}</span><span class="seed-value"><s style="color:#bbb;font-weight:400;">${coin}${c.seed_cost}</s> <strong style="color:var(--barn-red);">${coin}${price}</strong></span></span>`
+          : `<span class="seed-cost"><span class="seed-label">${seedPriceLabel}</span><span class="seed-value">${coin}${c.seed_cost}</span></span>`;
+        const specialBadge = isSpecial
+          ? '<div class="seed-special-badge">⭐ ' + (lang === 'en' ? 'TODAY -50%' : '今日 -50%') + '</div>'
+          : '';
+        const statusCell = locked
+          ? `<span style="color:#999;">Lv ${c.unlock_level}</span>`
+          : `<span class="seed-owned">× ${owned}</span>`;
+        return `
+          <div class="seed-card ${locked ? 'locked' : ''} ${isSpecial ? 'special' : ''}" data-crop-id="${c.id}" data-action="buy">
+            ${specialBadge}
+            <span class="seed-icon">${cropFace(c)}</span>
+            <div>
+              <div class="seed-name">${c[nameKey]}</div>
+              <div class="seed-meta">
+                ${priceCell}
+                <span class="seed-chips"><span class="seed-time">⏱${formatMinutes(c.grow_minutes)}</span>${statusCell}</span>
               </div>
-            `;
-          }).join('')}
-        </div>
-        <div class="btn-row">
-          <button class="btn secondary" onclick="Farm.ui.hideModal()">${Farm.i18n.t('btn_close')}</button>
-        </div>
-      `;
-      Farm.ui.showModal(html);
+            </div>
+          </div>`;
+      }).join('');
+      return '<div class="seed-list">' + bagCard + cards + '</div>';
+    },
 
-      // Bind click on each seed card
-      document.querySelectorAll('.seed-card[data-action="buy"]').forEach(card => {
-        if (card.classList.contains('locked')) return;
-        card.onclick = () => {
-          const cropId = card.dataset.cropId;
-          this.buySeed(cropId);
+    _epBody(tab, lang) {
+      const EN = lang === 'en';
+      const ep = Farm.epShop;
+      if (!ep || !ep.items || !ep.items.length) {
+        return '<div class="muted" style="text-align:center;padding:26px;">'
+          + (EN ? 'Nothing here yet' : '此分类暂无商品') + '</div>';
+      }
+      const list = ep.items.filter((it) => (it.category || 'consumable') === tab);
+      if (!list.length) {
+        return '<div class="muted" style="text-align:center;padding:26px;">'
+          + (EN ? 'Nothing here yet' : '此分类暂无商品') + '</div>';
+      }
+      return '<div class="ep-shop-grid">' + list.map((it) => ep._cardHtml(it, lang)).join('') + '</div>';
+    },
+
+    _homesBody(lang) {
+      const iso = Farm.isoView;
+      const EN = lang === 'en';
+      if (!iso || !iso._homeCatCardsHtml) {
+        return '<div class="muted" style="text-align:center;padding:26px;">'
+          + (EN ? 'Open the farm to buy a house.' : '请先进入农场再买房子。') + '</div>';
+      }
+      if (!this._homeCat) {
+        return '<p class="modal-subtitle" style="margin:0 0 8px;">'
+          + (EN ? 'A new house costs the catalog price and is placed on free land.' : '新盖一座按图册全价，自动落在空地上。点场上已有的房子改建只补差价。')
+          + '</p>' + iso._homeCatCardsHtml(EN, 0);
+      }
+      return '<div style="margin:0 0 8px;">'
+        + '<button type="button" id="shopHomeBack" class="btn secondary" style="padding:4px 10px;font-size:13px;">'
+        + (EN ? 'Types' : '返回分类') + '</button></div>'
+        + iso._homeGridHtml(EN, null, this._homeCat, 0).replace(/data-home-id="/g, 'data-new-home-id="');
+    },
+
+    _carsBody(lang) {
+      const iso = Farm.isoView;
+      const EN = lang === 'en';
+      if (!iso || !iso._carCatCardsHtml) {
+        return '<div class="muted" style="text-align:center;padding:26px;">'
+          + (EN ? 'Open the farm to buy a car.' : '请先进入农场再买车。') + '</div>';
+      }
+      if (!this._carCat) {
+        return '<p class="modal-subtitle" style="margin:0 0 8px;">'
+          + (EN ? 'A new car costs the catalog price and parks on free land.' : '新停一辆按图册全价，自动停在空地上。点场上已有的车换款只补差价。')
+          + '</p>' + iso._carCatCardsHtml(EN, 0);
+      }
+      return '<div style="margin:0 0 8px;display:flex;align-items:center;justify-content:space-between;">'
+        + '<button type="button" id="shopCarBack" class="btn secondary" style="padding:4px 10px;font-size:13px;">'
+        + (EN ? 'Types' : '返回分类') + '</button>'
+        + '<span style="width:72px;"></span></div>'
+        + iso._carGridHtml(EN, null, this._carCat, 0).replace(/data-car-id="/g, 'data-new-car-id="');
+    },
+
+    _bindTab(tab) {
+      if (tab === 'seeds') {
+        document.querySelectorAll('.seed-card[data-action="buy"]').forEach((card) => {
+          if (card.classList.contains('locked')) return;
+          card.onclick = () => this.buySeed(card.dataset.cropId);
+        });
+        const bagEl = document.querySelector('.seed-card[data-action="premium-bag"]');
+        if (bagEl) bagEl.onclick = () => this.buyPremiumBag();
+        return;
+      }
+      if (tab === 'homes') {
+        const iso = Farm.isoView;
+        document.querySelectorAll('[data-home-cat]').forEach((btn) => {
+          btn.onclick = () => { this._homeCat = btn.getAttribute('data-home-cat'); this.open('homes'); };
+        });
+        const back = document.getElementById('shopHomeBack');
+        if (back) back.onclick = () => { this._homeCat = null; this.open('homes'); };
+        document.querySelectorAll('[data-new-home-id]').forEach((btn) => {
+          btn.onclick = () => { if (iso && iso._placeNewHome) iso._placeNewHome(parseInt(btn.getAttribute('data-new-home-id'), 10)); };
+        });
+        return;
+      }
+      if (tab === 'cars') {
+        const iso = Farm.isoView;
+        document.querySelectorAll('[data-car-cat]').forEach((btn) => {
+          btn.onclick = () => { this._carCat = btn.getAttribute('data-car-cat'); this.open('cars'); };
+        });
+        const back = document.getElementById('shopCarBack');
+        if (back) back.onclick = () => { this._carCat = null; this.open('cars'); };
+        document.querySelectorAll('[data-new-car-id]').forEach((btn) => {
+          btn.onclick = () => { if (iso && iso._placeNewCar) iso._placeNewCar(parseInt(btn.getAttribute('data-new-car-id'), 10)); };
+        });
+        return;
+      }
+      const ep = Farm.epShop;
+      const EN = Farm.state.data.language === 'en';
+      document.querySelectorAll('[data-buy]').forEach((btn) => {
+        if (btn.hasAttribute('disabled')) return;
+        btn.onclick = (e) => {
+          e.stopPropagation();
+          if (!ep) return;
+          const r = ep.buy(btn.dataset.buy);
+          if (!r.ok) {
+            Farm.ui.toast(r.reason === 'insufficient_coins' || r.reason === 'insufficient_ep'
+              ? (EN ? 'Not enough coins or points' : '余额不足')
+              : r.reason === 'daily_cap'
+                ? (EN ? 'Daily purchase limit reached' : '今日购买次数已满')
+                : (EN ? 'Cannot buy' : '无法购买'), 2400);
+            if (Farm.audio) Farm.audio.play('error');
+            return;
+          }
+          ep._showPurchaseFeedback(r.item, r.effect);
+          setTimeout(() => this.open(tab), 350);
         };
       });
-      // 高级种子袋
-      const bagEl = document.querySelector('.seed-card[data-action="premium-bag"]');
-      if (bagEl) bagEl.onclick = () => this.buyPremiumBag();
     },
 
     // 高级种子袋：500 币随机 3 颗「已解锁的 Lv10+」作物种子（B5 小额可重复金币水槽）。
@@ -146,7 +282,7 @@
         return (c ? (c.icon + ' ' + c[nameKey]) : id) + '×' + granted[id];
       }).join('  ');
       Farm.ui.toast('🎁 ' + parts, 3200);
-      this.open();
+      this.open('seeds');
     },
 
     buySeed(cropId) {
@@ -186,8 +322,7 @@
         }
       }
       Farm.ui.toast('🌱 +1 ' + def[Farm.state.data.language === 'en' ? 'name_en' : 'name_zh']);
-      // Refresh shop UI inline
-      this.open();
+      this.open('seeds');
     },
 
     // ============ Plant flow ============
@@ -203,7 +338,7 @@
         // 不再让玩家买完后自己找回刚才点的那块空地。
         Farm.ui.toast(Farm.i18n.t('toast_not_enough_seeds'));
         this._pendingPlotIdx = plotIdx;
-        setTimeout(() => this.open(), 600);
+        setTimeout(() => this.open('seeds'), 600);
         return;
       }
 
@@ -283,7 +418,7 @@
       document.getElementById('goToShopBtn').onclick = () => {
         // 从选种器进商店：记下原地块，买完种子直接种回（UX 第 2 批 #4）
         this._pendingPlotIdx = plotIdx;
-        this.open();
+        this.open('seeds');
       };
 
       // 「种满所有空地」按钮（卡片内嵌，stopPropagation 防触发整卡种一块）

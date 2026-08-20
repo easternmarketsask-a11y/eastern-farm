@@ -7,7 +7,7 @@
 
     "nav_farm": { "zh": "农场", "en": "Farm" },
     "nav_today": { "zh": "今日", "en": "Today" },
-    "nav_shop": { "zh": "种子店", "en": "Shop" },
+    "nav_shop": { "zh": "商店", "en": "Shop" },
     "nav_tasks": { "zh": "今日任务", "en": "Today's Tasks" },
     "nav_rewards": { "zh": "积分", "en": "Points" },
     "nav_store": { "zh": "农场商城", "en": "Shop" },
@@ -77,8 +77,8 @@
     "daily_login_streak": { "zh": "连续登录第 {n} 天", "en": "Day {n} login streak" },
     "daily_login_reward": { "zh": "今日奖励: {coins}🪙 + {points}🎫", "en": "Today: {coins}🪙 + {points}🎫" },
 
-    "shop_title": { "zh": "种子店", "en": "Seed Shop" },
-    "shop_subtitle": { "zh": "买种子，种希望", "en": "Buy seeds, grow hope" },
+    "shop_title": { "zh": "商店", "en": "Shop" },
+    "shop_subtitle": { "zh": "种子、道具、装饰、房子、汽车，官方出售的都在这里。", "en": "Seeds, items, decor, homes and cars — everything the game sells." },
 
     "tasks_title": { "zh": "今日任务", "en": "Today's Tasks" },
     "tasks_progress": { "zh": "{done}/{total}", "en": "{done}/{total}" },

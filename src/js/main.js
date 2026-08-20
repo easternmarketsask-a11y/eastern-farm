@@ -484,14 +484,13 @@
     const lang = (Farm.state && Farm.state.data && Farm.state.data.language) || 'zh';
     // 图标是 index.html 内嵌 sprite 的 symbol id（视觉升级第1批：chrome 不再用 emoji）。
     const items = [
-      { a: 'shop', icon: 'shop', zh: '种子店', en: 'Seeds' },
+      { a: 'shop', icon: 'shop', zh: '商店', en: 'Shop' },
       { a: 'tasks', icon: 'tasks', zh: '任务', en: 'Tasks' },
       { a: 'orders', icon: 'orders', zh: '小东订单', en: 'Orders' },
       { a: 'storeRewards', icon: 'receipt', zh: '领取到店奖励', en: 'Store Rewards' },
       { a: 'story', icon: 'story', zh: '农场人生', en: 'My Story' },
       { a: 'kitchen', icon: 'kitchen', zh: '小东厨房', en: 'Kitchen' },
       { a: 'community', icon: 'community', zh: '社区', en: 'Community' },
-      { a: 'store', icon: 'mall', zh: '农场商城', en: 'Mall' },
       { a: 'expand', icon: 'expand', zh: '开垦农田', en: 'Clear land' },
       { a: 'collection', icon: 'collection', zh: '图鉴', en: 'Collection' },
       { a: 'guide', icon: 'guide', zh: '怎么玩', en: 'How to' },
@@ -515,7 +514,6 @@
           case 'story': if (Farm.lifeStory) Farm.lifeStory.open(); break;
           case 'kitchen': if (Farm.kitchen) Farm.kitchen.open(); break;
           case 'community': if (Farm.neighbors) Farm.neighbors.open(); break;
-          case 'store': if (Farm.epShop) Farm.epShop.open(); break;
           case 'expand':
             if (Farm.ui) Farm.ui.hideModal();
             if (Farm.isoView && Farm.isoView._enterClearMode) Farm.isoView._enterClearMode();
@@ -813,8 +811,8 @@
         <div class="settings-card-title">${lang === 'en' ? 'Farm display' : '农场显示'}</div>
         <label class="settings-row">
           <span class="settings-row-txt">${lang === 'en'
-            ? 'Pets roam the yard (from the Mall)'
-            : '小动物在院子里走动（农场商城购买）'}</span>
+            ? 'Pets roam the yard (bought in the Shop)'
+            : '小动物在院子里走动（商店购买）'}</span>
           <span class="settings-switch-wrap">
             <input id="petsToggle" class="settings-switch-input" type="checkbox" ${Farm.state.data.petsEnabled === false ? '' : 'checked'}/>
             <span class="settings-switch" aria-hidden="true"></span>

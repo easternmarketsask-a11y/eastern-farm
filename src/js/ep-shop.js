@@ -277,6 +277,10 @@
     },
 
     open(tab) {
+      if (Farm.shop && Farm.shop.open) {
+        Farm.shop.open(tab || 'consumable');
+        return;
+      }
       const lang = Farm.state.data.language;
       const EN = lang === 'en';
       if (tab) this._shopTab = tab;
