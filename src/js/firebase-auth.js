@@ -1942,7 +1942,23 @@
             ${lang === 'en'
               ? 'Give us your phone in store — these land on your member card'
               : '到店报一下手机号，就到你的会员卡上'}
-          </div>` : `
+          </div>
+          <!-- 激活码：顾客到柜台要报的就是这 6 位数。字要大 —— 他多半是举着
+               手机给收银员看，或者念出来。24 小时有效，过期点一下重出。 -->
+          ${m.activationCode ? `
+          <div style="margin-top:14px;padding:12px;border-radius:12px;
+                      background:var(--cream-2,#fdf8ef);border:1px dashed rgba(122,90,60,.28);">
+            <div style="font-size:11px;color:var(--warm-text-soft);">
+              ${lang === 'en' ? 'Show this code at the till' : '到收银台报这个码'}
+            </div>
+            <div style="font-size:30px;font-weight:700;letter-spacing:6px;
+                        color:var(--leaf-dark,#2a5c34);margin-top:4px;font-variant-numeric:tabular-nums;">
+              ${String(m.activationCode).replace(/[^0-9]/g, '')}
+            </div>
+            <button class="auth-ghost" id="pendNewCode" style="margin-top:6px;">
+              ${lang === 'en' ? 'Code expired? Get a new one' : '过期了？换一个'}
+            </button>
+          </div>` : ''}` : `
           <div style="font-size:24px;font-weight:700;color:var(--purple-points);margin-top:6px;"><span class="points-icon"></span> ${totalPoints.toLocaleString()}</div>
           <div style="font-size:11px;color:var(--warm-text-soft);">
             ${lang === 'en' ? 'Lifetime: ' : '累积: '}${lifetimePoints.toLocaleString()}
@@ -1961,6 +1977,31 @@
       Farm.ui.showModal(html);
       const shareBtn = document.getElementById('memberShareBtn');
       if (shareBtn) shareBtn.onclick = () => { if (Farm.share) Farm.share.open(); };
+
+      // 激活码过期了换一个（码 24 小时有效，隔几天才来店里的人一定会遇到）
+      const newCodeBtn = document.getElementById('pendNewCode');
+      if (newCodeBtn) newCodeBtn.onclick = async () => {
+        const en = lang === 'en';
+        newCodeBtn.disabled = true;
+        newCodeBtn.textContent = en ? 'Getting…' : '换取中…';
+        try {
+          const idToken = await this.currentUser.getIdToken();
+          const r = await fetch(STOCKWISE_BASE + '/api/public/member-auth/pending/new-code', {
+            method: 'POST', headers: { Authorization: 'Bearer ' + idToken },
+          });
+          const d = await r.json().catch(() => null);
+          if (!r.ok || !d || !d.activationCode) throw new Error((d && d.detail) || 'HTTP ' + r.status);
+          if (this.memberDoc) this.memberDoc.activationCode = d.activationCode;
+          Farm.ui.hideModal();
+          this.openMenu();                       // 重画，显示新码
+        } catch (e) {
+          // 🔒 拿不到新码要说清楚，不能静默 —— 他正站在收银台前
+          Farm.ui.toast(String((e && e.message) || '')
+            || (en ? 'Could not get a new code. Please try again.' : '换不出新码，请重试。'), 3000);
+          newCodeBtn.disabled = false;
+          newCodeBtn.textContent = en ? 'Code expired? Get a new one' : '过期了？换一个';
+        }
+      };
       const settingsBtn = document.getElementById('memberSettingsBtn');
       if (settingsBtn) settingsBtn.onclick = () => {
         Farm.ui.hideModal();
