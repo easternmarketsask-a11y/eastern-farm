@@ -37,6 +37,11 @@
   const IDENT_KEY = 'eastern_farm_last_ident';
   // 会员激活流程要问后端「这个手机号该走哪条路」。与 analytics.js 同一个后端。
   const STOCKWISE_BASE = 'https://stockwise-app-873982544406.us-central1.run.app';
+  /* 后端调用一律带超时。没有超时的 fetch 卡住时不报错、不进 catch，
+     只是永远停在那儿 —— 本项目在「SMTP 没超时导致线程永久挂起」上刚栽过
+     （2026-08-19）。8 秒：Cloud Run 冷启动最慢也就这个量级。 */
+  const WHOAMI_TIMEOUT_MS = 8000;
+  const PHONE_LOOKUP_TIMEOUT_MS = 8000;
 
   const auth = {
     currentUser: null,
@@ -315,12 +320,50 @@
         }
         // 3. Last resort (legacy orphan keyed by uid, or genuinely nothing).
         const direct = await Farm.fb.db.collection('members').doc(uid).get();
-        this.memberDoc = direct.exists ? { id: direct.id, ...direct.data() } : null;
+        if (direct.exists) {
+          this.memberDoc = { id: direct.id, ...direct.data() };
+          this._syncLocalBalance();
+          return;
+        }
+        /* 4. 「手机号直接进」的玩家（2026-08-19）——上面三条全查不到。
+           他们用的是**匿名登录**的 uid，只记在 members.linked_uids 里，
+           而 members 的读规则收紧过（allow list limit≤1 + 条件），前端
+           查不了 array-contains。所以问后端。
+           🔒 后端只回 memberId/name/points/verified，字段闭合。 */
+        this.memberDoc = await this._whoAmI();
       } catch (e) {
         console.warn('member doc load failed', e);
         this.memberDoc = null;
       }
       this._syncLocalBalance();
+    },
+
+    /** 问后端「我关联的是哪个会员」。查不到回 null（游客，正常情况）。 */
+    async _whoAmI() {
+      const u = this.currentUser;
+      if (!u) return null;
+      try {
+        const idToken = await u.getIdToken();
+        const ctl = new AbortController();
+        const timer = setTimeout(() => ctl.abort(), WHOAMI_TIMEOUT_MS);
+        const r = await fetch(STOCKWISE_BASE + '/api/public/member-auth/whoami', {
+          headers: { Authorization: 'Bearer ' + idToken },
+          signal: ctl.signal,
+        });
+        clearTimeout(timer);
+        if (!r.ok) return null;
+        const d = await r.json().catch(() => null);
+        if (!d || !d.linked) return null;
+        // 拼成 memberDoc 的形状，后面的代码（memberDocId / _syncLocalBalance /
+        // 「欢迎回来，XXX」）就都不用改
+        return { id: d.memberId, name: d.name || '', totalPoints: d.points || 0,
+                 _fromWhoami: true, _verified: !!d.verified };
+      } catch (e) {
+        // 🔒 读不到 ≠ 不是会员。返回 null 只是这次没拿到，下次启动会再试；
+        // 绝不能因此把人当成游客去写一个孤儿存档。
+        console.warn('[auth] whoami 失败（下次启动会再试）:', e);
+        return null;
+      }
     },
 
     _syncLocalBalance() {
@@ -394,7 +437,8 @@
        视图（_view）：
          login      手机号/用户名 + 密码   ← 默认，日常路径（邮箱也认，含 @ 即直登）
          phone      输入手机号 →【继续】    ← 激活入口，调后端 start 判断走哪条
-         sent       已发送到 ****@域名      ← 有登记邮箱的人
+         confirm    「是你吗？」+ 姓名      ← 🆕 手机号直接进的确认屏
+         sent       已发送到 ****@域名      ← 有登记邮箱的人（老路，仍保留）
          otp        【发送短信验证码】      ← 🔒 短信必须由**这一次点击**触发
          setpw      设密码 + 选填用户名     ← 短信验证通过后（一辈子一次）
          forgot     忘记密码                ← 留过邮箱自助；没留的到店
@@ -419,6 +463,7 @@
         login: [en ? 'Member sign in' : '会员登录', ''],
         phone: [en ? 'First time here?' : '第一次登录',
                 en ? 'The number you gave us in store' : '您在店里登记的手机号'],
+        confirm: ['', ''],          // 这一屏自己画标题（姓名要大字居中）
         sent:  [en ? 'Check your email' : '请查收邮件', ''],
         otp:   [en ? 'Verify your phone' : '验证手机号',
                 en ? `We'll text ${this._formatPhone((this._currentPhoneE164 || '').replace('+1', ''))}`
@@ -434,6 +479,7 @@
       const body = {
         login: () => this._renderIdentView(lang, rememberedIdent),
         phone: () => this._renderPhoneView(lang, remembered),
+        confirm: () => this._renderConfirmView(lang),
         sent:  () => this._renderSentView(lang),
         otp:   () => this._renderOtpView(lang),
         setpw: () => this._renderSetPwView(lang),
@@ -477,6 +523,19 @@
       if (btn) { btn.disabled = true; btn.textContent = en ? 'Checking…' : '查询中…'; }
       this._currentPhoneE164 = '+1' + digits;
       localStorage.setItem(REMEMBER_KEY, this._formatPhone(digits));
+
+      /* 🆕 手机号直接进（2026-08-19 Chris 定）：输对号码 + 确认姓名就能玩，
+         **不发短信、不设密码**。
+         spec: stockwise_final/docs/superpowers/specs/2026-08-19-phone-first-login-verify-on-spend-design.md
+
+         为什么改：980 个会员里 908 个从来没成功登录过。门一直锁着（今天修了
+         三个 bug），但就算门都能开，「先验证再进门」本身也是一道劝退墙 ——
+         实测 77 个 Auth 账号里 67 个卡在验证那一屏走掉了。
+
+         身份用**匿名登录**：不需要任何新的 IAM 权限，后端把这台设备记进
+         members.linked_uids（绝不写 firebase_uid —— 那是「已验证本人」的语义）。 */
+      const okNew = await this._phoneFirstLookup(digits, btn, en);
+      if (okNew !== 'fallthrough') return;
 
       let data = null;
       try {
@@ -530,6 +589,129 @@
         return;
       }
       this._go('otp');
+    },
+
+    /* ═══ 手机号直接进（2026-08-19）═════════════════════════════════════
+       输号 → 查名字 → 「是你吗？」→ 确认 → 进游戏。全程不发短信。
+
+       返回 'fallthrough' 表示这条路走不通（后端不支持/网络问题），
+       让调用方退回老流程（/start → 邮件或短信）——**绝不能因为新路
+       失败就把人挡在门外**，那正是我们要修的病。 */
+    async _phoneFirstLookup(digits, btn, en) {
+      const resetBtn = () => {
+        if (btn) { btn.disabled = false; btn.textContent = en ? 'Continue' : '继续'; }
+      };
+      // 需要一个 Auth 身份才能调后端。没登录就匿名登录一个 ——
+      // 匿名 uid 只用来标识「这台设备」，不含任何个人信息。
+      try {
+        if (!Farm.fb.auth.currentUser) await Farm.fb.auth.signInAnonymously();
+      } catch (e) {
+        console.warn('[auth] 匿名登录失败，退回老流程:', e);
+        return 'fallthrough';
+      }
+
+      let data = null;
+      try {
+        const idToken = await Farm.fb.auth.currentUser.getIdToken();
+        const ctl = new AbortController();
+        const timer = setTimeout(() => ctl.abort(), PHONE_LOOKUP_TIMEOUT_MS);
+        const r = await fetch(STOCKWISE_BASE + '/api/public/member-auth/lookup-phone', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + idToken },
+          body: JSON.stringify({ phone: digits }),
+          signal: ctl.signal,
+        });
+        clearTimeout(timer);
+        if (r.status === 404) return 'fallthrough';      // 后端还没上这条路
+        if (r.status === 429) {
+          this._showError(en ? 'Too many tries. Please wait a moment.' : '刚试过了，稍等一下再试。');
+          resetBtn();
+          return 'handled';
+        }
+        if (!r.ok) return 'fallthrough';
+        data = await r.json().catch(() => null);
+      } catch (e) {
+        return 'fallthrough';
+      }
+      if (!data) return 'fallthrough';
+
+      if (!data.found) {
+        // ⚠️ 不说「号码不存在」—— 对真会员那是假话（可能只是号码换了）。
+        // 沿用既有那套「到店免费办理」的文案。
+        this._showError(en
+          ? 'This phone is not registered at our store.\nPlease visit 133-412 Willowgrove Square to sign up (free).\nMon–Sat 10am–6:30pm · (306) 244-5522'
+          : '此手机号未在店内登记。\n请光临本店免费办理：\n📍 133-412 Willowgrove Square\n🕐 周一至周六 10am–6:30pm\n☎️ (306) 244-5522');
+        resetBtn();
+        return 'handled';
+      }
+
+      this._confirmName = String(data.name || '').trim();
+      this._confirmDigits = digits;
+      this._go('confirm');
+      return 'handled';
+    },
+
+    /* 「是你吗？」——这一屏的全部作用是接住**打错一位数**。
+       名字在这儿是给本人确认的，不是要藏起来的（Chris 2026-08-19：
+       别假设人人想偷看别人的信息；真正会发生的是手滑）。 */
+    _renderConfirmView(lang) {
+      const en = lang === 'en';
+      const safe = String(this._confirmName || '').replace(/[<>"&]/g, '');
+      const who = safe || (en ? 'this member' : '这位会员');
+      return `
+        <div style="text-align:center;padding:6px 2px 2px;">
+          <div style="font-size:15px;color:var(--warm-text-soft);margin-bottom:6px;">
+            ${en ? 'Is this you?' : '是你吗？'}
+          </div>
+          <div style="font-size:30px;font-weight:800;color:var(--leaf-dark,#2a5c34);
+                      line-height:1.2;margin-bottom:4px;word-break:break-word;">${who}</div>
+          <div style="font-size:13px;color:var(--warm-text-soft);">
+            ${this._formatPhone(this._confirmDigits || '')}
+          </div>
+        </div>
+        <button class="btn auth-primary" id="authConfirmYes" style="margin-top:16px;">
+          ${en ? 'Yes, that’s me' : '是我，进入农场'}
+        </button>
+        <button class="auth-ghost" data-auth-go="phone">
+          ${en ? 'No — re-enter my number' : '不是，我输错了'}
+        </button>
+      `;
+    },
+
+    /** 确认之后：把这台设备关联到会员档，然后进游戏。 */
+    async _confirmClaim() {
+      const lang = Farm.state.data.language;
+      const en = lang === 'en';
+      this._showError('');
+      const btn = document.getElementById('authConfirmYes');
+      const reset = () => {
+        if (btn) { btn.disabled = false; btn.textContent = en ? 'Yes, that’s me' : '是我，进入农场'; }
+      };
+      if (btn) { btn.disabled = true; btn.textContent = en ? 'Signing in…' : '进入中…'; }
+      try {
+        if (!Farm.fb.auth.currentUser) await Farm.fb.auth.signInAnonymously();
+        const idToken = await Farm.fb.auth.currentUser.getIdToken();
+        const ctl = new AbortController();
+        const timer = setTimeout(() => ctl.abort(), PHONE_LOOKUP_TIMEOUT_MS);
+        const r = await fetch(STOCKWISE_BASE + '/api/public/member-auth/claim-phone', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + idToken },
+          body: JSON.stringify({ phone: this._confirmDigits }),
+          signal: ctl.signal,
+        });
+        clearTimeout(timer);
+        const d = await r.json().catch(() => null);
+        if (!r.ok) throw new Error((d && d.detail) || ('HTTP ' + r.status));
+      } catch (e) {
+        // 🔒 失败就说失败，别把人静默留在原地
+        this._showError(en ? 'Could not finish sign-in. Please try again.' : '进入失败，请重试。');
+        reset();
+        return;
+      }
+      // 会员档现在能从后端查到了（linked_uids），刷新一次再进
+      try { await this._loadMemberDoc(Farm.fb.auth.currentUser.uid); } catch (_) {}
+      this._trackLoginOnce();
+      this._onLoginSuccess(lang);
     },
 
     /** 激活入口：只收手机号。这一屏**没有** reCAPTCHA，因为还不确定要不要发短信。 */
@@ -754,6 +936,10 @@
           const el = document.getElementById(id);
           if (el) el.onkeydown = (e) => { if (e.key === 'Enter') this._identLogin(); };
         });
+
+      } else if (view === 'confirm') {
+        const yes = document.getElementById('authConfirmYes');
+        if (yes) yes.onclick = () => this._confirmClaim();
 
       } else if (view === 'setpw') {
         const el = document.getElementById('setPw');

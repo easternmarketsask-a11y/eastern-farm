@@ -1045,7 +1045,11 @@ body.mapmode #warehouseBtn { display: none !important; }
   padding: 8px 12px;
   border: 1.5px solid var(--border-soft);
   border-radius: 10px;
-  font-size: 15px;
+  /* 🔒 ≥16px 不是审美，是硬约束：低于 16px，iOS Safari 一聚焦就把整页放大，
+     放大后按钮跑出屏幕、输入框看不全 —— 长辈很难自己缩回去。
+     2026-08-19 登录体检查出这里是 15px（.auth-input-phone 早写对了 18px，
+     只有这个通用输入框漏了），登录/设密码/忘记密码/加邮箱四屏全中。 */
+  font-size: 16px;
   background: #fff;
   color: var(--warm-text);
   box-sizing: border-box;
@@ -1166,6 +1170,10 @@ body.mapmode #warehouseBtn { display: none !important; }
   width: 100%;
   margin-top: 10px;
   padding: 8px;
+  /* 🔒 触摸目标 ≥44px。这些是「返回 / 取消 / 换个号码」，点不中不会报错，
+     只会让人以为「点了没反应」—— 那正是 2026-08-19 一天查出五个 bug 的
+     共同表现。实测原来只有 32–37px。 */
+  min-height: 44px;
   border: none;
   background: none;
   color: var(--warm-text-soft);
@@ -1204,6 +1212,16 @@ body.mapmode #warehouseBtn { display: none !important; }
   line-height: 1;
   color: var(--warm-text-soft);
   cursor: pointer;
+}
+/* 触控热区扩到 44×44，视觉保持小圈（跟 .modal-close-x 同一套做法）——
+   ⓘ 挨着 label 文字，真做成 44px 高会把整行撑开；扩伪元素不影响排版。 */
+.auth-info-btn { position: relative; }
+.auth-info-btn::after {
+  content: '';
+  position: absolute;
+  left: 50%; top: 50%;
+  width: 44px; height: 44px;
+  transform: translate(-50%, -50%);
 }
 .auth-info-btn:hover { color: var(--leaf-green); }
 .auth-info-body {

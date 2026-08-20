@@ -243,6 +243,41 @@ else
     echo "—— 部署中止：短信验证码发不出去。这挡住所有第一次登录的会员。"
     exit 1
   fi
+
+  # 闸门 H: 登录全流程体检(手机视口，约 6 秒)
+  # 2026-08-19 加：一天之内在登录这条路上查出 5 个「按钮在、点了没用、还不报错」
+  # 的 bug。共同点是**都不报错**，客人只觉得怪怪的然后走掉。
+  # 这一关逐屏问：画得出来吗 / 主按钮绑了吗 / 输入框能打字且 ≥16px 吗 /
+  # 有没有死路 / 错误提示多行显示得了吗 / 触摸目标够不够 44px。
+  echo "▶ 闸门 H: 登录全流程体检(约 6 秒)…"
+  $PYCMD -m http.server 8153 --bind 127.0.0.1 >/dev/null 2>&1 &
+  AUD_PID=$!
+  trap 'kill $AUD_PID 2>/dev/null || true' EXIT
+  sleep 1
+  AUD_OUT="$(mktemp)"
+  EF_MOBILE=1 node scripts/verify/cdp.mjs "http://127.0.0.1:8153/src/" "scripts/verify/login-audit.js" 300 >"$AUD_OUT" 2>/dev/null || true
+  kill $AUD_PID 2>/dev/null || true
+  trap - EXIT
+  if ! node -e '
+    const o = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
+    const r = o.evalResult;
+    if (!r || !r.ran || !r.ran.length) {
+      console.error("✗ 登录体检没跑起来(evalResult=" + JSON.stringify(r) + ")");
+      process.exit(1);
+    }
+    if (r.failures && r.failures.length) {
+      console.error("✗ 登录流程有问题:");
+      r.failures.forEach(f => console.error("  - " + f));
+      process.exit(1);
+    }
+    if (r.warnings && r.warnings.length) {
+      console.log("  ⚠ " + r.warnings.length + " 条提示(不阻断)");
+    }
+    console.log("  ✓ 登录体检 " + r.ran.length + " 项全过");
+  ' "$AUD_OUT"; then
+    echo "—— 部署中止：顾客登录会踩到问题。这类 bug 不报错，客人只会默默走掉。"
+    exit 1
+  fi
 fi
 
 # 3. 提交未保存的改动(如果有;SW 版本注入保证至少有它)
