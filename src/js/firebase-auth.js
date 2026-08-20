@@ -708,9 +708,24 @@
         reset();
         return;
       }
-      // 会员档现在能从后端查到了（linked_uids），刷新一次再进
+      // 会员档现在能从后端查到了（linked_uids），刷新一次再决定下一步
       try { await this._loadMemberDoc(Farm.fb.auth.currentUser.uid); } catch (_) {}
       this._trackLoginOnce();
+
+      /* 🆕 没登记过邮箱 → 立即补一个（Chris 2026-08-20 定的完整流程）：
+             关联手机号 → 验邮箱 → 设密码 → 之后邮箱或手机号都能登
+         为什么必须现在补而不是「以后提醒」：邮箱是他在**网站**那边的登录凭据，
+         也是订单通知和自助改密码的唯一通道。没有它，他只能在这台设备上玩。
+
+         ⚠️ 这一屏历史上很凶：77 个账号里 67 个卡在设邮箱那儿走掉了。
+            但当年那一屏是**坏的**（发信被权限卡死、链接是过期页），
+            人不是不想填、是填了也没用。现在三样都修好了，而且有 3000 农场币
+            的即时回报。上线后看 email_set 埋点 —— 如果新账号还是不动，
+            那就是墙，要再谈。 */
+      if (!this.hasRealEmail()) {
+        this._go('email');
+        return;
+      }
       this._onLoginSuccess(lang);
     },
 
@@ -1236,15 +1251,37 @@
       if (Farm.track) Farm.track('email_set');
       // 本地会员档里的邮箱也跟上，提醒条才会立刻消失（不用等下次拉取）
       if (this.memberDoc) this.memberDoc.email = this._pendingEmail || this.memberDoc.email;
-      Farm.ui.hideModal();
       this.refreshEmailNudge();
-      Farm.ui.toast(en ? 'Email saved 🎉' : '邮箱已保存 🎉', 3000);
       // 邮箱是发 3000 农场币的条件，补上后立刻再试一次（事务幂等，重复调安全）
       try {
         if (Farm.fbPoints && Farm.fbPoints.firstLoginGameSignupBonus) {
           Farm.fbPoints.firstLoginGameSignupBonus(user);
         }
       } catch (_) {}
+
+      /* 🆕 验完邮箱接着设密码（Chris 2026-08-20 定的完整流程的最后一段）。
+         没有这一段，他在**网站**那边仍然登不进去 —— 邮箱只是记在会员档上，
+         Auth 账号还没有密码这套凭据。设完之后邮箱和手机号两条路都能登，
+         农场和网站是同一个账号（已实测 uid 不变，存档不会分家）。
+         🔒 只有还没设过密码的人才走这一步；已经有凭据的（老会员补邮箱）
+            直接进游戏，别平白多问一次。 */
+      if (!this._hasLoginCredential()) {
+        Farm.ui.toast(en ? 'Email verified 🎉' : '邮箱已验证 🎉', 2200);
+        this._go('setpw');
+        return;
+      }
+      Farm.ui.hideModal();
+      Farm.ui.toast(en ? 'Email saved 🎉' : '邮箱已保存 🎉', 3000);
+    },
+
+    /** 这个账号有没有「邮箱/用户名 + 密码」那套登录凭据。
+        匿名进来、还没设过密码的人返回 false —— 他们只能在这台设备上玩。 */
+    _hasLoginCredential() {
+      const u = this.currentUser;
+      if (!u) return false;
+      // 匿名账号的 providerData 是空的；设过密码之后会出现 'password'
+      const ps = (u.providerData || []).map((x) => x && x.providerId);
+      return ps.indexOf('password') !== -1;
     },
 
     // 单个验证码输入框：只留数字、满 6 位自动提交。自动填充/粘贴不用任何补丁。
