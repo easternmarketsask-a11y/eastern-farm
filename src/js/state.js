@@ -75,6 +75,7 @@
     mapTerrain: null,           // paintable terrain overrides {"gx,gy": "path"|"water"} (null until first use)
     mapBuildSeen: false,        // has the player opened build mode once? (gates the 建造-button hint pulse)
     farmStyle: 'iso',           // chosen farm view: 'iso' (Hay Day) | 'topdown' (pixel) | 'classic' (vertical)
+    farmerLook: 2,              // 油画农户 1–9；缺省女农户。非法值按 2 收。
     extraPlots: 0,              // additional plots unlocked beyond the base 12 (max 4)
     homeUpkeepOn: '',           // Sask date last paid; empty = not yet
     homeNeglected: false,       // unpaid upkeep today → house charm halved
@@ -398,6 +399,8 @@
           this.data.loginCalendar = Object.assign({}, STARTER_STATE.loginCalendar, this.data.loginCalendar || {});
           this.data.ownedShopItems = this.data.ownedShopItems || {};
           this.data.decorations = this.data.decorations || [];
+          const fl = this.data.farmerLook | 0;
+          this.data.farmerLook = (fl >= 1 && fl <= 9) ? fl : 2;
           // Fresh top-level object so per-ai relationship writes never leak into STARTER_STATE.
           this.data.aiRelationships = Object.assign({}, STARTER_STATE.aiRelationships, this.data.aiRelationships || {});
           // Reset session stats daily

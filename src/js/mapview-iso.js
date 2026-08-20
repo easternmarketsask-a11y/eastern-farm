@@ -359,6 +359,7 @@
       Object.keys(ASSET_SRC).forEach((k) => { const im = new Image(); im.onload = () => { this._img[k] = im; this._bgKey = null; if (this._on) this.render(); }; im.src = ASSET_DIR + ASSET_SRC[k]; });   // _bgKey=null → re-render cached backdrop once the landscape/tiles finish loading
       HOME_LEVELS.forEach((s) => { if (s.stem) this._lazyImg(s.stem); });
       CAR_LEVELS.forEach((s) => { if (s.stem) this._lazyImg(s.stem); });
+      if (Farm.farmer && Farm.farmer.LOOKS) Farm.farmer.LOOKS.forEach((lk) => Farm.farmer.sheet(lk.id));
       this._undoForwardOnce();
       this._buildLayout();
       // ⚠️ 顺序：必须在 _buildLayout 之后（老存档的 plot 坐标在那里才补上），
@@ -997,7 +998,13 @@
         return;
       }
       this._stickyEnd();
-      if (Farm.crops.isMature(plot)) { this._justHarvested = { idx, t: Date.now() }; Farm.farm.harvestPlot(idx, this._fakeEvt(gx, gy)); setTimeout(() => this.render(), 50); return; }
+      if (Farm.crops.isMature(plot)) {
+        if (Farm.farmer && Farm.farmer.enqueue) {
+          Farm.farmer.enqueue(idx, 'harvest');
+          return;
+        }
+        this._justHarvested = { idx, t: Date.now() }; Farm.farm.harvestPlot(idx, this._fakeEvt(gx, gy)); setTimeout(() => this.render(), 50); return;
+      }
       Farm.farm.openPlotCare(idx, plot, Farm.crops.get(plot.crop));
     },
     _fakeEvt(gx, gy) {
@@ -1953,6 +1960,13 @@
           // 邻居的小动物也照画（门后是真实世界）；走动状态按 seed 缓存，进出都清掉，
           // 别让我家的鸡在邻居院子里当隐形靶子（_petAt 会命中没画出来的鬼影）
           farmFwdUndoneV1: true, pondMoveV3: true, worldStamped: true,
+          farmerLook: (Farm.farmer && Farm.farmer.lookOf)
+            ? Farm.farmer.lookOf({
+                farmerLook: info.farmerLook != null ? info.farmerLook
+                  : (info._neighbor && info._neighbor._doc && info._neighbor._doc.gameStats && info._neighbor._doc.gameStats.farmerLook),
+                uid: info.uid,
+              })
+            : 2,
         };
         (L.terr || []).forEach((e) => { if (e && e.k) vd.mapTerrain[e.k] = e.t; });
         (L.cl || []).forEach((k) => { if (k) vd.clearedCells[k] = 1; });
@@ -1960,6 +1974,7 @@
         this._visit = { info, savedData: real, vd };
         Farm.state._visitLock = true;
         Farm.state.data = vd;
+        if (Farm.farmer && Farm.farmer.onEnterVisit) Farm.farmer.onEnterVisit(info);
         this._pcs = null; this._pcsN = -1;       // 地块格缓存按 plots.length 判断, 必须手动失效
         this._bgKey = null;
         this._buildLayout();
@@ -1984,6 +1999,7 @@
       this._visit = null;
       if (v && v.savedData) Farm.state.data = v.savedData;
       Farm.state._visitLock = false;
+      if (Farm.farmer && Farm.farmer.onExitVisit) Farm.farmer.onExitVisit();
       this._pets = {};
       this._pcs = null; this._pcsN = -1;
       this._bgKey = null;
@@ -3835,6 +3851,7 @@
     },
     render() {
       if (!this._on) return;
+      if (Farm.farmer && Farm.farmer.tick) Farm.farmer.tick(this);
       const ctx = this._ctx, tw = this._tw(), th = this._th(), W = this._cssW(), H = this._cssH();
       const terrain = Farm.state.data.mapTerrain || {};
       ctx.clearRect(0, 0, W, H);
@@ -3932,6 +3949,10 @@
           draws.push({ d: gx + gy + 0.2, fn: () => this._drawDeco({ emoji: d.emoji, itemId: d.itemId, gx, gy, pet: d.pet, seed: d.seed }, mv) });
         }
       });
+      if (Farm.farmer && Farm.farmer.depthDraw) {
+        const fd = Farm.farmer.depthDraw(this);
+        if (fd) draws.push(fd);
+      }
       draws.sort((a, c) => a.d - c.d); draws.forEach(x => x.fn());
 
       /* 🔒 红叉必须画在深度排序**之后**（2026-08-13）——它是「这里不能放」的
@@ -4255,7 +4276,9 @@
             // 站在**路上**(路正好从摊前过; 用格子锚点, 不会掉进水塘 —— 截图实证)
             const rp2 = this._cell(o.gx + 0.7, o.gy + 2.15);
             const sx2 = rp2.x, sy2 = rp2.y;
-            this._drawVillager(sx2, sy2 + bob * 0.4, th, { scale: 1.05, shirt: '#e07030' });
+            if (!(Farm.farmer && Farm.farmer.drawGuest && Farm.farmer.drawGuest(this, cu, sx2, sy2 + bob * 0.4))) {
+              this._drawVillager(sx2, sy2 + bob * 0.4, th, { scale: 1.05, shirt: '#e07030' });
+            }
             // 气泡绘制内部还会再上抬 th*1.62(历史锚点), 这里只留一点余量 → 恰好悬在头顶
             const px2 = sx2, py2 = sy2 - th * 0.15;
             ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';

@@ -448,6 +448,7 @@
           const ok = Farm.isoView.enterVisitFarm({
             uid: neighbor.uid, name: neighbor.name, emoji: neighbor.emoji,
             level: neighbor.level || 1, layout: wl, _neighbor: neighbor,
+            farmerLook: neighbor._doc && neighbor._doc.gameStats && neighbor._doc.gameStats.farmerLook,
           });
           if (ok) return;
         }

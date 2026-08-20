@@ -52,7 +52,9 @@
           .filter((m) => m && m.uid && m.uid !== me)
           .map((m) => {
             let h = 0; for (let i = 0; i < m.uid.length; i++) h = (h * 31 + m.uid.charCodeAt(i)) >>> 0;
-            return { uid: m.uid, name: Farm.fbGameSync.displayName(m.doc), face: AVATARS[h % AVATARS.length] };
+            const gs = (m.doc && m.doc.gameStats) || {};
+            return { uid: m.uid, name: Farm.fbGameSync.displayName(m.doc), face: AVATARS[h % AVATARS.length],
+              look: (Farm.farmer && Farm.farmer.lookOf) ? Farm.farmer.lookOf({ farmerLook: gs.farmerLook, uid: m.uid }) : ((h % 9) + 1) };
           })
           .filter((m) => m.name);
         this._poolAt = now;
@@ -123,6 +125,7 @@
         pct: Math.round((mult2 - 1) * 100),
         zh: who ? who.name : ANON.zh, en: who ? who.name : ANON.en,
         face: who ? who.face : ANON.face,
+        look: who ? (who.look || 1) : 1,
         real: !!who, uid: who ? who.uid : null, visits,
         bornAt: now, expireAt: now + (WAIT_MIN + Math.random() * (WAIT_MAX - WAIT_MIN)) * 60e3,
       };

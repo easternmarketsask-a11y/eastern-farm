@@ -225,6 +225,7 @@
       const waterBtn = document.getElementById('careWater');
       if (waterBtn) waterBtn.onclick = () => {
         Farm.ui.hideModal();
+        if (Farm.farmer && Farm.farmer.enqueue) { Farm.farmer.enqueue(plotIdx, 'water'); return; }
         if (Farm.tending) Farm.tending.waterPlot(plotIdx);
       };
 

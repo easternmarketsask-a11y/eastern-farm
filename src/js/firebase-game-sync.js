@@ -81,6 +81,7 @@
         weeklyHarvests: s.weeklyHarvests || 0,
         weekId: s.weekId || '',
         nickname: s.nickname || null,
+        farmerLook: (Farm.farmer && Farm.farmer.clampLook) ? Farm.farmer.clampLook(s.farmerLook) : ((s.farmerLook >= 1 && s.farmerLook <= 9) ? (s.farmerLook | 0) : 2),
         visibleToNeighbors: s.visibleToNeighbors == null
           ? PRIVACY_DEFAULT_VISIBLE
           : !!s.visibleToNeighbors,

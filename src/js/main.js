@@ -818,6 +818,16 @@
             <span class="settings-switch" aria-hidden="true"></span>
           </span>
         </label>
+        <div class="settings-card-hint" style="margin-top:12px;">${lang === 'en' ? 'Farm look' : '农户形象'}</div>
+        <div class="settings-card-hint">${lang === 'en' ? 'This is how you look on the farm.' : '这是你在农场里走动的样子。'}</div>
+        <div id="farmerLookGrid" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:8px;">
+          ${(Farm.farmer && Farm.farmer.LOOKS ? Farm.farmer.LOOKS : []).map((lk) => {
+            const on = (Farm.farmer.clampLook(Farm.state.data.farmerLook) === lk.id);
+            return '<button type="button" class="farmer-look-btn" data-look="' + lk.id + '" style="border:1.5px solid ' + (on ? 'var(--leaf-dark,#3a8c50)' : '#e8e0d4') + ';border-radius:12px;padding:8px 4px 10px;background:' + (on ? '#f4faf4' : '#fff') + ';cursor:pointer;font:inherit;color:inherit;">'
+              + '<div style="width:56px;height:64px;margin:0 auto;background:#f3efe6 url(assets/images/farmers/p_farmer_' + lk.id + '.webp) 0 0 / 600% 400% no-repeat;background-position:0 0;border-radius:8px;"></div>'
+              + '<div style="font-size:12px;margin-top:4px;">' + (lang === 'en' ? lk.en : lk.zh) + '</div></button>';
+          }).join('')}
+        </div>
       </div>
 
       <div class="settings-card">
@@ -909,6 +919,16 @@
         if (Farm.isoView && Farm.isoView.render) Farm.isoView.render();
       };
     }
+    document.querySelectorAll('.farmer-look-btn[data-look]').forEach((btn) => {
+      btn.onclick = () => {
+        const id = parseInt(btn.getAttribute('data-look'), 10);
+        if (Farm.farmer && Farm.farmer.applyLook) Farm.farmer.applyLook(id);
+        else { Farm.state.data.farmerLook = id; Farm.state.save(); }
+        if (Farm.audio) Farm.audio.play('tap');
+        if (Farm.fbGameSync) Farm.fbGameSync.push();
+        openSettings();
+      };
+    });
     // Neighbor settings: save nickname on blur, visibility on change
     const nickEl = document.getElementById('nicknameInput');
     if (nickEl) {
