@@ -216,7 +216,7 @@
   const FARM_DY = -70;          // −150 (up)   … 0 … +150 (down), pixels
   // 'stall' 2026-08-14 从面板下架: 摊位贴图现在是种子店的专属形象, 再卖同款
   // 装饰摊 = 两个一样的摊分不清哪个能买种子。已放置的照常渲染不受影响。
-  const PALETTE = ['home', 'car', 'barn', 'house', 'greenhouse', 'coop', 'well', 'tree', 'bush', 'lantern', 'fence', 'wheel', 'bridge'];
+  const PALETTE = ['home', 'barn', 'house', 'greenhouse', 'coop', 'well', 'tree', 'bush', 'lantern', 'fence', 'wheel', 'bridge'];
   // 我的家图册。改建只收与现款的差价；另建一座收全价（农户小宅另建至少 cost=300）。
   // lv 存在每座 map 对象上。全场最多 HOME_CAP 座。
   const HOME_CAP = 4;
@@ -2127,15 +2127,6 @@
         }
         if (n > 0) { this._openNewHomePanel(); return; }
       }
-      if (type === 'car') {
-        const n = this._cars().length;
-        if (n >= CAR_CAP) {
-          if (Farm.ui && Farm.ui.toast) Farm.ui.toast(en ? 'Car limit reached. Tap a car to change it.' : '车子已经停满。点现有的车可以换款。');
-          return;
-        }
-        this._openNewCarPanel();
-        return;
-      }
       // unique 建筑（菜摊）全场限一座
       if (b.unique) {
         const map = Farm.state.data.map || [];
@@ -2417,20 +2408,6 @@
           }
           if (n > 0) {
             if (cs) { cs.textContent = en ? 'Build another' : '再建一座'; cs.style.color = '#3a8c50'; }
-            btn.style.opacity = '1';
-            return;
-          }
-        }
-        if (btn.dataset.type === 'car') {
-          const n = this._cars().length;
-          const cs = btn.querySelector('.palCost');
-          if (n >= CAR_CAP) {
-            if (cs) { cs.textContent = en ? '✓ MAX' : '✓ 已满'; cs.style.color = '#9a8f7d'; }
-            btn.style.opacity = '0.5';
-            return;
-          }
-          if (n > 0) {
-            if (cs) { cs.textContent = en ? 'Park another' : '再停一辆'; cs.style.color = '#3a8c50'; }
             btn.style.opacity = '1';
             return;
           }

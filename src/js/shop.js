@@ -184,7 +184,7 @@
       }
       if (!this._carCat) {
         return '<p class="modal-subtitle" style="margin:0 0 8px;">'
-          + (EN ? 'A new car costs the catalog price and parks on free land.' : '新停一辆按图册全价，自动停在空地上。点场上已有的车换款只补差价。')
+          + (EN ? 'Buy a car here. It parks on free land. Tap a parked car to change it and pay only the difference.' : '在商店买车，自动停在空地上。点场上已有的车换款，只补差价。')
           + '</p>' + iso._carCatCardsHtml(EN, 0);
       }
       return '<div style="margin:0 0 8px;display:flex;align-items:center;justify-content:space-between;">'

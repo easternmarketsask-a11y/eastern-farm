@@ -62,8 +62,8 @@
     },
     {
       icon: '🚗',
-      zh: { title: '停自己的车', body: '点右下角<b>建造</b>，选<b>汽车</b>。农用、家用、越野、豪华都能换。点停好的车可以换款，只补差价。' },
-      en: { title: 'Park a car', body: 'Tap <b>Build</b> (bottom-right), then <b>Car</b>. Utility, family, off-road and luxury are in the catalog. Tap a parked car to change it — you pay only the difference.' },
+      zh: { title: '停自己的车', body: '点底部<b>商店</b>，打开<b>汽车</b>分类。农用、家用、越野、豪华都能买。点停好的车可以换款，只补差价。' },
+      en: { title: 'Park a car', body: 'Open <b>Shop</b> at the bottom, then the <b>Cars</b> tab. Utility, family, off-road and luxury are for sale. Tap a parked car to change it — you pay only the difference.' },
     },
     {
       icon: '🏘',
