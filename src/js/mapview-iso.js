@@ -999,8 +999,8 @@
       }
       this._stickyEnd();
       if (Farm.crops.isMature(plot)) {
-        if (Farm.farmer && Farm.farmer.enqueue) {
-          Farm.farmer.enqueue(idx, 'harvest');
+        if (Farm.farmer && Farm.farmer.enqueueHarvestAll) {
+          Farm.farmer.enqueueHarvestAll(idx);
           return;
         }
         this._justHarvested = { idx, t: Date.now() }; Farm.farm.harvestPlot(idx, this._fakeEvt(gx, gy)); setTimeout(() => this.render(), 50); return;

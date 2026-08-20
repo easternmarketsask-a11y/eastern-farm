@@ -105,6 +105,42 @@
     return true;
   }
 
+  function enqueueHarvestAll(startIdx) {
+    const iso = Farm.isoView;
+    if (!iso || (Farm.state && Farm.state._visitLock)) return false;
+    const plots = (Farm.state.data && Farm.state.data.plots) || [];
+    const ripe = [];
+    for (let i = 0; i < plots.length; i++) {
+      if (plots[i] && plots[i].unlocked && plots[i].crop && Farm.crops && Farm.crops.isMature && Farm.crops.isMature(plots[i])) ripe.push(i);
+    }
+    if (!ripe.length) return false;
+    const dist = (a, b) => {
+      const dx = iso._plotGX(a) - iso._plotGX(b);
+      const dy = iso._plotGY(a) - iso._plotGY(b);
+      return dx * dx + dy * dy;
+    };
+    const left = ripe.slice();
+    const order = [];
+    let cur = (startIdx != null && left.indexOf(startIdx) >= 0) ? startIdx : left[0];
+    while (left.length) {
+      const at = left.indexOf(cur);
+      if (at >= 0) left.splice(at, 1);
+      order.push(cur);
+      if (!left.length) break;
+      let best = left[0], bd = Infinity;
+      for (let k = 0; k < left.length; k++) {
+        const d = dist(cur, left[k]);
+        if (d < bd) { bd = d; best = left[k]; }
+      }
+      cur = best;
+    }
+    let n = 0;
+    for (let i = 0; i < order.length; i++) {
+      if (enqueue(order[i], 'harvest')) n++;
+    }
+    return n > 0;
+  }
+
   function cellWalkable(iso, gx, gy) {
     const x = Math.round(gx), y = Math.round(gy);
     if (!iso._inBounds(x, y) || !iso._ownedCell(x, y)) return false;
@@ -371,6 +407,7 @@
     specOf: specOf,
     applyLook: applyLook,
     enqueue: enqueue,
+    enqueueHarvestAll: enqueueHarvestAll,
     tick: tick,
     depthDraw: depthDraw,
     drawGuest: drawGuest,
