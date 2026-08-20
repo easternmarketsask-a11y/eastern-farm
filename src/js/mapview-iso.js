@@ -2928,7 +2928,7 @@
       const cy = c.y + th * 0.06;
       const hsh = ((((gx || 0) * 73856093) ^ ((gy || 0) * 19349663)) >>> 0);
       const tint = ((hsh % 17) - 8) / 8;
-      const dz = th * (locked ? 0.08 : 0.28);
+      const dz = th * (locked ? 0.08 : (empty ? 0.14 : 0.22));
       const Lx = c.x - w / 2, Rx = c.x + w / 2, By = cy + h / 2;
       if (locked) {
         ctx.save();

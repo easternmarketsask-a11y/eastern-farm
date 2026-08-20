@@ -34,21 +34,21 @@
           <p class="modal-subtitle" style="margin-top:0;">${t('tutorial_subtitle')}</p>
           <div class="tutorial-steps">
             <div class="tutorial-step">
-              <div class="tutorial-step-icon">🌱</div>
+              <div class="tutorial-step-icon tut-icon-plant" aria-hidden="true"></div>
               <div class="tutorial-step-text">
                 <div class="tutorial-step-title">${t('tutorial_step1_title')}</div>
                 <div class="tutorial-step-body">${t('tutorial_step1_body')}</div>
               </div>
             </div>
             <div class="tutorial-step">
-              <div class="tutorial-step-icon">⏳</div>
+              <div class="tutorial-step-icon tut-icon-wait" aria-hidden="true"></div>
               <div class="tutorial-step-text">
                 <div class="tutorial-step-title">${t('tutorial_step2_title')}</div>
                 <div class="tutorial-step-body">${t('tutorial_step2_body')}</div>
               </div>
             </div>
             <div class="tutorial-step">
-              <div class="tutorial-step-icon">🏪</div>
+              <div class="tutorial-step-icon tut-icon-sell" aria-hidden="true"></div>
               <div class="tutorial-step-text">
                 <div class="tutorial-step-title">${t('tutorial_step3_title')}</div>
                 <div class="tutorial-step-body">${t('tutorial_step3_body')}</div>

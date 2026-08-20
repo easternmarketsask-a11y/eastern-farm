@@ -8,6 +8,7 @@
   if (Farm.ui && Farm.ui.hideModal) Farm.ui.hideModal();
   const d = Farm.state.data;
   d.tutorialV1Done = true; d.spotlightDone = true;
+  d.completedAchievements = (Farm.achievements && Farm.achievements.catalog || []).map((a) => a.id);
   d.inventory = d.inventory || {};
   d.inventory.shanghai_miao = 12;
   d.inventory.tomato = 8;

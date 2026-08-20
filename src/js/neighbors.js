@@ -306,9 +306,12 @@
         const list = await this._fetchToday();
         // No real neighbors visible yet → invite state instead of fake people.
         if (list.length === 0) {
+          const face = (n) => (Farm.farmer && Farm.farmer.previewStyle)
+            ? '<div class="farmer-look-face" style="' + Farm.farmer.previewStyle(n) + '"></div>'
+            : '';
           document.getElementById('neighborBody').innerHTML = `
             <div style="padding:22px 16px;text-align:center;">
-              <div style="font-size:46px;margin-bottom:10px;">🌱🏘️</div>
+              <div class="nb-empty-faces">${face(2)}${face(1)}${face(9)}</div>
               <div style="font-size:14px;font-weight:600;color:var(--warm-text);margin-bottom:8px;">
                 ${lang === 'en' ? 'No neighbors around yet' : '现在还没有邻居在线'}
               </div>

@@ -8,6 +8,7 @@
   if (Farm.ui && Farm.ui.hideModal) Farm.ui.hideModal();
   const d = Farm.state.data;
   d.tutorialV1Done = true; d.spotlightDone = true; d.level = 8;
+  d.completedAchievements = (Farm.achievements && Farm.achievements.catalog || []).map((a) => a.id);
   Farm.state.save();
   Farm.shop.open();
   await sleep(400);

@@ -238,8 +238,8 @@ body {
   padding: 6px 10px;
   padding-top: calc(6px + env(safe-area-inset-top));
   background:
-    radial-gradient(circle at 12% 150%, rgba(106, 176, 76, 0.08), transparent 55%),
-    linear-gradient(180deg, rgba(255,250,235,0.62) 0%, rgba(250,240,216,0.42) 100%);
+    radial-gradient(circle at 12% 150%, rgba(106, 176, 76, 0.05), transparent 55%),
+    linear-gradient(180deg, rgba(255,250,235,0.42) 0%, rgba(250,240,216,0.22) 100%);
   border-bottom: 1px solid rgba(200,180,140,0.35);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
@@ -451,6 +451,7 @@ body {
   z-index: 200;
   overflow: hidden;
 }
+body.modal-open .confetti-layer { display: none; }
 .confetti-piece {
   position: absolute;
   top: -40px;
@@ -2217,6 +2218,135 @@ body.mapmode #warehouseBtn { display: none !important; }
   width: 100%;
   height: 100%;
 }
+.storekeeper-avatar {
+  overflow: hidden;
+  border-radius: 50%;
+  background: #eaf6df;
+  border: 2px solid #fff;
+}
+.farmer-look-face {
+  width: 100%;
+  height: 100%;
+  background-color: #f3efe6;
+  background-repeat: no-repeat;
+  background-size: 600% 500%;
+  background-position: 0 0;
+}
+.storekeeper-face {
+  background-image: url('../assets/images/farmers/p_farmer_9.webp');
+  background-size: 600% 500%;
+  background-position: 0 0;
+}
+.farmer-look-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 6px;
+  margin-top: 8px;
+}
+.farmer-look-btn {
+  border: 1.5px solid #e8e0d4;
+  border-radius: 12px;
+  padding: 6px 4px 8px;
+  background: #fff;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+.farmer-look-btn.is-on {
+  border-color: var(--leaf-dark, #3a8c50);
+  background: #f4faf4;
+}
+.farmer-look-btn .farmer-look-face {
+  width: 44px;
+  height: 52px;
+  margin: 0 auto;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.farmer-look-name {
+  font-size: 11px;
+  margin-top: 4px;
+  line-height: 1.2;
+  text-align: center;
+}
+.wh-empty {
+  text-align: center;
+  padding: 18px 16px 10px;
+}
+.wh-empty img {
+  width: 140px;
+  height: auto;
+  display: block;
+  margin: 0 auto 10px;
+  filter: drop-shadow(0 4px 10px rgba(80, 50, 20, 0.18));
+}
+.wh-empty-title {
+  font-size: 15px;
+  color: var(--warm-text);
+  margin-bottom: 4px;
+}
+.wh-empty-hint {
+  font-size: 12px;
+  color: var(--warm-text-soft);
+  line-height: 1.5;
+}
+.nb-empty-faces {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.nb-empty-faces .farmer-look-face {
+  width: 48px;
+  height: 56px;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 2px 6px rgba(80, 50, 20, 0.12);
+}
+.tutorial-step-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: #eef6e6;
+  color: #2f7343;
+  font-size: 0;
+}
+.tutorial-step-icon::before {
+  content: '';
+  width: 18px;
+  height: 18px;
+  background: currentColor;
+}
+.tut-icon-plant::before {
+  clip-path: polygon(50% 0, 80% 40%, 65% 40%, 65% 100%, 35% 100%, 35% 40%, 20% 40%);
+}
+.tut-icon-wait {
+  background: #fff6e0;
+  color: #b07a20;
+}
+.tut-icon-wait::before {
+  width: 16px;
+  height: 16px;
+  border: 2.5px solid currentColor;
+  border-radius: 50%;
+  background: transparent;
+  box-shadow: inset 0 -5px 0 -3px currentColor;
+  box-sizing: border-box;
+}
+.tut-icon-sell {
+  background: #e8f3ea;
+  color: #3a8c50;
+}
+.tut-icon-sell::before {
+  width: 18px;
+  height: 14px;
+  border-radius: 2px 2px 4px 4px;
+  box-shadow: 0 -3px 0 currentColor;
+}
 .storekeeper-bubble {
   background: var(--cream-card);
   border: 2px solid var(--border-soft);
@@ -2927,12 +3057,13 @@ body.modal-open #bottombar { display: none; }
   border: 1px solid rgba(0,0,0,0.04);
 }
 .tutorial-step-icon {
-  font-size: 28px;
+  font-size: 0;
   line-height: 1;
   flex-shrink: 0;
   width: 40px;
+  height: 40px;
   text-align: center;
-  padding-top: 2px;
+  padding-top: 0;
 }
 .tutorial-step-text { flex: 1; min-width: 0; }
 .tutorial-step-title {
@@ -2966,6 +3097,11 @@ body.modal-open #bottombar { display: none; }
   /* 必须压过世界杯观赛台(z 7000)与所有弹窗(z 100)；仍低于 PWA 安装横幅(9000)。 */
   z-index: 7500;
   pointer-events: none;         /* 不挡下层点击…… */
+}
+/* 弹窗开着时 toast 贴底，不再盖住木牌标题（商店被「老农民 +5P」盖掉的根因）。 */
+body.modal-open .toast-stack {
+  top: auto;
+  bottom: calc(88px + env(safe-area-inset-bottom));
 }
 .toast {
   pointer-events: auto;         /* ……但 toast 本体可点（点一下就关） */
@@ -3820,14 +3956,16 @@ body.modal-open #bottombar { display: none; }
    导航不该藏：宁可弹窗高 40px，也不能让入口看不见。 */
 .ep-shop-tabs {
   display: flex;
-  gap: 6px;
-  margin-bottom: 14px;
   flex-wrap: wrap;
   justify-content: center;
+  gap: 6px;
+  margin-bottom: 14px;
 }
 .ep-shop-tab {
-  flex: 0 0 auto;
-  min-width: 58px;
+  flex: 0 0 calc(25% - 5px);
+  box-sizing: border-box;
+  min-width: 0;
+  width: auto;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -4724,10 +4862,10 @@ body.modal-open .pwa-install-banner { display: none; }
 .harvest-status-bar {
   position: fixed; left: 50%; transform: translateX(-50%);
   top: calc(50px + env(safe-area-inset-top));
-  z-index: 8; background: rgba(255,252,240,0.38); backdrop-filter: blur(8px);
+  z-index: 8; background: rgba(255,252,240,0.22); backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(200,180,140,0.28); border-radius: 999px;
-  padding: 2px 10px; box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+  border: 1px solid rgba(200,180,140,0.18); border-radius: 999px;
+  padding: 2px 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.06);
   max-width: 80%; pointer-events: none;
 }
 /* 外层 bar 是 pointer-events:none 的穿透浮层；onclick 绑在 center 胶囊上

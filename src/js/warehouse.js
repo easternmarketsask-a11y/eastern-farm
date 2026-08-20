@@ -43,12 +43,14 @@
 
       const titleZh = '我的谷仓';   // 与底部 dock「谷仓」同名（2026-08-15 统一叫法）
       const titleEn = 'My Barn';
-      const emptyZh = '谷仓空空如也<br><span style="font-size:12px;color:var(--warm-text-soft);">先去地里种点东西收获吧</span>';
-      const emptyEn = 'Your barn is empty<br><span style="font-size:12px;color:var(--warm-text-soft);">Plant + harvest some crops first</span>';
 
       let body;
       if (count === 0) {
-        body = `<div style="text-align:center;padding:30px 16px;font-size:14px;line-height:1.6;color:var(--warm-text);">${lang === 'en' ? emptyEn : emptyZh}</div>`;
+        body = `<div class="wh-empty">
+          <img src="assets/images/warehouse-barn.webp" alt="" width="140" height="100">
+          <div class="wh-empty-title">${lang === 'en' ? 'Your barn is empty' : '谷仓空空如也'}</div>
+          <div class="wh-empty-hint">${lang === 'en' ? 'Plant and harvest some crops first' : '先去地里种点东西收获吧'}</div>
+        </div>`;
       } else {
         // List unique crops with their counts + sell value
         const rows = Object.keys(summary).map(cropId => {

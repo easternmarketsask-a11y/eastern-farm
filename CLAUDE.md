@@ -339,6 +339,12 @@ See `docs/GAME-DESIGN.md` for full spec. TL;DR:
   走 / 浇水 / 收获 / 摊前站着。新号默认女农户。不造假名、不上照片。
   贴图按需加载，不进 SW 预缓存。规格：
   `docs/superpowers/specs/2026-08-20-painted-farmers-design.md`
+- **开车（2026-08-20）**：点农场任意空地，人绕开障碍走过去（`src/js/pathfind.js`
+  的 BFS，只走 4 邻接不擦角）。点场上的车 →「🚗 上车」，之后点哪儿车开哪儿，
+  到了人下车、车停在新位置并写进存档。车款价差＝速度差（农用 4.4 / 家用 6.0 /
+  越野 7.5 / 豪华 9.0 格·秒⁻¹，走路 2.2）。🔒 `A.driving` **不落盘**，刷新即下车；
+  建造模式与拜访别人农场时一律开不了。回归测试是 `deploy.sh` 闸门 I。
+  规格：`docs/superpowers/specs/2026-08-20-drive-car-anywhere-design.md`
 - **金色黄昏光（2026-08-15）**：程序化天空/草地/林影对齐宣传插画
   （`promo/keyart-farm-*.jpg`）——左上侧光、暖黄绿草地、云杉往右下拉长影。
   只改调色和影子方向，不换位图。别把天空改回冷薄荷绿。

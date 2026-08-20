@@ -8,6 +8,7 @@
   if (Farm.ui && Farm.ui.hideModal) Farm.ui.hideModal();
   const d = Farm.state.data;
   d.tutorialV1Done = true; d.spotlightDone = true; d.farmerLook = 2;
+  d.completedAchievements = (Farm.achievements && Farm.achievements.catalog || []).map((a) => a.id);
   Farm.state.save();
   const hb = document.getElementById('hamburgerButton');
   if (hb) hb.click();
