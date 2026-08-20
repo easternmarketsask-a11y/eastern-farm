@@ -13,10 +13,12 @@ OUT = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
 CELL_W, CELL_H = 128, 160
 COLS, ROWS = 6, 4
 
-# look id -> idle jpg number in session images/
+# look id -> session jpg numbers
 IDLE = {1: 222, 2: 206, 3: 220, 4: 209, 5: 217, 6: 218, 7: 223, 8: 219, 9: 221}
-# optional extra poses for look 2
-WALK_A, WALK_B, WATER, HARVEST = 214, 216, 210, 215
+WALK_A = {1: 225, 2: 214, 3: 224, 4: 226, 5: 228, 6: 230, 7: 227, 8: 229, 9: 231}
+WALK_B = {1: 235, 2: 216, 3: 233, 4: 234, 5: 236, 6: 238, 7: 232, 8: 237, 9: 239}
+WATER = {1: 243, 2: 210, 3: 242, 4: 240, 5: 246, 6: 245, 7: 241, 8: 247, 9: 244}
+HARVEST = {1: 250, 2: 215, 3: 251, 4: 248, 5: 255, 6: 253, 7: 249, 8: 254, 9: 252}
 
 
 def is_bg(r, g, b, br, bg, bb, tol):
@@ -114,17 +116,14 @@ def pack(look, frames_by_row):
 
 def main():
     idle_cells = {i: load_cell(n) for i, n in IDLE.items()}
-    walk_a = load_cell(WALK_A)
-    walk_b = load_cell(WALK_B)
-    water = load_cell(WATER)
-    harvest = load_cell(HARVEST)
     for look, idle in idle_cells.items():
-        if look == 2:
-            walk = [idle, walk_a, walk_b, walk_a, idle, walk_b]
-            wat = [idle, water, water, water, water, idle]
-            har = [idle, harvest, harvest, harvest, harvest, idle]
-        else:
-            walk = wat = har = [idle]
+        a = load_cell(WALK_A[look])
+        b = load_cell(WALK_B[look])
+        w = load_cell(WATER[look])
+        h = load_cell(HARVEST[look])
+        walk = [a, b, a, b, a, b]
+        wat = [idle, w, w, w, w, idle]
+        har = [idle, h, h, h, h, idle]
         pack(look, [[idle], walk, wat, har])
     print('done')
 

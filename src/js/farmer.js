@@ -16,8 +16,8 @@
   ];
   const SHEET_COLS = 6, SHEET_ROWS = 4;
   const ANIMS = { idle: 0, walk: 1, water: 2, harvest: 3 };
-  const FPS = 10;
-  const WALK_SPEED = 2.4;     // cells / second
+  const FPS = 8;
+  const WALK_SPEED = 2.2;     // cells / second
   const IDLE_PAUSE = [2, 4];
   const DIR = 'assets/images/farmers/';
 
@@ -287,8 +287,9 @@
       const row = ANIMS[anim] || 0;
       const w = h * (cw / ch);
       ctx.save();
+      const bob = (anim === 'walk') ? Math.abs(Math.sin(A.frameT * 16)) * th * 0.06 : 0;
       if (iso._shadow) iso._shadow(x + (face === 'l' ? -1 : 1) * w * 0.08, y + th * 0.04, w * 0.55, 0.16);
-      ctx.translate(x, y);
+      ctx.translate(x, y - bob);
       if (face === 'l') ctx.scale(-1, 1);
       ctx.drawImage(im, fi * cw, row * ch, cw, ch, -w / 2, -h, w, h);
       ctx.restore();
