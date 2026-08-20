@@ -92,6 +92,33 @@ try {
     }
   });
 
+  /* 给所有请求注入额外的头（EF_EXTRA_HEADERS，JSON 对象）。
+     用途：测**后台管理页面**。后台靠 cookie 会话登录，而浏览器没法给顶层导航
+     加请求头 —— 用这个就能拿 X-Admin-Token 进去，不必经手任何人的真实密码。
+     ⚠️ 只在本地验证时用；这些头会跟着**每一个**请求发出去，别拿它打第三方站。 */
+  if (process.env.EF_EXTRA_HEADERS) {
+    const extra = JSON.parse(process.env.EF_EXTRA_HEADERS);
+    const targetOrigin = new URL(url).origin;
+    /* 🔒 **只给目标站点加头。**
+       第一版用 Network.setExtraHTTPHeaders 给**所有**请求加，结果 Google 字体
+       那种跨域请求被自定义头变成了预检请求、被对方拒掉 —— 一次跑出 53 条
+       CORS 报错，全是工具自己造的假警报。一个会制造假报错的验证工具，
+       下次会骗到写它的人。 */
+    await cdp.send('Fetch.enable', {}, sessionId);
+    cdp.on(async (msg) => {
+      if (msg.method !== 'Fetch.requestPaused' || msg.sessionId !== sessionId) return;
+      const { requestId, request } = msg.params;
+      let same = false;
+      try { same = new URL(request.url).origin === targetOrigin; } catch (_) {}
+      const headers = Object.entries(
+        same ? Object.assign({}, request.headers, extra) : request.headers,
+      ).map(([name, value]) => ({ name, value: String(value) }));
+      try {
+        await cdp.send('Fetch.continueRequest', { requestId, headers }, sessionId);
+      } catch (_) { /* 请求可能已被取消 */ }
+    });
+  }
+
   await cdp.send('Runtime.enable', {}, sessionId);
   await cdp.send('Log.enable', {}, sessionId);
   await cdp.send('Page.enable', {}, sessionId);

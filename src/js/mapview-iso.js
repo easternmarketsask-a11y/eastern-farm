@@ -97,6 +97,14 @@
     hd_soil: 'hd_soil.webp',   // painted tilled-soil bed (grass no longer tiled — the bg image is the ground)
     hd_bg: 'hd_bg.webp',   // painted landscape backdrop (hills + forest + grass)
   };
+  // 进场只预载眼前会用到的建筑。30 栋房子皮肤 + 16 辆车走 _lazyImg。
+  // 以前 Object.keys(ASSET_SRC) 一次排队 80+ 张，篱笆/灯笼/水车排在房子后面，
+  // 头三秒 _blit 失败就画调试红块（Chris 2026-08-20 实况截图）。
+  const BOOT_ASSETS = [
+    'barn', 'house', 'greenhouse', 'coop', 'well', 'stall', 'tree',
+    'deco_bush', 'deco_lantern', 'deco_fence', 'deco_wheel', 'deco_bridge',
+    'plot_bed', 'tile_path', 'tile_water',
+  ];
   // Painted iso ground cube tiles. `cy` = fraction of the image height where the
   // diamond-top CENTER sits (so it lands on the cell center; tuned by screenshot).
   const ISO_TILES = {
@@ -163,7 +171,7 @@
     well: { img: 'well', w: 1, h: 1, sc: 3.15, zh: '水井', en: 'Well', cost: 180 },
     tree: { img: 'tree', w: 1, h: 1, sc: 2.2, zh: '树', en: 'Tree', cost: 90 },
     bush: { img: 'deco_bush', w: 1, h: 1, sc: 1.7, zh: '花丛', en: 'Flowers', cost: 40 },
-    lantern: { img: 'deco_lantern', w: 1, h: 1, sc: 2.6, zh: '灯笼', en: 'Lantern', cost: 70 },
+    lantern: { img: 'deco_lantern', w: 1, h: 1, sc: 3.6, zh: '灯笼', en: 'Lantern', cost: 70 },
     fence: { img: 'deco_fence', w: 1, h: 1, sc: 1.9, zh: '篱笆', en: 'Fence', cost: 40 },
     wheel: { img: 'deco_wheel', w: 2, h: 2, sc: 2.2, zh: '水车', en: 'Water Wheel', cost: 480 },
     bridge: { img: 'deco_bridge', w: 2, h: 1, sc: 1.6, zh: '小桥', en: 'Bridge', cost: 140 },
@@ -356,9 +364,26 @@
       document.body.appendChild(cv);
       this._cv = cv; this._ctx = cv.getContext('2d');
 
-      Object.keys(ASSET_SRC).forEach((k) => { const im = new Image(); im.onload = () => { this._img[k] = im; this._bgKey = null; if (this._on) this.render(); }; im.src = ASSET_DIR + ASSET_SRC[k]; });   // _bgKey=null → re-render cached backdrop once the landscape/tiles finish loading
-      HOME_LEVELS.forEach((s) => { if (s.stem) this._lazyImg(s.stem); });
-      CAR_LEVELS.forEach((s) => { if (s.stem) this._lazyImg(s.stem); });
+      const loadKey = (k) => {
+        if (!k || this._img[k] instanceof Image || this._img[k] === 'loading') return;
+        const src = ASSET_SRC[k];
+        if (!src) { this._lazyImg(k); return; }
+        this._img[k] = 'loading';
+        const im = new Image();
+        im.onload = () => { this._img[k] = im; this._bgKey = null; if (this._on) this.render(); };
+        im.onerror = () => { this._img[k] = 'failed'; };
+        im.src = ASSET_DIR + src;
+      };
+      BOOT_ASSETS.forEach(loadKey);
+      (Farm.state.data.map || []).forEach((o) => {
+        if (!o) return;
+        if (o.type === 'home') this._homeSprite(o);
+        else if (o.type === 'car') this._carSprite(o);
+        else {
+          const b = BUILDINGS[o.type];
+          if (b && b.img) loadKey(b.img);
+        }
+      });
       if (Farm.farmer && Farm.farmer.LOOKS) Farm.farmer.LOOKS.forEach((lk) => Farm.farmer.sheet(lk.id));
       this._undoForwardOnce();
       this._buildLayout();
@@ -2647,7 +2672,12 @@
     },
 
     // ---- render ----
-    _blit(im, cx, by, maxW, maxH) { if (!im) return false; const s = Math.min(maxW / im.width, maxH / im.height), w = im.width * s, h = im.height * s; this._ctx.drawImage(im, cx - w / 2, by - h, w, h); return true; },
+    _blit(im, cx, by, maxW, maxH) {
+      if (!(im instanceof Image) || !im.width) return false;
+      const s = Math.min(maxW / im.width, maxH / im.height), w = im.width * s, h = im.height * s;
+      this._ctx.drawImage(im, cx - w / 2, by - h, w, h);
+      return true;
+    },
     _cropSprite(id) { return this._cropArtImg(id, 2); },
     _cropArtImg(id, stage) {
       const key = id + '_s' + stage;
@@ -2759,6 +2789,10 @@
         } else {
           ctx.drawImage(im, x - w / 2, y - h + s * 0.08, w, h);
         }
+        ctx.fillStyle = 'rgba(255,220,140,0.16)';
+        ctx.beginPath();
+        ctx.ellipse(x - w * 0.10, y - h * 0.58, w * 0.22, h * 0.16, -0.5, 0, 6.283);
+        ctx.fill();
         return;
       }
       ctx.fillStyle = '#5a3a22';
@@ -2801,6 +2835,50 @@
       const cols = ['#f6c945', '#ef7a7a', '#e88ad0', '#ffffff'], col = cols[Math.abs(Math.round(x * 0.7 + y)) % 4];
       ctx.fillStyle = col; for (let a = 0; a < 5; a++) { const an = a / 5 * 6.283; ctx.beginPath(); ctx.arc(x + Math.cos(an) * s * 0.2, y - s * 0.95 + Math.sin(an) * s * 0.2, s * 0.15, 0, 6.283); ctx.fill(); }
       ctx.fillStyle = '#ffd34d'; ctx.beginPath(); ctx.arc(x, y - s * 0.95, s * 0.13, 0, 6.283); ctx.fill();
+    },
+    _daisy(x, y, s) {
+      const ctx = this._ctx, r = Math.max(1.1, s);
+      ctx.fillStyle = '#fff8e8';
+      for (let a = 0; a < 6; a++) {
+        const an = a / 6 * 6.283;
+        ctx.beginPath();
+        ctx.ellipse(x + Math.cos(an) * r * 0.85, y + Math.sin(an) * r * 0.55, r * 0.55, r * 0.32, an, 0, 6.283);
+        ctx.fill();
+      }
+      ctx.fillStyle = '#f2c34a';
+      ctx.beginPath(); ctx.ellipse(x, y, r * 0.42, r * 0.32, 0, 0, 6.283); ctx.fill();
+    },
+    _hollyhock(x, y, s) {
+      const ctx = this._ctx;
+      ctx.strokeStyle = '#3d6a32';
+      ctx.lineWidth = Math.max(1.1, s * 0.12);
+      ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(x, y); ctx.quadraticCurveTo(x + s * 0.12, y - s * 1.1, x + s * 0.04, y - s * 2.2); ctx.stroke();
+      const cols = ['#d45a4a', '#e07060', '#c44536'];
+      for (let i = 0; i < 4; i++) {
+        const t = 0.45 + i * 0.16;
+        const fx = x + s * 0.04 + (i % 2 ? 0.14 : -0.10) * s;
+        const fy = y - s * 2.2 * t;
+        ctx.fillStyle = cols[i % 3];
+        ctx.beginPath(); ctx.ellipse(fx, fy, s * 0.22, s * 0.18, 0, 0, 6.283); ctx.fill();
+      }
+    },
+    _reed(x, y, s) {
+      const ctx = this._ctx;
+      ctx.save();
+      ctx.strokeStyle = '#4a6a38';
+      ctx.lineWidth = Math.max(0.9, s * 0.08);
+      ctx.lineCap = 'round';
+      for (let i = 0; i < 4; i++) {
+        const dx = (i - 1.5) * s * 0.18;
+        ctx.beginPath();
+        ctx.moveTo(x + dx, y);
+        ctx.quadraticCurveTo(x + dx + s * 0.08, y - s * 0.7, x + dx + s * 0.04, y - s * (1.15 + (i % 3) * 0.18));
+        ctx.stroke();
+      }
+      ctx.fillStyle = '#6a5430';
+      ctx.beginPath(); ctx.ellipse(x, y - s * 1.28, s * 0.10, s * 0.22, -0.2, 0, 6.283); ctx.fill();
+      ctx.restore();
     },
     // 未开发农地 + 场外：油画树连成林。扩地后这片格变草地，树从缓存里消失。
     _drawWildWoods() {
@@ -2898,8 +2976,14 @@
     },
     _drawMeadowDetail(cx, cy) {
       const tw = this._tw(), th = this._th();
-      const P = [[-3.6, 2.5], [-3.1, 4.6], [-4.1, 0.8], [-2.2, 6.3], [-1.4, 7.4], [3.5, 1.8], [4.2, 3.6], [4.6, 0.4], [3.0, 6.0], [1.2, 7.3], [2.6, 7.6], [-3.0, 7.0]];
-      P.forEach((o, i) => { const x = cx + o[0] * tw, y = cy + o[1] * th; if (i % 3 === 0) this._flower(x, y, tw * 0.22); else this._tuft(x, y, tw * 0.24); });
+      const P = [[-3.6, 2.5], [-3.1, 4.6], [-4.1, 0.8], [-2.2, 6.3], [-1.4, 7.4], [3.5, 1.8], [4.2, 3.6], [4.6, 0.4], [3.0, 6.0], [1.2, 7.3], [2.6, 7.6], [-3.0, 7.0],
+        [-2.6, 3.4], [2.2, 4.8], [5.1, 2.2], [-4.8, 5.5], [1.6, 8.2], [4.8, 6.8], [-1.0, 5.8]];
+      P.forEach((o, i) => {
+        const x = cx + o[0] * tw, y = cy + o[1] * th;
+        if (i === 0 || i === 8) this._hollyhock(x, y, tw * 0.28);
+        else if (i % 6 === 0) this._daisy(x, y, tw * 0.07);
+        else this._tuft(x, y, tw * 0.24);
+      });
     },
     _drawTreeRow(cx, y, span) {
       // a row of trees along the horizon behind the farm (world-anchored → pans),
@@ -2928,7 +3012,7 @@
       const cy = c.y + th * 0.06;
       const hsh = ((((gx || 0) * 73856093) ^ ((gy || 0) * 19349663)) >>> 0);
       const tint = ((hsh % 17) - 8) / 8;
-      const dz = th * (locked ? 0.08 : (empty ? 0.14 : 0.22));
+      const dz = th * (locked ? 0.08 : (empty ? 0.05 : 0.16));
       const Lx = c.x - w / 2, Rx = c.x + w / 2, By = cy + h / 2;
       if (locked) {
         ctx.save();
@@ -2946,6 +3030,7 @@
       this._diamond(c.x + tw * 0.05, cy + th * 0.14 + dz * 0.35, w * 1.08, h * 1.12);
       ctx.fill();
       ctx.restore();
+      if (!empty) {
       // 前左木帮（暗）
       ctx.beginPath();
       ctx.moveTo(Lx, cy); ctx.lineTo(c.x, By); ctx.lineTo(c.x, By + dz); ctx.lineTo(Lx, cy + dz);
@@ -2989,12 +3074,13 @@
       ctx.lineWidth = Math.max(0.8, th * 0.03);
       this._diamond(c.x, cy, w, h);
       ctx.stroke();
+      }
       // 框内垄土（略内收，露出一圈木沿）
-      const iw = w * 0.86, ih = h * 0.82;
+      const iw = w * (empty ? 0.92 : 0.86), ih = h * (empty ? 0.90 : 0.82);
       this._diamond(c.x, cy + th * 0.01, iw, ih);
-      const r0 = Math.round((empty ? 142 : 148) + tint * 8);
-      const g0 = Math.round((empty ? 86 : 90) + tint * 5);
-      const b0 = Math.round(40 + tint * 3);
+      const r0 = Math.round((empty ? 118 : 148) + tint * 8);
+      const g0 = Math.round((empty ? 72 : 90) + tint * 5);
+      const b0 = Math.round((empty ? 32 : 40) + tint * 3);
       const r1 = Math.round(86 + tint * 6), g1 = Math.round(50 + tint * 4), b1 = 22;
       const soil = ctx.createLinearGradient(c.x - iw * 0.4, cy - ih * 0.3, c.x + iw * 0.25, cy + ih * 0.4);
       soil.addColorStop(0, 'rgb(' + r0 + ',' + g0 + ',' + b0 + ')');
@@ -3002,6 +3088,12 @@
       soil.addColorStop(1, 'rgb(' + r1 + ',' + g1 + ',' + b1 + ')');
       ctx.fillStyle = soil;
       ctx.fill();
+      if (empty) {
+        ctx.strokeStyle = 'rgba(90,58,28,0.50)';
+        ctx.lineWidth = Math.max(0.8, th * 0.035);
+        this._diamond(c.x, cy + th * 0.01, iw, ih);
+        ctx.stroke();
+      }
       ctx.save();
       ctx.beginPath();
       this._diamond(c.x, cy + th * 0.01, iw * 0.96, ih * 0.94);
@@ -3046,12 +3138,15 @@
     _drawGardenPatch() {
       const plots = Farm.state.data.plots || [];
       const pts = [];
+      let planted = 0;
       for (let i = 0; i < plots.length; i++) {
         if (!plots[i] || !plots[i].unlocked) continue;
+        if (plots[i].crop) planted++;
         const pp = this._plotPos(i);
         pts.push(this._cell(pp.gx, pp.gy));
       }
       if (!pts.length) return;
+      if (planted === 0) return;
       let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
       for (let i = 0; i < pts.length; i++) {
         const p = pts[i];
@@ -3218,9 +3313,10 @@
       ctx.save();
       body(1, 1); ctx.clip();
       const g = ctx.createLinearGradient(0, minY - th, 0, maxY + th);
-      g.addColorStop(0, '#b8dce8');
-      g.addColorStop(0.28, '#5aa8c4');
-      g.addColorStop(0.68, '#2d7a94');
+      g.addColorStop(0, '#d8eef0');
+      g.addColorStop(0.18, '#f0d0b0');
+      g.addColorStop(0.38, '#5aa8c4');
+      g.addColorStop(0.72, '#2d7a94');
       g.addColorStop(1, '#1d5468');
       ctx.fillStyle = g;
       ctx.fillRect(minX - tw * 1.4, minY - th * 1.4, (maxX - minX) + tw * 2.8, (maxY - minY) + th * 2.8);
@@ -3248,6 +3344,16 @@
       }
       ctx.restore();
       ctx.restore();
+      const shore = [
+        { x: minX - tw * 0.10, y: maxY + th * 0.08, s: 0.95 },
+        { x: minX + tw * 0.42, y: maxY + th * 0.20, s: 1.15 },
+        { x: maxX + tw * 0.08, y: maxY - th * 0.02, s: 0.88 },
+        { x: maxX - tw * 0.36, y: minY + th * 0.40, s: 0.72 },
+      ];
+      for (let i = 0; i < shore.length; i++) this._reed(shore[i].x, shore[i].y, tw * 0.38 * shore[i].s);
+      ctx.fillStyle = 'rgba(48,110,62,0.70)';
+      ctx.beginPath(); ctx.ellipse(cxp + tw * 0.22, cyp + oy + th * 0.10, tw * 0.16, th * 0.08, 0.4, 0, 6.283); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(cxp - tw * 0.16, cyp + oy + th * 0.18, tw * 0.12, th * 0.06, -0.3, 0, 6.283); ctx.fill();
     },
     _startLoop() {
       const loop = () => {
@@ -3264,17 +3370,18 @@
       const ctx = this._ctx, tw = this._tw(), th = this._th();
       // 金色黄昏天空（对齐 2026-08-15 宣传插画）：上暖下金，草地再盖住下半。
       const base = ctx.createLinearGradient(0, 0, 0, H);
-      base.addColorStop(0, '#f4a888');
-      base.addColorStop(0.20, '#f6b890');
-      base.addColorStop(0.42, '#f3c89a');
-      base.addColorStop(0.64, '#d4c878');
+      base.addColorStop(0, '#ee8a72');
+      base.addColorStop(0.16, '#f4b08c');
+      base.addColorStop(0.34, '#f6c9a0');
+      base.addColorStop(0.52, '#ecd080');
+      base.addColorStop(0.72, '#c8c060');
       base.addColorStop(1, '#9ab04a');
       ctx.fillStyle = base; ctx.fillRect(0, 0, W, H);
       // 左上太阳：柔光晕，不画硬边日轮（避免像贴纸）
-      const sun = ctx.createRadialGradient(W * 0.16, H * 0.07, 0, W * 0.16, H * 0.07, Math.max(W, H) * 0.55);
-      sun.addColorStop(0, 'rgba(255,236,190,0.72)');
-      sun.addColorStop(0.18, 'rgba(255,206,130,0.28)');
-      sun.addColorStop(1, 'rgba(255,180,90,0)');
+      const sun = ctx.createRadialGradient(W * 0.16, H * 0.07, 0, W * 0.16, H * 0.07, Math.max(W, H) * 0.62);
+      sun.addColorStop(0, 'rgba(255,236,190,0.82)');
+      sun.addColorStop(0.16, 'rgba(255,200,120,0.34)');
+      sun.addColorStop(1, 'rgba(255,170,80,0)');
       ctx.fillStyle = sun; ctx.fillRect(0, 0, W, H);
       ctx.fillStyle = 'rgba(255,242,210,0.95)';
       ctx.beginPath();
@@ -3652,15 +3759,15 @@
       // 从林脚以下起铺(hl+0.8th), 树脚由菱形格自然探上去咬合, 不再一刀切。
       const gTop = Math.max(0, hl + th * 2.4);
       const meadow = ctx.createLinearGradient(0, gTop, 0, H);
-      meadow.addColorStop(0, 'rgb(178,180,72)');
-      meadow.addColorStop(0.38, 'rgb(156,170,60)');
-      meadow.addColorStop(1, 'rgb(124,150,50)');
+      meadow.addColorStop(0, 'rgb(210,196,88)');
+      meadow.addColorStop(0.40, 'rgb(176,178,64)');
+      meadow.addColorStop(1, 'rgb(138,160,54)');
       ctx.fillStyle = meadow;
       ctx.fillRect(0, gTop, W, H - gTop);
       const shade = ctx.createLinearGradient(0, gTop, W * 0.85, H);
-      shade.addColorStop(0, 'rgba(255,214,120,0.16)');
-      shade.addColorStop(0.55, 'rgba(255,200,100,0.04)');
-      shade.addColorStop(1, 'rgba(48,62,28,0.10)');
+      shade.addColorStop(0, 'rgba(255,214,120,0.28)');
+      shade.addColorStop(0.45, 'rgba(255,196,96,0.10)');
+      shade.addColorStop(1, 'rgba(48,62,28,0.12)');
       ctx.fillStyle = shade;
       ctx.fillRect(0, gTop, W, H - gTop);
       for (let gy = gy0; gy <= gy1; gy++) {
@@ -3700,15 +3807,16 @@
             gg = gg * (1 - fade) + 160 * fade;
             bb2 = bb2 * (1 - fade) + 80 * fade;
           }
-          ctx.fillStyle = 'rgb(' + (rr | 0) + ',' + (gg | 0) + ',' + (bb2 | 0) + ')';
-          const tileA = (owned || apron) ? 0.08 : 0.40;
-          ctx.globalAlpha = dHl < 1.15 ? Math.max(0.08, (dHl - 0.7) / 0.45 * tileA) : tileA;
-          ctx.beginPath();
-          ctx.ellipse(c.x, c.y, tw * 0.78, th * 0.68, 0, 0, 6.283);
-          ctx.fill();
-          ctx.globalAlpha = 1;
-          // 点缀: 草簇(内外都有, 外面更密) / 小花(只在农场内)
-          const tuftP = inWorld ? 0.82 : 0.72;
+          if (!(owned || apron)) {
+            ctx.fillStyle = 'rgb(' + (rr | 0) + ',' + (gg | 0) + ',' + (bb2 | 0) + ')';
+            ctx.globalAlpha = dHl < 1.15 ? Math.max(0.10, (dHl - 0.7) / 0.45 * 0.40) : 0.40;
+            ctx.beginPath();
+            ctx.ellipse(c.x, c.y, tw * 0.78, th * 0.68, 0, 0, 6.283);
+            ctx.fill();
+            ctx.globalAlpha = 1;
+          }
+          // 点缀: 草簇 / 油画那种贴地雏菊
+          const tuftP = inWorld ? 0.74 : 0.68;
           if (r2 > tuftP && dHl > 1.15) {
             ctx.strokeStyle = inWorld ? '#5e8a38' : '#6d8840';
             ctx.lineWidth = Math.max(0.8, tw * 0.018); ctx.lineCap = 'round';
@@ -3716,15 +3824,12 @@
             for (let i = -1; i <= 1; i++) {
               ctx.beginPath();
               ctx.moveTo(bx + i * tw * 0.03, byy + th * 0.06);
-              ctx.quadraticCurveTo(bx + i * tw * 0.05, byy - th * 0.05, bx + i * tw * 0.075, byy - th * 0.13);
+              ctx.quadraticCurveTo(bx + i * tw * 0.05, byy - th * 0.08, bx + i * tw * 0.075, byy - th * 0.18);
               ctx.stroke();
             }
-          } else if ((owned || apron) && r2 < 0.22) {
-            const fx = c.x + (r1 - 0.5) * tw * 0.5, fy = c.y + (r2 * 8 - 0.4) * th * 0.4;
-            ctx.fillStyle = '#fdf6e8';
-            for (let i = 0; i < 5; i++) { const an = i / 5 * 6.283; ctx.beginPath(); ctx.arc(fx + Math.cos(an) * tw * 0.032, fy + Math.sin(an) * th * 0.042, Math.max(1.0, tw * 0.020), 0, 6.283); ctx.fill(); }
-            ctx.fillStyle = '#f2c34a';
-            ctx.beginPath(); ctx.arc(fx, fy, Math.max(0.9, tw * 0.015), 0, 6.283); ctx.fill();
+          } else if ((owned || apron) && r2 < 0.07 && dHl > 1.15) {
+            const pk = this._cellToPlot && this._cellToPlot[gx + ',' + gy];
+            if (pk == null) this._daisy(c.x + (r1 - 0.5) * tw * 0.5, c.y + (r2 - 0.4) * th * 0.45, tw * 0.046);
           }
         }
       }
@@ -3743,11 +3848,21 @@
     _drawGoldenHour(W, H) {
       const ctx = this._ctx;
       const g = ctx.createRadialGradient(W * 0.14, H * 0.06, 0, W * 0.14, H * 0.06, Math.max(W, H) * 1.15);
-      g.addColorStop(0, 'rgba(255,208,130,0.44)');
-      g.addColorStop(0.34, 'rgba(255,176,96,0.18)');
-      g.addColorStop(1, 'rgba(48,42,22,0.07)');
+      g.addColorStop(0, 'rgba(255,208,130,0.50)');
+      g.addColorStop(0.34, 'rgba(255,176,96,0.20)');
+      g.addColorStop(1, 'rgba(48,42,22,0.08)');
       ctx.fillStyle = g;
       ctx.fillRect(0, 0, W, H);
+      const t = Date.now() / 1000, th = this._th();
+      ctx.save();
+      for (let i = 0; i < 7; i++) {
+        const px = ((0.12 + i * 0.11) * W + Math.sin(t * 0.22 + i) * 10);
+        const py = H * (0.18 + (i % 4) * 0.12) + Math.cos(t * 0.18 + i * 0.7) * 8;
+        ctx.globalAlpha = 0.10 + 0.08 * (0.5 + 0.5 * Math.sin(t + i));
+        ctx.fillStyle = '#ffe6b0';
+        ctx.beginPath(); ctx.arc(px, py, Math.max(1.2, th * 0.05), 0, 6.283); ctx.fill();
+      }
+      ctx.restore();
     },
     /* 程序化地平线: 一切以世界坐标锚定 —— 林线沿着世界北缘的等 gx+gy 对角线,
        跟着缩放/平移走(和农场同一套变换), 所以农场永远贴着自己的地平线。
@@ -3768,7 +3883,7 @@
         const y = hl - th * cl.lift;
         if (y < -th * 2 || y > H * 0.55) continue;
         const s = th * 1.7 * cl.s;
-        ctx.fillStyle = 'rgba(255,246,228,0.48)';
+        ctx.fillStyle = 'rgba(255,214,186,0.52)';
         ctx.beginPath();
         ctx.ellipse(x, y, s * 1.65, s * 0.50, -0.08, 0, 6.283);
         ctx.ellipse(x - s * 0.72, y + s * 0.06, s * 0.88, s * 0.38, 0.1, 0, 6.283);
@@ -3820,10 +3935,10 @@
         }
         ctx.lineTo(W, hl + th * 3); ctx.lineTo(0, hl + th * 3); ctx.closePath(); ctx.fill();
       };
-      hill(th * 7.4, th * 1.15, '#e8c99a', 0.3);
-      hill(th * 5.6, th * 1.05, '#d2c07a', 1.4);
-      hill(th * 4.0, th * 1.20, '#a8b86a', 2.6);
-      hill(th * 2.5, th * 0.95, '#7fa050', 0.9);
+      hill(th * 7.4, th * 1.15, '#f0d0a8', 0.3);
+      hill(th * 5.6, th * 1.05, '#e2c888', 1.4);
+      hill(th * 4.0, th * 1.20, '#c4c070', 2.6);
+      hill(th * 2.5, th * 0.95, '#8fb052', 0.9);
       // 远坡一小圈、近坡稍大：油画后山是疏林，不是三棵孤树
       const bands = [
         { step: tw * 1.18, y0: 3.6, ySpan: 3.4, s0: 0.28, sSpan: 0.38, skip: 0.10, cam: 0.42 },
@@ -4291,7 +4406,23 @@
       const homeO = ((o.type === 'home' || o.type === 'car') && rec) ? rec : o;
       const hz = o.type === 'home' ? this._homeDrawMul(homeO) : (o.type === 'car' ? this._carDrawMul(homeO) : 1);
       const him = o.type === 'home' ? this._homeSprite(homeO) : (o.type === 'car' ? this._carSprite(homeO) : this._img[b.img]);
-      if (!this._blit(him, cc.x, by, b.w * tw * 0.92 * BLD * pk * hz, b.sc * th * 2.2 * BLD * pk * hz)) { ctx.fillStyle = '#c0392b'; ctx.fillRect(cc.x - tw * 0.4, by - th, tw * 0.8, th); }
+      if (o.type === 'fence' && him instanceof Image && him.width) {
+        // deco_fence.webp 是一张两格条：上是转角、下是单片。1×1 篱笆只用单片。
+        const sx = him.width * 0.46, sy = him.height * 0.54, sw = him.width * 0.50, sh = him.height * 0.44;
+        const destH = th * 1.55 * BLD * pk, destW = destH * (sw / sh);
+        ctx.drawImage(him, sx, sy, sw, sh, cc.x - destW / 2, by - destH * 0.92, destW, destH);
+      } else if (!this._blit(him, cc.x, by, b.w * tw * 0.92 * BLD * pk * hz, b.sc * th * 2.2 * BLD * pk * hz)) {
+        // 贴图还在路上：留草地，onload 会重画。禁止再画调试红块。
+      }
+      if (o.type === 'lantern' && him instanceof Image && him.width) {
+        const glow = ctx.createRadialGradient(cc.x - tw * 0.12, by - th * 1.35 * BLD, th * 0.08, cc.x, by - th * 0.8 * BLD, th * 1.1);
+        glow.addColorStop(0, 'rgba(255,170,70,0.28)');
+        glow.addColorStop(1, 'rgba(255,140,40,0)');
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.ellipse(cc.x - tw * 0.08, by - th * 1.2 * BLD, tw * 0.42, th * 0.55, 0, 0, 6.283);
+        ctx.fill();
+      }
       if (o.type === 'house' && !moving) {
         this._drawShopSign(cc.x, by, b.w * tw * 0.92 * BLD, b.sc * th * 2.2 * BLD);
         /* 摊前的路人(2026-08-15 两轮定稿): 瘆人的是悬空的**头**(emoji 脸),
