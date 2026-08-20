@@ -12,9 +12,20 @@
      · 有没有哪一屏是死路（既没有主按钮也没有返回）？ */
 (async () => {
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-  for (let i = 0; i < 60 && !(window.Farm && Farm.fbAuth && Farm.ui); i++) await sleep(100);
+  /* ⚠️ 必须等到 **Farm.state.data 也就绪**，不只是 fbAuth/ui。
+     每一屏的渲染都读 Farm.state.data.language，state 还没 init 时直接
+     TypeError。本地 boot 快，只等 fbAuth 也碰巧能过；生产站慢一点就整片报错，
+     看着像「登录全坏了」——那是测试跑太早，不是产品坏了。
+     判据要等的是「渲染真正依赖的东西」，不是「大概差不多了」。 */
+  for (let i = 0; i < 100 && !(window.Farm && Farm.fbAuth && Farm.ui
+        && Farm.state && Farm.state.data && Farm.state.data.language); i++) {
+    await sleep(100);
+  }
   const A = window.Farm && Farm.fbAuth;
   if (!A) return { failures: ['Farm.fbAuth 没加载'] };
+  if (!(Farm.state && Farm.state.data)) {
+    return { inconclusive: '等了 10 秒 Farm.state 仍未初始化（网络太慢？）' };
+  }
 
   // 每屏：视图名 → [主按钮 id, 其它必须存在的 id...]
   const SCREENS = [

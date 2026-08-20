@@ -11,7 +11,13 @@
      ③ 每屏的主按钮都绑上了 onclick（「点了没反应」是本项目反复出现的失败态） */
 (async () => {
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-  for (let i = 0; i < 120 && !(window.Farm && Farm.fbAuth && Farm.ui); i++) await sleep(100);
+  /* ⚠️ 要等 Farm.state.data 也就绪 —— 每屏渲染都读 state.data.language，
+     state 没 init 就是 TypeError。本地 boot 快碰巧能过，生产站慢一点就整片
+     报错，看着像「登录全坏了」，实则是测试跑太早（2026-08-19 踩过）。 */
+  for (let i = 0; i < 120 && !(window.Farm && Farm.fbAuth && Farm.ui
+        && Farm.state && Farm.state.data && Farm.state.data.language); i++) {
+    await sleep(100);
+  }
   const A = window.Farm && window.Farm.fbAuth;
   if (!A) return { failures: ['Farm.fbAuth 没加载'] };
 
