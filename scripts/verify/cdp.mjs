@@ -15,6 +15,7 @@ const PORT = 9222 + (process.pid % 600);
 const url = process.argv[2] || 'http://127.0.0.1:8000/src/';
 const evalFile = process.argv[3] || '';
 const waitMs = parseInt(process.argv[4] || '2500', 10);
+const CDP_TIMEOUT = parseInt(process.env.EF_CDP_TIMEOUT || '15000', 10);
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -50,7 +51,9 @@ class CDP {
     return new Promise((resolve, reject) => {
       this.pending.set(id, { resolve, reject });
       this.ws.send(JSON.stringify({ id, method, params, sessionId }));
-      setTimeout(() => { if (this.pending.has(id)) { this.pending.delete(id); reject(new Error('timeout ' + method)); } }, 15000);
+      // 默认 15s 够所有部署闸门用。走真实登录/下单那种「点一下等一次云端」的
+      // 长流程时用 EF_CDP_TIMEOUT 放宽 —— 别为此调高默认值，闸门跑得快才有人跑。
+      setTimeout(() => { if (this.pending.has(id)) { this.pending.delete(id); reject(new Error('timeout ' + method)); } }, CDP_TIMEOUT);
     });
   }
   on(fn) { this.listeners.push(fn); }

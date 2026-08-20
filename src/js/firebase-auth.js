@@ -1026,12 +1026,18 @@
     },
 
     /* 日常登录：手机号 / 用户名 / 邮箱 + 密码。
-       手机号和用户名都不是 Firebase 认识的东西，所以先问后端要「登录用的假邮箱」
-       （/resolve-login），再拿它走标准的邮箱+密码登录。
 
-       🔒 后端对**查不到**的号码也回一个形状相同的占位假邮箱 —— 登录会失败在
-       Firebase 那一步，统一报「不对」。这样这个接口就不是会员枚举器。
-       前端因此**不能**把 resolve 的结果当成「这个号存在」，也不能分别提示。 */
+       手机号和用户名都不是 Firebase 认识的东西，而且**一个 Firebase 账号只能有
+       一个登录邮箱** —— 走新流程的人挂的是验证过的真邮箱，走老短信流程的人挂的
+       是手机号推导的假邮箱，两种都在线上跑。所以先问后端「该用哪个邮箱登」
+       （POST /login，2026-08-20），再拿它走标准的邮箱+密码登录。
+
+       🔒 后端**先拿密码核一次，核过了才回映射** —— 知道密码的就是本人，对本人
+       不存在泄露。所以这里可以放心把三种输入都交给它。
+       🔒 后端对「没这个人」和「密码不对」回的是同一句话，所以前端也**不能**
+          分别提示，否则又成了会员枚举器。
+       （旧的 /resolve-login 还在，但它只算得出假邮箱 —— 真邮箱账号输手机号
+         必然登不上，那正是这次要修的。） */
     async _identLogin() {
       const lang = Farm.state.data.language;
       const en = lang === 'en';
@@ -1050,25 +1056,37 @@
       const reset = () => { if (btn) { btn.disabled = false; btn.textContent = en ? 'Sign in' : '登录'; } };
       if (btn) { btn.disabled = true; btn.textContent = en ? 'Signing in…' : '登录中…'; }
 
-      // 用户名不允许含 @（后端 validate_username 保证），所以含 @ 一定是邮箱。
-      // 老会员（10 个已有邮箱密码的）走这条，一步都不多。
+      /* 三种输入都交给后端换算。邮箱也要走 —— 老短信流程的人账号挂的是假邮箱，
+         他输自己的真邮箱直接登是登不上的，得靠后端换。 */
       let loginId = ident;
-      if (ident.indexOf('@') === -1) {
-        try {
-          const r = await fetch(STOCKWISE_BASE + '/api/public/member-auth/resolve-login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ identifier: ident }),
-          });
+      let denied = false;
+      try {
+        const r = await fetch(STOCKWISE_BASE + '/api/public/member-auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ identifier: ident, password: pw }),
+        });
+        if (r.status === 401) {
+          denied = true;                       // 账号或密码不对（后端不区分）
+        } else if (r.status === 404 && ident.indexOf('@') !== -1) {
+          // 后端还没上这条路，而输的是邮箱 —— 直接拿它试，别把人挡在门外
+          loginId = ident;
+        } else {
           const d = await r.json().catch(() => null);
           if (!r.ok || !d || !d.loginId) throw new Error((d && d.detail) || 'HTTP ' + r.status);
           loginId = d.loginId;
-        } catch (e) {
-          // 🔒 请求失败绝不能显示成「账号密码不对」——那是把一个错误的事实告诉顾客
-          this._showError(en ? 'Could not reach the server. Please try again.' : '连接不上服务器，请重试。');
-          reset();
-          return;
         }
+      } catch (e) {
+        // 🔒 请求失败绝不能显示成「账号密码不对」——那是把一个错误的事实告诉顾客
+        this._showError(en ? 'Could not reach the server. Please try again.' : '连接不上服务器，请重试。');
+        reset();
+        return;
+      }
+      if (denied) {
+        this._showError(en ? 'That account and password don’t match.'
+                           : '账号或密码不对。');
+        reset();
+        return;
       }
 
       try {
@@ -1087,15 +1105,11 @@
         } else {
           /* 统一口径：不区分「没这个号」和「密码错」，否则就是会员枚举器。
 
-             第二句是给 10 个用真邮箱注册的老会员的（实测 77 个 Auth 账号里 10 个
-             如此）。他们的账号挂的是真邮箱，而 /resolve-login 按手机号只会算出
-             假邮箱 —— 输手机号必然登不上。
-             🔒 后端**不能**改成回真邮箱：那等于任何人拿一个手机号就能查出别人的
-             邮箱地址，比这个不便严重得多。所以在这里给一句对**所有人**都一样的
-             中性提示 —— 不透露任何账号存不存在。 */
-          msg = en
-            ? 'That phone/username and password don’t match.\nSigned up with an email? Enter the email instead.'
-            : '手机号/用户名或密码不对。\n用邮箱注册过的话，请填邮箱。';
+             ⓘ 这里原来还有一句「用邮箱注册过的话请填邮箱」—— 那是在绕开
+             「真邮箱账号输手机号登不上」这个缺陷。POST /login（2026-08-20）
+             把缺陷本身修掉了：后端先核密码再回该用哪个邮箱，所以两条路都能登，
+             那句绕路的提示可以撤了。 */
+          msg = en ? 'That account and password don’t match.' : '账号或密码不对。';
         }
         this._showError(msg);
         reset();
@@ -1146,6 +1160,14 @@
         reset();
         return;
       }
+      /* 密码是后端用 admin SDK 写到这个 uid 上的，客户端手上的 user 对象
+         **还是旧的** —— providerData 里没有 'password'，`_hasLoginCredential()`
+         会继续说「这人还没设过密码」，于是可能把刚设完的人再推回设密码屏。
+         reload() 一次让它说实话。失败不拦路：密码在服务端已经写成了。
+         （农场不用重新登录 —— 身份就是这个 uid，没变。网站那边不一样，
+           它靠 auth 状态判「登没登」，所以那边设完要真登一次。）*/
+      try { await user.reload(); } catch (_) {}
+
       // 下次登录默认填这个（本机）。设了用户名就填用户名，否则填手机号。
       try {
         localStorage.setItem(IDENT_KEY,
