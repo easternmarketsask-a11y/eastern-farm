@@ -78,7 +78,7 @@
     "daily_login_reward": { "zh": "今日奖励: {coins}🪙 + {points}🎫", "en": "Today: {coins}🪙 + {points}🎫" },
 
     "shop_title": { "zh": "商店", "en": "Shop" },
-    "shop_subtitle": { "zh": "种子、道具、装饰、房子、汽车，官方出售的都在这里。", "en": "Seeds, items, decor, homes and cars — everything the game sells." },
+    "shop_subtitle": { "zh": "种子、道具、装饰、房子、汽车，都在这里。", "en": "Seeds, items, decor, homes and cars — all in here." },
 
     "tasks_title": { "zh": "今日任务", "en": "Today's Tasks" },
     "tasks_progress": { "zh": "{done}/{total}", "en": "{done}/{total}" },
