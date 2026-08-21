@@ -340,7 +340,7 @@
     _sel: -1, _moving: null,
     _pets: {},          // seed -> {fx,fy,tx,ty,pause,face,hx,hy} live walk state (not persisted)
     _lastWalkT: 0,
-    _buildBtn: null, _communityBtn: null, _palette: null, _hint: null, _modeTabs: null, _palBuild: null, _palTerrain: null,
+    _buildBtn: null, _communityBtn: null, _driveBtn: null, _driveBtnOn: null, _palette: null, _hint: null, _modeTabs: null, _palBuild: null, _palTerrain: null,
 
     // DEFAULT farm view (Hay Day isometric). Chosen via Farm.state.farmStyle()
     // (saved preference + URL override); players switch in the guide (ⓘ).
@@ -2540,6 +2540,21 @@
       nbBtn.onclick = () => { if (Farm.audio) Farm.audio.play('tap'); if (Farm.neighbors) Farm.neighbors.open(); };
       document.body.appendChild(nbBtn); this._communityBtn = nbBtn;
 
+      /* 🚶 下车按钮：只在开车时出现。
+         此前下车的唯一入口是「点那辆车」，可农场能缩放平移 —— 车开远了或者
+         镜头挪开了，车根本不在视野里，玩家就被困在车上（唯一的逃生路径是点菜地
+         触发自动下车，没人猜得到）。它出现本身也是「你正在开车」的提示：
+         人一上车就藏进车里了，屏幕上原本没有任何持续的状态。 */
+      const outBtn = document.createElement('button');
+      outBtn.id = 'isoDriveOutBtn';
+      outBtn.style.cssText = 'position:fixed;left:14px;z-index:20;display:none;border:none;border-radius:24px;padding:11px 16px;min-height:44px;box-sizing:border-box;align-items:center;justify-content:center;font:600 15px/1 "Noto Sans SC",system-ui,sans-serif;color:#fff;background:#8b6a4a;box-shadow:0 3px 10px rgba(0,0,0,.22);cursor:pointer;';
+      outBtn.onclick = () => {
+        if (Farm.audio) Farm.audio.play('tap');
+        if (Farm.farmer && Farm.farmer.unboard) Farm.farmer.unboard();
+        this._syncDriveBtn();
+      };
+      document.body.appendChild(outBtn); this._driveBtn = outBtn;
+
       const tray = document.createElement('div'); tray.id = 'isoPalette';
       tray.style.cssText = 'position:fixed;left:0;right:0;z-index:20;display:none;flex-direction:column;gap:8px;padding:9px 10px;background:rgba(255,255,255,.94);box-shadow:0 -3px 12px rgba(0,0,0,.12);';
       const tabs = document.createElement('div'); tabs.style.cssText = 'display:flex;gap:6px;justify-content:center;';
@@ -2586,9 +2601,10 @@
     // mode/zoom/camera state lives on `this` and survives the rebuild.
     relang() {
       if (!this._on) return;   // map inactive → next init() builds it fresh in the right language
-      [this._buildBtn, this._communityBtn, this._palette, this._hint, this._zoomUI].forEach((el) => { if (el && el.remove) el.remove(); });
+      [this._buildBtn, this._communityBtn, this._driveBtn, this._palette, this._hint, this._zoomUI].forEach((el) => { if (el && el.remove) el.remove(); });
       if (this._buildPulse && this._buildPulse.cancel) { try { this._buildPulse.cancel(); } catch (e) {} }
-      this._buildBtn = this._communityBtn = this._palette = this._hint = this._zoomUI = null;
+      this._buildBtn = this._communityBtn = this._driveBtn = this._palette = this._hint = this._zoomUI = null;
+      this._driveBtnOn = null;
       this._modeTabs = this._palBuild = this._palTerrain = null;
       this._buildUI();   // rebuilds in current language; _refreshModeUI()+_layoutUI() restore the mode
       this.render();
@@ -2613,7 +2629,26 @@
         this._communityBtn.textContent = en ? '🏘 Neighbors' : '🏘 邻居';
         this._communityBtn.style.display = (this._build || this._visit) ? 'none' : 'inline-flex';
       }
+      if (this._driveBtn) {
+        const ph = (this._build && this._palette) ? (this._palette.getBoundingClientRect().height || 74) : 0;
+        this._driveBtn.style.left = (r.left + 14) + 'px';
+        // 抬一层跟「邻居」齐平：farmRect 的底边压在底部 dock 后面，贴着底边放会
+        // 盖住「任务」和左下角头像（实测过）。左下车 / 右邻居，视觉也对称。
+        this._driveBtn.style.bottom = (fromBottom + (this._build ? ph + 10 : 14) + 52) + 'px';
+        this._driveBtn.textContent = en ? '🚶 Get out' : '🚶 下车';
+        this._driveBtnOn = null;            // 强制下一次 _syncDriveBtn 重算显隐
+        this._syncDriveBtn();
+      }
       if (this._hint) { this._hint.style.display = this._build ? 'block' : 'none'; this._hint.style.left = r.left + 'px'; this._hint.style.right = Math.max(0, window.innerWidth - (r.left + r.width)) + 'px'; this._hint.style.top = (r.top + 8) + 'px'; }
+    },
+    _syncDriveBtn() {
+      const b = this._driveBtn;
+      if (!b) return;
+      const driving = !!(Farm.farmer && Farm.farmer.drivingIdx && Farm.farmer.drivingIdx() != null);
+      const on = driving && !this._build && !this._visit && !(Farm.state && Farm.state._visitLock);
+      if (this._driveBtnOn === on) return;   // render 每帧都调，状态没变就别碰 DOM
+      this._driveBtnOn = on;
+      b.style.display = on ? 'inline-flex' : 'none';
     },
     _refreshModeUI() {
       const terr = this._editMode === 'terrain', en = this._lang() === 'en';
@@ -4190,6 +4225,7 @@
     render() {
       if (!this._on) return;
       if (Farm.farmer && Farm.farmer.tick) Farm.farmer.tick(this);
+      this._syncDriveBtn();   // 上/下车是 tick 里发生的，按钮显隐跟着它走
       this._followDriveCam();
       const ctx = this._ctx, tw = this._tw(), th = this._th(), W = this._cssW(), H = this._cssH();
       const terrain = Farm.state.data.mapTerrain || {};

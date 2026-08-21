@@ -246,6 +246,19 @@
     T('E4b 点车不再弹车卡片', !document.querySelector('[data-car-cat],[data-car-swap],[data-car-id],[data-new-car-id]'));
     for (let i = 0; i < 80 && Farm.farmer.drivingIdx() !== ti; i++) { Farm.farmer.tick(iso); await sleep(120); }
     T('E5 走到后坐进车里', Farm.farmer.drivingIdx() === ti);
+    // 🚶 常驻下车按钮：车可能开出视野，点车不是唯一出路
+    const outBtn = document.getElementById('isoDriveOutBtn');
+    T('E6a 开车时出现下车按钮', !!outBtn && outBtn.style.display !== 'none');
+    T('E6b 按钮文字是下车', !!outBtn && /下车|Get out/.test(outBtn.textContent || ''));
+    outBtn.click();
+    await sleep(120);
+    T('E6c 点按钮就下车了', Farm.farmer.drivingIdx() === null);
+    iso.render(); await sleep(60);
+    T('E6d 下车后按钮收起来', outBtn.style.display === 'none');
+
+    // 点车下车这条老路也得还在
+    iso._tapCar(ti);
+    for (let i = 0; i < 60 && Farm.farmer.drivingIdx() !== ti; i++) { Farm.farmer.tick(iso); await sleep(120); }
     T('E6 驾驶中再点这辆车＝下车', iso._tapCar(ti) === true && Farm.farmer.drivingIdx() === null);
 
     // 商店里选一款车：场上已有车 → 应该问买新的还是换掉
