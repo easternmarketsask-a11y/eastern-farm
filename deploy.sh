@@ -75,6 +75,25 @@ if ! node scripts/verify/audio-test.mjs; then
   echo "—— 部署中止(音效契约)"
   exit 1
 fi
+if command -v py >/dev/null 2>&1; then
+  if ! py -3 scripts/verify/car-platform-test.py; then
+    echo "—— 部署中止(车辆平台贴合草地契约)"
+    exit 1
+  fi
+elif command -v python >/dev/null 2>&1; then
+  if ! python scripts/verify/car-platform-test.py; then
+    echo "—— 部署中止(车辆平台贴合草地契约)"
+    exit 1
+  fi
+elif command -v python3 >/dev/null 2>&1; then
+  if ! python3 scripts/verify/car-platform-test.py; then
+    echo "—— 部署中止(车辆平台贴合草地契约)"
+    exit 1
+  fi
+else
+  echo "—— 部署中止(车辆平台契约需要 python)"
+  exit 1
+fi
 
 # 2. 发布闸门 B: 无头 Chrome 冒烟启动(游戏能开、无未捕获异常)
 #    依赖: node + Chrome + python(起本地静态服务)。缺任一 → 跳过并大声警告。

@@ -353,6 +353,10 @@ See `docs/GAME-DESIGN.md` for full spec. TL;DR:
   `p_farmer_N_back.webp` / `p_car_N_rear.webp`。
   ❌ 不许再用世界轴 `|dx| vs |dy|`（+gy 会被错画成朝右，人侧着走、车侧着开）。
   宠物已经是 `dx-dy` 翻转，人/车必须同一套。契约：`scripts/verify/iso-heading-test.mjs`。
+- 🔒 **车辆落地贴合草地（2026-08-20）**：买来的车坐在程序化草地上，不带影棚黄绿椭圆。
+  `scripts/_key_car_platform.py` 从边缘洪水抠椭圆；车漆跟草地太像的款（2/4/7/10/11/15）
+  只抠影棚、保留椭圆，避免把车身抠穿。引擎 `_drawBuilding` 已经画接地影。
+  契约：`scripts/verify/car-platform-test.py`。
 - **开车（2026-08-20）**：点农场任意空地，人绕开障碍走过去（`src/js/pathfind.js`
   的 BFS，只走 4 邻接不擦角）。点场上的车 →「🚗 上车」，之后点哪儿车开哪儿，
   到了人下车、车停在新位置并写进存档。车款价差＝速度差（农用 4.4 / 家用 6.0 /
