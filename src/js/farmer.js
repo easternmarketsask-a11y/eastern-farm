@@ -17,6 +17,7 @@
   const SHEET_COLS = 6, SHEET_ROWS = 5;
   const ANIMS = { idle: 0, walk: 1, water: 2, harvest: 3, plant: 4 };
   const FPS = 8;
+  const WORK_HOLD = 1.05;     // harvest/plant/water 播完才生效；跳过站桩首尾帧
   const WALK_SPEED = 2.2;     // cells / second
   const IDLE_PAUSE = [2, 4];
   const DIR = 'assets/images/farmers/';
@@ -141,7 +142,7 @@
     // 这一批活刚开工（队列从空变非空、手上没别的事）→ 算一次开车去值不值。
     // 只判这一次：开车只负责去干活的第一段路，菜地连片挨着，逐块上下车太吵。
     if (A.queue.length === 1 && !A.job) {
-      const wp = plotPos(iso, plotIdx);
+      const wp = approachPos(iso, plotIdx);
       const carIdx = pickCarForWork(iso, wp.gx, wp.gy);
       if (carIdx != null) {
         if (A.driving === carIdx) goTo(wp.gx, wp.gy, true);
@@ -258,7 +259,7 @@
     if (Farm.audio && Farm.audio.play) Farm.audio.play('horn');
     // 上车是为了去干活 → 不用玩家再点一次，直接开到第一块地
     if (A.queue.length && iso) {
-      const wp = plotPos(iso, A.queue[0].plotIdx);
+      const wp = approachPos(iso, A.queue[0].plotIdx);
       if (goTo(wp.gx, wp.gy, true)) { if (iso.render) iso.render(); return true; }
     }
     if (Farm.ui && Farm.ui.toast) {
@@ -310,7 +311,7 @@
      「自动开车」就会静默地永不触发（或者到处乱触发），而它不报任何错。 */
   function driveDebug(plotIdx) {
     const iso = Farm.isoView;
-    const tp = plotPos(iso, plotIdx);         // 与 enqueue 用的是同一个落脚点
+    const tp = approachPos(iso, plotIdx);         // 车停邻格；人再走进垄前缘
     const tx = tp.gx, ty = tp.gy;
     const map = (Farm.state.data && Farm.state.data.map) || [];
     const walkFree = walkableFor(iso, 1, 1);
@@ -489,14 +490,22 @@
     return near[(Math.random() * near.length) | 0];
   }
 
-  function plotPos(iso, plotIdx) {
+  function approachPos(iso, plotIdx) {
     const gx = iso._plotGX(plotIdx), gy = iso._plotGY(plotIdx);
-    const dirs = [[0, 1], [1, 1], [-1, 1], [1, 0], [-1, 0], [0, -1]];
+    const dirs = [[0, 1], [1, 1], [-1, 1], [1, 0], [-1, 0], [0, -1], [1, -1], [-1, -1]];
     for (let i = 0; i < dirs.length; i++) {
       const x = gx + dirs[i][0], y = gy + dirs[i][1];
-      if (cellWalkable(iso, x, y)) return { gx: x, gy: y + 0.12 };
+      if (cellWalkable(iso, x, y)) return { gx: x, gy: y };
     }
     return { gx: gx + 0.2, gy: gy + 0.9 };
+  }
+
+  // 干活站在本块地朝镜头的前缘：手落在土/菜上。寻路只走到 approachPos。
+  function plotPos(iso, plotIdx, kind) {
+    const gx = iso._plotGX(plotIdx), gy = iso._plotGY(plotIdx);
+    if (kind === 'plant') return { gx: gx + 0.12, gy: gy + 0.34 };
+    if (kind === 'water') return { gx: gx + 0.32, gy: gy + 0.22 };
+    return { gx: gx + 0.14, gy: gy + 0.38 };
   }
 
   function enqueueWaterAll(startIdx) {
@@ -619,8 +628,8 @@
     A.job = job;
     A.anim = 'walk';
     A.frameT = 0;
-    const jp = plotPos(iso, job.plotIdx);
-    A.path = Farm.pathfind.find(A.gx, A.gy, jp.gx, jp.gy, freeFromHere(walkableFor(iso, 1, 1)));
+    const ap = approachPos(iso, job.plotIdx);
+    A.path = Farm.pathfind.find(A.gx, A.gy, ap.gx, ap.gy, freeFromHere(walkableFor(iso, 1, 1)));
     A.pathI = 1;
     return true;
   }
@@ -706,7 +715,7 @@
     }
 
     if (A.job && (A.job.kind === 'harvest' || A.job.kind === 'water' || A.job.kind === 'plant')) {
-      const p = plotPos(iso, A.job.plotIdx);
+      const p = plotPos(iso, A.job.plotIdx, A.job.kind);
       if (A.anim === 'walk') {
         // 先沿寻路的整格路线走，最后一小段再对齐到地头的精确落点。
         // 原来这里是直线插值：地块近时看不出来，开车把距离拉长后会明显穿墙穿水塘。
@@ -728,7 +737,7 @@
           A.frameT = 0;
         }
       } else if (A.anim === 'harvest' || A.anim === 'water' || A.anim === 'plant') {
-        if (A.frameT >= SHEET_COLS / FPS) finishJob(iso);
+        if (A.frameT >= WORK_HOLD) finishJob(iso);
       }
       return;
     }
@@ -756,7 +765,8 @@
   function frameIndex() {
     const n = SHEET_COLS;
     if (A.anim === 'harvest' || A.anim === 'water' || A.anim === 'plant') {
-      return Math.min(n - 1, Math.floor(A.frameT * FPS));
+      const t = Math.min(0.999, A.frameT / WORK_HOLD);
+      return 1 + Math.min(3, Math.floor(t * 4));
     }
     return Math.floor(A.frameT * FPS) % n;
   }
@@ -776,8 +786,14 @@
       const w = h * (cw / ch);
       ctx.save();
       const bob = (anim === 'walk') ? Math.abs(Math.sin(A.frameT * 16)) * th * 0.07 : 0;
+      let dip = 0;
+      if (anim === 'harvest' || anim === 'plant') {
+        const t = Math.min(1, A.frameT / WORK_HOLD);
+        const squat = t < 0.22 ? t / 0.22 : (t > 0.82 ? 1 - (t - 0.82) / 0.18 * 0.45 : 1);
+        dip = th * (anim === 'plant' ? 0.05 : 0.08) * squat;
+      }
       if (iso._shadow) iso._shadow(x + (face === 'l' ? -1 : 1) * w * 0.08, y + th * 0.04, w * 0.55, 0.16);
-      ctx.translate(x, y - bob);
+      ctx.translate(x, y - bob + dip);
       if (wantBack) ctx.scale(0.94, 0.94);
       if (face === 'l') ctx.scale(-1, 1);
       if (anim === 'walk') ctx.rotate(0.05);
@@ -791,7 +807,8 @@
   function drawActor(iso, look, anim, fi, gx, gy, face, away) {
     const c = iso._cell(gx, gy);
     const th = iso._th();
-    const x = c.x, y = c.y + th * 0.18;
+    const yOff = (anim === 'harvest' || anim === 'plant') ? 0.10 : 0.18;
+    const x = c.x, y = c.y + th * yOff;
     if (blitSheet(iso._ctx, iso, look, anim, fi, x, y, face, away)) return;
     const spec = specOf(look);
     if (iso._drawVillager) {
@@ -809,7 +826,7 @@
     const fi = frameIndex();
     const gx = A.gx, gy = A.gy, look = A.look, anim = A.anim, face = A.face, away = !!A.away;
     return {
-      d: gx + gy + 0.35,
+      d: gx + gy + ((anim === 'harvest' || anim === 'plant' || anim === 'water') ? 0.62 : 0.35),
       fn: () => drawActor(iso, look, anim, fi, gx, gy, face, away),
     };
   }

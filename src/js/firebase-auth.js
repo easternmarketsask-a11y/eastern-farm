@@ -34,7 +34,8 @@
      预填。混着存的话，设过用户名的人再去激活，手机号框里会冒出一个用户名。
      🔒 这是**本机**的便利，不是「认识你」——绝不存姓名、绝不显示姓名。
      陌生设备上不得出现任何顾客姓名是隐私红线（spec 3.2）。 */
-  const IDENT_KEY = 'eastern_farm_last_ident';
+  const CARD_LINK_ASKED_KEY = 'ef_card_link_asked_v1';
+const IDENT_KEY = 'eastern_farm_last_ident';
   // 会员激活流程要问后端「这个手机号该走哪条路」。与 analytics.js 同一个后端。
   const STOCKWISE_BASE = 'https://stockwise-app-873982544406.us-central1.run.app';
   /* 后端调用一律带超时。没有超时的 fetch 卡住时不报错、不进 catch，
@@ -70,6 +71,7 @@
         if (user) {
           this.currentUser = user;
           await this._loadMemberDoc(user.uid);
+          this._maybeOfferCardLink();
           this._notify();
           this._renderTopbar();
           this._renderSplash();
@@ -336,6 +338,61 @@
         this.memberDoc = null;
       }
       this._syncLocalBalance();
+    },
+
+    /* 登录了、但系统认不出他是谁 —— 请他输一下手机号就能连上（2026-08-20）。
+
+       ## 这不是假想的情况
+
+       实测生产库：有一位真实顾客（650 积分）用邮箱+密码能正常登进来，
+       但 `members.firebase_uid` 是空的、账号上也没有手机号 —— 于是
+       `_loadMemberDoc` 的四条查找链（firebase_uid / token 手机号 / uid /
+       whoami）**全部落空**，她被当成游客，650 分一分看不见。
+
+       🔒 不能就这么显示成「0 分的游客」—— 那是把一个**错误的事实**告诉顾客
+          （失败态铁律：请求失败不能显示成「没有内容」）。
+
+       修法是复用已有的「手机号直接进」：输号 → 确认名字 → 关联。安全性与那条
+       路完全相同，不新开口子。
+
+       ⚠️ 只对**真账号**弹（有邮箱/密码凭据的）。匿名访客本来就没有会员卡，
+          对他们弹这个是骚扰。
+       ⚠️ 一台设备只弹一次（记 localStorage）；他关掉就不再纠缠，
+          「我的」菜单里仍有入口。 */
+    _maybeOfferCardLink() {
+      try {
+        const u = this.currentUser;
+        if (!u || u.isAnonymous || this.memberDoc) return;
+        if (!this._hasLoginCredential()) return;      // 匿名/未设密码的不算
+        if (localStorage.getItem(CARD_LINK_ASKED_KEY)) return;
+        localStorage.setItem(CARD_LINK_ASKED_KEY, '1');
+      } catch (_) { return; }
+
+      const en = Farm.state.data.language === 'en';
+      setTimeout(() => {
+        // 🔒 别盖在开屏/新手引导/别的弹窗上（isBusy 统一判定，2026-08-15 定）
+        if (Farm.ui && Farm.ui.isBusy && Farm.ui.isBusy()) return;
+        Farm.ui.showModal(`
+          <h2 class="modal-title">${en ? 'Link your member card' : '连上你的会员卡'}</h2>
+          <p style="text-align:center;font-size:15px;line-height:1.7;margin:14px 0;">
+            ${en
+              ? "You're signed in, but this account isn't linked to a member card yet — so your points aren't showing."
+              : '你已经登录了，但这个账号还没连上会员卡，所以积分还看不到。'}
+          </p>
+          <p style="text-align:center;font-size:14px;line-height:1.7;color:var(--warm-text-soft);">
+            ${en ? 'Enter the phone number you gave us in store and it links right away.'
+                 : '输一下你在店里登记的手机号，马上就能连上。'}
+          </p>
+          <button class="btn auth-primary" id="cardLinkGo" style="margin-top:14px;">
+            ${en ? 'Enter my phone number' : '输入手机号'}
+          </button>
+          <button class="auth-ghost" onclick="Farm.ui.hideModal()">
+            ${en ? 'Later' : '以后再说'}
+          </button>
+        `);
+        const b = document.getElementById('cardLinkGo');
+        if (b) b.onclick = () => { this._view = 'phone'; this._renderLoginModal(); };
+      }, 1200);
     },
 
     /** 问后端「我关联的是哪个会员」。查不到回 null（游客，正常情况）。 */
