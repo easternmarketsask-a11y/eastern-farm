@@ -22,7 +22,7 @@ def is_bg(r, g, b, br, bg, bb, tol):
 
 
 def key_rgba(src, tol=42):
-    im = Image.open(src).convert('RGBA')
+    im = src if isinstance(src, Image.Image) else Image.open(src).convert('RGBA')
     w, h = im.size
     pix = im.load()
     samples = [pix[0, 0][:3], pix[w - 1, 0][:3], pix[0, h - 1][:3], pix[w - 1, h - 1][:3]]
@@ -124,7 +124,9 @@ def main():
         cw, ch = sheet.width // COLS, sheet.height // ROWS
         assert cw == CELL_W and ch == CELL_H, (look, cw, ch)
         hv = fit_cell(key_rgba(sess(HARVEST[look])))
-        pl = wipe_ground(fit_cell(strip_floor(key_rgba(sess(PLANT[look])))))
+        pim = Image.open(sess(PLANT[look])).convert('RGBA')
+        pim = pim.crop((0, 0, pim.width, int(pim.height * 0.78)))
+        pl = wipe_ground(fit_cell(strip_floor(key_rgba(pim))))
         blank = Image.new('RGBA', (CELL_W, CELL_H), (0, 0, 0, 0))
         for col in range(1, 5):
             sheet.paste(blank, (col * CELL_W, 3 * CELL_H))

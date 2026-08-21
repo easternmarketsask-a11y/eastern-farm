@@ -339,6 +339,10 @@ See `docs/GAME-DESIGN.md` for full spec. TL;DR:
   走 / 浇水 / 收获 / 摊前站着。新号默认女农户。不造假名、不上照片。
   贴图按需加载，不进 SW 预缓存。规格：
   `docs/superpowers/specs/2026-08-20-painted-farmers-design.md`
+- 🔒 **收割/种植落点（2026-08-20）**：人站在**本块地朝镜头的前缘**（`plotPos`，偏移约 +0.14/+0.38），
+  手够得到土和菜。寻路/停车只走到邻格 `approachPos`，最后一小段再走进垄。
+  收割是弯腰空手去摘（地里的菜还在，播完才进仓）；种植是蹲下拿手按进土，图里不带土堆。
+  契约：`scripts/verify/farmer-work-test.mjs`。
 - 🔒 **等距朝向（2026-08-20）**：格子是 2:1，`_cell` 里 `x∝(gx-gy)`、`y∝(gx+gy)`。
   人/车贴图都是 3/4 朝右下。朝向**必须**走 `farmer.heading(dx, dy)`：
   屏幕右 = `dx-dy ≥ 0` → 水平翻转；背对镜头 = `dx+dy < 0` → 换
