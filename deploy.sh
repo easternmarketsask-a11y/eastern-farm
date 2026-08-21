@@ -71,6 +71,10 @@ if ! node scripts/verify/farmer-work-test.mjs; then
   echo "—— 部署中止(收割/种植落点与动作契约)"
   exit 1
 fi
+if ! node scripts/verify/audio-test.mjs; then
+  echo "—— 部署中止(音效契约)"
+  exit 1
+fi
 
 # 2. 发布闸门 B: 无头 Chrome 冒烟启动(游戏能开、无未捕获异常)
 #    依赖: node + Chrome + python(起本地静态服务)。缺任一 → 跳过并大声警告。

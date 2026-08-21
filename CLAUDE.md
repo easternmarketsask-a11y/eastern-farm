@@ -343,6 +343,10 @@ See `docs/GAME-DESIGN.md` for full spec. TL;DR:
   手够得到土和菜。寻路/停车只走到邻格 `approachPos`，最后一小段再走进垄。
   收割是弯腰空手去摘（地里的菜还在，播完才进仓）；种植是蹲下拿手按进土，图里不带土堆。
   契约：`scripts/verify/farmer-work-test.mjs`。
+- 🔒 **音效（2026-08-20）**：零音频文件，全是 `audio.js` WebAudio 合成。每种必须
+  噪声质感 + 乐音收尾（土扑/叶片/水流/木贴），不得退回单振荡器蜂鸣。浇水播
+  `water` 不得播 `coin`。环境层独立 gain（风+鸟+偶发叶响）。契约：
+  `scripts/verify/audio-test.mjs`。
 - 🔒 **等距朝向（2026-08-20）**：格子是 2:1，`_cell` 里 `x∝(gx-gy)`、`y∝(gx+gy)`。
   人/车贴图都是 3/4 朝右下。朝向**必须**走 `farmer.heading(dx, dy)`：
   屏幕右 = `dx-dy ≥ 0` → 水平翻转；背对镜头 = `dx+dy < 0` → 换

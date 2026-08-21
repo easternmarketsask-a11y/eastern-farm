@@ -2,29 +2,30 @@
  * audio.js — WebAudio synthesized sound effects + ambient bed.
  *
  * Zero asset files. AudioContext is created lazily on the first play() call
- * (which is always inside a user gesture handler in this game, so the autoplay
- * policy is satisfied). If the context starts suspended we resume it on the
- * first play.
+ * (always inside a user gesture). If the context starts suspended we resume
+ * it on the first play.
  *
  * Sound settings persist via state:
  *   - audioMuted (bool)     — hard off. Backward compatible with old saves.
  *   - audioVolume (0..1)    — soft volume tier (1 = normal, 0.4 = low).
  *   - ambientOff (bool)     — disables the background farm ambience only.
  *
- * Available sounds: 'plant', 'harvest', 'coin', 'levelUp', 'achievement',
- *   'error', 'tap', 'buy', 'horn'. Unknown names are silently ignored. play(name, opts)
- *   accepts opts.step (int) to raise the whole sound by N semitones — used for
- *   the Hay Day-style do-re-mi combo pitch stepping on rapid harvests.
+ * Available sounds: 'plant', 'harvest', 'water', 'coin', 'levelUp',
+ *   'achievement', 'error', 'tap', 'buy', 'horn'. Unknown names are
+ *   silently ignored. play(name, opts) accepts opts.step (int) to raise
+ *   the whole sound by N semitones — Hay Day-style combo on rapid harvests.
  *
- * Each play adds a tiny (±3.5% pitch, ±10% timing) random variation so repeated
- * high-frequency actions (harvesting a whole row) don't sound like a machine.
+ * Each play adds a tiny (±3.5% pitch, ±10% timing) random variation so
+ * harvesting a whole row doesn't sound like a machine.
  *
  * Master gain is ~0.18 for SFX; the ambient bed sits on its own quiet gain
- * (~0.06) so it can be toggled independently and never masks the SFX.
+ * (~0.055) so it can be toggled independently and never masks the SFX.
+ *
+ * 2026-08-20：每种音效都是噪声质感 + 乐音收尾叠出来的，不再是单振荡器蜂鸣。
  */
 (function() {
   const MASTER_VOLUME = 0.18;
-  const AMBIENT_VOLUME = 0.06;   // background wind+birds bed — deliberately faint
+  const AMBIENT_VOLUME = 0.055;
 
   const audio = {
     ctx: null,
@@ -34,7 +35,8 @@
     _gestureSeen: false,
     _pitchShift: 1,
     _lastTapAt: 0,
-    _ambient: { on: false, nodes: null, birdTimer: null },
+    _noiseBuf: null,
+    _ambient: { on: false, nodes: null, birdTimer: null, rustleTimer: null },
 
     _init() {
       if (this.ctx) return;
@@ -45,8 +47,6 @@
         this.masterGain = this.ctx.createGain();
         this.masterGain.gain.value = MASTER_VOLUME * this._volMul();
         this.masterGain.connect(this.ctx.destination);
-        // Ambient bed rides its own gain straight to the destination so it can
-        // be toggled/volumed independently of the SFX bus.
         this.ambientGain = this.ctx.createGain();
         this.ambientGain.gain.value = AMBIENT_VOLUME * this._volMul();
         this.ambientGain.connect(this.ctx.destination);
@@ -56,17 +56,12 @@
       }
     },
 
-    // Browsers refuse to start an AudioContext without a user gesture. Install
-    // a one-time listener that resumes the context on the first interaction;
-    // until that happens, play() is a no-op so we don't spew console warnings
-    // on boot-time achievement unlocks.
     armGestureGate() {
       if (this._gestureSeen) return;
       const arm = () => {
         this._gestureSeen = true;
         if (!this.ctx) this._init();
         if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
-        // Apply saved volume + kick off the ambient bed now that we're unlocked.
         this.applyVolume();
         document.removeEventListener('pointerdown', arm, true);
         document.removeEventListener('keydown', arm, true);
@@ -81,8 +76,6 @@
       return !!(window.Farm && Farm.state && Farm.state.data && Farm.state.data.audioMuted);
     },
 
-    // Soft volume multiplier (0 when muted). Missing field → 1 (normal), so old
-    // saves are unaffected.
     _volMul() {
       if (this.isMuted()) return 0;
       const v = window.Farm && Farm.state && Farm.state.data && Farm.state.data.audioVolume;
@@ -93,9 +86,6 @@
       return !!(window.Farm && Farm.state && Farm.state.data && Farm.state.data.ambientOff);
     },
 
-    // Push the current volume tier onto the live gain nodes AND reconcile the
-    // ambient bed (start it if audible+enabled+visible, stop it otherwise).
-    // Safe to call any time; no-ops before the context exists.
     applyVolume() {
       const m = this._volMul();
       if (this.masterGain) this.masterGain.gain.value = MASTER_VOLUME * m;
@@ -117,7 +107,6 @@
       return this.isMuted();
     },
 
-    // ===== Volume tier (settings): 'off' | 'low' | 'normal' =====
     setVolumeTier(tier) {
       if (!(Farm.state && Farm.state.data)) return;
       if (tier === 'off') {
@@ -135,7 +124,6 @@
       return (v != null && v < 0.7) ? 'low' : 'normal';
     },
 
-    // ===== Ambient background bed (wind pad + intermittent bird chirps) =====
     setAmbientEnabled(on) {
       if (Farm.state && Farm.state.data) {
         Farm.state.data.ambientOff = !on;
@@ -155,15 +143,13 @@
       if (this._ambient.on) return;
       if (this.ctx.state === 'suspended') this.ctx.resume();
       const ctx = this.ctx;
-      // Wind: 2s of brown-ish noise (integrated white → softer, less hissy),
-      // looped through a lowpass, with a very slow LFO on its gain for gusts.
       const bufLen = Math.floor(ctx.sampleRate * 2);
       const buf = ctx.createBuffer(1, bufLen, ctx.sampleRate);
       const d = buf.getChannelData(0);
       let last = 0;
       for (let i = 0; i < bufLen; i++) {
         const w = Math.random() * 2 - 1;
-        last = (last + 0.02 * w) / 1.02;   // leaky integrator
+        last = (last + 0.02 * w) / 1.02;
         d[i] = last * 3.5;
       }
       const src = ctx.createBufferSource();
@@ -171,44 +157,64 @@
       src.loop = true;
       const lp = ctx.createBiquadFilter();
       lp.type = 'lowpass';
-      lp.frequency.value = 480;
-      lp.Q.value = 0.5;
+      lp.frequency.value = 420;
+      lp.Q.value = 0.45;
       const windGain = ctx.createGain();
-      windGain.gain.value = 0.5;
+      windGain.gain.value = 0.42;
       const lfo = ctx.createOscillator();
-      lfo.frequency.value = 0.07;          // ~14s gust period
+      lfo.frequency.value = 0.06;
       const lfoGain = ctx.createGain();
-      lfoGain.gain.value = 0.28;
+      lfoGain.gain.value = 0.22;
       lfo.connect(lfoGain);
       lfoGain.connect(windGain.gain);
       src.connect(lp);
       lp.connect(windGain);
       windGain.connect(this.ambientGain);
-      try { src.start(); lfo.start(); } catch (e) {}
-      this._ambient.nodes = { src: src, lfo: lfo, lp: lp, windGain: windGain, lfoGain: lfoGain };
+
+      // Quiet air layer — a little treble so the pad isn't just a rumble.
+      const airSrc = ctx.createBufferSource();
+      airSrc.buffer = buf;
+      airSrc.loop = true;
+      const airHp = ctx.createBiquadFilter();
+      airHp.type = 'highpass';
+      airHp.frequency.value = 700;
+      const airLp = ctx.createBiquadFilter();
+      airLp.type = 'lowpass';
+      airLp.frequency.value = 2200;
+      const airGain = ctx.createGain();
+      airGain.gain.value = 0.12;
+      airSrc.connect(airHp);
+      airHp.connect(airLp);
+      airLp.connect(airGain);
+      airGain.connect(this.ambientGain);
+
+      try { src.start(); airSrc.start(); lfo.start(); } catch (e) {}
+      this._ambient.nodes = {
+        src: src, lfo: lfo, lp: lp, windGain: windGain, lfoGain: lfoGain,
+        airSrc: airSrc, airHp: airHp, airLp: airLp, airGain: airGain,
+      };
       this._ambient.on = true;
       this._scheduleBird();
+      this._scheduleRustle();
     },
 
     stopAmbient() {
       const n = this._ambient.nodes;
       if (n) {
-        try { n.src.stop(); } catch (e) {}
-        try { n.lfo.stop(); } catch (e) {}
-        try {
-          n.src.disconnect(); n.lp.disconnect(); n.windGain.disconnect();
-          n.lfo.disconnect(); n.lfoGain.disconnect();
-        } catch (e) {}
+        ['src', 'lfo', 'airSrc'].forEach((k) => { try { n[k].stop(); } catch (e) {} });
+        Object.keys(n).forEach((k) => { try { n[k].disconnect(); } catch (e) {} });
       }
       this._ambient.nodes = null;
       clearTimeout(this._ambient.birdTimer);
+      clearTimeout(this._ambient.rustleTimer);
       this._ambient.birdTimer = null;
+      this._ambient.rustleTimer = null;
       this._ambient.on = false;
     },
 
     _scheduleBird() {
       clearTimeout(this._ambient.birdTimer);
-      const delay = 8000 + Math.random() * 12000;   // 8–20s between chirps
+      const delay = 9000 + Math.random() * 14000;
       this._ambient.birdTimer = setTimeout(() => {
         if (this._ambient.on && !(document && document.hidden) && !this.isMuted()) {
           this._chirp();
@@ -217,52 +223,130 @@
       }, delay);
     },
 
+    _scheduleRustle() {
+      clearTimeout(this._ambient.rustleTimer);
+      const delay = 14000 + Math.random() * 18000;
+      this._ambient.rustleTimer = setTimeout(() => {
+        if (this._ambient.on && !(document && document.hidden) && !this.isMuted()) {
+          this._leafRustle();
+          this._scheduleRustle();
+        }
+      }, delay);
+    },
+
     _chirp() {
       const ctx = this.ctx;
       if (!ctx || !this.ambientGain) return;
-      const notes = 2 + Math.floor(Math.random() * 3);   // 2–4 quick notes
+      const notes = 2 + Math.floor(Math.random() * 3);
       let t = ctx.currentTime + 0.02;
+      const species = 1700 + Math.random() * 1100;
       for (let i = 0; i < notes; i++) {
         const osc = ctx.createOscillator();
         const g = ctx.createGain();
         osc.type = 'sine';
-        const base = 2600 + Math.random() * 1400;        // 2.6–4kHz
+        const base = species * (1 + (Math.random() - 0.5) * 0.08);
         osc.frequency.setValueAtTime(base, t);
-        osc.frequency.exponentialRampToValueAtTime(base * (1.1 + Math.random() * 0.3), t + 0.05);
+        osc.frequency.exponentialRampToValueAtTime(base * (1.08 + Math.random() * 0.18), t + 0.045);
         g.gain.setValueAtTime(0.0001, t);
-        g.gain.linearRampToValueAtTime(0.5, t + 0.01);
-        g.gain.exponentialRampToValueAtTime(0.0001, t + 0.09);
+        g.gain.linearRampToValueAtTime(0.28, t + 0.008);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + 0.07);
         osc.connect(g);
         g.connect(this.ambientGain);
         osc.start(t);
-        osc.stop(t + 0.12);
-        t += 0.06 + Math.random() * 0.05;
+        osc.stop(t + 0.09);
+        t += 0.055 + Math.random() * 0.04;
       }
     },
 
-    // Schedule one short tone with attack-decay envelope. Applies the current
-    // combo pitch shift (this._pitchShift) plus a small per-tone random wobble
-    // so repeats never sound identical.
+    _leafRustle() {
+      if (!this.ctx || !this.ambientGain) return;
+      const t = this.ctx.currentTime;
+      this._noise(t, 0.22, {
+        bp: 1800, q: 0.8, gain: 0.22, attack: 0.03, dest: this.ambientGain,
+      });
+    },
+
+    _ensureNoise() {
+      if (this._noiseBuf) return this._noiseBuf;
+      const len = this.ctx.sampleRate;
+      const buf = this.ctx.createBuffer(1, len, this.ctx.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+      this._noiseBuf = buf;
+      return buf;
+    },
+
+    _noise(t, dur, opts) {
+      opts = opts || {};
+      const src = this.ctx.createBufferSource();
+      src.buffer = this._ensureNoise();
+      src.loop = true;
+      const g = this.ctx.createGain();
+      const peak = (opts.gain != null) ? opts.gain : 0.2;
+      const attack = (opts.attack != null) ? opts.attack : 0.004;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.linearRampToValueAtTime(peak, t + attack);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      let node = src;
+      if (opts.hp) {
+        const hp = this.ctx.createBiquadFilter();
+        hp.type = 'highpass';
+        hp.frequency.value = opts.hp;
+        hp.Q.value = 0.7;
+        node.connect(hp);
+        node = hp;
+      }
+      if (opts.lp) {
+        const lp = this.ctx.createBiquadFilter();
+        lp.type = 'lowpass';
+        lp.frequency.value = opts.lp;
+        lp.Q.value = opts.q || 0.7;
+        node.connect(lp);
+        node = lp;
+      }
+      if (opts.bp) {
+        const bp = this.ctx.createBiquadFilter();
+        bp.type = 'bandpass';
+        bp.frequency.value = opts.bp;
+        bp.Q.value = opts.q || 1.1;
+        node.connect(bp);
+        node = bp;
+      }
+      node.connect(g);
+      g.connect(opts.dest || this.masterGain);
+      src.start(t);
+      src.stop(t + dur + 0.03);
+    },
+
     _tone(freq, startTime, dur, opts) {
       opts = opts || {};
       const shift = this._pitchShift || 1;
-      const wobble = 1 + (Math.random() - 0.5) * 0.07;   // ±3.5% pitch
+      const wobble = 1 + (Math.random() - 0.5) * 0.07;
       const f = freq * shift * wobble;
-      const d = dur * (1 + (Math.random() - 0.5) * 0.2); // ±10% timing
+      const d = dur * (1 + (Math.random() - 0.5) * 0.2);
       const t = startTime;
       const osc = this.ctx.createOscillator();
       const gain = this.ctx.createGain();
       osc.type = opts.type || 'sine';
       osc.frequency.setValueAtTime(f, t);
       if (opts.glide) {
-        osc.frequency.exponentialRampToValueAtTime(opts.glide * shift * wobble, t + d);
+        osc.frequency.exponentialRampToValueAtTime(Math.max(20, opts.glide * shift * wobble), t + d);
       }
       const peak = (opts.gain != null) ? opts.gain : 0.5;
       const attack = (opts.attack != null) ? opts.attack : 0.005;
       gain.gain.setValueAtTime(0.0001, t);
       gain.gain.linearRampToValueAtTime(peak, t + attack);
       gain.gain.exponentialRampToValueAtTime(0.0001, t + d);
-      osc.connect(gain);
+      let node = osc;
+      if (opts.lp) {
+        const lp = this.ctx.createBiquadFilter();
+        lp.type = 'lowpass';
+        lp.frequency.value = opts.lp;
+        lp.Q.value = 0.8;
+        node.connect(lp);
+        node = lp;
+      }
+      node.connect(gain);
       gain.connect(this.masterGain);
       osc.start(t);
       osc.stop(t + d + 0.02);
@@ -271,73 +355,86 @@
     play(name, opts) {
       opts = opts || {};
       if (this.isMuted()) return;
-      // Skip until the user has actually interacted with the page. Boot-time
-      // calls (e.g. retroactive achievement unlocks) would otherwise spam the
-      // "AudioContext not allowed to start" warning.
       if (!this._gestureSeen) return;
       if (!this.ctx) this._init();
       if (!this.available) return;
-      // Dedupe rapid tap blips — the global .btn delegation and any explicit
-      // per-button play('tap') can both fire on one press; collapse to one.
       if (name === 'tap') {
         const now = performance.now();
         if (this._lastTapAt && now - this._lastTapAt < 60) return;
         this._lastTapAt = now;
       }
       if (this.ctx.state === 'suspended') this.ctx.resume();
-      // Combo pitch step (do-re-mi): raise the whole sound by opts.step
-      // semitones, capped at +7 (a fifth) so a long chain stays musical.
       const step = Math.max(0, Math.min(7, opts.step || 0));
       this._pitchShift = step ? Math.pow(2, step / 12) : 1;
       const t = this.ctx.currentTime;
       switch (name) {
         case 'plant':
-          // Soft puff: triangle wave down-glide
-          this._tone(280, t, 0.18, { type: 'triangle', glide: 180, gain: 0.45 });
-          this._tone(560, t + 0.02, 0.1, { type: 'sine', gain: 0.18 });
+          // 土扑 + 细沙 + 轻轻一按
+          this._noise(t, 0.09, { lp: 360, gain: 0.30, attack: 0.006 });
+          this._noise(t + 0.03, 0.05, { bp: 2400, q: 1.3, gain: 0.11 });
+          this._tone(240, t + 0.02, 0.13, { type: 'triangle', glide: 165, gain: 0.20, lp: 1200 });
           break;
         case 'harvest':
-          // Two-note ascending chime (C5 → G5)
-          this._tone(523, t, 0.14, { type: 'triangle', gain: 0.5 });
-          this._tone(784, t + 0.08, 0.22, { type: 'triangle', gain: 0.5 });
+          // 叶片窸窣 + 茎一折 + 清亮两音（连击升调加在乐音上）
+          this._noise(t, 0.10, { bp: 2700, q: 0.85, gain: 0.17, attack: 0.008 });
+          this._tone(300, t + 0.018, 0.055, { type: 'sine', gain: 0.20, lp: 1400 });
+          this._tone(523, t + 0.05, 0.16, { type: 'triangle', gain: 0.30, lp: 4200 });
+          this._tone(784, t + 0.12, 0.26, { type: 'sine', gain: 0.26 });
+          this._tone(1175, t + 0.14, 0.12, { type: 'sine', gain: 0.08 });
+          break;
+        case 'water':
+          // 细水流 + 几颗气泡 + 收尾一滴
+          this._noise(t, 0.32, { bp: 1300, q: 0.55, gain: 0.20, attack: 0.025 });
+          this._noise(t, 0.28, { hp: 700, lp: 2600, gain: 0.10, attack: 0.02 });
+          for (let i = 0; i < 5; i++) {
+            this._noise(t + 0.04 + i * 0.048, 0.028, {
+              bp: 1600 + Math.random() * 1200, q: 1.6, gain: 0.07, attack: 0.002,
+            });
+          }
+          this._tone(560, t + 0.27, 0.09, { type: 'sine', gain: 0.09, glide: 380 });
           break;
         case 'coin':
-          // Bright ka-ching
-          this._tone(1318, t, 0.06, { type: 'triangle', gain: 0.4 });
-          this._tone(1568, t + 0.04, 0.12, { type: 'triangle', gain: 0.4 });
+          this._tone(987, t, 0.07, { type: 'triangle', gain: 0.24, lp: 5000 });
+          this._tone(1318, t + 0.045, 0.16, { type: 'sine', gain: 0.30 });
+          this._tone(1975, t + 0.05, 0.09, { type: 'sine', gain: 0.09 });
           break;
         case 'buy':
-          // Mid-pitch happy two-tone
-          this._tone(660, t, 0.08, { type: 'triangle', gain: 0.4 });
-          this._tone(880, t + 0.06, 0.12, { type: 'triangle', gain: 0.4 });
+          this._tone(392, t, 0.09, { type: 'triangle', glide: 320, gain: 0.20, lp: 1800 });
+          this._tone(659, t + 0.05, 0.14, { type: 'sine', gain: 0.26 });
+          this._tone(830, t + 0.09, 0.18, { type: 'triangle', gain: 0.14 });
           break;
         case 'levelUp':
-          // C-E-G-C ascending arpeggio
-          [523, 659, 784, 1047].forEach((f, i) => {
-            this._tone(f, t + i * 0.09, 0.22, { type: 'triangle', gain: 0.5 });
+          this._tone(261, t, 0.72, { type: 'sine', gain: 0.10, lp: 800 });
+          [523, 659, 784, 1046].forEach((f, i) => {
+            const dur = i === 3 ? 0.42 : 0.20;
+            this._tone(f, t + i * 0.10, dur, { type: 'triangle', gain: 0.32, lp: 5000 });
+            this._tone(f * 2, t + i * 0.10, dur * 0.7, { type: 'sine', gain: 0.10 });
           });
+          this._noise(t + 0.32, 0.14, { hp: 4500, lp: 9000, gain: 0.06 });
           break;
-        case 'achievement':
-          // Sparkly bell: multiple sine harmonics overlapping
-          this._tone(880, t, 0.45, { type: 'sine', gain: 0.5 });
-          this._tone(1320, t, 0.35, { type: 'sine', gain: 0.3 });
-          this._tone(1760, t + 0.04, 0.28, { type: 'sine', gain: 0.2 });
-          this._tone(1100, t + 0.18, 0.4, { type: 'sine', gain: 0.3 });
+        case 'achievement': {
+          // 钟：非谐分音，比叠正弦更像铃
+          const f0 = 784;
+          this._tone(f0, t, 0.55, { type: 'sine', gain: 0.36 });
+          this._tone(f0 * 2.01, t, 0.42, { type: 'sine', gain: 0.16 });
+          this._tone(f0 * 2.76, t + 0.03, 0.38, { type: 'sine', gain: 0.12 });
+          this._tone(f0 * 5.4, t + 0.05, 0.22, { type: 'sine', gain: 0.07 });
+          this._tone(f0 * 1.5, t + 0.16, 0.40, { type: 'sine', gain: 0.14 });
+          this._noise(t, 0.12, { hp: 5000, gain: 0.05, attack: 0.004 });
           break;
+        }
         case 'error':
-          // Low sad buzz
-          this._tone(220, t, 0.2, { type: 'sawtooth', gain: 0.28, glide: 140 });
+          this._noise(t, 0.09, { lp: 260, gain: 0.16, attack: 0.004 });
+          this._tone(185, t, 0.22, { type: 'triangle', glide: 125, gain: 0.20, lp: 700 });
           break;
         case 'tap':
-          // Subtle UI click
-          this._tone(700, t, 0.04, { type: 'sine', gain: 0.18 });
+          this._noise(t, 0.022, { bp: 2100, q: 2.2, gain: 0.14, attack: 0.001 });
+          this._tone(920, t, 0.028, { type: 'sine', gain: 0.09, attack: 0.001, lp: 2800 });
           break;
         case 'horn':
-          // 老式汽车喇叭：两个音叠成和弦（真车喇叭就是双音簧片），短促鸣两下。
-          // 比别的音效轻，它一次响两声，跟收获音同响度会盖过一切。
           [0, 0.24].forEach((off) => {
-            this._tone(440, t + off, 0.15, { type: 'sawtooth', gain: 0.30 });
-            this._tone(554, t + off, 0.15, { type: 'sawtooth', gain: 0.22 });
+            this._tone(370, t + off, 0.16, { type: 'square', gain: 0.14, lp: 900 });
+            this._tone(466, t + off, 0.16, { type: 'square', gain: 0.11, lp: 1100 });
           });
           break;
       }
@@ -345,9 +442,6 @@
     },
   };
 
-  // Pause the ambient bed when the tab/app is backgrounded; resume (if audible
-  // and enabled) when it comes back. SFX are gesture-driven so they need no
-  // handling here.
   if (typeof document !== 'undefined') {
     document.addEventListener('visibilitychange', function () {
       if (document.hidden) audio.stopAmbient();

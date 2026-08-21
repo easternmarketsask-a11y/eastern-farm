@@ -48,7 +48,7 @@
       const r = this.applyWaterSpeedup(plot);
       if (!r.ok) return false;
       Farm.state.save();
-      if (Farm.audio) Farm.audio.play('coin');
+      if (Farm.audio) Farm.audio.play('water');
 
       // 视觉：地块短暂蓝色水光 + 飘字
       const el = document.querySelector('.plot[data-plot-id="' + plotIdx + '"]');
