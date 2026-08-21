@@ -187,7 +187,8 @@
       if (!this._carCat) {
         return '<p class="modal-subtitle" style="margin:0 0 8px;">'
           + (EN ? 'Buy a car here — it parks on free land. Already have one? Pick a model to replace it and pay only the difference. On the farm, tapping a car gets you in.' : '在商店买车，自动停在空地上。已经有车的话，选一款可以换掉它，只补差价。农场上点车是上车。')
-          + '</p>' + iso._carCatCardsHtml(EN, 0);
+          + '</p>' + iso._carCatCardsHtml(EN, 0)
+          + (iso._carCareHtml ? iso._carCareHtml(EN) : '');
       }
       return '<div style="margin:0 0 8px;display:flex;align-items:center;justify-content:space-between;">'
         + '<button type="button" id="shopCarBack" class="btn secondary" style="padding:4px 10px;font-size:13px;">'
@@ -227,6 +228,13 @@
         if (back) back.onclick = () => { this._carCat = null; this.open('cars'); };
         document.querySelectorAll('[data-new-car-id]').forEach((btn) => {
           btn.onclick = () => { if (iso && iso._openCarBuyChoice) iso._openCarBuyChoice(parseInt(btn.getAttribute('data-new-car-id'), 10)); };
+        });
+        document.querySelectorAll('[data-car-shine]').forEach((btn) => {
+          btn.onclick = () => {
+            const idx = parseInt(btn.getAttribute('data-car-shine'), 10);
+            if (Farm.farmer && Farm.farmer.polish) Farm.farmer.polish(idx);
+            if (Farm.ui) Farm.ui.hideModal();
+          };
         });
         return;
       }

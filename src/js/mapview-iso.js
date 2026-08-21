@@ -961,6 +961,12 @@
       if (this._build) { this._sel = this._buildingAt(c.gx, c.gy); this.render(); return; }
       const ps = this._petAt(p.x, p.y);   // tap a roaming pet → ❤️ + sound + hop
       if (ps != null) { this._stickyEnd(); this._pettedReact(ps, p.x, p.y); return; }
+      const care = this._carCareAt(p.x, p.y);
+      if (care != null) {
+        this._stickyEnd();
+        if (Farm.farmer && Farm.farmer.polish) Farm.farmer.polish(care);
+        return;
+      }
       // Depth-aware plot pick: crops are ~3 tiles TALL, so players tap the visible
       // plant (high up), not its base cell — a plain cell hit-test would land on the
       // cell BEHIND the plant. Test each plot's on-screen sprite box front-to-back
@@ -2750,6 +2756,65 @@
       }
       ctx.restore();
     },
+    _drawCarGlint(cc, by, tw, th, shine) {
+      const ctx = this._ctx, t = Date.now() / 1000;
+      const n = shine > 0.7 ? 3 : 2;
+      for (let i = 0; i < n; i++) {
+        const a = t * (1.8 + i * 0.35) + i * 2.1;
+        const x = cc.x + Math.cos(a) * tw * 0.24;
+        const y = by - th * 0.58 + Math.sin(a * 1.35) * th * 0.16;
+        ctx.globalAlpha = (0.2 + 0.55 * shine) * (0.45 + 0.55 * Math.sin(a * 2.2));
+        ctx.fillStyle = '#fff6c8';
+        ctx.beginPath();
+        ctx.ellipse(x, y, tw * 0.032, th * 0.038, 0, 0, 6.283);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+    },
+    _drawCarCareChip(cc, by, tw, th) {
+      const x = cc.x + tw * 0.28, y = by - th * 1.08;
+      const ctx = this._ctx;
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(x, y - th * 0.08, tw * 0.16, 0, 6.283);
+      ctx.fillStyle = 'rgba(255,252,240,0.92)';
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(232, 196, 90, 0.7)';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      ctx.font = (th * 0.48) + 'px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('✨', x, y - th * 0.06);
+      ctx.restore();
+      return { x: x, y: y, r: tw * 0.32 };
+    },
+    _carCareAt(sx, sy) {
+      const hits = this._carCareHits || [];
+      for (let i = 0; i < hits.length; i++) {
+        if (Math.hypot(sx - hits[i].x, sy - hits[i].y) <= hits[i].r) return hits[i].idx;
+      }
+      return null;
+    },
+    _carCareHtml(en) {
+      const map = (Farm.state.data && Farm.state.data.map) || [];
+      const coin = '<span class="coin-icon"></span>';
+      let html = '';
+      map.forEach((o, i) => {
+        if (!o || o.type !== 'car') return;
+        const spec = this._carSpec(o);
+        const name = en ? spec.en : spec.zh;
+        const shine = (typeof o.shine === 'number') ? o.shine : 0;
+        if (shine >= 0.85) {
+          html += '<div class="ef-empty" style="padding:10px 8px;"><div class="ef-empty-title">✨ '
+            + name + (en ? ' is gleaming' : ' 已经锃亮') + '</div></div>';
+        } else {
+          html += '<button type="button" class="btn" data-car-shine="' + i + '" style="width:100%;margin-top:8px;">✨ '
+            + (en ? ('Polish the ' + name + ' · 50 ') : ('给' + name + '擦亮 · 50 ')) + coin + '</button>';
+        }
+      });
+      return html;
+    },
     _followDriveCam() {
       if (this._drag && this._drag.moved) return;
       if (this._build) return;
@@ -4190,6 +4255,7 @@
         for (let gy = 0; gy < ROWS; gy++) for (let gx = 0; gx < COLS; gx++) { const c = this._cell(gx, gy); this._diamond(c.x, c.y, tw, th); ctx.stroke(); }
       }
 
+      this._carCareHits = [];
       // depth-sorted objects: plots + buildings
       const draws = [];
       const plots = Farm.state.data.plots || [];
@@ -4576,6 +4642,12 @@
         }
         if (live) this._drawCarRiders(cc, by, tw, th, flipX, bob);
         this._carLights(cc, by + bob, tw, th, flipX, live ? fx.away : !!homeO.away, moving);
+        const shine = (homeO && typeof homeO.shine === 'number') ? homeO.shine : 0;
+        if (shine > 0.18) this._drawCarGlint(cc, by + bob, tw, th, shine);
+        if (!live && shine < 0.85 && !this._build && !this._visit) {
+          const chip = this._drawCarCareChip(cc, by, tw, th);
+          this._carCareHits.push({ idx: idx, x: chip.x, y: chip.y, r: chip.r });
+        }
       } else if (!this._blit(him, cc.x, by, b.w * tw * 0.92 * BLD * pk * hz, b.sc * th * 2.2 * BLD * pk * hz, flipX)) {
         // 贴图还在路上：留草地，onload 会重画。禁止再画调试红块。
       }

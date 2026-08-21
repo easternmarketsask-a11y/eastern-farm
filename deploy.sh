@@ -79,6 +79,10 @@ if ! node scripts/verify/car-motion-test.mjs; then
   echo "—— 部署中止(开车动画契约)"
   exit 1
 fi
+if ! node scripts/verify/car-shine-test.mjs; then
+  echo "—— 部署中止(车辆保养奖励型契约)"
+  exit 1
+fi
 if ! node scripts/verify/modal-ux-test.mjs; then
   echo "—— 部署中止(弹窗操作手感契约)"
   exit 1

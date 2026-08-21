@@ -217,9 +217,24 @@
     };
   }
 
-  /* 🔒 车款价差 = 速度差（Chris 2026-08-20 定）。除此之外车没有别的属性。
-     四档写死一张表：调数值不用动逻辑。 */
+  /* 🔒 车款价差 = 基础速度差（Chris 2026-08-20 定）。四档写死一张表。
+     擦亮是奖励型加成：shine 0–1 最多再快 22%，地板就是目录速度。
+     永远不会没油、不会坏、不会开不了（Chris 2026-08-21 否决惩罚型）。 */
   const CAR_SPEED = { utility: 4.4, family: 6.0, offroad: 7.5, luxury: 9.0 };
+  const SHINE_BONUS = 0.22;
+  const SHINE_DECAY = 0.007;
+  const POLISH_COST = 50;
+
+  function shineOf(o) {
+    const s = o && o.shine;
+    if (typeof s !== 'number' || !(s > 0)) return 0;
+    return s > 1 ? 1 : s;
+  }
+  function cruiseSpeed(o) {
+    const iso = Farm.isoView;
+    if (!o || !iso || !iso._carSpec) return WALK_SPEED;
+    return (CAR_SPEED[iso._carSpec(o).cat] || WALK_SPEED) * (1 + SHINE_BONUS * shineOf(o));
+  }
 
   function drivingCar() {
     if (A.driving == null) return null;
@@ -241,6 +256,7 @@
   function moveSpeed() {
     let s = catalogSpeed();
     if (A.driving == null) return s;
+    s *= 1 + SHINE_BONUS * shineOf(drivingCar());
     s *= 0.38 + 0.62 * Math.min(1, A.driveAccel || 0);
     s *= 1 - 0.58 * Math.min(1, A.driveBrake || 0);
     return s;
@@ -287,6 +303,8 @@
       A.driveBrake = left < 1.35 ? Math.min(1, (1.35 - left) / 1.35) : 0;
       spawnDriveDust(dt);
       if (Farm.audio && Farm.audio.startEngine) Farm.audio.startEngine();
+      const car = drivingCar();
+      if (car && shineOf(car) > 0) car.shine = Math.max(0, shineOf(car) - dt * SHINE_DECAY);
     } else {
       A.driveAccel = Math.max(0, (A.driveAccel || 0) - dt / 0.20);
       A.driveBrake = 0;
@@ -404,7 +422,7 @@
       const o = map[i];
       if (!o || o.type !== 'car') continue;
       const side = carSideSpot(iso, o);
-      const speed = CAR_SPEED[iso._carSpec(o).cat] || WALK_SPEED;
+      const speed = cruiseSpeed(o);
       const toCar = side ? walkTime(iso, A.gx, A.gy, side.gx, side.gy, walkFree) : Infinity;
       const drive = driveTime(iso, o, i, tx, ty, speed);
       out.cars.push({ idx: i, lv: o.lv, at: { gx: o.gx, gy: o.gy }, side: side,
@@ -428,7 +446,7 @@
       if (!side) continue;
       const toCar = walkTime(iso, A.gx, A.gy, side.gx, side.gy, walkFree);
       if (!isFinite(toCar)) continue;
-      const speed = CAR_SPEED[iso._carSpec(o).cat] || WALK_SPEED;
+      const speed = cruiseSpeed(o);
       const drive = driveTime(iso, o, i, tx, ty, speed);
       if (!isFinite(drive)) continue;
       if (toCar + drive < bestCost) { bestCost = toCar + drive; best = i; }
@@ -459,6 +477,67 @@
     return true;
   }
 
+  function finishPolish(o) {
+    const en = Farm.state.data.language === 'en';
+    if ((Farm.state.data.coins || 0) < POLISH_COST) {
+      if (Farm.ui && Farm.ui.toast) Farm.ui.toast(en ? 'Not enough farm coins' : '农场币不够', 2200);
+      if (Farm.audio) Farm.audio.play('error');
+      return;
+    }
+    Farm.state.data.coins -= POLISH_COST;
+    o.shine = 1;
+    if (Farm.state.save) Farm.state.save();
+    if (Farm.ui && Farm.ui.refreshHUD) Farm.ui.refreshHUD();
+    if (Farm.audio) Farm.audio.play('achievement');
+    if (Farm.ui && Farm.ui.toast) {
+      Farm.ui.toast(en ? 'Gleaming — it will run faster for a while.' : '擦得锃亮，这一阵子开起来更快。', 2800);
+    }
+    if (Farm.ui && Farm.ui.burst && Farm.isoView) {
+      const c = Farm.isoView._cell(o.gx, o.gy);
+      const r = Farm.isoView._cv && Farm.isoView._cv.getBoundingClientRect();
+      if (r) Farm.ui.burst(r.left + c.x, r.top + c.y - 20, ['✨', '✨', '⭐'], 8);
+    }
+  }
+
+  function polish(mapIdx) {
+    const iso = Farm.isoView;
+    const en = Farm.state.data.language === 'en';
+    if (!iso || !iso._on || iso._build) return false;
+    if (Farm.state && Farm.state._visitLock) return false;
+    if (A.driving != null) return false;
+    const o = (Farm.state.data.map || [])[mapIdx];
+    if (!o || o.type !== 'car') return false;
+    if (shineOf(o) >= 0.85) {
+      if (Farm.ui && Farm.ui.toast) Farm.ui.toast(en ? 'Already gleaming' : '已经很亮了', 1800);
+      return false;
+    }
+    if ((Farm.state.data.coins || 0) < POLISH_COST) {
+      if (Farm.ui && Farm.ui.toast) Farm.ui.toast(en ? 'Not enough farm coins · 50' : '擦亮要 50 农场币', 2200);
+      if (Farm.audio) Farm.audio.play('error');
+      return false;
+    }
+    if (A.gx == null) spawnAt(iso);
+    const spot = carSideSpot(iso, o);
+    if (!spot) return false;
+    A.queue = [];
+    A.job = null; A.path = null;
+    if (Math.round(A.gx) === spot.gx && Math.round(A.gy) === spot.gy) {
+      A.job = { kind: 'polish', car: mapIdx };
+      A.anim = 'harvest';
+      A.frameT = 0;
+      A.away = false;
+      return true;
+    }
+    const path = Farm.pathfind.find(A.gx, A.gy, spot.gx, spot.gy, freeFromHere(walkableFor(iso, 1, 1)));
+    if (!path || path.length < 1) return false;
+    A.job = { kind: 'polish', car: mapIdx };
+    A.path = path;
+    A.pathI = 1;
+    A.anim = 'walk';
+    A.pause = 0;
+    return true;
+  }
+
   function unboard() {
     const iso = Farm.isoView;
     const o = drivingCar();
@@ -474,6 +553,7 @@
     const spot = carSideSpot(iso, o);
     A.gx = spot ? spot.gx : o.gx;
     A.gy = spot ? spot.gy : o.gy;
+    if (Farm.state && Farm.state.save) Farm.state.save();
     if (iso.render) iso.render();
     return true;
   }
@@ -794,6 +874,32 @@
       return;
     }
 
+    if (A.job && A.job.kind === 'polish') {
+      const o = ((Farm.state.data && Farm.state.data.map) || [])[A.job.car];
+      if (!o || o.type !== 'car') { A.job = null; A.path = null; A.anim = 'idle'; return; }
+      if (A.anim === 'harvest') {
+        if (A.frameT >= WORK_HOLD) {
+          finishPolish(o);
+          A.job = null; A.path = null; A.anim = 'idle';
+        }
+        return;
+      }
+      const path = A.path;
+      if (!path || A.pathI >= path.length) {
+        A.path = null;
+        A.anim = 'harvest';
+        A.frameT = 0;
+        A.away = false;
+        const h = heading(o.gx - A.gx, o.gy - A.gy);
+        A.face = h.face;
+        return;
+      }
+      A.anim = 'walk';
+      const step = path[A.pathI];
+      if (moveToward(dt, step.gx, step.gy, WALK_SPEED)) A.pathI++;
+      return;
+    }
+
     if (A.job && A.job.kind === 'goto') {
       A.anim = 'walk';
       const path = A.path;
@@ -985,6 +1091,7 @@
     walkableFor: walkableFor,
     board: board,
     unboard: unboard,
+    polish: polish,
     drivingIdx: drivingIdx,
     carPos: carPos,
     heading: heading,
