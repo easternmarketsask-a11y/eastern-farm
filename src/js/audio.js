@@ -253,44 +253,93 @@
       this._scheduleRustle();
     },
 
-    startEngine() {
+    /* 一个工作循环的点火脉冲 buffer。
+       内燃机的声音本质是**一串规律的爆发**，不是连续波形 —— 之前那版
+       三角波 + 滤波噪声只是「嗡嗡声」，听着像冰箱不像车。
+       四缸四冲程每两圈点火 4 次，所以一个循环里放 4 个脉冲；
+       每个脉冲 = 爆音（噪声瞬态）+ 管腔阻尼共鸣。
+       缸间幅度/时刻各差几个百分点 —— 完全均匀会立刻听出是电子合成的。 */
+    _makeEngineCycle(cylinders) {
+      const ctx = this.ctx, sr = ctx.sampleRate;
+      const n = cylinders || 4;
+      const cycle = 0.10;                       // 一个工作循环的基准时长
+      const len = Math.floor(sr * cycle);
+      const buf = ctx.createBuffer(1, len, sr);
+      const d = buf.getChannelData(0);
+      const resFreq = 88;                       // 排气管腔共鸣
+      for (let k = 0; k < n; k++) {
+        const jitter = 1 + (Math.random() - 0.5) * 0.06;      // 点火时刻不齐
+        const amp = 0.82 + Math.random() * 0.30;              // 缸间强弱不一
+        const at = Math.floor(len * ((k + 0.02 * (Math.random() - 0.5)) / n) * jitter) % len;
+        const burst = Math.floor(sr * 0.006);                 // 爆音 6ms
+        for (let i = 0; i < burst; i++) {
+          const e = Math.pow(1 - i / burst, 2.2);
+          d[(at + i) % len] += (Math.random() * 2 - 1) * e * 0.55 * amp;
+        }
+        const ring = Math.floor(sr * 0.055);                  // 管腔余振
+        for (let i = 0; i < ring; i++) {
+          const e = Math.exp(-i / (sr * 0.012));
+          d[(at + i) % len] += Math.sin(2 * Math.PI * resFreq * i / sr) * e * 0.42 * amp;
+        }
+      }
+      let peak = 0;
+      for (let i = 0; i < len; i++) peak = Math.max(peak, Math.abs(d[i]));
+      if (peak > 0) for (let i = 0; i < len; i++) d[i] /= peak;   // 归一，音量只由 gain 管
+      return buf;
+    },
+
+    /* load 0..1 = 这辆车跑多快（皮卡 0 → 豪华车 1）。
+       转速直接是 playbackRate —— 脉冲密度跟着变，这才是真车加速的听感。 */
+    startEngine(load) {
       this._init();
       if (!this.available || !this.ctx || !this.masterGain) return;
       if (!this._gestureSeen) return;
       if (this.isMuted()) return;
-      if (this._engine) return;
+      if (this._engine) { this.setEngineLoad(load); return; }
+      const ld = Math.max(0, Math.min(1, load == null ? 0.4 : load));
       const ctx = this.ctx;
-      const bufLen = Math.floor(ctx.sampleRate * 1.2);
-      const buf = ctx.createBuffer(1, bufLen, ctx.sampleRate);
-      const d = buf.getChannelData(0);
-      let last = 0;
-      for (let i = 0; i < bufLen; i++) {
-        last = (last + 0.035 * (Math.random() * 2 - 1)) / 1.035;
-        d[i] = last * 4.2;
-      }
+
       const src = ctx.createBufferSource();
-      src.buffer = buf;
+      src.buffer = this._makeEngineCycle(4);
       src.loop = true;
+      const rate = 0.88 + 0.62 * ld;            // 怠速 → 高转
+      src.playbackRate.value = rate;
+
+      // 排气低频：120Hz 抬起来才有「厚度」，没有它像小摩托
+      const body = ctx.createBiquadFilter();
+      body.type = 'peaking'; body.frequency.value = 120; body.Q.value = 1.1; body.gain.value = 7;
+      // 车外听到的声音本来就没什么高频，削掉机械毛刺
       const lp = ctx.createBiquadFilter();
-      lp.type = 'lowpass';
-      lp.frequency.value = 280;
-      lp.Q.value = 0.7;
-      const osc = ctx.createOscillator();
-      osc.type = 'triangle';
-      osc.frequency.value = 72;
-      const oscGain = ctx.createGain();
-      oscGain.gain.value = 0.22;
+      lp.type = 'lowpass'; lp.frequency.value = 1250; lp.Q.value = 0.7;
+      // 极轻的机械层：只有脉冲会显得太干净
+      const hiss = ctx.createBufferSource();
+      hiss.buffer = this._ensureNoise(); hiss.loop = true;
+      const hissBp = ctx.createBiquadFilter();
+      hissBp.type = 'bandpass'; hissBp.frequency.value = 1800; hissBp.Q.value = 0.8;
+      const hissGain = ctx.createGain(); hissGain.gain.value = 0.035;
+
       const gain = ctx.createGain();
       gain.gain.value = 0;
-      src.connect(lp);
-      lp.connect(gain);
-      osc.connect(oscGain);
-      oscGain.connect(gain);
+      src.connect(body); body.connect(lp); lp.connect(gain);
+      hiss.connect(hissBp); hissBp.connect(hissGain); hissGain.connect(gain);
       gain.connect(this.masterGain);
       const t = ctx.currentTime;
-      gain.gain.linearRampToValueAtTime(0.085, t + 0.14);
-      try { src.start(); osc.start(); } catch (e) {}
-      this._engine = { src: src, osc: osc, lp: lp, oscGain: oscGain, gain: gain };
+      gain.gain.linearRampToValueAtTime(0.17, t + 0.14);
+      try { src.start(); hiss.start(); } catch (e) {}
+      this._engine = { src: src, hiss: hiss, body: body, lp: lp, hissBp: hissBp,
+                       hissGain: hissGain, gain: gain, load: ld, rate: rate };
+    },
+
+    // 换车/加速时平滑改转速，别硬跳（硬跳听起来像换了一辆车）
+    setEngineLoad(load) {
+      const e = this._engine;
+      if (!e || !this.ctx) return;
+      const ld = Math.max(0, Math.min(1, load == null ? 0.4 : load));
+      if (Math.abs(ld - (e.load || 0)) < 0.02) return;
+      e.load = ld;
+      const rate = 0.88 + 0.62 * ld, t = this.ctx.currentTime;
+      e.rate = rate;
+      try { e.src.playbackRate.linearRampToValueAtTime(rate, t + 0.25); } catch (err) {}
     },
 
     stopEngine() {
@@ -304,7 +353,7 @@
         e.gain.gain.linearRampToValueAtTime(0, t + 0.16);
       } catch (err) {}
       setTimeout(() => {
-        ['src', 'osc'].forEach((k) => { try { e[k].stop(); } catch (err) {} });
+        ['src', 'hiss'].forEach((k) => { try { e[k] && e[k].stop(); } catch (err) {} });
         Object.keys(e).forEach((k) => { try { e[k].disconnect(); } catch (err) {} });
       }, 200);
     },
@@ -581,9 +630,15 @@
           this._tone(920, t, 0.028, { type: 'sine', gain: 0.09, attack: 0.001, lp: 2800, dest: dry });
           break;
         case 'horn':
-          [0, 0.24].forEach((off) => {
-            this._tone(370, t + off, 0.16, { type: 'square', gain: 0.14, lp: 900 });
-            this._tone(466, t + off, 0.16, { type: 'square', gain: 0.11, lp: 1100 });
+          /* 老式双簧片喇叭：两个音差小三度，谐波一直到 3–4k，起振几乎瞬间。
+             之前 lowpass 900 把谐波全削光了 —— 喇叭的穿透力恰恰在 1–2k，
+             削掉就剩一个闷闷的玩具喇叭。响度也翻了一倍：车喇叭本来就该盖过一切。 */
+          [0, 0.26].forEach((off) => {
+            const st = t + off;
+            this._tone(370, st, 0.20, { type: 'sawtooth', gain: 0.26, lp: 3600, attack: 0.002, pan: pan });
+            this._tone(466, st, 0.20, { type: 'sawtooth', gain: 0.20, lp: 3600, attack: 0.002, pan: pan });
+            this._tone(740, st, 0.17, { type: 'square', gain: 0.07, lp: 3000, attack: 0.002, pan: pan });
+            this._noise(st, 0.05, { bp: 1500, q: 1.2, gain: 0.05, attack: 0.001, pan: pan });
           });
           break;
       }

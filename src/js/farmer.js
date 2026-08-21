@@ -302,7 +302,11 @@
       const left = remainingPath();
       A.driveBrake = left < 1.35 ? Math.min(1, (1.35 - left) / 1.35) : 0;
       spawnDriveDust(dt);
-      if (Farm.audio && Farm.audio.startEngine) Farm.audio.startEngine();
+      // 转速跟着这辆车的速度走：皮卡低沉，豪华车高亢
+      if (Farm.audio && Farm.audio.startEngine) {
+        const sp = moveSpeed();
+        Farm.audio.startEngine((sp - WALK_SPEED) / (9.0 - WALK_SPEED));
+      }
       const car = drivingCar();
       if (car && shineOf(car) > 0) car.shine = Math.max(0, shineOf(car) - dt * SHINE_DECAY);
     } else {

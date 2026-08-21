@@ -59,6 +59,22 @@
 </div>
 
 <div class="card">
+  <h2>发动机</h2>
+  <div class="row">
+    <div class="lab"><b>点火运转</b><span>四缸四冲程，一个循环点火四次</span></div>
+    <button class="sw" id="swEngine"></button>
+  </div>
+  <div class="row" style="display:block;">
+    <div class="lab" style="margin-bottom:8px;"><b>转速</b><span id="rpmLab">旧皮卡（最慢）</span></div>
+    <input type="range" id="rpm" min="0" max="100" value="0" style="width:100%;height:34px;">
+  </div>
+  <div class="note">
+    开着运转、来回拉转速滑块听。真车加速是<b>点火变密</b>，不是音调平移——
+    这一版是脉冲循环变快，跟真车一个道理。
+  </div>
+</div>
+
+<div class="card">
   <h2>拿到东西的声音</h2>
   <div class="grid">
     <button class="snd" data-s="coin"><b>金币</b><span>卖菜进账</span></button>
@@ -142,6 +158,28 @@
     swGlue.classList.toggle('on', on);
     if (A._glue) A._glue.threshold.value = on ? -18 : 0;
     stateEl.textContent = on ? '峰值控制：开' : '峰值控制：关';
+  });
+
+  var swEngine = document.getElementById('swEngine');
+  var rpm = document.getElementById('rpm');
+  var rpmLab = document.getElementById('rpmLab');
+  function loadNow() { return parseInt(rpm.value, 10) / 100; }
+  function labelFor(v) {
+    if (v < 0.2) return '旧皮卡（最慢）';
+    if (v < 0.5) return '家用车';
+    if (v < 0.8) return '越野车';
+    return '豪华车（最快）';
+  }
+  swEngine.addEventListener('click', function () {
+    var on = !swEngine.classList.contains('on');
+    swEngine.classList.toggle('on', on);
+    if (on) { A.startEngine(loadNow()); stateEl.textContent = '发动机：运转中'; }
+    else { A.stopEngine(); stateEl.textContent = '发动机：熄火'; }
+  });
+  rpm.addEventListener('input', function () {
+    var v = loadNow();
+    rpmLab.textContent = labelFor(v);
+    if (swEngine.classList.contains('on')) A.setEngineLoad(v);
   });
 
   document.addEventListener('pointerdown', function once() {

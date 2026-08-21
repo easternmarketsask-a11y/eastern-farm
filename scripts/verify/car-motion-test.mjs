@@ -30,8 +30,17 @@ assert.ok(!/ctx\.rotate\(0\.05\)/.test(farmer), '人走路不得再歪');
 
 assert.match(audio, /startEngine/);
 assert.match(audio, /stopEngine/);
-assert.ok(/startEngine[\s\S]{0,800}lowpass|startEngine[\s\S]{0,800}_noise/.test(audio),
-  '引擎必须是低通噪声，不能是蜂鸣');
+/* 2026-08-21 改严：原来只要求「startEngine 后 800 字符内有 lowpass 或 _noise」，
+   窗口匹配，实现一变长就落窗外。现在直接钉住真正的意图 ——
+   内燃机的声音是一串点火脉冲，加速是脉冲变密（playbackRate），
+   不是把一个嗡嗡声的音调往上平移。 */
+assert.match(audio, /_makeEngineCycle\(/);
+assert.ok(/_makeEngineCycle[\s\S]{0,2000}playbackRate/.test(audio),
+  '引擎变速必须靠脉冲循环的 playbackRate，不能是音调平移');
+assert.ok(/startEngine[\s\S]{0,2000}lowpass/.test(audio),
+  '引擎要低通：车外听到的没有机械毛刺');
+assert.ok(!/startEngine[\s\S]{0,600}osc\.frequency\.value = \d+;[\s\S]{0,200}oscGain/.test(audio),
+  '引擎不能退回「一个振荡器嗡嗡响」');
 
 assert.match(farmer, /boardHop/);
 assert.match(farmer, /alightHop/);
