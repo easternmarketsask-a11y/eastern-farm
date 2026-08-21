@@ -362,9 +362,13 @@
       const wp = approachPos(iso, A.queue[0].plotIdx);
       if (goTo(wp.gx, wp.gy, true)) { if (iso.render) iso.render(); return true; }
     }
-    if (Farm.ui && Farm.ui.toast) {
+    /* 这句只在第一次上车时说一次。有了常驻的「下车」按钮之后，它的信息价值就低了，
+       每次上车都弹一条横幅纯属噪音。老存档没有这个字段＝没看过，照样会看到一次。 */
+    if (Farm.ui && Farm.ui.toast && !Farm.state.data.driveHintSeen) {
       const en = Farm.state.data.language === 'en';
       Farm.ui.toast(en ? 'Tap anywhere on the farm to drive there.' : '点农场上任意一处，车就开过去。');
+      Farm.state.data.driveHintSeen = true;
+      if (Farm.state.save && !Farm.state._visitLock) Farm.state.save();
     }
     if (iso && iso.render) iso.render();
     return true;

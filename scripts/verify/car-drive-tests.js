@@ -152,6 +152,7 @@
                pathLen: A1.path ? A1.path.length : null, carAt: { gx: Farm.state.data.map[carIdx].gx, gy: Farm.state.data.map[carIdx].gy } };
     T('C3 走到了才真的上车', Farm.farmer.drivingIdx() === carIdx);
     T('C3b 上车响了喇叭', horns.indexOf('horn') >= 0);
+    T('C3c 上车提示只说一次', Farm.state.data.driveHintSeen === true);
     if (realPlay) Farm.audio.play = realPlay;
     await sleep(100);
 
