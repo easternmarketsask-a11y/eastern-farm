@@ -89,6 +89,7 @@
       path: null, pathI: 0, driving: null,
       driveT: 0, driveAccel: 0, driveBrake: 0, driveTurnT: 9,
       driveDust: [], driveDustAcc: 0, driveDx: 0, driveDy: 0,
+      boardHop: 0, alightHop: 0,
     };
   }
 
@@ -265,12 +266,13 @@
         gx: A.gx - dx * 0.28,
         gy: A.gy - dy * 0.28,
         t: 0,
-        life: 0.32 + Math.random() * 0.22,
-        ox: (Math.random() - 0.5) * 0.38,
-        oy: (Math.random() - 0.12) * 0.24,
+        life: 0.38 + Math.random() * 0.28,
+        ox: (Math.random() - 0.5) * 0.42,
+        oy: (Math.random() - 0.12) * 0.28,
         vx: -dx * 0.85 + (Math.random() - 0.5) * 0.45,
         vy: -dy * 0.85 + (Math.random() - 0.5) * 0.35,
-        r: 0.11 + Math.random() * 0.10,
+        r: 0.12 + Math.random() * 0.14,
+        dark: Math.random() < 0.45,
       });
     }
   }
@@ -334,6 +336,7 @@
     if (!o || o.type !== 'car') { A.job = null; A.path = null; A.anim = 'idle'; return false; }
     A.driving = mapIdx;
     A.gx = o.gx; A.gy = o.gy;
+    A.boardHop = 0.32;
     A.job = null; A.path = null; A.anim = 'idle';
     if (Farm.audio && Farm.audio.play) Farm.audio.play('horn');
     // 上车是为了去干活 → 不用玩家再点一次，直接开到第一块地
@@ -464,6 +467,7 @@
     A.driveAccel = 0;
     A.driveBrake = 0;
     A.driving = null;
+    A.alightHop = 0.28;
     A.job = null; A.path = null; A.anim = 'idle';
     if (!iso || !o) return true;
     // 人落在车旁第一个能站的格子；四周都站不了就退回车的锚点（不至于卡死）
@@ -770,6 +774,8 @@
     }
 
     A.frameT += dt;
+    if (A.boardHop > 0) A.boardHop = Math.max(0, A.boardHop - dt);
+    if (A.alightHop > 0) A.alightHop = Math.max(0, A.alightHop - dt);
     if (A.driving != null) tickDrive(dt);
 
     // 车停着等指令，不自己乱逛 —— 闲逛逻辑是给人写的，驾驶中它会把整辆车挪走。
@@ -892,11 +898,17 @@
     return false;
   }
 
+  function hopLift(th) {
+    if (A.boardHop > 0) return Math.sin((1 - A.boardHop / 0.32) * Math.PI) * th * 0.72;
+    if (A.alightHop > 0) return Math.sin((1 - A.alightHop / 0.28) * Math.PI) * th * 0.55;
+    return 0;
+  }
+
   function drawActor(iso, look, anim, fi, gx, gy, face, away) {
     const c = iso._cell(gx, gy);
     const th = iso._th();
     const yOff = (anim === 'harvest' || anim === 'plant') ? 0.10 : 0.18;
-    const x = c.x, y = c.y + th * yOff;
+    const x = c.x, y = c.y + th * yOff - hopLift(th);
     if (blitSheet(iso._ctx, iso, look, anim, fi, x, y, face, away)) return;
     const spec = specOf(look);
     if (iso._drawVillager) {
@@ -910,11 +922,12 @@
 
   function depthDraw(iso) {
     if (A.gx == null) return null;
-    if (A.driving != null) return null;   // 人在车里，车自己会被画出来
+    if (A.driving != null && !(A.boardHop > 0)) return null;   // 人在车里；上车那一跳还要画
     const fi = frameIndex();
     const gx = A.gx, gy = A.gy, look = A.look, anim = A.anim, face = A.face, away = !!A.away;
+    const hopD = (A.boardHop > 0 || A.alightHop > 0) ? 0.9 : 0;
     return {
-      d: gx + gy + ((anim === 'harvest' || anim === 'plant' || anim === 'water') ? 0.62 : 0.35),
+      d: gx + gy + hopD + ((anim === 'harvest' || anim === 'plant' || anim === 'water') ? 0.62 : 0.35),
       fn: () => drawActor(iso, look, anim, fi, gx, gy, face, away),
     };
   }

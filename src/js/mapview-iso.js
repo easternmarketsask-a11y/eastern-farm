@@ -298,6 +298,9 @@
   ];
   // EP-shop pets → painted iso animal sprites (replaces the emoji pet).
   const ANIMALS = { pet_chick: 'animal_chicken', pet_cat: 'animal_cat', pet_rabbit: 'animal_rabbit', decoration_dog: 'animal_dog', guard_dog: 'animal_dog' };
+  // 能坐上车的体型（马/牛太大，上车会把车盖住）。只在内存，不落盘。
+  const RIDE_PETS = { pet_chick: 1, pet_cat: 1, pet_rabbit: 1, decoration_dog: 1, guard_dog: 1,
+    pet_duck: 1, pet_squirrel: 1, pet_hedgehog: 1, pet_turtle: 1 };
   /* 小动物体型（2026-08-15 Chris：「宠物小鸡小狗比人都大不好吧」）
      以摊前站着的路人为尺子，数值 = 占人身高的比例（实测：emoji 人的墨迹高度 ≈ 字号
      th*1.5，所以这个比例是诚实的）。按现实来：狗到人大腿(0.40)、猫到小腿(0.30)、
@@ -2709,10 +2712,17 @@
         const a = Math.max(0, 1 - p.t / p.life);
         const c = this._cell(p.gx, p.gy);
         const rx = (p.r + p.t * 0.22) * tw;
-        ctx.fillStyle = 'rgba(196,176,96,' + (0.32 * a * a) + ')';
+        const col = p.dark ? 'rgba(132,110,62,' : 'rgba(210,188,108,';
+        ctx.fillStyle = col + (0.38 * a * a) + ')';
         ctx.beginPath();
         ctx.ellipse(c.x + p.ox * tw, c.y + p.oy * th + th * 0.18, rx, rx * 0.42, 0.5, 0, 6.283);
         ctx.fill();
+        if (!p.dark) {
+          ctx.fillStyle = 'rgba(255,236,180,' + (0.16 * a * a) + ')';
+          ctx.beginPath();
+          ctx.ellipse(c.x + p.ox * tw, c.y + p.oy * th + th * 0.14, rx * 0.45, rx * 0.2, 0.5, 0, 6.283);
+          ctx.fill();
+        }
       }
     },
     _carLights(cc, by, tw, th, flipX, away, moving) {
@@ -4207,10 +4217,12 @@
       const nowW = Date.now();
       const wdt = this._lastWalkT ? Math.min(0.25, (nowW - this._lastWalkT) / 1000) : 0;
       this._lastWalkT = nowW;
+      this._syncPetRides();
       this._decoPlacements().forEach((d) => {
         const mv = this._moving && this._moving.kind === 'deco' && this._moving.idx === d.seed;
         if (d.itemId && ANIMALS[d.itemId] && !mv) {           // walking pet
           const p = this._updatePet(d.seed, d.gx, d.gy, wdt);
+          if (p.ride) return;                                // 画在车上，不在草地上再画一遍
           draws.push({ d: p.fx + p.fy + 0.25, fn: () => this._drawAnimal(d, p.fx, p.fy, p.face) });
         } else {                                              // static deco (or pet being dragged)
           const gx = mv ? this._moving.gx : d.gx, gy = mv ? this._moving.gy : d.gy;
@@ -4512,8 +4524,9 @@
       const cc = this._cell(o.gx + (b.w - 1) / 2, o.gy + (b.h - 1) / 2);
       const front = this._cell(o.gx + (b.w - 1), o.gy + (b.h - 1));
       const by = front.y + th / 2 + th * 0.18;
+      // 接地影钉在地上，不跟着车身弹跳（Hay Day：影子是路面，车在跳）。
+      this._shadow(cc.x + tw * 0.28, by - th * 0.14, b.w * tw * 0.88, moving ? 0.16 : 0.20);
       if (!moving) {
-        this._shadow(cc.x + tw * 0.28, by - th * 0.14, b.w * tw * 0.88, 0.20);
         const ctxS = this._ctx;
         ctxS.save();
         ctxS.fillStyle = 'rgba(40,52,18,0.14)';
@@ -4561,6 +4574,7 @@
         if (!this._blitCar(him, cc.x, by, b.w * tw * 0.92 * BLD * pk * hz, b.sc * th * 2.2 * BLD * pk * hz, flipX, mot)) {
           /* 贴图还在路上 */
         }
+        if (live) this._drawCarRiders(cc, by, tw, th, flipX, bob);
         this._carLights(cc, by + bob, tw, th, flipX, live ? fx.away : !!homeO.away, moving);
       } else if (!this._blit(him, cc.x, by, b.w * tw * 0.92 * BLD * pk * hz, b.sc * th * 2.2 * BLD * pk * hz, flipX)) {
         // 贴图还在路上：留草地，onload 会重画。禁止再画调试红块。
@@ -4755,11 +4769,73 @@
     },
     // Advance one pet's wander (toward a random walkable spot near its home),
     // dt seconds. Returns live {fx,fy,face}. Frozen while in build mode.
+    _syncPetRides() {
+      const idx = Farm.farmer && Farm.farmer.drivingIdx ? Farm.farmer.drivingIdx() : null;
+      if (idx == null) {
+        const actor = Farm.farmer && Farm.farmer._actor ? Farm.farmer._actor() : null;
+        for (const seed in this._pets) {
+          const p = this._pets[seed];
+          if (!p || !p.ride) continue;
+          p.ride = false;
+          p.pause = 0.7 + Math.random() * 0.5;
+          const ox = (Math.random() - 0.5) * 1.6, oy = (Math.random() - 0.5) * 1.6;
+          p.fx = p.tx = (actor && actor.gx != null ? actor.gx : p.fx) + ox;
+          p.fy = p.ty = (actor && actor.gy != null ? actor.gy : p.fy) + oy;
+        }
+        return;
+      }
+      const pos = Farm.farmer.carPos(idx);
+      if (!pos) return;
+      this._decoPlacements().forEach((d) => {
+        if (!d.pet || !RIDE_PETS[d.itemId]) return;
+        let p = this._pets[d.seed];
+        if (!p) p = this._pets[d.seed] = { fx: d.gx, fy: d.gy, tx: d.gx, ty: d.gy, pause: 0, face: 1, hx: d.gx, hy: d.gy };
+        if (p.ride) return;
+        if (Math.abs(p.fx - pos.gx) + Math.abs(p.fy - pos.gy) <= 8) {
+          p.ride = true;
+          p.rideHop = 0;
+        }
+      });
+    },
+    _drawCarRiders(cc, by, tw, th, flipX, bob) {
+      let slot = 0;
+      this._decoPlacements().forEach((d) => {
+        if (!d.pet || !RIDE_PETS[d.itemId]) return;
+        const p = this._pets[d.seed];
+        if (!p || !p.ride) return;
+        const s = slot++;
+        const dir = flipX ? -1 : 1;
+        const ox = dir * tw * (0.04 - s * 0.26);
+        let hop = 0;
+        if (p.rideHop != null && p.rideHop < 0.28) hop = Math.sin((p.rideHop / 0.28) * Math.PI) * th * 0.42;
+        const im = this._lazyImg(ANIMALS[d.itemId]);
+        const hMax = animalH(d.itemId, th) * 0.72;
+        const x = cc.x + ox, y = by + bob - th * (0.58 + (s % 2) * 0.08) - hop;
+        if (im && im.width) {
+          const sc = Math.min((hMax * 1.1) / im.width, hMax / im.height);
+          const dw = im.width * sc, dh = im.height * sc;
+          const ctx = this._ctx;
+          ctx.save();
+          ctx.translate(x, y);
+          ctx.scale(dir, 1);
+          ctx.drawImage(im, -dw / 2, -dh, dw, dh);
+          ctx.restore();
+        }
+      });
+    },
     _updatePet(seed, hgx, hgy, dt) {
       let p = this._pets[seed];
       if (!p) p = this._pets[seed] = { fx: hgx, fy: hgy, tx: hgx, ty: hgy, pause: 0.4 + (seed % 5) * 0.25, face: 1, hx: hgx, hy: hgy };
       if (Math.abs(hgx - p.hx) > 0.5 || Math.abs(hgy - p.hy) > 0.5) { p.fx = p.tx = hgx; p.fy = p.ty = hgy; }  // home dragged → teleport
       p.hx = hgx; p.hy = hgy;
+      if (p.ride) {
+        const idx = Farm.farmer && Farm.farmer.drivingIdx ? Farm.farmer.drivingIdx() : null;
+        const pos = (idx != null && Farm.farmer.carPos) ? Farm.farmer.carPos(idx) : null;
+        if (pos) { p.fx = pos.gx; p.fy = pos.gy; }
+        p.rideHop = (p.rideHop || 0) + Math.max(0, dt);
+        p.pause = 9;
+        return p;
+      }
       if (dt <= 0 || this._build) return p;     // freeze while editing
       if (p.pause > 0) { p.pause -= dt; return p; }
       const dx = p.tx - p.fx, dy = p.ty - p.fy, dist = Math.hypot(dx, dy);
@@ -4805,7 +4881,8 @@
     _petAt(sx, sy) {
       const th = this._th(), tw = this._tw(); let best = null, bd = tw * 0.6;
       for (const seed in this._pets) {
-        const p = this._pets[seed], c = this._cell(p.fx, p.fy);
+        const p = this._pets[seed]; if (!p || p.ride) continue;
+        const c = this._cell(p.fx, p.fy);
         const d = Math.hypot(sx - c.x, sy - (c.y - th * 0.45));
         if (d < bd) { bd = d; best = +seed; }
       }
