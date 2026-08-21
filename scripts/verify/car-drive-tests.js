@@ -51,6 +51,26 @@
   try { if (Farm.ui && Farm.ui.hideModal) Farm.ui.hideModal(); } catch (e) {}
   const iso = Farm.isoView;
   T('G-init 农场视图已就绪', iso._on === true);
+
+  /* 测试是凭空把车 push 进 map 的，可能正好盖在人站的格子上，把人围死 ——
+     那时寻路只剩起点，上车/开车全都算不出来，测试随机红。真实游戏里人会自己
+     走开，所以这是测试的责任：放车前先把人挪到车身外。 */
+  const manClearOf = (gx, gy, wh) => {
+    const A = Farm.farmer._actor();
+    const mx = Math.round(A.gx), my = Math.round(A.gy);
+    const inside = (x, y) => x >= gx && x < gx + wh.w && y >= gy && y < gy + wh.h;
+    if (!inside(mx, my)) return;
+    const free = Farm.farmer.walkableFor(iso, 1, 1);
+    for (let r = 1; r <= 8; r++) {
+      for (let dy = -r; dy <= r; dy++) {
+        for (let dx = -r; dx <= r; dx++) {
+          if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+          const x = mx + dx, y = my + dy;
+          if (!inside(x, y) && free(x, y)) { A.gx = x; A.gy = y; return; }
+        }
+      }
+    }
+  };
   T('G0 goTo 已导出', typeof Farm.farmer.goTo === 'function');
   T('H0 heading 已导出', typeof Farm.farmer.heading === 'function');
   if (typeof Farm.farmer.heading === 'function') {
@@ -111,6 +131,7 @@
   const spot = iso._findHomeSpot(iso._carWh(1), -1, null, 'car');
   T('C1 有地方停车', !!spot);
   if (spot && typeof Farm.farmer.board === 'function') {
+    manClearOf(spot.gx, spot.gy, iso._carWh(1));
     Farm.state.data.map.push({ type: 'car', gx: spot.gx, gy: spot.gy, lv: 1 });
     const carIdx = Farm.state.data.map.length - 1;
 
@@ -123,7 +144,12 @@
     const A1 = Farm.farmer._actor();
     T('C2b 先走过去，还没坐进车里',
       Farm.farmer.drivingIdx() === null && A1.job && A1.job.kind === 'boarding' && A1.path && A1.path.length > 1);
+    dbg.c2 = { boardRet: true, spot0: { gx: spot.gx, gy: spot.gy }, man0: { gx: A1.gx, gy: A1.gy },
+               pathLen: A1.path ? A1.path.length : null, job: A1.job ? A1.job.kind : null };
     for (let i = 0; i < 80 && Farm.farmer.drivingIdx() !== carIdx; i++) { Farm.farmer.tick(iso); await sleep(120); }
+    dbg.c3 = { driving: Farm.farmer.drivingIdx(), man: { gx: A1.gx, gy: A1.gy },
+               job: A1.job ? A1.job.kind : null, pathI: A1.pathI,
+               pathLen: A1.path ? A1.path.length : null, carAt: { gx: Farm.state.data.map[carIdx].gx, gy: Farm.state.data.map[carIdx].gy } };
     T('C3 走到了才真的上车', Farm.farmer.drivingIdx() === carIdx);
     T('C3b 上车响了喇叭', horns.indexOf('horn') >= 0);
     if (realPlay) Farm.audio.play = realPlay;
@@ -151,6 +177,7 @@
   // ---- 第 4 组：停车落盘 ----
   const spot2 = iso._findHomeSpot(iso._carWh(1), -1, null, 'car');
   if (spot2) {
+    manClearOf(spot2.gx, spot2.gy, iso._carWh(1));
     Farm.state.data.map.push({ type: 'car', gx: spot2.gx, gy: spot2.gy, lv: 1 });
     const ci = Farm.state.data.map.length - 1;
     const before = { gx: spot2.gx, gy: spot2.gy };
@@ -207,6 +234,7 @@
 
   const spot3 = iso._findHomeSpot(iso._carWh(1), -1, null, 'car');
   if (spot3 && typeof iso._tapCar === 'function') {
+    manClearOf(spot3.gx, spot3.gy, iso._carWh(1));
     Farm.state.data.map.push({ type: 'car', gx: spot3.gx, gy: spot3.gy, lv: 1 });
     const ti = Farm.state.data.map.length - 1;
     try { Farm.ui.hideModal(); } catch (e) {}
@@ -243,7 +271,7 @@
     if (farPlot < 0 || plotD(i) > plotD(farPlot)) farPlot = i;
     if (nearPlot < 0 || plotD(i) < plotD(nearPlot)) nearPlot = i;
   }
-  TODO('F0 找得到远近两块空地', farPlot >= 0 && nearPlot >= 0 && farPlot !== nearPlot);
+  T('F0 找得到远近两块空地', farPlot >= 0 && nearPlot >= 0 && farPlot !== nearPlot);
 
   if (farPlot >= 0 && nearPlot >= 0 && farPlot !== nearPlot) {
     // F1: 车就停在人旁边 + 活儿在远处 → 该去开车
@@ -258,15 +286,16 @@
         }
       }
     }
-    TODO('F0b 人旁边放得下一辆车', !!side);
+    T('F0b 人旁边放得下一辆车', !!side);
     if (side) {
+      manClearOf(side.gx, side.gy, iso._carWh(16));
       Farm.state.data.map.push({ type: 'car', gx: side.gx, gy: side.gy, lv: 16 });   // 豪华车最快
       const nearCar = Farm.state.data.map.length - 1;
       Farm.farmer.enqueue(farPlot, 'plant', 'xiao_cong');
       dbg.f1 = { job: A6.job ? A6.job.kind : null, q: A6.queue.length,
                  man: { gx: A6.gx, gy: A6.gy }, car: side, plotD: plotD(farPlot) };
       dbg.f1cost = Farm.farmer._driveDebug(farPlot);
-      TODO('F1 车在手边就开车去干活',
+      T('F1 车在手边就开车去干活',
         !!A6.job && (A6.job.kind === 'boarding' || A6.job.kind === 'goto') && A6.queue.length === 1);
 
       for (let i = 0; i < 140 && A6.job && (A6.job.kind === 'boarding' || A6.job.kind === 'goto'); i++) {
@@ -276,10 +305,16 @@
       dbg.f2 = { car: carNow ? { gx: carNow.gx, gy: carNow.gy } : null,
                  plot: { gx: iso._plotGX(farPlot), gy: iso._plotGY(farPlot) },
                  driving: Farm.farmer.drivingIdx() };
-      TODO('F2 到了地头就下车干活', Farm.farmer.drivingIdx() === null);
-      TODO('F3 车开到了活儿那一头', !!carNow
-        && (Math.abs(carNow.gx - iso._plotGX(farPlot)) + Math.abs(carNow.gy - iso._plotGY(farPlot))) < 10);
-      TODO('F4 去干活的路不穿障碍',
+      T('F2 到了地头就下车干活', Farm.farmer.drivingIdx() === null);
+      // 🔒 判据必须是「车动了 + 离活儿更近了」。早先写成「离地块 10 格以内」，
+      // 车停在原地没动也能满足 —— 自动开车根本没触发时它照样绿灯。
+      const px = iso._plotGX(farPlot), py = iso._plotGY(farPlot);
+      const dBefore = Math.abs(side.gx - px) + Math.abs(side.gy - py);
+      const dAfter = carNow ? Math.abs(carNow.gx - px) + Math.abs(carNow.gy - py) : Infinity;
+      dbg.f3 = { from: side, to: carNow ? { gx: carNow.gx, gy: carNow.gy } : null, dBefore: dBefore, dAfter: dAfter };
+      T('F3 车真的开过去了（动了且更靠近活儿）',
+        !!carNow && (carNow.gx !== side.gx || carNow.gy !== side.gy) && dAfter < dBefore);
+      T('F4 去干活的路不穿障碍',
         !A6.path || A6.path.every((st) => Farm.farmer.walkableFor(iso, 1, 1)(st.gx, st.gy)));
       reset6();
       Farm.state.data.map.splice(nearCar, 1);
@@ -301,7 +336,7 @@
       const farCar = Farm.state.data.map.length - 1;
       Farm.farmer.enqueue(nearPlot, 'plant', 'xiao_cong');
       dbg.f5 = { job: A6.job ? A6.job.kind : null, cornerD: cornerD, nearD: plotD(nearPlot) };
-      TODO('F5 车在天边就老实走路', !A6.job || A6.job.kind !== 'boarding');
+      T('F5 车在天边就老实走路', !A6.job || A6.job.kind !== 'boarding');
       reset6();
       Farm.state.data.map.splice(farCar, 1);
     }
