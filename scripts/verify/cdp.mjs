@@ -66,6 +66,9 @@ try {
   userDataDir = mkdtempSync(join(tmpdir(), 'cdp-'));
   chromeProc = spawn(CHROME, [
     '--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check',
+    // 音频测试必须：合成的 pointerdown 不算「真实用户激活」，没有这个 flag
+    // AudioContext 永远停在 suspended，测不到任何实际出声（2026-08-21）。
+    '--autoplay-policy=no-user-gesture-required',
     '--disable-extensions', `--remote-debugging-port=${PORT}`, `--user-data-dir=${userDataDir}`,
     'about:blank',
   ], { stdio: 'ignore' });

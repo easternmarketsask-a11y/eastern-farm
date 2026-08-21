@@ -38,6 +38,13 @@
     [174.61, 261.63, 329.63, 392.00],   // Fmaj7 的骨架
   ];
 
+  /* 自动选曲规则（Chris 2026-08-21 选「按日历自动切，不用我管」）。
+     节日走游戏现成的 events.js，天气走 weather.js 的萨斯卡通实况 ——
+     不自己造农历表，也不假装下雨。 */
+  const FESTIVAL_STYLE = { spring_festival: 'cny', mid_autumn: 'midautumn' };
+  const FORCE_KEY = 'eastern_farm_music_force';   // 临时指定，见 pickAuto
+  const RECHECK_MS = 15 * 60 * 1000;              // 节日会跨日、天气会变
+
   const rnd = (a, b) => a + Math.random() * (b - a);
   const pick = (arr) => arr[(Math.random() * arr.length) | 0];
 
@@ -319,7 +326,7 @@
       if (!ctx) return false;
       if (ctx.state === 'suspended') ctx.resume();
       if (this.playing && style === this.style) return true;
-      if (this.playing) this.stop(true);
+      if (this.playing) this.stop(true);   // 已排期的音符会自然衰减完，不会咔一声
       this.style = (style && STYLES[style]) ? style : 'zh';
       const bus = this._ensureBus();
       if (!bus) return false;
@@ -343,6 +350,68 @@
       this._bus.gain.cancelScheduledValues(t);
       this._bus.gain.setValueAtTime(this._bus.gain.value, t);
       this._bus.gain.linearRampToValueAtTime(0, t + (immediate ? 0.12 : 1.2));
+    },
+
+    /* 现在该放哪一款。优先级：临时指定 > 节日 > 真在下雨 > 日常。
+       临时指定是留给 Chris 的后门：搞活动想换成「丰收季」时，
+       ?music=harvest 打开一次就记住（?music=auto 清掉）。全自动的人碰不到它。 */
+    pickAuto() {
+      try {
+        const q = (location.search.match(/[?&]music=([a-z_]+)/) || [])[1];
+        if (q === 'auto') { localStorage.removeItem(FORCE_KEY); }
+        else if (q && STYLES[q]) { localStorage.setItem(FORCE_KEY, q); }
+        const forced = localStorage.getItem(FORCE_KEY);
+        if (forced && STYLES[forced]) return forced;
+      } catch (e) { /* 隐私模式下 localStorage 会抛，忽略 */ }
+
+      const f = window.Farm && Farm.events && Farm.events.activeFestival;
+      if (f && FESTIVAL_STYLE[f.id]) return FESTIVAL_STYLE[f.id];
+
+      const w = window.Farm && Farm.weather;
+      if (w && w._isRainy && w._isRainy()) return 'rain';
+
+      return 'zh';
+    },
+
+    enabled() {
+      const st = window.Farm && Farm.state && Farm.state.data;
+      return !(st && st.musicOff);
+    },
+
+    setEnabled(on) {
+      const st = window.Farm && Farm.state && Farm.state.data;
+      if (st) { st.musicOff = !on; if (Farm.state.save) Farm.state.save(); }
+      if (on) this.autoStart(); else this.stop();
+    },
+
+    /* 进农场后调。没有用户手势时 AudioContext 起不来，所以先挂一次性监听，
+       等玩家第一次触碰再开声 —— 不然是静默失败。 */
+    autoStart() {
+      if (!this.enabled()) return;
+      const A = window.Farm && Farm.audio;
+      if (!A) return;
+      if (A.isMuted && A.isMuted()) return;
+      if (!A._gestureSeen) {
+        if (this._armed) return;
+        this._armed = true;
+        const arm = () => {
+          document.removeEventListener('pointerdown', arm, true);
+          document.removeEventListener('touchstart', arm, true);
+          this._armed = false;
+          setTimeout(() => this.autoStart(), 60);
+        };
+        document.addEventListener('pointerdown', arm, true);
+        document.addEventListener('touchstart', arm, true);
+        return;
+      }
+      this.play(this.pickAuto());
+      if (!this._recheck) {
+        this._recheck = setInterval(() => {
+          if (!this.playing || !this.enabled()) return;
+          const want = this.pickAuto();
+          if (want !== this.style) this.play(want);   // 节日到了/雨停了，平滑换
+        }, RECHECK_MS);
+      }
     },
 
     setVolume(v) {

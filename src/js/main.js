@@ -786,6 +786,7 @@
     const lang = Farm.state.data.language;
     const tier = (Farm.audio && Farm.audio.currentTier) ? Farm.audio.currentTier() : 'normal';
     const ambientOn = !(Farm.audio && Farm.audio.ambientEnabled) ? true : Farm.audio.ambientEnabled();
+    const musicOn = !(Farm.music && Farm.music.enabled) ? true : Farm.music.enabled();
     const html = `
       <h2 class="modal-title">${Farm.i18n.t('settings_title')}</h2>
 
@@ -808,6 +809,13 @@
           <span class="settings-row-txt">${lang === 'en' ? 'Farm ambience (wind + birds)' : '农场环境声（轻风 + 鸟鸣）'}</span>
           <span class="settings-switch-wrap">
             <input id="ambientToggle" class="settings-switch-input" type="checkbox" ${ambientOn ? 'checked' : ''}/>
+            <span class="settings-switch" aria-hidden="true"></span>
+          </span>
+        </label>
+        <label class="settings-row">
+          <span class="settings-row-txt">${lang === 'en' ? 'Background music' : '背景音乐'}</span>
+          <span class="settings-switch-wrap">
+            <input id="musicToggle" class="settings-switch-input" type="checkbox" ${musicOn ? 'checked' : ''}/>
             <span class="settings-switch" aria-hidden="true"></span>
           </span>
         </label>
@@ -916,6 +924,12 @@
     if (ambientEl) {
       ambientEl.onchange = () => {
         if (Farm.audio && Farm.audio.setAmbientEnabled) Farm.audio.setAmbientEnabled(ambientEl.checked);
+      };
+    }
+    const musicEl = document.getElementById('musicToggle');
+    if (musicEl) {
+      musicEl.onchange = () => {
+        if (Farm.music && Farm.music.setEnabled) Farm.music.setEnabled(musicEl.checked);
       };
     }
     // 农场显示：走动小动物开关（2026-08-15 从「怎么玩」搬来，那里放设置太怪；

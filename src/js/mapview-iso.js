@@ -352,6 +352,8 @@
     init() {
       if (!this.active() || this._on) return;
       this._on = true;
+      // 背景音乐跟着农场开：开屏/登录页不响，进了农场才有
+      if (Farm.music && Farm.music.autoStart) Farm.music.autoStart();
       document.body.classList.add('mapmode');
       const farmEl = document.getElementById('farm');
       if (farmEl) { farmEl.style.padding = '0'; farmEl.style.overflow = 'hidden'; }
