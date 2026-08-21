@@ -295,6 +295,9 @@
       if (!this.available || !this.ctx || !this.masterGain) return;
       if (!this._gestureSeen) return;
       if (this.isMuted()) return;
+      // play() 里有这一句，startEngine 之前漏了 —— 如果玩家第一个动作就是开车，
+      // AudioContext 还是 suspended，发动机静默地什么都不响。
+      if (this.ctx.state === 'suspended') this.ctx.resume();
       if (this._engine) { this.setEngineLoad(load); return; }
       const ld = Math.max(0, Math.min(1, load == null ? 0.4 : load));
       const ctx = this.ctx;
@@ -316,7 +319,7 @@
       hiss.buffer = this._ensureNoise(); hiss.loop = true;
       const hissBp = ctx.createBiquadFilter();
       hissBp.type = 'bandpass'; hissBp.frequency.value = 1800; hissBp.Q.value = 0.8;
-      const hissGain = ctx.createGain(); hissGain.gain.value = 0.035;
+      const hissGain = ctx.createGain(); hissGain.gain.value = 0.055;
 
       const gain = ctx.createGain();
       gain.gain.value = 0;
@@ -324,7 +327,11 @@
       hiss.connect(hissBp); hissBp.connect(hissGain); hissGain.connect(gain);
       gain.connect(this.masterGain);
       const t = ctx.currentTime;
-      gain.gain.linearRampToValueAtTime(0.17, t + 0.14);
+      /* 🔒 0.62 不是拍脑袋：点火脉冲的波峰因数约 11.7dB（峰值 1 / RMS 0.26），
+         而耳朵听的是 RMS。按 0.17 算出来的有效 RMS 只有 0.0079，比喇叭轻 12 倍，
+         实测就是「听不到」。0.62 让它落在喇叭响度的三成左右 —— 持续音该有的位置。
+         别按「峰值看起来够大」来调这个数。 */
+      gain.gain.linearRampToValueAtTime(0.62, t + 0.14);
       try { src.start(); hiss.start(); } catch (e) {}
       this._engine = { src: src, hiss: hiss, body: body, lp: lp, hissBp: hissBp,
                        hissGain: hissGain, gain: gain, load: ld, rate: rate };
