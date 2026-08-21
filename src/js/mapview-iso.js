@@ -340,7 +340,7 @@
     _sel: -1, _moving: null,
     _pets: {},          // seed -> {fx,fy,tx,ty,pause,face,hx,hy} live walk state (not persisted)
     _lastWalkT: 0,
-    _buildBtn: null, _communityBtn: null, _driveBtn: null, _driveBtnOn: null, _palette: null, _hint: null, _modeTabs: null, _palBuild: null, _palTerrain: null,
+    _buildBtn: null, _communityBtn: null, _driveBtn: null, _driveBtnOn: null, _musicBtn: null, _musicBtnOn: null, _palette: null, _hint: null, _modeTabs: null, _palBuild: null, _palTerrain: null,
 
     // DEFAULT farm view (Hay Day isometric). Chosen via Farm.state.farmStyle()
     // (saved preference + URL override); players switch in the guide (ⓘ).
@@ -2590,7 +2590,32 @@
       // 44×44 触控热区（was 32，低于可用性底线；2026-07-05 UX 第 1 批 #8）
       const mkZ = (label, f) => { const z = document.createElement('button'); z.textContent = label; z.setAttribute('aria-label', label === '＋' ? 'zoom in' : 'zoom out'); z.style.cssText = 'width:36px;height:36px;border:1px solid rgba(255,255,255,0.42);border-radius:50%;background:rgba(255,248,230,0.34);color:rgba(48,72,36,0.72);font:600 17px/1 system-ui,sans-serif;box-shadow:0 1px 4px rgba(40,32,16,.10);cursor:pointer;touch-action:manipulation;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);'; z.onclick = (e) => { e.preventDefault(); this._zoomBy(f); }; return z; };
       zwrap.appendChild(mkZ('＋', 1.3)); zwrap.appendChild(mkZ('－', 0.77));
+
+      /* 🎵 背景音乐开关（Chris 2026-08-21：「做一个悬浮音符，直接点击可开可关」）。
+         设置里那个开关仍在，但埋得深 —— 大多数人不会为了关音乐去翻设置，
+         音乐又是最需要「立刻能关掉」的东西（公共场合、孩子睡了）。
+         并进缩放那一列：位置和玻璃钮样式直接复用，不另起一套浮动 UI。 */
+      const zMusic = mkZ('♪', 1);
+      zMusic.id = 'isoMusicBtn';
+      zMusic.style.marginTop = '6px';
+      zMusic.style.fontSize = '19px';
+      zMusic.onclick = (e) => {
+        e.preventDefault();
+        if (!Farm.music || !Farm.music.setEnabled) return;
+        const on = !Farm.music.enabled();
+        Farm.music.setEnabled(on);
+        if (Farm.audio) Farm.audio.play('tap');
+        this._syncMusicBtn(true);
+        if (Farm.ui && Farm.ui.toast) {
+          const en2 = this._lang() === 'en';
+          Farm.ui.toast(on ? (en2 ? 'Background music on' : '背景音乐已打开')
+                           : (en2 ? 'Background music off' : '背景音乐已关闭'));
+        }
+      };
+      zwrap.appendChild(zMusic);
+      this._musicBtn = zMusic;
       document.body.appendChild(zwrap); this._zoomUI = zwrap;
+      this._syncMusicBtn(true);
 
       this._refreshModeUI(); this._layoutUI();
     },
@@ -2605,7 +2630,8 @@
       if (!this._on) return;   // map inactive → next init() builds it fresh in the right language
       [this._buildBtn, this._communityBtn, this._driveBtn, this._palette, this._hint, this._zoomUI].forEach((el) => { if (el && el.remove) el.remove(); });
       if (this._buildPulse && this._buildPulse.cancel) { try { this._buildPulse.cancel(); } catch (e) {} }
-      this._buildBtn = this._communityBtn = this._driveBtn = this._palette = this._hint = this._zoomUI = null;
+      this._buildBtn = this._communityBtn = this._driveBtn = this._palette = this._hint = this._zoomUI = this._musicBtn = null;
+      this._musicBtnOn = null;
       this._driveBtnOn = null;
       this._modeTabs = this._palBuild = this._palTerrain = null;
       this._buildUI();   // rebuilds in current language; _refreshModeUI()+_layoutUI() restore the mode
@@ -2643,6 +2669,26 @@
       }
       if (this._hint) { this._hint.style.display = this._build ? 'block' : 'none'; this._hint.style.left = r.left + 'px'; this._hint.style.right = Math.max(0, window.innerWidth - (r.left + r.width)) + 'px'; this._hint.style.top = (r.top + 8) + 'px'; }
     },
+    /* 音符按钮的外观。设置面板里也能改音乐开关，所以这里不能只在自己被点时更新。
+       挂在 render 上，用 _musicBtnOn 记住上次状态 —— 状态没变就不碰 DOM。 */
+    _syncMusicBtn(force) {
+      const b = this._musicBtn;
+      if (!b) return;
+      const on = !!(Farm.music && Farm.music.enabled && Farm.music.enabled());
+      if (!force && this._musicBtnOn === on) return;
+      this._musicBtnOn = on;
+      const en = this._lang() === 'en';
+      /* 🔒 关闭态要「看得清且明显是关的」，不能靠淡出 —— 实测 opacity 0.45 + 细删除线
+         在浅色天空上几乎消失，玩家会以为按钮没了、想开回来找不到。
+         改成画一条斜杠，透明度只降一点点。 */
+      b.style.opacity = on ? '1' : '0.9';
+      b.style.color = on ? 'rgba(48,72,36,0.72)' : 'rgba(120,105,95,0.85)';
+      b.style.backgroundImage = on ? 'none'
+        : 'linear-gradient(45deg, transparent 43%, rgba(160,80,66,0.85) 43%, rgba(160,80,66,0.85) 57%, transparent 57%)';
+      b.setAttribute('aria-label', en ? (on ? 'Music on' : 'Music off') : (on ? '背景音乐开' : '背景音乐关'));
+      b.title = b.getAttribute('aria-label');
+    },
+
     _syncDriveBtn() {
       const b = this._driveBtn;
       if (!b) return;
@@ -4228,6 +4274,7 @@
       if (!this._on) return;
       if (Farm.farmer && Farm.farmer.tick) Farm.farmer.tick(this);
       this._syncDriveBtn();   // 上/下车是 tick 里发生的，按钮显隐跟着它走
+      this._syncMusicBtn();   // 设置面板里也能改音乐开关，外观要跟着走
       this._followDriveCam();
       const ctx = this._ctx, tw = this._tw(), th = this._th(), W = this._cssW(), H = this._cssH();
       const terrain = Farm.state.data.mapTerrain || {};
