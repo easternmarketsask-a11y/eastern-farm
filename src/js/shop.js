@@ -145,14 +145,15 @@
     _epBody(tab, lang) {
       const EN = lang === 'en';
       const ep = Farm.epShop;
+      const emptyShelf = '<div class="ef-empty"><div class="ef-empty-icon">🌱</div>'
+        + '<div class="ef-empty-title">' + (EN ? 'This shelf is empty' : '这层货架还是空的') + '</div>'
+        + '<div class="ef-empty-hint">' + (EN ? 'Check another tab' : '换个分类看看') + '</div></div>';
       if (!ep || !ep.items || !ep.items.length) {
-        return '<div class="muted" style="text-align:center;padding:26px;">'
-          + (EN ? 'Nothing here yet' : '此分类暂无商品') + '</div>';
+        return emptyShelf;
       }
       const list = ep.items.filter((it) => (it.category || 'consumable') === tab);
       if (!list.length) {
-        return '<div class="muted" style="text-align:center;padding:26px;">'
-          + (EN ? 'Nothing here yet' : '此分类暂无商品') + '</div>';
+        return emptyShelf;
       }
       return '<div class="ep-shop-grid">' + list.map((it) => ep._cardHtml(it, lang)).join('') + '</div>';
     },
@@ -161,8 +162,9 @@
       const iso = Farm.isoView;
       const EN = lang === 'en';
       if (!iso || !iso._homeCatCardsHtml) {
-        return '<div class="muted" style="text-align:center;padding:26px;">'
-          + (EN ? 'Open the farm to buy a house.' : '请先进入农场再买房子。') + '</div>';
+        return '<div class="ef-empty"><div class="ef-empty-icon">🏠</div>'
+          + '<div class="ef-empty-title">' + (EN ? 'Open the farm first' : '先回到农场') + '</div>'
+          + '<div class="ef-empty-hint">' + (EN ? 'Then you can pick a house.' : '再来挑要盖的房子。') + '</div></div>';
       }
       if (!this._homeCat) {
         return '<p class="modal-subtitle" style="margin:0 0 8px;">'

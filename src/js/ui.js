@@ -147,10 +147,6 @@
         if (!modal.querySelector('.modal-backdrop')) { const bd = document.createElement('div'); bd.className = 'modal-backdrop'; modal.appendChild(bd); }
         content = document.createElement('div'); content.id = 'modalContent'; content.className = 'modal-content'; modal.appendChild(content);
       }
-      // Auto-inject a floating ✕ button at the top-right of every modal.
-      // Was previously only a bottom "Close" button which required scrolling
-      // on long modals (warehouse, shop, leaderboard). The ✕ is always
-      // reachable without scroll, matches universal close-affordance.
       // ✕ 钉在不滚动的外壳上；正文进 .modal-body。以前 ✕ 是 absolute 子元素，
       // 商店/设置一往下滑叉就跟着走掉，只能靠点空白关 —— 长辈够不着。
       content.innerHTML = '<button class="modal-close-x" aria-label="关闭 Close">✕</button><div class="modal-body">' + html + '</div>';
@@ -178,8 +174,22 @@
       document.addEventListener('keydown', this._escHandler);
       this._ensureViewportWatch();
       if (this._syncKb) this._syncKb();
+      this._staggerModalItems(content);
       if (typeof opts.onShow === 'function') {
         try { opts.onShow(); } catch (e) { console.warn('[ui] modal onShow failed:', e); }
+      }
+    },
+
+    // Hay Day 式入场：列表一项接一项弹出，而不是整板同时出现。
+    _staggerModalItems(content) {
+      if (this._prefersReducedMotion()) return;
+      const items = content.querySelectorAll(
+        '.seed-card, .wh-row, .nav-menu-item, .guide-card, .ep-shop-card, .task-card, .order-card, .settings-card'
+      );
+      const n = Math.min(items.length, 14);
+      for (let i = 0; i < n; i++) {
+        items[i].classList.add('ef-pop');
+        items[i].style.animationDelay = (24 + i * 26) + 'ms';
       }
     },
 

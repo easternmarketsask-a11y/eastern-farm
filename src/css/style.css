@@ -1931,6 +1931,7 @@ body.mapmode #warehouseBtn { display: none !important; }
   border: 1.5px solid var(--border-soft);
   border-radius: 10px;
   padding: 6px 10px;
+  box-shadow: 0 2px 0 #e2d3ac, inset 0 1px 0 #fff;
 }
 .wh-row .wh-icon { font-size: 22px; line-height: 1; text-align: center; display: inline-flex; align-items: center; justify-content: center; }
 .wh-row .wh-icon svg, .wh-row .wh-icon img.crop-sprite { width: 30px; height: 30px; }
@@ -2533,6 +2534,10 @@ body.modal-open #bottombar { display: none; }
   background: rgba(58, 46, 38, 0.5);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
+  animation: modalDim 0.22s ease;
+}
+.modal.closing .modal-backdrop {
+  animation: modalDimOut 0.18s ease forwards;
 }
 .modal-content {
   position: relative;
@@ -2557,6 +2562,18 @@ body.modal-open #bottombar { display: none; }
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
 }
+.ef-empty {
+  text-align: center;
+  padding: 28px 12px 20px;
+}
+.ef-empty-icon { font-size: 36px; line-height: 1; margin-bottom: 8px; }
+.ef-empty-title {
+  font-family: var(--font-display);
+  font-size: 16px;
+  color: var(--warm-text);
+  margin-bottom: 4px;
+}
+.ef-empty-hint { font-size: 13px; color: var(--warm-text-soft); line-height: 1.5; }
 
 /* ✕ 钉在 .modal-content 外壳（overflow:hidden）上，正文在 .modal-body 里滚。
    别改回让 ✕ 做滚动容器的 absolute 子元素 —— 商店/设置一滑叉就没了。 */
@@ -2564,13 +2581,13 @@ body.modal-open #bottombar { display: none; }
   position: absolute;
   top: 10px;
   right: 10px;
-  width: 34px;
-  height: 34px;
+  width: 36px;
+  height: 36px;
   border: none;
   border-radius: 50%;
-  background: rgba(0, 0, 0, 0.06);
-  color: var(--warm-text-soft);
-  font-size: 16px;
+  background: linear-gradient(180deg, #fffdf8 0%, #f3ead6 100%);
+  color: #8a6240;
+  font-size: 17px;
   font-weight: 700;
   line-height: 1;
   cursor: pointer;
@@ -2578,20 +2595,17 @@ body.modal-open #bottombar { display: none; }
   align-items: center;
   justify-content: center;
   z-index: 10;
-  transition: background 0.15s ease, transform 0.15s ease;
   padding: 0;
+  touch-action: manipulation;
+  box-shadow: 0 3px 0 #d4c4a0, 0 5px 10px rgba(90, 60, 30, 0.16), inset 0 1px 0 #fff;
+  transition: transform .1s ease, box-shadow .1s ease, filter .12s ease;
 }
-/* 触控热区扩到 44×44（视觉保持 34px 圆，不压弹窗标题）：伪元素外扩 5px
-   （2026-07-05 UX 第 1 批 #8）。 */
-.modal-close-x::after { content: ''; position: absolute; inset: -5px; border-radius: 50%; }
-.modal-close-x:hover {
-  background: rgba(0, 0, 0, 0.12);
-  color: var(--warm-text);
-}
+/* 触控热区扩到 44×44（视觉保持圆钮，不压弹窗标题）：伪元素外扩 4px */
+.modal-close-x::after { content: ''; position: absolute; inset: -4px; border-radius: 50%; }
+.modal-close-x:hover { filter: brightness(1.04); color: #6f4a2c; }
 .modal-close-x:active {
-  transform: scale(0.92);
-  background: rgba(232, 82, 42, 0.15);
-  color: var(--barn-red);
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 #d4c4a0, inset 0 1px 0 #fff;
 }
 
 /* Subtle "tap outside to close" hint cursor */
@@ -2603,6 +2617,27 @@ body.modal-open #bottombar { display: none; }
 @keyframes modalOut {
   from { transform: scale(1) translateY(0); opacity: 1; }
   to { transform: scale(0.92) translateY(12px); opacity: 0; }
+}
+@keyframes modalDim {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes modalDimOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+@keyframes efPop {
+  from { opacity: 0; transform: translateY(10px) scale(0.94); }
+  to { opacity: 1; transform: none; }
+}
+.ef-pop {
+  animation: efPop 0.34s cubic-bezier(0.22, 1.15, 0.36, 1) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ef-pop, .modal-content, .modal-backdrop,
+  .modal.closing .modal-content, .modal.closing .modal-backdrop {
+    animation: none !important;
+  }
 }
 
 /* Wooden plank sign header — same visual language as the farm-name sign
@@ -2758,15 +2793,20 @@ body.modal-open #bottombar { display: none; }
   border-radius: var(--radius-md);
   padding: 8px 10px;
   cursor: pointer;
-  transition: all var(--transition);
   display: grid;
   grid-template-columns: 38px 1fr;
   align-items: center;
   gap: 8px;
   text-align: left;
   min-height: 60px;
+  touch-action: manipulation;
+  box-shadow: 0 3px 0 #e2d3ac, 0 5px 10px rgba(139, 90, 60, 0.10), inset 0 1px 0 #fff;
+  transition: transform .1s ease, box-shadow .1s ease, filter .12s ease;
 }
-.seed-card:active { transform: scale(0.96); }
+.seed-card:active {
+  transform: translateY(2px) scale(0.985);
+  box-shadow: 0 1px 0 #e2d3ac, inset 0 1px 0 #fff;
+}
 .seed-card.locked { opacity: 0.45; cursor: not-allowed; }
 
 /* Icon column — crop art (SVG) or emoji fallback sitting in a little
@@ -2908,6 +2948,7 @@ body.modal-open #bottombar { display: none; }
   display: flex;
   align-items: center;
   gap: 12px;
+  box-shadow: 0 3px 0 #e2d3ac, inset 0 1px 0 #fff;
 }
 .task-card.done {
   background: #e8f4d2;
@@ -3007,13 +3048,18 @@ body.modal-open #bottombar { display: none; }
   background: linear-gradient(180deg, #5bb874 0%, #3f9657 52%, #34864a 100%);
   color: #fff;
   border: none;
-  padding: 12px 22px;
+  padding: 13px 22px;
+  min-height: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border-radius: 18px;
   font-family: var(--font-display);   /* kawaii rounded button text */
   font-weight: 700;
-  font-size: 14px;
+  font-size: 16px;
   letter-spacing: 0.2px;
   cursor: pointer;
+  touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
   box-shadow: 0 4px 0 #2a6038, 0 6px 12px rgba(47,122,69,0.26), inset 0 1px 0 rgba(255,255,255,0.4);
   transition: transform .1s ease, box-shadow .1s ease, filter .12s ease;
@@ -3990,7 +4036,8 @@ body.modal-open .toast-stack {
   flex-direction: column;
   align-items: center;
   gap: 2px;
-  padding: 7px 8px 6px;
+  padding: 8px 8px 7px;
+  min-height: 52px;
   border: 1.5px solid var(--border-soft);
   border-radius: 12px;
   background: var(--cream-bg);
@@ -3999,7 +4046,9 @@ body.modal-open .toast-stack {
   font-weight: 700;
   color: var(--warm-text-soft);
   cursor: pointer;
-  transition: all 0.14s ease;
+  touch-action: manipulation;
+  box-shadow: 0 3px 0 #e2d3ac, inset 0 1px 0 #fff;
+  transition: transform .1s ease, box-shadow .1s ease, background .14s ease, color .14s ease;
 }
 .ep-shop-tab-icon { font-size: 18px; line-height: 1; }
 .ep-shop-tab.active {
@@ -4008,7 +4057,14 @@ body.modal-open .toast-stack {
   color: #fff;
   box-shadow: 0 3px 0 #2a6038, inset 0 1px 0 rgba(255,255,255,0.35);
 }
-.ep-shop-tab:not(.active):active { transform: translateY(1px); }
+.ep-shop-tab:not(.active):active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 #e2d3ac, inset 0 1px 0 #fff;
+}
+.ep-shop-tab.active:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 #2a6038, inset 0 1px 0 rgba(255,255,255,0.3);
+}
 
 .ep-shop-grid {
   display: grid;
@@ -4021,8 +4077,9 @@ body.modal-open .toast-stack {
   border-radius: 16px;
   padding: 12px 8px 10px;
   text-align: center;
+  box-shadow: 0 3px 0 #e8dcc0, 0 5px 10px rgba(139, 90, 60, 0.08), inset 0 1px 0 #fff;
+  transition: transform .1s ease, box-shadow .1s ease;
   position: relative;
-  box-shadow: 0 2px 5px rgba(120,80,30,0.07);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -4926,8 +4983,14 @@ body.modal-open .pwa-install-banner { display: none; }
   background: #fffdf6; border: 1.5px solid var(--border-soft, #e9e1cd);
   border-radius: 14px; padding: 12px 4px; cursor: pointer;
   font: 600 12px/1.1 var(--font-zh); color: var(--warm-text, #5a4a36);
+  touch-action: manipulation;
+  box-shadow: 0 3px 0 #e2d3ac, 0 4px 8px rgba(139, 90, 60, 0.10), inset 0 1px 0 #fff;
+  transition: transform .1s ease, box-shadow .1s ease;
 }
-.nav-menu-item:active { transform: scale(0.95); background: #f6f1e3; }
+.nav-menu-item:active {
+  transform: translateY(2px) scale(0.97);
+  box-shadow: 0 1px 0 #e2d3ac, inset 0 1px 0 #fff;
+}
 .nav-menu-icon { font-size: 24px; line-height: 1; }
 .nav-menu-label { text-align: center; }
 @media (max-width: 360px) { .nav-menu-grid { grid-template-columns: repeat(3, 1fr); } }

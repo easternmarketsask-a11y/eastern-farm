@@ -136,8 +136,9 @@
       const lockedLabel = lang === 'en' ? 'Locked' : '未解锁';
 
       if (this.catalog.length === 0) {
-        return '<p style="text-align:center;color:var(--warm-text-soft);padding:24px;">' +
-          (lang === 'en' ? 'No achievements yet.' : '暂无成就') + '</p>';
+        return '<div class="ef-empty"><div class="ef-empty-icon">🏆</div>'
+          + '<div class="ef-empty-title">' + (lang === 'en' ? 'No badges yet' : '还没有徽章') + '</div>'
+          + '<div class="ef-empty-hint">' + (lang === 'en' ? 'Plant, harvest and sell — they will show up here.' : '种种收收卖卖，徽章会自己来。') + '</div></div>';
       }
 
       return '<div class="ach-list">' + this.catalog.map(ach => {

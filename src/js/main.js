@@ -221,8 +221,12 @@
     document.addEventListener('pointerdown', (e) => {
       const t = e.target;
       if (!t || !t.closest) return;
-      const btn = t.closest('.btn, .ds-btn, .modal-close-x, .nav-menu-item, .action-btn');
+      const btn = t.closest('.btn, .ds-btn, .modal-close-x, .nav-menu-item, .action-btn, .seed-card, .ep-shop-tab, .ep-shop-buy');
       if (btn && !btn.disabled && window.Farm && Farm.audio) Farm.audio.play('tap');
+      if (btn && !btn.disabled && navigator.vibrate
+          && !(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) {
+        try { navigator.vibrate(10); } catch (_) {}
+      }
     }, true);
     // Tap the Lv/title status strip to open the growth roadmap (成长之路).
     const statusbarEl = document.getElementById('statusbar');

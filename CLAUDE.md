@@ -437,7 +437,8 @@ Read `docs/TASKS.md` for the full prioritized list. Summary:
 - 🔒 **弹窗手感（2026-08-20）**：✕ 钉在不滚动的 `.modal-content` 上，正文进
   `.modal-body`（长列表一滑叉不能跟着走掉）。登录/短信 `closeOnBackdrop:false`。
   弹窗里输入框 ≥16px。关窗期间 `.modal.closing { pointer-events:none }`。
-  契约 `scripts/verify/modal-ux-test.mjs`。
+  列表入场走 `_staggerModalItems`（`.ef-pop`），按钮 48px 厚边、点下去有
+  轻触震动。关闭叉是奶油圆钮不是灰影。契约 `scripts/verify/modal-ux-test.mjs`。
 - **玩家可见叫法一律**：游戏名「东方农场 / Eastern Farm」（「东方农场路」是世界里的地址）；存储建筑「谷仓 / barn」（别再写 仓库 / silo / warehouse）；
   NPC 英文名 **Xiaodong**（不是 Little East）。
 - 宠物显示语义：`state.petsEnabled === false` 才藏，`undefined` 视为开；买宠物自动置 true。

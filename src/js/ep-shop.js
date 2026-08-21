@@ -308,7 +308,7 @@
       const list = groups[this._shopTab] || [];
       const grid = list.length
         ? `<div class="ep-shop-grid">${list.map(it => this._cardHtml(it, lang)).join('')}</div>`
-        : `<div class="muted" style="text-align:center;padding:26px;">${EN ? 'Nothing here yet' : '此分类暂无商品'}</div>`;
+        : `<div class="ef-empty"><div class="ef-empty-icon">🌱</div><div class="ef-empty-title">${EN ? 'Nothing here yet' : '这里还是空的'}</div><div class="ef-empty-hint">${EN ? 'Check another shelf' : '换个分类看看'}</div></div>`;
 
       const html = `
         <h2 class="modal-title">${EN ? 'Farm Shop' : '农场商城'}</h2>

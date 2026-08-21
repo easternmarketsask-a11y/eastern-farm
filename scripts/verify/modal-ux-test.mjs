@@ -16,6 +16,11 @@ assert.match(ui, /class="modal-body"/, '正文必须包进 .modal-body，✕ 才
 assert.match(ui, /_closeOnBackdrop = opts\.closeOnBackdrop !== false/, 'showModal 认 closeOnBackdrop');
 assert.match(ui, /visualViewport/, '键盘顶起走 visualViewport --kb');
 assert.match(ui, /scrollIntoView/, '焦点输入滚进视口');
+assert.match(ui, /_staggerModalItems/, '弹窗列表错开弹出');
+assert.match(css, /@keyframes efPop/, '列表弹出动画');
+assert.match(css, /@keyframes modalDim/, '背板淡入');
+assert.match(css, /\.modal-close-x\s*\{[\s\S]*?box-shadow:\s*0 3px 0/, '关闭叉是实体圆钮');
+assert.match(css, /\.btn\s*\{[\s\S]*?min-height:\s*48px/, '主按钮 ≥48px');
 
 assert.match(css, /\.modal-body\s*\{/, '.modal-body 滚动');
 assert.match(css, /\.modal\.closing\s*\{[^}]*pointer-events:\s*none/, '关窗动画期间不吞点击');
@@ -27,5 +32,6 @@ assert.match(css, /\.exchange-input-group input\s*\{[\s\S]*?font-size:\s*16px/, 
 assert.match(auth, /closeOnBackdrop:\s*false/, '登录弹窗误点空白不关');
 assert.doesNotMatch(main, /confirm\(Farm\.i18n\.t\('settings_reset_confirm'\)\)/, '重置不用系统 confirm');
 assert.match(main, /id="resetKeep"/, '重置先问「再想想」');
+assert.match(main, /navigator\.vibrate\(10\)/, '点按钮有轻触反馈');
 
 console.log('ok modal-ux');
