@@ -92,6 +92,7 @@
       if (this.ambientGain) this.ambientGain.gain.value = AMBIENT_VOLUME * m;
       if (m > 0 && !this._ambientDisabled()) this.startAmbient();
       else this.stopAmbient();
+      if (m <= 0) this.stopEngine();
     },
 
     setMuted(m) {
@@ -196,6 +197,62 @@
       this._ambient.on = true;
       this._scheduleBird();
       this._scheduleRustle();
+    },
+
+    startEngine() {
+      this._init();
+      if (!this.available || !this.ctx || !this.masterGain) return;
+      if (!this._gestureSeen) return;
+      if (this.isMuted()) return;
+      if (this._engine) return;
+      const ctx = this.ctx;
+      const bufLen = Math.floor(ctx.sampleRate * 1.2);
+      const buf = ctx.createBuffer(1, bufLen, ctx.sampleRate);
+      const d = buf.getChannelData(0);
+      let last = 0;
+      for (let i = 0; i < bufLen; i++) {
+        last = (last + 0.035 * (Math.random() * 2 - 1)) / 1.035;
+        d[i] = last * 4.2;
+      }
+      const src = ctx.createBufferSource();
+      src.buffer = buf;
+      src.loop = true;
+      const lp = ctx.createBiquadFilter();
+      lp.type = 'lowpass';
+      lp.frequency.value = 280;
+      lp.Q.value = 0.7;
+      const osc = ctx.createOscillator();
+      osc.type = 'triangle';
+      osc.frequency.value = 72;
+      const oscGain = ctx.createGain();
+      oscGain.gain.value = 0.22;
+      const gain = ctx.createGain();
+      gain.gain.value = 0;
+      src.connect(lp);
+      lp.connect(gain);
+      osc.connect(oscGain);
+      oscGain.connect(gain);
+      gain.connect(this.masterGain);
+      const t = ctx.currentTime;
+      gain.gain.linearRampToValueAtTime(0.085, t + 0.14);
+      try { src.start(); osc.start(); } catch (e) {}
+      this._engine = { src: src, osc: osc, lp: lp, oscGain: oscGain, gain: gain };
+    },
+
+    stopEngine() {
+      const e = this._engine;
+      if (!e || !this.ctx) { this._engine = null; return; }
+      this._engine = null;
+      const t = this.ctx.currentTime;
+      try {
+        e.gain.gain.cancelScheduledValues(t);
+        e.gain.gain.setValueAtTime(e.gain.gain.value, t);
+        e.gain.gain.linearRampToValueAtTime(0, t + 0.16);
+      } catch (err) {}
+      setTimeout(() => {
+        ['src', 'osc'].forEach((k) => { try { e[k].stop(); } catch (err) {} });
+        Object.keys(e).forEach((k) => { try { e[k].disconnect(); } catch (err) {} });
+      }, 200);
     },
 
     stopAmbient() {
@@ -444,7 +501,7 @@
 
   if (typeof document !== 'undefined') {
     document.addEventListener('visibilitychange', function () {
-      if (document.hidden) audio.stopAmbient();
+      if (document.hidden) { audio.stopAmbient(); audio.stopEngine(); }
       else audio.applyVolume();
     });
   }

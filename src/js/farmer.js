@@ -87,6 +87,8 @@
       anim: 'idle', frameT: 0, pause: 0,
       queue: [], job: null, visitHold: null,
       path: null, pathI: 0, driving: null,
+      driveT: 0, driveAccel: 0, driveBrake: 0, driveTurnT: 9,
+      driveDust: [], driveDustAcc: 0, driveDx: 0, driveDy: 0,
     };
   }
 
@@ -230,10 +232,87 @@
     return iso._carWh(o);
   }
   // 驾驶中的速度；没在开车就是走路速度。
-  function moveSpeed() {
+  function catalogSpeed() {
     const o = drivingCar(), iso = Farm.isoView;
     if (!o || !iso || !iso._carSpec) return WALK_SPEED;
     return CAR_SPEED[iso._carSpec(o).cat] || WALK_SPEED;
+  }
+  function moveSpeed() {
+    let s = catalogSpeed();
+    if (A.driving == null) return s;
+    s *= 0.38 + 0.62 * Math.min(1, A.driveAccel || 0);
+    s *= 1 - 0.58 * Math.min(1, A.driveBrake || 0);
+    return s;
+  }
+
+  function remainingPath() {
+    if (!A.path || A.pathI >= A.path.length) return 0;
+    let d = Math.hypot(A.path[A.pathI].gx - A.gx, A.path[A.pathI].gy - A.gy);
+    for (let i = A.pathI; i < A.path.length - 1; i++) {
+      d += Math.hypot(A.path[i + 1].gx - A.path[i].gx, A.path[i + 1].gy - A.path[i].gy);
+    }
+    return d;
+  }
+
+  function spawnDriveDust(dt) {
+    A.driveDust = A.driveDust || [];
+    A.driveDustAcc = (A.driveDustAcc || 0) + dt;
+    const gap = 0.046;
+    while (A.driveDustAcc >= gap && A.driveDust.length < 24) {
+      A.driveDustAcc -= gap;
+      const dx = A.driveDx || 0, dy = A.driveDy || 0;
+      A.driveDust.push({
+        gx: A.gx - dx * 0.28,
+        gy: A.gy - dy * 0.28,
+        t: 0,
+        life: 0.32 + Math.random() * 0.22,
+        ox: (Math.random() - 0.5) * 0.38,
+        oy: (Math.random() - 0.12) * 0.24,
+        vx: -dx * 0.85 + (Math.random() - 0.5) * 0.45,
+        vy: -dy * 0.85 + (Math.random() - 0.5) * 0.35,
+        r: 0.11 + Math.random() * 0.10,
+      });
+    }
+  }
+
+  function tickDrive(dt) {
+    A.driveT = (A.driveT || 0) + dt;
+    A.driveTurnT = (A.driveTurnT == null ? 9 : A.driveTurnT) + dt;
+    const going = !!(A.job && A.job.kind === 'goto' && A.path);
+    if (going) {
+      A.driveAccel = Math.min(1, (A.driveAccel || 0) + dt / 0.40);
+      const left = remainingPath();
+      A.driveBrake = left < 1.35 ? Math.min(1, (1.35 - left) / 1.35) : 0;
+      spawnDriveDust(dt);
+      if (Farm.audio && Farm.audio.startEngine) Farm.audio.startEngine();
+    } else {
+      A.driveAccel = Math.max(0, (A.driveAccel || 0) - dt / 0.20);
+      A.driveBrake = 0;
+      if (Farm.audio && Farm.audio.stopEngine) Farm.audio.stopEngine();
+    }
+    const dust = A.driveDust || [];
+    for (let i = dust.length - 1; i >= 0; i--) {
+      dust[i].t += dt;
+      dust[i].ox += (dust[i].vx || 0) * dt;
+      dust[i].oy += (dust[i].vy || 0) * dt;
+      if (dust[i].t >= dust[i].life) dust.splice(i, 1);
+    }
+  }
+
+  function driveFx() {
+    if (A.driving == null) return null;
+    const going = !!(A.job && A.job.kind === 'goto' && A.path);
+    return {
+      idx: A.driving,
+      moving: going,
+      t: A.driveT || 0,
+      accel: A.driveAccel || 0,
+      brake: A.driveBrake || 0,
+      turnT: A.driveTurnT == null ? 9 : A.driveTurnT,
+      face: A.face,
+      away: !!A.away,
+      dust: A.driveDust || [],
+    };
   }
 
   // 车旁第一个能站人的格子（上车的落脚点、下车的去处，同一套判据）
@@ -380,6 +459,10 @@
   function unboard() {
     const iso = Farm.isoView;
     const o = drivingCar();
+    if (Farm.audio && Farm.audio.stopEngine) Farm.audio.stopEngine();
+    A.driveDust = [];
+    A.driveAccel = 0;
+    A.driveBrake = 0;
     A.driving = null;
     A.job = null; A.path = null; A.anim = 'idle';
     if (!iso || !o) return true;
@@ -639,8 +722,12 @@
     const dist = Math.hypot(dx, dy);
     if (dist < 0.08) { A.gx = tx; A.gy = ty; return true; }
     const h = heading(dx, dy);
+    const prevFace = A.face, prevAway = A.away;
     A.face = h.face;
     A.away = h.away;
+    A.driveDx = dx / dist;
+    A.driveDy = dy / dist;
+    if (A.driving != null && (A.face !== prevFace || A.away !== prevAway)) A.driveTurnT = 0;
     if (A.driving != null && Farm.state && Farm.state.data && Farm.state.data.map) {
       const car = Farm.state.data.map[A.driving];
       if (car && car.type === 'car') { car.face = A.face; car.away = !!A.away; }
@@ -683,6 +770,7 @@
     }
 
     A.frameT += dt;
+    if (A.driving != null) tickDrive(dt);
 
     // 车停着等指令，不自己乱逛 —— 闲逛逻辑是给人写的，驾驶中它会把整辆车挪走。
     if (A.driving != null && !A.job) { A.anim = 'idle'; return; }
@@ -887,7 +975,8 @@
     drivingIdx: drivingIdx,
     carPos: carPos,
     heading: heading,
-    _speedNow: moveSpeed,
+    driveFx: driveFx,
+    _speedNow: catalogSpeed,
     _driveDebug: driveDebug,
     enqueueHarvestAll: enqueueHarvestAll,
     enqueueWaterAll: enqueueWaterAll,

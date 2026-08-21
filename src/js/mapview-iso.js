@@ -2684,6 +2684,75 @@
       }
       return true;
     },
+    _blitCar(im, cx, by, maxW, maxH, flipX, mot) {
+      if (!(im instanceof Image) || !im.width) return false;
+      const s = Math.min(maxW / im.width, maxH / im.height), w = im.width * s, h = im.height * s;
+      const ctx = this._ctx;
+      const bob = (mot && mot.bob) || 0;
+      const sx = (mot && mot.sx) || 1;
+      const sy = (mot && mot.sy) || 1;
+      const lean = (mot && mot.lean) || 0;
+      ctx.save();
+      ctx.translate(cx, by + bob);
+      if (flipX) ctx.scale(-1, 1);
+      if (lean) ctx.rotate(lean);
+      ctx.scale(sx, sy);
+      ctx.drawImage(im, -w / 2, -h, w, h);
+      ctx.restore();
+      return true;
+    },
+    _drawCarDust(dust, tw, th) {
+      if (!dust || !dust.length) return;
+      const ctx = this._ctx;
+      for (let i = 0; i < dust.length; i++) {
+        const p = dust[i];
+        const a = Math.max(0, 1 - p.t / p.life);
+        const c = this._cell(p.gx, p.gy);
+        const rx = (p.r + p.t * 0.22) * tw;
+        ctx.fillStyle = 'rgba(196,176,96,' + (0.32 * a * a) + ')';
+        ctx.beginPath();
+        ctx.ellipse(c.x + p.ox * tw, c.y + p.oy * th + th * 0.18, rx, rx * 0.42, 0.5, 0, 6.283);
+        ctx.fill();
+      }
+    },
+    _carLights(cc, by, tw, th, flipX, away, moving) {
+      if (!moving) return;
+      const ctx = this._ctx;
+      const dir = flipX ? -1 : 1;
+      ctx.save();
+      if (away) {
+        ctx.fillStyle = 'rgba(220,50,40,0.55)';
+        ctx.beginPath();
+        ctx.ellipse(cc.x + dir * tw * 0.22, by - th * 0.72, tw * 0.05, th * 0.035, 0, 0, 6.283);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(cc.x + dir * tw * 0.38, by - th * 0.62, tw * 0.05, th * 0.035, 0, 0, 6.283);
+        ctx.fill();
+      } else {
+        const hx = cc.x + dir * tw * 0.42, hy = by - th * 0.38;
+        const g = ctx.createRadialGradient(hx, hy, th * 0.02, hx + dir * tw * 0.18, hy + th * 0.12, tw * 0.55);
+        g.addColorStop(0, 'rgba(255,220,140,0.42)');
+        g.addColorStop(1, 'rgba(255,180,80,0)');
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.ellipse(hx + dir * tw * 0.12, hy + th * 0.08, tw * 0.38, th * 0.22, dir * 0.4, 0, 6.283);
+        ctx.fill();
+      }
+      ctx.restore();
+    },
+    _followDriveCam() {
+      if (this._drag && this._drag.moved) return;
+      if (this._build) return;
+      const fx = Farm.farmer && Farm.farmer.driveFx && Farm.farmer.driveFx();
+      if (!fx || !fx.moving) return;
+      const dv = Farm.farmer.carPos(fx.idx);
+      if (!dv) return;
+      const c = this._cell(dv.gx, dv.gy);
+      const W = this._cssW(), H = this._cssH();
+      this._camX += (c.x - W * 0.50) * 0.11;
+      this._camY += (c.y - H * 0.52) * 0.11;
+      this._clampCam();
+    },
     _cropSprite(id) { return this._cropArtImg(id, 2); },
     _cropArtImg(id, stage) {
       const key = id + '_s' + stage;
@@ -4046,6 +4115,7 @@
     render() {
       if (!this._on) return;
       if (Farm.farmer && Farm.farmer.tick) Farm.farmer.tick(this);
+      this._followDriveCam();
       const ctx = this._ctx, tw = this._tw(), th = this._th(), W = this._cssW(), H = this._cssH();
       const terrain = Farm.state.data.mapTerrain || {};
       ctx.clearRect(0, 0, W, H);
@@ -4477,6 +4547,21 @@
         const sx = him.width * 0.46, sy = him.height * 0.54, sw = him.width * 0.50, sh = him.height * 0.44;
         const destH = th * 1.55 * BLD * pk, destW = destH * (sw / sh);
         ctx.drawImage(him, sx, sy, sw, sh, cc.x - destW / 2, by - destH * 0.92, destW, destH);
+      } else if (o.type === 'car') {
+        const fx = (Farm.farmer && Farm.farmer.driveFx) ? Farm.farmer.driveFx() : null;
+        const live = fx && fx.idx === idx;
+        if (live) this._drawCarDust(fx.dust, tw, th);
+        const accel = live ? fx.accel : 0, brake = live ? fx.brake : 0, moving = !!(live && fx.moving);
+        const bob = moving ? Math.sin(fx.t * (9 + accel * 6)) * th * 0.038 * (0.35 + 0.65 * accel) : (live ? Math.sin(fx.t * 14) * th * 0.01 : 0);
+        const sx = moving ? (1.03 - 0.06 * accel + 0.05 * brake) : 1;
+        const sy = moving ? (0.94 + 0.07 * accel - 0.07 * brake) : 1;
+        let lean = 0;
+        if (live && fx.turnT < 0.26) lean = Math.sin((fx.turnT / 0.26) * Math.PI) * 0.065 * (flipX ? -1 : 1);
+        const mot = { bob: bob, sx: sx, sy: sy, lean: lean };
+        if (!this._blitCar(him, cc.x, by, b.w * tw * 0.92 * BLD * pk * hz, b.sc * th * 2.2 * BLD * pk * hz, flipX, mot)) {
+          /* 贴图还在路上 */
+        }
+        this._carLights(cc, by + bob, tw, th, flipX, live ? fx.away : !!homeO.away, moving);
       } else if (!this._blit(him, cc.x, by, b.w * tw * 0.92 * BLD * pk * hz, b.sc * th * 2.2 * BLD * pk * hz, flipX)) {
         // 贴图还在路上：留草地，onload 会重画。禁止再画调试红块。
       }

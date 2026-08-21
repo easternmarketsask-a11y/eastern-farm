@@ -37,6 +37,8 @@ const horn = src.match(/case 'horn':[\s\S]*?break;/);
 assert.ok(horn && horn[0].includes('0.24') || /forEach/.test(horn[0]), '喇叭仍是短促两响');
 
 assert.ok(/startAmbient/.test(src) && /_chirp/.test(src), '环境层：风 + 鸟');
+assert.ok(/startEngine/.test(src) && /stopEngine/.test(src), '开车要有引擎循环');
+assert.ok(/startEngine[\s\S]{0,900}lowpass/.test(src), '引擎必须低通，不能是蜂鸣');
 assert.ok(/tending[\s\S]{0,80}water|play\('water'\)/.test(readFileSync(
   join(dirname(fileURLToPath(import.meta.url)), '../../src/js/tending.js'), 'utf8'
 )) || /play\('water'\)/.test(src), '浇水路径要播 water');
