@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>东方农场 · 音效试听</title>
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    margin: 0; padding: 18px 16px calc(28px + env(safe-area-inset-bottom));
+    font-family: "Noto Sans SC", system-ui, -apple-system, sans-serif;
+    background: linear-gradient(180deg, #fffaf0 0%, #f4f9f5 100%);
+    color: #2f2a24; line-height: 1.6;
+  }
+  h1 { font-size: 21px; margin: 0 0 4px; font-weight: 500; }
+  .sub { font-size: 14px; color: #6b6259; margin: 0 0 18px; }
+  .card {
+    background: #fffdf8; border: 1.5px solid #efe4cf; border-radius: 14px;
+    padding: 14px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(139,90,60,.08);
+  }
+  .card h2 { font-size: 15px; margin: 0 0 10px; font-weight: 500; color: #3a8c50; }
+  .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  button.snd {
+    display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
+    padding: 13px 14px; min-height: 62px; border-radius: 12px; cursor: pointer;
+    border: 1.5px solid #dfe9df; background: #fff; font-family: inherit; text-align: left;
+  }
+  button.snd:active { transform: translateY(1px); background: #f2f8f2; }
+  button.snd b { font-size: 16px; font-weight: 500; color: #2a5c34; }
+  button.snd span { font-size: 12px; color: #7a7168; }
+  .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 0; border-top: 1px solid #f0e8da; }
+  .row:first-of-type { border-top: none; }
+  .row .lab b { font-weight: 500; font-size: 15px; }
+  .row .lab span { display: block; font-size: 12.5px; color: #7a7168; }
+  .sw { flex: 0 0 auto; width: 58px; height: 32px; border-radius: 999px; border: none;
+        background: #cfd8cf; position: relative; cursor: pointer; transition: background .18s; }
+  .sw.on { background: #3a8c50; }
+  .sw::after { content: ''; position: absolute; top: 3px; left: 3px; width: 26px; height: 26px;
+               border-radius: 50%; background: #fff; transition: transform .18s; box-shadow: 0 1px 3px rgba(0,0,0,.2); }
+  .sw.on::after { transform: translateX(26px); }
+  .note { font-size: 13px; color: #6b6259; background: #f7f3ea; border-radius: 10px; padding: 10px 12px; margin-top: 10px; }
+  .hint { font-size: 13px; color: #a0705a; margin-top: 10px; }
+</style>
+</head>
+<body>
+
+<h1>音效试听</h1>
+<p class="sub">戴耳机或用手机外放都行。先每个点一遍，再用下面的开关对比。</p>
+
+<div class="card">
+  <h2>农场里的声音</h2>
+  <div class="grid">
+    <button class="snd" data-s="plant"><b>种下</b><span>把种子按进土里</span></button>
+    <button class="snd" data-s="harvest"><b>收获</b><span>摘菜，连收会升调</span></button>
+    <button class="snd" data-s="water"><b>浇水</b><span>水流 + 气泡</span></button>
+    <button class="snd" data-s="horn"><b>汽车喇叭</b><span>上车时响两下</span></button>
+  </div>
+</div>
+
+<div class="card">
+  <h2>拿到东西的声音</h2>
+  <div class="grid">
+    <button class="snd" data-s="coin"><b>金币</b><span>卖菜进账</span></button>
+    <button class="snd" data-s="buy"><b>买下</b><span>商店里成交</span></button>
+    <button class="snd" data-s="levelUp"><b>升级</b><span>四音上行</span></button>
+    <button class="snd" data-s="achievement"><b>成就</b><span>铃钟</span></button>
+  </div>
+</div>
+
+<div class="card">
+  <h2>界面反馈</h2>
+  <div class="grid">
+    <button class="snd" data-s="tap"><b>点击</b><span>一天要响几百次</span></button>
+    <button class="snd" data-s="error"><b>不能这么做</b><span>钱不够、格子满了</span></button>
+  </div>
+</div>
+
+<div class="card">
+  <h2>对比开关</h2>
+  <div class="row">
+    <div class="lab"><b>空间感</b><span>关掉＝声音贴在耳朵上；开着＝落在院子里</span></div>
+    <button class="sw on" id="swRev"></button>
+  </div>
+  <div class="row">
+    <div class="lab"><b>峰值控制</b><span>关掉后连点几下收获，声音会发糊、发炸</span></div>
+    <button class="sw on" id="swGlue"></button>
+  </div>
+  <div class="row">
+    <div class="lab"><b>连收升调</b><span>模拟连续收获第 1、3、5 下</span></div>
+    <button class="snd" id="btnCombo" style="min-height:auto;padding:9px 14px;"><b>试一串</b></button>
+  </div>
+  <div class="note">
+    对比时建议：同一个音，开关各点三次再下判断。空间感是最容易一下听出差别的那个。
+  </div>
+</div>
+
+<p class="hint" id="state">正在准备音频…</p>
+
+<script>
+  // audio.js 读 Farm.state.data 判断静音和音量，这里给一个最小替身。
+  window.Farm = window.Farm || {};
+  Farm.state = { data: { audioMuted: false, audioVolume: 1, ambientOff: true } };
+</script>
+<script src="js/audio.js"></script>
+<script>
+  var A = Farm.audio;
+  var stateEl = document.getElementById('state');
+
+  function ready() {
+    if (!A) { stateEl.textContent = '音频模块没加载出来。'; return false; }
+    A.armGestureGate && A.armGestureGate();
+    return true;
+  }
+  ready();
+
+  document.querySelectorAll('button.snd[data-s]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      A.play(b.getAttribute('data-s'));
+      stateEl.textContent = '刚播放：' + b.querySelector('b').textContent;
+    });
+  });
+
+  document.getElementById('btnCombo').addEventListener('click', function () {
+    [0, 1, 2].forEach(function (i) {
+      setTimeout(function () { A.play('harvest', { step: i * 2 }); }, i * 320);
+    });
+    stateEl.textContent = '刚播放：连收三下（升调）';
+  });
+
+  var swRev = document.getElementById('swRev');
+  swRev.addEventListener('click', function () {
+    var on = !swRev.classList.contains('on');
+    swRev.classList.toggle('on', on);
+    if (A._revSend) A._revSend.gain.value = on ? 0.16 : 0;
+    stateEl.textContent = on ? '空间感：开' : '空间感：关（干声）';
+  });
+
+  var swGlue = document.getElementById('swGlue');
+  swGlue.addEventListener('click', function () {
+    var on = !swGlue.classList.contains('on');
+    swGlue.classList.toggle('on', on);
+    if (A._glue) A._glue.threshold.value = on ? -18 : 0;
+    stateEl.textContent = on ? '峰值控制：开' : '峰值控制：关';
+  });
+
+  document.addEventListener('pointerdown', function once() {
+    stateEl.textContent = '可以点了。';
+    document.removeEventListener('pointerdown', once);
+  }, { once: true });
+</script>
+</body>
+</html>
