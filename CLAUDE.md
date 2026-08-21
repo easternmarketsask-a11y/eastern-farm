@@ -434,6 +434,10 @@ Read `docs/TASKS.md` for the full prioritized list. Summary:
 - **任何自动弹出的东西**（章节来信、回家小报、催登录、促销……）出手前先问
   `Farm.ui.isBusy()`：它统一判定 `#modal` 开着 / 开屏还在 / 新手聚光灯进行中。
   别再各自只查 `#modal` —— 聚光灯与开屏都不走 modal，漏了就会盖在新手引导上（实测过）。
+- 🔒 **弹窗手感（2026-08-20）**：✕ 钉在不滚动的 `.modal-content` 上，正文进
+  `.modal-body`（长列表一滑叉不能跟着走掉）。登录/短信 `closeOnBackdrop:false`。
+  弹窗里输入框 ≥16px。关窗期间 `.modal.closing { pointer-events:none }`。
+  契约 `scripts/verify/modal-ux-test.mjs`。
 - **玩家可见叫法一律**：游戏名「东方农场 / Eastern Farm」（「东方农场路」是世界里的地址）；存储建筑「谷仓 / barn」（别再写 仓库 / silo / warehouse）；
   NPC 英文名 **Xiaodong**（不是 Little East）。
 - 宠物显示语义：`state.petsEnabled === false` 才藏，`undefined` 视为开；买宠物自动置 true。

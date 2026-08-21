@@ -775,6 +775,10 @@
   }
 
   function openSettings() {
+    const scroller = document.querySelector('#modalContent .modal-body');
+    const keepY = (scroller && document.getElementById('modal')
+      && !document.getElementById('modal').classList.contains('hidden'))
+      ? scroller.scrollTop : 0;
     const lang = Farm.state.data.language;
     const tier = (Farm.audio && Farm.audio.currentTier) ? Farm.audio.currentTier() : 'normal';
     const ambientOn = !(Farm.audio && Farm.audio.ambientEnabled) ? true : Farm.audio.ambientEnabled();
@@ -867,6 +871,10 @@
       </div>
     `;
     Farm.ui.showModal(html);
+    if (keepY) {
+      const sc = document.querySelector('#modalContent .modal-body');
+      if (sc) sc.scrollTop = keepY;
+    }
 
     const applyLanguage = (lang) => {
       Farm.state.data.language = lang;
@@ -973,10 +981,19 @@
       }
     }
     document.getElementById('resetBtn').onclick = () => {
-      if (confirm(Farm.i18n.t('settings_reset_confirm'))) {
-        Farm.state.reset();
-        location.reload();
-      }
+      const L = Farm.state.data.language;
+      Farm.ui.showModal(
+        '<h2 class="modal-title">' + Farm.i18n.t('settings_reset') + '</h2>'
+        + '<p class="modal-subtitle">' + Farm.i18n.t('settings_reset_confirm') + '</p>'
+        + '<div class="btn-row"><button class="btn" id="resetKeep" style="width:100%;">'
+        + (L === 'en' ? 'Keep playing' : '再想想') + '</button></div>'
+        + '<div class="btn-row" style="margin-top:8px;"><button class="btn danger" id="resetYes" style="width:100%;">'
+        + (L === 'en' ? 'Reset everything' : '确定清空进度') + '</button></div>'
+      );
+      const keep = document.getElementById('resetKeep');
+      if (keep) keep.onclick = () => openSettings();
+      const yes = document.getElementById('resetYes');
+      if (yes) yes.onclick = () => { Farm.state.reset(); location.reload(); };
     };
   }
 

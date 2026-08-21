@@ -190,7 +190,7 @@
 .wc-filters { display: flex; gap: 7px; margin: 2px 0 10px; }
 .wc-search {
   flex: 1; min-width: 0; border: 1px solid var(--wc-border); background: var(--wc-card);
-  border-radius: var(--radius-pill); padding: 10px 15px; font-size: 15px; color: var(--wc-ink);
+  border-radius: var(--radius-pill); padding: 10px 15px; font-size: 16px; color: var(--wc-ink);
   font-family: var(--font-zh); outline: none; transition: border-color 0.15s, box-shadow 0.15s;
 }
 .wc-search:focus { border-color: var(--wc-pitch-soft); box-shadow: 0 0 0 3px rgba(106,176,76,0.15); }

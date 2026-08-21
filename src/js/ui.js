@@ -151,7 +151,9 @@
       // Was previously only a bottom "Close" button which required scrolling
       // on long modals (warehouse, shop, leaderboard). The ✕ is always
       // reachable without scroll, matches universal close-affordance.
-      content.innerHTML = '<button class="modal-close-x" aria-label="关闭 Close">✕</button>' + html;
+      // ✕ 钉在不滚动的外壳上；正文进 .modal-body。以前 ✕ 是 absolute 子元素，
+      // 商店/设置一往下滑叉就跟着走掉，只能靠点空白关 —— 长辈够不着。
+      content.innerHTML = '<button class="modal-close-x" aria-label="关闭 Close">✕</button><div class="modal-body">' + html + '</div>';
       // Cancel any in-flight close animation (rapid reopen) so we don't land
       // .hidden on top of a freshly-shown modal.
       clearTimeout(this._closeTimer);
@@ -161,21 +163,54 @@
       // z-index 9000) can hide themselves while a modal is open — otherwise they
       // float on top of the modal's bottom content.
       document.body.classList.add('modal-open');
-      // Click backdrop to close
-      modal.querySelector('.modal-backdrop').onclick = () => this.hideModal();
-      // ✕ button click
+      this._closeOnBackdrop = opts.closeOnBackdrop !== false;
+      this._closeOnEsc = opts.closeOnEsc !== false;
+      // 登录/短信验证传 closeOnBackdrop:false，误点空白不会把等着的验证冲掉。
+      modal.querySelector('.modal-backdrop').onclick = () => {
+        if (this._closeOnBackdrop === false) return;
+        this.hideModal();
+      };
       const xBtn = content.querySelector('.modal-close-x');
       if (xBtn) xBtn.onclick = () => this.hideModal();
-      // Escape key support (desktop)
       this._escHandler = (e) => {
-        if (e.key === 'Escape') this.hideModal();
+        if (e.key === 'Escape' && this._closeOnEsc !== false) this.hideModal();
       };
       document.addEventListener('keydown', this._escHandler);
-      // 弹窗已真正渲染 → 现在才执行调用方的绑定/庆祝副作用（队列场景下
-      // 这可能发生在入队之后很久）。
+      this._ensureViewportWatch();
+      if (this._syncKb) this._syncKb();
       if (typeof opts.onShow === 'function') {
         try { opts.onShow(); } catch (e) { console.warn('[ui] modal onShow failed:', e); }
       }
+    },
+
+    // iPhone 键盘顶起弹窗：visualViewport 变矮时把 --kb 写到 #modal。
+    _ensureViewportWatch() {
+      if (this._vvBound) return;
+      this._vvBound = true;
+      const sync = () => {
+        const el = document.getElementById('modal');
+        if (!el) return;
+        let kb = 0;
+        if (window.visualViewport) {
+          const vv = window.visualViewport;
+          kb = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+        }
+        el.style.setProperty('--kb', kb + 'px');
+      };
+      this._syncKb = sync;
+      if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', sync);
+        window.visualViewport.addEventListener('scroll', sync);
+      }
+      window.addEventListener('focusin', (e) => {
+        const el = document.getElementById('modal');
+        if (!el || el.classList.contains('hidden')) return;
+        const t = e.target;
+        if (!t || (t.tagName !== 'INPUT' && t.tagName !== 'TEXTAREA')) return;
+        setTimeout(() => {
+          try { t.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (_) {}
+        }, 280);
+      });
     },
 
     hideModal() {

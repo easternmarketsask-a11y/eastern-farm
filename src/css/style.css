@@ -2518,8 +2518,15 @@ body.modal-open #bottombar { display: none; }
   display: flex;
   align-items: center;
   justify-content: center;
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: calc(env(safe-area-inset-bottom) + var(--kb, 0px));
 }
 .modal.hidden { display: none; }
+.modal.closing { pointer-events: none; }
+.modal.closing .modal-content {
+  animation: modalOut 0.18s ease forwards;
+}
 .modal-backdrop {
   position: absolute;
   inset: 0;
@@ -2529,22 +2536,30 @@ body.modal-open #bottombar { display: none; }
 }
 .modal-content {
   position: relative;
+  display: flex;
+  flex-direction: column;
   background: var(--cream-card);
   border: 2px solid #f6eed9;          /* kawaii: softer, lighter rim */
   border-radius: 28px;                /* puffier marshmallow corners */
-  padding: 24px 20px;
+  padding: 24px 20px 20px;
   max-width: 380px;
   width: calc(100% - 40px);
-  max-height: 80vh;
-  overflow-y: auto;
+  max-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px);
+  overflow: hidden;                   /* 滚动交给 .modal-body，✕ 钉在外壳 */
   box-shadow: 0 5px 0 rgba(139, 90, 60, 0.12),
               0 16px 40px rgba(60, 40, 20, 0.24);   /* softer, more diffuse */
   animation: modalIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
+.modal-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
 
-/* Auto-injected floating close button — top-right of every modal.
-   Sits OUTSIDE the scroll flow (position:sticky/absolute) so it's
-   reachable without scrolling on long modals. */
+/* ✕ 钉在 .modal-content 外壳（overflow:hidden）上，正文在 .modal-body 里滚。
+   别改回让 ✕ 做滚动容器的 absolute 子元素 —— 商店/设置一滑叉就没了。 */
 .modal-close-x {
   position: absolute;
   top: 10px;
@@ -2584,6 +2599,10 @@ body.modal-open #bottombar { display: none; }
 @keyframes modalIn {
   from { transform: scale(0.85) translateY(20px); opacity: 0; }
   to { transform: scale(1) translateY(0); opacity: 1; }
+}
+@keyframes modalOut {
+  from { transform: scale(1) translateY(0); opacity: 1; }
+  to { transform: scale(0.92) translateY(12px); opacity: 0; }
 }
 
 /* Wooden plank sign header — same visual language as the farm-name sign
@@ -2644,7 +2663,7 @@ body.modal-open #bottombar { display: none; }
   min-height: 120px;
   box-sizing: border-box;
   padding: 10px 12px;
-  font-size: 14px;
+  font-size: 16px;
   line-height: 1.5;
   border: 1.5px solid var(--border-soft);
   border-radius: 12px;
@@ -3847,12 +3866,13 @@ body.modal-open .toast-stack {
   gap: 6px;
 }
 .exchange-input-group input {
-  width: 70px;
-  padding: 4px 6px;
+  width: 92px;
+  min-height: 44px;
+  padding: 8px 10px;
   border: 1.5px solid var(--border-soft);
   border-radius: var(--radius-sm);
   font-family: var(--font-en);
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 600;
 }
 .exchange-arrow {
@@ -5128,7 +5148,7 @@ body.modal-open .pwa-install-banner { display: none; }
   width: 100%;
   box-sizing: border-box;
   padding: 10px 12px;
-  font-size: 14px;
+  font-size: 16px;
   border: 1.5px solid #e6d8b4;
   border-radius: 12px;
   background: #fff;

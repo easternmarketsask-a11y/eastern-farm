@@ -588,7 +588,8 @@ const IDENT_KEY = 'eastern_farm_last_ident';
           ? 'Not a member yet? Sign up free at 133-412 Willowgrove Square.'
           : '还不是会员？到店免费办理 · 133-412 Willowgrove Square'}</p>
       `;
-      Farm.ui.showModal(html);
+      // 误点空白不能关：短信发出去之后一关就要重发，长辈很容易点到旁边。
+      Farm.ui.showModal(html, { closeOnBackdrop: false, closeOnEsc: false });
       this._wireLoginModal();
     },
 
