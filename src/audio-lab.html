@@ -59,6 +59,27 @@
 </div>
 
 <div class="card">
+  <h2>背景音乐 · 三种风格</h2>
+  <p style="margin:0 0 10px;font-size:13px;color:#6b6259;">
+    每种至少听 30 秒 —— 它是随机生成的，永不重复，听太短判断不准。
+  </p>
+  <div class="grid">
+    <button class="snd" data-m="zh"><b>① 中式田园</b><span>五声音阶 · 拨弦 · 笛</span></button>
+    <button class="snd" data-m="west"><b>② 西式民谣</b><span>和弦进行 · 有曲子感</span></button>
+    <button class="snd" data-m="min"><b>③ 极简氛围</b><span>只有和声 · 无旋律</span></button>
+    <button class="snd" id="mStop"><b>停止</b><span>淡出</span></button>
+  </div>
+  <div class="row" style="display:block;margin-top:10px;">
+    <div class="lab" style="margin-bottom:8px;"><b>音乐音量</b><span id="mVolLab">60%（相对音乐总量）</span></div>
+    <input type="range" id="mVol" min="10" max="100" value="60" style="width:100%;height:34px;">
+  </div>
+  <div class="note">
+    听的时候顺手点几下上面的「收获」「金币」——音乐要能<b>让路</b>，
+    音效响的时候不该被盖住，这也是判断标准之一。
+  </div>
+</div>
+
+<div class="card">
   <h2>发动机</h2>
   <div class="row">
     <div class="lab"><b>点火运转</b><span>四缸四冲程，一个循环点火四次</span></div>
@@ -119,6 +140,7 @@
   Farm.state = { data: { audioMuted: false, audioVolume: 1, ambientOff: true } };
 </script>
 <script src="js/audio.js"></script>
+<script src="js/music.js"></script>
 <script>
   var A = Farm.audio;
   var stateEl = document.getElementById('state');
@@ -158,6 +180,25 @@
     swGlue.classList.toggle('on', on);
     if (A._glue) A._glue.threshold.value = on ? -18 : 0;
     stateEl.textContent = on ? '峰值控制：开' : '峰值控制：关';
+  });
+
+  var mNames = { zh: '中式田园', west: '西式民谣', min: '极简氛围' };
+  document.querySelectorAll('button.snd[data-m]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var st = b.getAttribute('data-m');
+      Farm.music.play(st);
+      stateEl.textContent = '正在播放：' + mNames[st] + '（随机生成，不会重复）';
+    });
+  });
+  document.getElementById('mStop').addEventListener('click', function () {
+    Farm.music.stop();
+    stateEl.textContent = '音乐已停。';
+  });
+  var mVol = document.getElementById('mVol'), mVolLab = document.getElementById('mVolLab');
+  mVol.addEventListener('input', function () {
+    var v = parseInt(mVol.value, 10) / 100;
+    mVolLab.textContent = mVol.value + '%（相对音乐总量）';
+    Farm.music.setVolume(v);
   });
 
   var swEngine = document.getElementById('swEngine');
