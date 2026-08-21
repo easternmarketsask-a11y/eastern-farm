@@ -357,8 +357,10 @@ See `docs/GAME-DESIGN.md` for full spec. TL;DR:
   宠物已经是 `dx-dy` 翻转，人/车必须同一套。契约：`scripts/verify/iso-heading-test.mjs`。
 - 🔒 **车辆落地贴合草地（2026-08-20）**：买来的车坐在程序化草地上，不带影棚黄绿椭圆。
   `scripts/_key_car_platform.py` 从边缘洪水抠椭圆；车漆跟草地太像的款（2/4/7/10/11/15）
-  只抠影棚、保留椭圆，避免把车身抠穿。引擎 `_drawBuilding` 已经画接地影。
-  契约：`scripts/verify/car-platform-test.py`。
+  只抠影棚、保留椭圆，避免把车身抠穿。轮子围住的那块草洪水到不了——再放宽颜色
+  会抠穿奶油车门，所以 p_car_1 / p_car_5（截图里的皮卡和家庭轿车）改为品红底
+  隔离后再抠。引擎 `_drawBuilding` 已经画接地影。
+  契约：`scripts/verify/car-platform-test.py`（1/5 左下右下草地框必须空）。
 - 🔒 **开车动画（2026-08-20）**：车不是贴图在滑。驾驶中必须有悬挂弹跳、扬尘、
   起步蹲下/刹车点头、转弯微倾、车头灯/尾灯，引擎是低通噪声循环（不是蜂鸣）。
   镜头轻跟（玩家正在拖地图时不跟）。状态只在内存，不落盘。

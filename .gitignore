@@ -24,6 +24,8 @@ _incoming/
 src/assets/images/map/_pre_keyart/
 src/assets/images/map/_tmp_keyed/
 src/assets/images/map/_tmp_car*
+src/assets/images/map/_diag*/
+src/assets/images/map/_edit_*/
 src/assets/images/farmers/_turn/
 
 # Local art/verify scratch (never ship)

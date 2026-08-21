@@ -82,7 +82,7 @@ def is_oval(r, g, b):
         return False
     if (g - b) < 20:
         return False
-    if (g - r) > 14 or (g - r) < -8:
+    if (g - r) > 14 or (g - r) < -12:
         return False
     if g < 100 and (g - r) > 4 and (g - b) < 36:
         return False
@@ -120,9 +120,28 @@ def is_flower(r, g, b):
 
 
 def is_floodable(r, g, b):
+    if is_flower(r, g, b):
+        return True
     if is_car_paint(r, g, b):
         return False
-    return is_oval(r, g, b) or is_dirt_oval(r, g, b) or is_flower(r, g, b)
+    return is_oval(r, g, b) or is_dirt_oval(r, g, b)
+
+
+def is_pad_leftover(r, g, b):
+    """Olive leftover under the chassis. Stricter than a global chroma widen
+    so cream body shading is not treated as grass."""
+    if is_car_paint(r, g, b) or is_red_paint(r, g, b):
+        return False
+    if is_floodable(r, g, b) or is_flower(r, g, b):
+        return True
+    s = r + g + b
+    if g < 70 or s < 160 or s > 520:
+        return False
+    if (g - b) < 16:
+        return False
+    if (g - r) > 16 or (g - r) < -20:
+        return False
+    return True
 
 
 def is_studio(r, g, b, br, bg, bb, tol=42):
@@ -238,6 +257,8 @@ def key_platform(path, out_path=None):
             if 0 <= nx < w and 0 <= ny < h:
                 seed(nx, ny)
 
+    # Trapped under the chassis: remaining pad CCs no longer reach the
+    # image edge (wheels close the ring). Skip blobs that sit on the body.
     visited = bytearray(n)
     for y in range(h):
         for x in range(w):
@@ -245,11 +266,10 @@ def key_platform(path, out_path=None):
             if visited[i]:
                 continue
             r, g, b, a = pix[x, y]
-            if a < 12 or not is_floodable(r, g, b):
+            if a < 12 or not is_pad_leftover(r, g, b):
                 visited[i] = 1
                 continue
             blob = []
-            touches_empty = False
             bq = deque([(x, y)])
             visited[i] = 1
             while bq:
@@ -257,74 +277,93 @@ def key_platform(path, out_path=None):
                 blob.append((cx, cy))
                 for nx, ny in ((cx + 1, cy), (cx - 1, cy), (cx, cy + 1), (cx, cy - 1)):
                     if nx < 0 or ny < 0 or nx >= w or ny >= h:
-                        touches_empty = True
                         continue
                     ni = ny * w + nx
-                    rr, gg, bb, aa = pix[nx, ny]
-                    if aa < 12:
-                        touches_empty = True
-                        continue
                     if visited[ni]:
                         continue
-                    if is_floodable(rr, gg, bb):
+                    rr, gg, bb, aa = pix[nx, ny]
+                    if aa < 12:
+                        visited[ni] = 1
+                        continue
+                    if is_pad_leftover(rr, gg, bb):
                         visited[ni] = 1
                         bq.append((nx, ny))
-            cy_mean = sum(p[1] for p in blob) / len(blob)
-            if touches_empty and len(blob) <= 900 and cy_mean > h * 0.55:
-                for cx, cy in blob:
-                    rr, gg, bb, aa = pix[cx, cy]
-                    pix[cx, cy] = (rr, gg, bb, 0)
-                    n_keyed += 1
+            on_body = 0
+            for cx, cy in blob:
+                if (body_box[0] <= cx < body_box[2] and body_box[1] <= cy < body_box[3]) or (
+                        cab_box[0] <= cx < cab_box[2] and cab_box[1] <= cy < cab_box[3]):
+                    on_body += 1
+            if on_body > 0.12 * len(blob):
+                continue
+            for cx, cy in blob:
+                rr, gg, bb, aa = pix[cx, cy]
+                pix[cx, cy] = (rr, gg, bb, 0)
+                n_keyed += 1
 
-    # White clover is cream-colored so the flood won't take it. Any tiny
-    # island in the lower half that touches empty meadow is leftover platform.
+    # Opaque islands far from the car body are leftover flowers / oval scraps.
+    # Chrome bumpers sit next to the body — keep those.
+    comps = []
     visited2 = bytearray(n)
-    for y in range(int(h * 0.52), h):
+    for y in range(h):
         for x in range(w):
             i = y * w + x
             if visited2[i] or pix[x, y][3] < 12:
                 visited2[i] = 1
                 continue
             blob = []
-            touches_empty = False
-            too_big = False
             bq = deque([(x, y)])
             visited2[i] = 1
             while bq:
                 cx, cy = bq.popleft()
                 blob.append((cx, cy))
-                if len(blob) > 500:
-                    too_big = True
-                    break
                 for nx, ny in ((cx + 1, cy), (cx - 1, cy), (cx, cy + 1), (cx, cy - 1)):
                     if nx < 0 or ny < 0 or nx >= w or ny >= h:
-                        touches_empty = True
                         continue
                     ni = ny * w + nx
-                    if pix[nx, ny][3] < 12:
-                        touches_empty = True
-                        continue
-                    if visited2[ni]:
+                    if visited2[ni] or pix[nx, ny][3] < 12:
+                        visited2[ni] = 1
                         continue
                     visited2[ni] = 1
                     bq.append((nx, ny))
-            if too_big:
-                while bq:
-                    cx, cy = bq.popleft()
-                    for nx, ny in ((cx + 1, cy), (cx - 1, cy), (cx, cy + 1), (cx, cy - 1)):
-                        if nx < 0 or ny < 0 or nx >= w or ny >= h:
-                            continue
-                        ni = ny * w + nx
-                        if pix[nx, ny][3] < 12 or visited2[ni]:
-                            continue
-                        visited2[ni] = 1
-                        bq.append((nx, ny))
+            xs = [p[0] for p in blob]
+            ys = [p[1] for p in blob]
+            comps.append((len(blob), min(xs), min(ys), max(xs), max(ys), blob))
+    if comps:
+        comps.sort(key=lambda t: t[0], reverse=True)
+        _n0, car_x0, car_y0, car_x1, car_y1, _car = comps[0]
+        pad = 18
+        near = (car_x0 - pad, car_y0 - pad, car_x1 + pad, car_y1 + pad)
+        for _n, x0, y0, x1, y1, blob in comps[1:]:
+            overlaps = not (x1 < near[0] or x0 > near[2] or y1 < near[1] or y0 > near[3])
+            if overlaps:
                 continue
-            if touches_empty and 3 <= len(blob) <= 400:
-                for cx, cy in blob:
-                    rr, gg, bb, aa = pix[cx, cy]
-                    pix[cx, cy] = (rr, gg, bb, 0)
-                    n_keyed += 1
+            for cx, cy in blob:
+                rr, gg, bb, aa = pix[cx, cy]
+                pix[cx, cy] = (rr, gg, bb, 0)
+                n_keyed += 1
+
+    # 2px pad fringe on already-keyed meadow, lower half only.
+    y_fringe = int(h * 0.48)
+    for _pass in range(2):
+        fringe = []
+        for y in range(y_fringe, h):
+            for x in range(w):
+                r, g, b, a = pix[x, y]
+                if a < 12 or not is_pad_leftover(r, g, b):
+                    continue
+                if (body_box[0] <= x < body_box[2] and body_box[1] <= y < body_box[3]):
+                    continue
+                hit = False
+                for nx, ny in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)):
+                    if 0 <= nx < w and 0 <= ny < h and pix[nx, ny][3] < 12:
+                        hit = True
+                        break
+                if hit:
+                    fringe.append((x, y))
+        for x, y in fringe:
+            r, g, b, a = pix[x, y]
+            pix[x, y] = (r, g, b, 0)
+            n_keyed += 1
 
     body1 = _box_opaque(pix, body_box)
     cab1 = _box_opaque(pix, cab_box)

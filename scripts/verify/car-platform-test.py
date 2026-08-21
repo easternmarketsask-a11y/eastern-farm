@@ -67,7 +67,14 @@ for i in range(1, 17):
         op, tot = box_opaque(pix, (int(w * 0.78), int(h * 0.58), int(w * 0.94), int(h * 0.76)))
         r = ratio(op, tot)
         if i in (1, 5) and kind == '':
-            check(r < 0.40, '%s oval cap still present (opaque %.1f%%)' % (tag, r * 100))
+            check(r < 0.33, '%s oval cap still present (opaque %.1f%%)' % (tag, r * 100))
+        # Screenshot 2026-08-20: cream sedan / pickup sat on a grass card.
+        # Lower-left and lower-right meadow must stay empty — not a flower pad.
+        if i in (1, 5):
+            op, tot = box_opaque(pix, (int(w * 0.08), int(h * 0.72), int(w * 0.22), int(h * 0.90)))
+            check(ratio(op, tot) < 0.05, '%s lower-left pad still present (opaque %.1f%%)' % (tag, ratio(op, tot) * 100))
+            op, tot = box_opaque(pix, (int(w * 0.88), int(h * 0.82), int(w * 0.98), int(h * 0.95)))
+            check(ratio(op, tot) < 0.05, '%s lower-right pad still present (opaque %.1f%%)' % (tag, ratio(op, tot) * 100))
         # Body mass in the upper-middle of the canvas.
         op, tot = box_opaque(pix, (int(w * 0.34), int(h * 0.36), int(w * 0.66), int(h * 0.58)))
         r = ratio(op, tot)
