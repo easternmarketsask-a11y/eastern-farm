@@ -1483,7 +1483,7 @@
       }
       const pay = this._carPay(null, carId);
       if (!this._spendHomePay(pay, '买车：' + spec.zh + ' / Car: ' + spec.en)) return;
-      const rec = { type: 'car', gx: spot.gx, gy: spot.gy, lv: carId };
+      const rec = { type: 'car', gx: spot.gx, gy: spot.gy, lv: carId, face: 'r', away: false };
       (Farm.state.data.map = Farm.state.data.map || []).push(rec);
       Farm.state.save();
       this._refreshPaletteAfford();

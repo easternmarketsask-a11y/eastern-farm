@@ -350,7 +350,9 @@ See `docs/GAME-DESIGN.md` for full spec. TL;DR:
 - 🔒 **等距朝向（2026-08-20）**：格子是 2:1，`_cell` 里 `x∝(gx-gy)`、`y∝(gx+gy)`。
   人/车贴图都是 3/4 朝右下。朝向**必须**走 `farmer.heading(dx, dy)`：
   屏幕右 = `dx-dy ≥ 0` → 水平翻转；背对镜头 = `dx+dy < 0` → 换
-  `p_farmer_N_back.webp` / `p_car_N_rear.webp`。
+  `p_farmer_N_back.webp`（6×2：上站立 / 下走路）/ `p_car_N_rear.webp`。
+  走路**不许** `rotate` 歪着迈。摊前客人背对镜头、面向菜摊。
+  新买的车默认 `face:'r', away:false`（朝镜头）；开过之后朝向写进存档。
   ❌ 不许再用世界轴 `|dx| vs |dy|`（+gy 会被错画成朝右，人侧着走、车侧着开）。
   宠物已经是 `dx-dy` 翻转，人/车必须同一套。契约：`scripts/verify/iso-heading-test.mjs`。
 - 🔒 **车辆落地贴合草地（2026-08-20）**：买来的车坐在程序化草地上，不带影棚黄绿椭圆。

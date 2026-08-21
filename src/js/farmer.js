@@ -780,9 +780,11 @@
     const h = th * (spec.child ? 1.45 : 2.05);
     if (im && im.width) {
       const usingBack = !!(back && back.width && im === back);
-      const rows = usingBack ? Math.max(1, Math.round(im.height / (im.width / SHEET_COLS))) : SHEET_ROWS;
-      const cw = im.width / SHEET_COLS, ch = im.height / rows;
-      const row = usingBack ? (anim === 'walk' && rows > 1 ? 1 : 0) : (ANIMS[anim] || 0);
+      const cw = im.width / SHEET_COLS;
+      // 格子是 128×160，不是正方形。用高宽比判背面是 1 行旧表还是 idle+walk 两行。
+      const backRows = usingBack ? (im.height / cw > 1.6 ? 2 : 1) : SHEET_ROWS;
+      const ch = im.height / backRows;
+      const row = usingBack ? (anim === 'walk' && backRows > 1 ? 1 : 0) : (ANIMS[anim] || 0);
       const w = h * (cw / ch);
       ctx.save();
       const bob = (anim === 'walk') ? Math.abs(Math.sin(A.frameT * 16)) * th * 0.07 : 0;
@@ -794,9 +796,7 @@
       }
       if (iso._shadow) iso._shadow(x + (face === 'l' ? -1 : 1) * w * 0.08, y + th * 0.04, w * 0.55, 0.16);
       ctx.translate(x, y - bob + dip);
-      if (wantBack) ctx.scale(0.94, 0.94);
       if (face === 'l') ctx.scale(-1, 1);
-      if (anim === 'walk') ctx.rotate(0.05);
       ctx.drawImage(im, fi * cw, row * ch, cw, ch, -w / 2, -h, w, h);
       ctx.restore();
       return true;
@@ -836,7 +836,8 @@
     const look = lookOf({ farmerLook: customer.look, uid: customer.uid });
     const th = iso._th();
     const fi = Math.floor(Date.now() / 1000 * FPS) % SHEET_COLS;
-    if (blitSheet(iso._ctx, iso, look, 'idle', fi, x, y, 'r')) return true;
+    // 人站在摊南侧路上，面向北面的菜摊 = 背对镜头。
+    if (blitSheet(iso._ctx, iso, look, 'idle', fi, x, y, 'r', true)) return true;
     const spec = specOf(look);
     iso._drawVillager(x, y, th, { scale: spec.child ? 0.78 : 1.05, shirt: spec.shirt, pants: spec.pants });
     return true;

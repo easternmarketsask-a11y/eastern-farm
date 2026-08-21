@@ -7,7 +7,7 @@
  * 旧逻辑用世界轴 |dx| vs |dy| 且 +gy → face 'r'，人会侧着走、车会侧着开。
  */
 import assert from 'node:assert/strict';
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, statSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
@@ -47,14 +47,22 @@ assert.match(farmerSrc, /A\.away = h\.away/);
 assert.match(farmerSrc, /backSheet|p_farmer_.*_back/);
 assert.match(farmerSrc, /Farm\.farmer\.heading\s*=\s*heading|heading:\s*heading/);
 
+assert.ok(!/ctx\.rotate\(0\.05\)/.test(farmerSrc),
+  '走路不得 rotate(0.05)，那会看起来像侧着歪着走');
+assert.match(farmerSrc, /anim === 'walk' && (backRows|rows) > 1|usingBack[\s\S]{0,200}walk/,
+  '背面表必须分行：站立 idle / 走路 walk');
+assert.match(farmerSrc, /blitSheet\([^)]*'r',\s*true\)/,
+  '摊前客人必须背对镜头（面向菜摊）');
+
 assert.match(isoSrc, /_blit\(im, cx, by, maxW, maxH, flipX\)|_blit\(im, cx, by, maxW, maxH, flip/);
 assert.match(isoSrc, /p_car_\d+_rear|stem \+ '_rear'|_carRear/);
 assert.ok(isoSrc.includes('carPos') && /face|away|flip/.test(isoSrc),
   '开车时必须按 heading 翻转/换车尾图');
 
 for (let i = 1; i <= 9; i++) {
-  assert.equal(existsSync(join(root, 'src/assets/images/farmers/p_farmer_' + i + '_back.webp')), true,
-    'missing back sheet p_farmer_' + i + '_back.webp');
+  const p = join(root, 'src/assets/images/farmers/p_farmer_' + i + '_back.webp');
+  assert.equal(existsSync(p), true, 'missing back sheet p_farmer_' + i + '_back.webp');
+  assert.ok(statSync(p).size > 18000, 'back sheet p_farmer_' + i + ' should be idle+walk 6×2');
 }
 for (let i = 1; i <= 16; i++) {
   assert.equal(existsSync(join(root, 'src/assets/images/map/p_car_' + i + '_rear.webp')), true,
