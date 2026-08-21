@@ -12,7 +12,7 @@
  *   - ambientOff (bool)     — disables the background farm ambience only.
  *
  * Available sounds: 'plant', 'harvest', 'coin', 'levelUp', 'achievement',
- *   'error', 'tap', 'buy'. Unknown names are silently ignored. play(name, opts)
+ *   'error', 'tap', 'buy', 'horn'. Unknown names are silently ignored. play(name, opts)
  *   accepts opts.step (int) to raise the whole sound by N semitones — used for
  *   the Hay Day-style do-re-mi combo pitch stepping on rapid harvests.
  *
@@ -331,6 +331,14 @@
         case 'tap':
           // Subtle UI click
           this._tone(700, t, 0.04, { type: 'sine', gain: 0.18 });
+          break;
+        case 'horn':
+          // 老式汽车喇叭：两个音叠成和弦（真车喇叭就是双音簧片），短促鸣两下。
+          // 比别的音效轻，它一次响两声，跟收获音同响度会盖过一切。
+          [0, 0.24].forEach((off) => {
+            this._tone(440, t + off, 0.15, { type: 'sawtooth', gain: 0.30 });
+            this._tone(554, t + off, 0.15, { type: 'sawtooth', gain: 0.22 });
+          });
           break;
       }
       this._pitchShift = 1;

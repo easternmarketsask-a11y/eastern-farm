@@ -8,6 +8,7 @@
   if (Farm.ui && Farm.ui.hideModal) Farm.ui.hideModal();
   const d = Farm.state.data;
   d.tutorialV1Done = true; d.spotlightDone = true;
+  d.lifeStory = { seen: { ch1: 1, ch2: 1, ch3: 1, ch4: 1, ch5: 1, ch6: 1 }, claimed: {} };
   d.completedAchievements = (Farm.achievements && Farm.achievements.catalog || []).map((a) => a.id);
   d.level = 8; d.landLevel = 1; d.landOrigin = 'back';
   d.plots = (d.plots || []).map((p, i) => {

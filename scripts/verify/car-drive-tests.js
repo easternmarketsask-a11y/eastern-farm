@@ -90,9 +90,20 @@
     Farm.state.data.map.push({ type: 'car', gx: spot.gx, gy: spot.gy, lv: 1 });
     const carIdx = Farm.state.data.map.length - 1;
 
+    // 上车＝先走到车边，走到了才坐进去（Chris：点上车要有人跑过来）
+    const horns = [];
+    const realPlay = Farm.audio && Farm.audio.play;
+    if (realPlay) Farm.audio.play = function (n, o) { horns.push(n); return realPlay.call(Farm.audio, n, o); };
+
     T('C2 上车成功', Farm.farmer.board(carIdx) === true);
-    T('C3 驾驶态记住了这辆车', Farm.farmer.drivingIdx() === carIdx);
-    await sleep(300);
+    const A1 = Farm.farmer._actor();
+    T('C2b 先走过去，还没坐进车里',
+      Farm.farmer.drivingIdx() === null && A1.job && A1.job.kind === 'boarding' && A1.path && A1.path.length > 1);
+    for (let i = 0; i < 80 && Farm.farmer.drivingIdx() !== carIdx; i++) { Farm.farmer.tick(iso); await sleep(120); }
+    T('C3 走到了才真的上车', Farm.farmer.drivingIdx() === carIdx);
+    T('C3b 上车响了喇叭', horns.indexOf('horn') >= 0);
+    if (realPlay) Farm.audio.play = realPlay;
+    await sleep(100);
 
     T('C4 驾驶中车位跟着人走', !!Farm.farmer.carPos(carIdx));
     T('C5 没在开的车不给实时位置', Farm.farmer.carPos(carIdx + 999) === null);
@@ -121,7 +132,7 @@
     const ci = Farm.state.data.map.length - 1;
     const before = { gx: spot2.gx, gy: spot2.gy };
     Farm.farmer.board(ci);
-    await sleep(300);
+    for (let i = 0; i < 80 && Farm.farmer.drivingIdx() !== ci; i++) { Farm.farmer.tick(iso); await sleep(120); }
 
     const wh1 = iso._carWh(1);
     const carFree = Farm.farmer.walkableFor(iso, wh1.w, wh1.h);
@@ -160,6 +171,39 @@
       T('D6 存档里没有驾驶态', JSON.stringify(saved).indexOf('"driving"') === -1);
     }
     Farm.state.data.map.splice(ci, 1);
+    Farm.state.save();
+  }
+
+  // ---- 第 5 组：点车即上车 / 换款搬到商店 ----
+  T('E0 _tapCar 存在', typeof iso._tapCar === 'function');
+  T('E1 换款面板搬到商店', typeof iso._openCarBuyChoice === 'function');
+  T('E2 旧的点车弹卡片已移除', typeof iso._openCarPanel === 'undefined');
+  T('E3 死代码 _openNewCarPanel 已清', typeof iso._openNewCarPanel === 'undefined');
+
+  const spot3 = iso._findHomeSpot(iso._carWh(1), -1, null, 'car');
+  if (spot3 && typeof iso._tapCar === 'function') {
+    Farm.state.data.map.push({ type: 'car', gx: spot3.gx, gy: spot3.gy, lv: 1 });
+    const ti = Farm.state.data.map.length - 1;
+    try { Farm.ui.hideModal(); } catch (e) {}
+    await sleep(150);
+    T('E4a 点车＝动身上车', iso._tapCar(ti) === true);
+    await sleep(150);
+    // 判据是「没弹**车**卡片」——测试跑几十秒，游戏自己可能弹别的（章节信/小报），
+    // 用「有没有任何弹窗」会假失败。
+    T('E4b 点车不再弹车卡片', !document.querySelector('[data-car-cat],[data-car-swap],[data-car-id],[data-new-car-id]'));
+    for (let i = 0; i < 80 && Farm.farmer.drivingIdx() !== ti; i++) { Farm.farmer.tick(iso); await sleep(120); }
+    T('E5 走到后坐进车里', Farm.farmer.drivingIdx() === ti);
+    T('E6 驾驶中再点这辆车＝下车', iso._tapCar(ti) === true && Farm.farmer.drivingIdx() === null);
+
+    // 商店里选一款车：场上已有车 → 应该问买新的还是换掉
+    iso._openCarBuyChoice(5);
+    await sleep(200);
+    const swapBtns = document.querySelectorAll('[data-car-swap]');
+    T('E7 商店里给得出「换掉这辆」', swapBtns.length >= 1);
+    T('E8 车位没满时也能再停一辆', !!document.querySelector('[data-car-new]'));
+    try { Farm.ui.hideModal(); } catch (e) {}
+
+    Farm.state.data.map.splice(ti, 1);
     Farm.state.save();
   }
 

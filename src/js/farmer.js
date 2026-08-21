@@ -204,6 +204,37 @@
     return CAR_SPEED[iso._carSpec(o).cat] || WALK_SPEED;
   }
 
+  // 车旁第一个能站人的格子（上车的落脚点、下车的去处，同一套判据）
+  function carSideSpot(iso, o) {
+    const free = walkableFor(iso, 1, 1);
+    const wh = iso._carWh(o);
+    const ring = [];
+    for (let x = o.gx - 1; x <= o.gx + wh.w; x++) { ring.push([x, o.gy - 1]); ring.push([x, o.gy + wh.h]); }
+    for (let y = o.gy; y < o.gy + wh.h; y++) { ring.push([o.gx - 1, y]); ring.push([o.gx + wh.w, y]); }
+    for (let i = 0; i < ring.length; i++) if (free(ring[i][0], ring[i][1])) return { gx: ring[i][0], gy: ring[i][1] };
+    return null;
+  }
+
+  /* 真正坐进去的那一刻：人藏进车里、响两下喇叭。
+     🔒 别把它并回 board() —— board 只是「动身去车那边」，中间人还在走路。 */
+  function mountNow(mapIdx) {
+    const iso = Farm.isoView;
+    const o = ((Farm.state.data && Farm.state.data.map) || [])[mapIdx];
+    if (!o || o.type !== 'car') { A.job = null; A.path = null; A.anim = 'idle'; return false; }
+    A.driving = mapIdx;
+    A.gx = o.gx; A.gy = o.gy;
+    A.job = null; A.path = null; A.anim = 'idle';
+    if (Farm.audio && Farm.audio.play) Farm.audio.play('horn');
+    if (Farm.ui && Farm.ui.toast) {
+      const en = Farm.state.data.language === 'en';
+      Farm.ui.toast(en ? 'Tap anywhere on the farm to drive there.' : '点农场上任意一处，车就开过去。');
+    }
+    if (iso && iso.render) iso.render();
+    return true;
+  }
+
+  /* 上车＝先走到车边（Chris 2026-08-20：「点上车要有人跑过来」）。
+     返回 true 只代表「动身了」，人还得走完这段路才真的坐进去。 */
   function board(mapIdx) {
     const iso = Farm.isoView;
     if (!iso || !iso._on || iso._build) return false;
@@ -211,13 +242,18 @@
     const o = (Farm.state.data.map || [])[mapIdx];
     if (!o || o.type !== 'car') return false;
     if (A.gx == null) spawnAt(iso);
+    const spot = carSideSpot(iso, o);
+    if (!spot) return false;          // 车四周站不了人，上不去
     A.queue = [];                     // 点了上车就立刻去；手上的农活不留半截
     A.job = null; A.path = null;
-    A.driving = mapIdx;
-    // 人此刻站在车外：把 actor 挪到车的锚点，视觉上就是坐进去（≤1 格的位移）
-    A.gx = o.gx; A.gy = o.gy;
-    A.anim = 'idle';
-    if (iso.render) iso.render();
+    if (Math.round(A.gx) === spot.gx && Math.round(A.gy) === spot.gy) return mountNow(mapIdx);
+    const path = Farm.pathfind.find(A.gx, A.gy, spot.gx, spot.gy, walkableFor(iso, 1, 1));
+    if (!path || path.length < 1) return false;
+    A.job = { kind: 'boarding', car: mapIdx };
+    A.path = path;
+    A.pathI = 1;
+    A.anim = 'walk';
+    A.pause = 0;
     return true;
   }
 
@@ -228,15 +264,9 @@
     A.job = null; A.path = null; A.anim = 'idle';
     if (!iso || !o) return true;
     // 人落在车旁第一个能站的格子；四周都站不了就退回车的锚点（不至于卡死）
-    const free = walkableFor(iso, 1, 1);
-    const wh = iso._carWh(o);
-    const ring = [];
-    for (let x = o.gx - 1; x <= o.gx + wh.w; x++) { ring.push([x, o.gy - 1]); ring.push([x, o.gy + wh.h]); }
-    for (let y = o.gy; y < o.gy + wh.h; y++) { ring.push([o.gx - 1, y]); ring.push([o.gx + wh.w, y]); }
-    A.gx = o.gx; A.gy = o.gy;
-    for (let i = 0; i < ring.length; i++) {
-      if (free(ring[i][0], ring[i][1])) { A.gx = ring[i][0]; A.gy = ring[i][1]; break; }
-    }
+    const spot = carSideSpot(iso, o);
+    A.gx = spot ? spot.gx : o.gx;
+    A.gy = spot ? spot.gy : o.gy;
     if (iso.render) iso.render();
     return true;
   }
@@ -518,6 +548,15 @@
 
     if (!A.job && A.queue.length) {
       while (A.queue.length && !startJob(iso, A.queue.shift())) { /* skip stale */ }
+    }
+
+    if (A.job && A.job.kind === 'boarding') {
+      A.anim = 'walk';
+      const path = A.path;
+      if (!path || A.pathI >= path.length) { mountNow(A.job.car); return; }
+      const step = path[A.pathI];
+      if (moveToward(dt, step.gx, step.gy, WALK_SPEED)) A.pathI++;   // 走去开车是走路，不是已经在开
+      return;
     }
 
     if (A.job && A.job.kind === 'goto') {

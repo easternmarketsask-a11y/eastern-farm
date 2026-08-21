@@ -963,7 +963,7 @@
       const hit = this._plotAtPoint(p.x, p.y);
       if (hit) { this._tapCell(hit.gx, hit.gy); return; }
       const bidx = this._buildingAtPoint(p.x, p.y);
-      if (bidx >= 0) { this._stickyEnd(); const o = Farm.state.data.map[bidx], b = BUILDINGS[o.type]; if (o.type === 'coop') { this._collectCoop(o, p); } else if (b.tap === 'home') { this._openHomePanel(bidx); } else if (b.tap === 'car') { this._openCarPanel(bidx); } else if (b.tap === 'stall_sale' && Farm.stall) { Farm.stall.open(); } else if (b.tap === 'warehouse' && Farm.warehouse && Farm.warehouse.open) Farm.warehouse.open(); else if (b.tap === 'shop' && Farm.shop && Farm.shop.open) Farm.shop.open(); else if (Farm.ui && Farm.ui.toast) Farm.ui.toast(this._lang() === 'en' ? b.en : b.zh); return; }
+      if (bidx >= 0) { this._stickyEnd(); const o = Farm.state.data.map[bidx], b = BUILDINGS[o.type]; if (o.type === 'coop') { this._collectCoop(o, p); } else if (b.tap === 'home') { this._openHomePanel(bidx); } else if (b.tap === 'car') { this._tapCar(bidx); } else if (b.tap === 'stall_sale' && Farm.stall) { Farm.stall.open(); } else if (b.tap === 'warehouse' && Farm.warehouse && Farm.warehouse.open) Farm.warehouse.open(); else if (b.tap === 'shop' && Farm.shop && Farm.shop.open) Farm.shop.open(); else if (Farm.ui && Farm.ui.toast) Farm.ui.toast(this._lang() === 'en' ? b.en : b.zh); return; }
       this._tapCell(c.gx, c.gy);
     },
     // Frontmost plot whose on-screen sprite box contains (px,py). Planted plots get
@@ -1385,12 +1385,85 @@
       Farm.state.save();
       this._revealBuiltCar(o, spec, false);
     },
+    /* 🔒 点车＝上车，不再弹卡片（Chris 2026-08-20）。换车款搬去商店，
+       农场上的车只做一件事：开。驾驶中再点这辆车就是下车。 */
+    _tapCar(idx) {
+      const o = (Farm.state.data.map || [])[idx];
+      if (!o || o.type !== 'car' || !Farm.farmer) return false;
+      const en = this._lang() === 'en';
+      const toast = (m) => { if (Farm.ui && Farm.ui.toast) Farm.ui.toast(m); };
+      if (Farm.state && Farm.state._visitLock) {
+        toast(en ? 'This car belongs to your neighbour.' : '这是邻居家的车。');
+        return false;
+      }
+      if (Farm.farmer.drivingIdx() === idx) {
+        Farm.farmer.unboard();
+        toast(en ? 'You got out of the car.' : '已经下车。');
+        return true;
+      }
+      // board() 只是让人动身走向车；真正坐进去、响喇叭、给提示都在 farmer.mountNow()。
+      return Farm.farmer.board(idx);
+    },
+
+    /* 商店里选中一款车之后：场上没车就直接买；已经有车就问是再停一辆
+       还是换掉某一辆（换只补差价）。 */
+    _openCarBuyChoice(carId) {
+      const spec = CAR_LEVELS[carId - 1];
+      if (!spec || !(Farm.ui && Farm.ui.showModal)) return;
+      const map = (Farm.state.data.map) || [];
+      const mine = [];
+      for (let i = 0; i < map.length; i++) if (map[i] && map[i].type === 'car') mine.push(i);
+      if (!mine.length) { this._placeNewCar(carId); return; }
+      const en = this._lang() === 'en';
+      const coin = '<span class="coin-icon"></span>';
+      const pt = '<span class="points-icon"></span>';
+      const payHtml = (pay) => {
+        if (!pay.coins && !pay.points) return '<span style="color:var(--leaf-dark);">' + (en ? 'Free' : '免费') + '</span>';
+        return (pay.coins ? pay.coins.toLocaleString() + ' ' + coin : '')
+          + (pay.points ? ' ' + pay.points.toLocaleString() + ' ' + pt : '');
+      };
+      let body = '<div style="text-align:center;line-height:1;margin-bottom:4px;">'
+        + this._homeFace(spec.stem, this._carFacePx(spec.cat, 'panel')) + '</div>'
+        + '<div style="text-align:center;font-family:var(--font-display);font-size:20px;">'
+        + (en ? spec.en : spec.zh) + '</div>'
+        + '<div style="text-align:center;font-size:12.5px;color:var(--warm-text-soft);margin:4px 0 12px;">'
+        + (en ? 'Charm' : '魅力') + ' +' + spec.charm + ' · ' + spec.w + '×' + spec.h + '</div>';
+
+      if (mine.length < CAR_CAP) {
+        body += '<button class="btn" data-car-new="1" style="width:100%;margin-bottom:8px;">'
+          + (en ? 'Park another one · ' : '再停一辆 · ') + payHtml(this._carPay(null, carId)) + '</button>';
+      }
+      for (let k = 0; k < mine.length; k++) {
+        const idx = mine[k], cur = this._carSpec(map[idx]);
+        const curId = Math.min(Math.max(map[idx].lv || 1, 1), CAR_LEVELS.length);
+        if (curId === carId) {
+          body += '<div class="ep-shop-card" style="text-align:center;padding:10px;margin-bottom:8px;font-size:13px;color:var(--warm-text-soft);">'
+            + (en ? 'You already have this one' : '这辆就是这一款') + '</div>';
+          continue;
+        }
+        body += '<button class="btn secondary" data-car-swap="' + idx + '" style="width:100%;margin-bottom:8px;">'
+          + (en ? ('Replace ' + cur.en + ' · ') : ('换掉' + cur.zh + ' · ')) + payHtml(this._carPay(curId, carId)) + '</button>';
+      }
+      body += '<div style="font-size:12px;color:var(--warm-text-soft);text-align:center;margin:2px 0 10px;">'
+        + (en ? 'Replacing only costs the difference. Downgrading is not refunded.' : '换款只补差价，降档不退款。') + '</div>'
+        + '<div class="btn-row"><button class="btn secondary" onclick="Farm.ui.hideModal()" style="width:100%;">'
+        + (en ? 'Close' : '关闭') + '</button></div>';
+
+      Farm.ui.showModal('<h2 class="modal-title">' + (en ? 'This car' : '这一款车') + '</h2>' + body);
+      const self = this;
+      const nb = document.querySelector('[data-car-new]');
+      if (nb) nb.onclick = () => { Farm.ui.hideModal(); self._placeNewCar(carId); };
+      document.querySelectorAll('[data-car-swap]').forEach((btn) => {
+        btn.onclick = () => { Farm.ui.hideModal(); self._buyCar(parseInt(btn.getAttribute('data-car-swap'), 10), carId); };
+      });
+    },
+
     _placeNewCar(carId) {
       const spec = CAR_LEVELS[carId - 1];
       const en = this._lang() === 'en';
       if (!spec) return;
       if (this._cars().length >= CAR_CAP) {
-        if (Farm.ui.toast) Farm.ui.toast(en ? 'Car limit reached. Tap a car to change it.' : '车子已经停满。点现有的车可以换款。');
+        if (Farm.ui.toast) Farm.ui.toast(en ? 'Car limit reached. Replace one from the shop instead.' : '车子已经停满。可以在商店里换掉其中一辆。');
         return;
       }
       const wh = this._carWh(carId);
@@ -1408,89 +1481,6 @@
       Farm.state.save();
       this._refreshPaletteAfford();
       this._revealBuiltCar(rec, spec, true);
-    },
-    _openCarPanel(idx, cat) {
-      const o = (Farm.state.data.map || [])[idx];
-      if (!o || o.type !== 'car' || !(Farm.ui && Farm.ui.showModal)) return;
-      const en = this._lang() === 'en';
-      const curId = Math.min(Math.max(o.lv || 1, 1), CAR_LEVELS.length);
-      const cur = CAR_LEVELS[curId - 1];
-      const catDef = cat && CAR_CATS.find((c) => c.id === cat);
-      const driving = !!(Farm.farmer && Farm.farmer.drivingIdx && Farm.farmer.drivingIdx() === idx);
-      const canRide = !this._build && !(Farm.state && Farm.state._visitLock);
-      const rideBtn = canRide
-        ? '<button class="btn" id="carRideBtn" style="width:100%;margin:10px 0 0;">'
-          + (driving ? (en ? '🚶 Get out' : '🚶 下车') : (en ? '🚗 Get in' : '🚗 上车')) + '</button>'
-          + '<div style="text-align:center;font-size:12px;color:var(--warm-text-soft);margin-top:6px;">'
-          + (driving ? (en ? 'Tap anywhere on the farm to drive there.' : '点农场上任意一处，车就开过去。')
-                     : (en ? 'Get in, then tap anywhere on the farm to drive there.' : '上车后点农场上任意一处，车就开过去。'))
-          + '</div>'
-        : '';
-      let body = '<div style="text-align:center;line-height:1;">' + this._homeFace(cur.stem, this._carFacePx(cur.cat, 'panel')) + '</div>'
-        + '<div style="text-align:center;font-family:var(--font-display);font-size:20px;margin-top:6px;">'
-        + (en ? cur.en : cur.zh) + '</div>'
-        + '<div style="text-align:center;font-size:12.5px;color:var(--warm-text-soft);margin-top:4px;">'
-        + (en ? 'Charm' : '魅力') + ' +' + cur.charm + ' · ' + cur.w + '×' + cur.h + '</div>'
-        + rideBtn;
-      if (!catDef) {
-        body += '<div style="margin:12px 0 8px;font-size:13px;font-weight:600;">'
-          + (en ? 'Choose a type' : '选一类车') + '</div>'
-          + this._carCatCardsHtml(en, curId);
-      } else {
-        body += '<div style="margin:12px 0 8px;display:flex;align-items:center;justify-content:space-between;">'
-          + '<button type="button" id="carCatBack" class="btn secondary" style="padding:4px 10px;font-size:13px;">'
-          + (en ? 'Types' : '返回分类') + '</button>'
-          + '<div style="font-size:13px;font-weight:600;">' + (en ? catDef.en : catDef.zh) + '</div>'
-          + '<span style="width:72px;"></span></div>'
-          + this._carGridHtml(en, curId, cat, curId);
-      }
-      body += '<div class="btn-row" style="margin-top:12px;"><button class="btn secondary" onclick="Farm.ui.hideModal()" style="width:100%;">'
-        + (en ? 'Close' : '关闭') + '</button></div>';
-      Farm.ui.showModal('<h2 class="modal-title">' + (en ? 'My Car' : '我的车') + '</h2>' + body);
-      const self = this;
-      document.querySelectorAll('[data-car-cat]').forEach((btn) => {
-        btn.onclick = () => self._openCarPanel(idx, btn.getAttribute('data-car-cat'));
-      });
-      document.querySelectorAll('[data-car-id]').forEach((btn) => {
-        btn.onclick = () => self._buyCar(idx, parseInt(btn.getAttribute('data-car-id'), 10));
-      });
-      const back = document.getElementById('carCatBack');
-      if (back) back.onclick = () => self._openCarPanel(idx);
-      const rb = document.getElementById('carRideBtn');
-      if (rb) rb.onclick = () => {
-        if (Farm.audio) Farm.audio.play('tap');
-        if (driving) Farm.farmer.unboard(); else Farm.farmer.board(idx);
-        Farm.ui.hideModal();
-      };
-    },
-    _openNewCarPanel(cat) {
-      if (!(Farm.ui && Farm.ui.showModal)) return;
-      const en = this._lang() === 'en';
-      const catDef = cat && CAR_CATS.find((c) => c.id === cat);
-      let body = '<div style="margin:0 0 8px;font-size:13px;color:var(--warm-text-soft);">'
-        + (en ? 'A new car costs the full catalog price. Change an existing one to pay only the difference.' : '新停一辆按图册全价。点场上已有的车换款，只补差价。') + '</div>';
-      if (!catDef) {
-        body += this._carCatCardsHtml(en, 0);
-      } else {
-        body += '<div style="margin:0 0 8px;display:flex;align-items:center;justify-content:space-between;">'
-          + '<button type="button" id="carCatBack" class="btn secondary" style="padding:4px 10px;font-size:13px;">'
-          + (en ? 'Types' : '返回分类') + '</button>'
-          + '<div style="font-size:13px;font-weight:600;">' + (en ? catDef.en : catDef.zh) + '</div>'
-          + '<span style="width:72px;"></span></div>'
-          + this._carGridHtml(en, null, cat, 0).replace(/data-car-id="/g, 'data-new-car-id="');
-      }
-      body += '<div class="btn-row" style="margin-top:12px;"><button class="btn secondary" onclick="Farm.ui.hideModal()" style="width:100%;">'
-        + (en ? 'Close' : '关闭') + '</button></div>';
-      Farm.ui.showModal('<h2 class="modal-title">' + (en ? 'Park another car' : '再停一辆') + '</h2>' + body);
-      const self = this;
-      document.querySelectorAll('[data-car-cat]').forEach((btn) => {
-        btn.onclick = () => self._openNewCarPanel(btn.getAttribute('data-car-cat'));
-      });
-      document.querySelectorAll('[data-new-car-id]').forEach((btn) => {
-        btn.onclick = () => self._placeNewCar(parseInt(btn.getAttribute('data-new-car-id'), 10));
-      });
-      const back = document.getElementById('carCatBack');
-      if (back) back.onclick = () => self._openNewCarPanel();
     },
     // fromId 有值 = 改建补差价；null = 另建付全价（不低于落成价）。
     _homePay(fromId, toId) {
@@ -2774,25 +2764,24 @@
         ctx.lineTo(right, base + span); ctx.lineTo(left, base + span); ctx.closePath(); ctx.fill();
       });
     },
-    _tree(x, y, s, flip) {
+    _tree(x, y, s, flip, seed) {
       const ctx = this._ctx;
       const im = this._img && this._img.tree;
-      if (im && im.width) {
-        const h = s * 1.85, w = h * (im.width / im.height);
+      seed = seed || 0;
+      if (im && im instanceof Image && im.width) {
+        const h = s * (1.68 + (seed % 4) * 0.10), w = h * (im.width / im.height);
         this._shadow(x + (flip ? -1 : 1) * s * 0.14, y + s * 0.05, s * 0.58, 0.16);
-        if (flip) {
-          ctx.save();
-          ctx.translate(x, 0);
-          ctx.scale(-1, 1);
-          ctx.drawImage(im, -w / 2, y - h + s * 0.08, w, h);
-          ctx.restore();
-        } else {
-          ctx.drawImage(im, x - w / 2, y - h + s * 0.08, w, h);
-        }
-        ctx.fillStyle = 'rgba(255,220,140,0.16)';
+        ctx.save();
+        ctx.translate(x, y);
+        if (flip) ctx.scale(-1, 1);
+        ctx.filter = 'hue-rotate(' + (((seed % 5) * 11) - 22) + 'deg) saturate(1.08)';
+        ctx.drawImage(im, -w / 2, -h + s * 0.08, w, h);
+        ctx.filter = 'none';
+        ctx.fillStyle = 'rgba(255,220,140,0.18)';
         ctx.beginPath();
-        ctx.ellipse(x - w * 0.10, y - h * 0.58, w * 0.22, h * 0.16, -0.5, 0, 6.283);
+        ctx.ellipse(-w * 0.12, -h * 0.58, w * 0.22, h * 0.16, -0.5, 0, 6.283);
         ctx.fill();
+        ctx.restore();
         return;
       }
       ctx.fillStyle = '#5a3a22';
@@ -2939,7 +2928,7 @@
       for (let i = 0; i < list.length; i++) {
         const t = list[i];
         const c = this._cell(t.gx + (t.r1 - 0.5) * 0.62, t.gy + (t.r2 - 0.5) * 0.62);
-        try { this._tree(c.x, c.y, tw * (0.62 + t.r2 * 0.95), t.flip); } catch (e) { /* 单棵失败不毁整场 */ }
+        try { this._tree(c.x, c.y, tw * (0.62 + t.r2 * 0.95), t.flip, t.gx * 13 + t.gy); } catch (e) { /* 单棵失败不毁整场 */ }
       }
     },
     // scattered grass tufts + flowers around the farm (NOT on the plot block), world-anchored
@@ -2971,7 +2960,7 @@
         if (igx >= 0 && igy >= 0 && this._ownedCell(igx, igy)) continue;
         const c = this._cell(s.gx, s.gy);
         this._shadow(c.x + tw * 0.18, c.y + th * 0.12, tw * 0.7 * s.s, 0.16);
-        this._tree(c.x, c.y, tw * 1.2 * s.s);
+        this._tree(c.x, c.y, tw * 1.2 * s.s, false, Math.round(s.gx * 17 + s.gy * 9));
       }
     },
     _drawMeadowDetail(cx, cy) {
@@ -3533,6 +3522,44 @@
       }
       ctx.globalAlpha = 1;
     },
+    // 油画里那条弯土路：只画画，不占格子、不挡建造。旧乡路因为挡格被关掉。
+    _drawWornTrack() {
+      const ctx = this._ctx, tw = this._tw(), th = this._th();
+      const terr = Farm.state.data.mapTerrain || {};
+      const N = 64;
+      const layers = [
+        { w: tw * 0.92, col: 'rgba(78,108,42,0.18)', off: 0 },
+        { w: tw * 0.52, col: 'rgba(176,138,78,0.38)', off: 0 },
+        { w: tw * 0.34, col: 'rgba(214,176,118,0.44)', off: 0 },
+        { w: tw * 0.04, col: 'rgba(118,86,48,0.28)', off: tw * 0.08 },
+        { w: tw * 0.04, col: 'rgba(118,86,48,0.28)', off: -tw * 0.08 },
+      ];
+      for (let li = 0; li < layers.length; li++) {
+        const ps = layers[li];
+        ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+        ctx.strokeStyle = ps.col; ctx.lineWidth = ps.w;
+        let prev = null;
+        for (let i = 0; i <= N; i++) {
+          const t = i / N;
+          const g = this._roadWorld(t);
+          const k = Math.round(g.gx) + ',' + Math.round(g.gy);
+          if (terr[k] === 'water' || terr[k] === 'path') { prev = null; continue; }
+          if (this._cellToPlot && this._cellToPlot[k] != null) { prev = null; continue; }
+          const pt = this._cell(g.gx, g.gy);
+          const fade = Math.min(1, t / 0.08) * Math.min(1, (1 - t) / 0.12);
+          const p2 = { x: pt.x, y: pt.y + (ps.off || 0) };
+          if (prev && fade > 0.05) {
+            ctx.globalAlpha = fade;
+            ctx.beginPath(); ctx.moveTo(prev.x, prev.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
+          }
+          prev = p2;
+        }
+      }
+      ctx.globalAlpha = 1;
+      const gw = this._roadWorld(0.52);
+      const sp = this._cell(gw.gx, gw.gy);
+      this._drawSignpost(sp.x + tw * 0.48, sp.y - th * 0.06);
+    },
     _drawCountryRoad(fit) {
       if (!SHOW_COUNTRY_ROAD) return;
       const tw = this._tw(), th = this._th();
@@ -3717,6 +3744,10 @@
         const h = th * 1.85, s = h / im.height, w = im.width * s;
         ctx.save(); ctx.globalAlpha = 0.78;
         ctx.drawImage(im, x - w / 2, y - h + th * 0.12, w, h);
+        ctx.globalAlpha = 0.28;
+        ctx.fillStyle = '#f4eee4';
+        ctx.beginPath(); ctx.ellipse(x + w * 0.08, y - h * 0.92, th * 0.16, th * 0.10, 0.2, 0, 6.283); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(x + w * 0.14, y - h * 1.08, th * 0.20, th * 0.12, 0.3, 0, 6.283); ctx.fill();
         ctx.restore();
         return;
       }
@@ -3730,6 +3761,13 @@
       ctx.beginPath();
       ctx.moveTo(x - sc2 * 0.68, y - sc2 * 0.50); ctx.lineTo(x, y - sc2 * 1.0);
       ctx.lineTo(x + sc2 * 0.68, y - sc2 * 0.50); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = 'rgba(244,238,228,0.35)';
+      ctx.beginPath();
+      ctx.ellipse(x + sc2 * 0.12, y - sc2 * 1.18, sc2 * 0.14, sc2 * 0.10, 0, 0, 6.283);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.ellipse(x + sc2 * 0.22, y - sc2 * 1.38, sc2 * 0.18, sc2 * 0.12, 0.2, 0, 6.283);
+      ctx.fill();
       ctx.restore();
     },
     /* 矢量地面层: 半透明叠在背景画的草甸上, 让画的笔触透出来、色调自动融合。
@@ -3953,7 +3991,7 @@
           const tx = x + (hsh - 0.5) * tw * 0.8;
           const ty = hl - th * (B.y0 + hsh * B.ySpan);
           const ts = tw * (B.s0 + hsh * B.sSpan);
-          this._tree(tx, ty, ts, (seed & 1) === 0);
+          this._tree(tx, ty, ts, (seed & 1) === 0, seed);
         }
       }
     },
@@ -4029,6 +4067,7 @@
       // 水沿被土床盖住 = 岸线自然贴着田边，绝不会出现「水漫到菜地上」。
       this._drawPond(waterCells);
       this._drawRoadSurface();   // 开着乡路时，路面盖住水塘溢出
+      this._drawWornTrack();     // 只画画、不占格（旧乡路挡建造所以关了）
       this._drawGardenPatch();
       this._drawUnifiedField();
       for (const tI of groundTiles) this._tileImg(tI.key, tI.c);
@@ -4255,11 +4294,11 @@
       if (!im) return null;
       const ctx = this._ctx;
       const grow = synth ? (fr <= 0 ? 0.28 : 0.52) : (0.55 + fr * 0.15);
-      const s = (th * (0.70 + grow * 0.62)) / 260;
+      const s = (th * (0.78 + grow * 0.70)) / 260;
       const w = im.width * s, h = im.height * s;
       const soilY = c.y + th * 0.10 - (ripe || 0);
-      const extra = ({ crop_carrot: 0.22, crop_daikon: 0.20, crop_yam: 0.24, crop_garlic: 0.10, crop_cucumber: 0.08, crop_ginger: 0.18, crop_taro: 0.08, crop_bamboo: 0.10, crop_wawa: 0.14, crop_cong: 0.16, crop_jiuhuang: 0.16 })[stem] || 0;
-      const bury = h * ((synth ? (0.28 - grow * 0.08) : 0.20) + extra);
+      const extra = ({ crop_qingcai: 0.24, crop_choysum: 0.22, crop_spinach: 0.20, crop_youmai: 0.18, crop_jimao: 0.18, crop_carrot: 0.22, crop_daikon: 0.20, crop_yam: 0.24, crop_garlic: 0.10, crop_cucumber: 0.08, crop_ginger: 0.18, crop_taro: 0.08, crop_bamboo: 0.10, crop_wawa: 0.14, crop_cong: 0.16, crop_jiuhuang: 0.16 })[stem] || 0;
+      const bury = h * ((synth ? (0.28 - grow * 0.08) : 0.28) + extra);
       const topY = soilY - h + bury;
       ctx.save();
       ctx.beginPath();
