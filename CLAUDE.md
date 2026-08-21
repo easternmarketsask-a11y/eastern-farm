@@ -378,6 +378,14 @@ See `docs/GAME-DESIGN.md` for full spec. TL;DR:
   🔒 **到了不自动下车，点一下车才下车**；开车时左下角常驻「🚶 下车」按钮
   （车可能开出视野，点车不是唯一出路）。回归测试是 `deploy.sh` 闸门 I。
   规格：`docs/superpowers/specs/2026-08-20-drive-car-anywhere-design.md`
+- **声音（2026-08-21）**：音效走三级混音总线（削毛刺 → 程序化院子混响 0.55s →
+  胶合压缩），**零音频文件**。🔒 同一事件的所有层共用同一声像值；UI 音走干声不进混响。
+  发动机是**点火脉冲循环**（四缸，加速＝脉冲变密），🔒 响度按 RMS 定不按峰值
+  （波峰因数 11.7dB，按峰值调会轻 12 倍＝听不到）。
+  背景音乐 `music.js` 程序化生成七款风格，**风格＝一条数据**；按
+  节日（`events.js`）→ 萨斯卡通实况天气（`weather.js`）→ 日常 自动选曲，
+  `?music=xxx` 可临时指定。设置里可关（`musicOff`）。试听页 `src/audio-lab.html`。
+  规格：`docs/superpowers/specs/2026-08-21-farm-audio-and-music-design.md`
 - **金色黄昏光（2026-08-15）**：程序化天空/草地/林影对齐宣传插画
   （`promo/keyart-farm-*.jpg`）——左上侧光、暖黄绿草地、云杉往右下拉长影。
   只改调色和影子方向，不换位图。别把天空改回冷薄荷绿。
