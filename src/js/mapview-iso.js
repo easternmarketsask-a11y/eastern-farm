@@ -384,7 +384,10 @@
           if (b && b.img) loadKey(b.img);
         }
       });
-      if (Farm.farmer && Farm.farmer.LOOKS) Farm.farmer.LOOKS.forEach((lk) => Farm.farmer.sheet(lk.id));
+      if (Farm.farmer && Farm.farmer.LOOKS) Farm.farmer.LOOKS.forEach((lk) => {
+        Farm.farmer.sheet(lk.id);
+        if (Farm.farmer.backSheet) Farm.farmer.backSheet(lk.id);
+      });
       this._undoForwardOnce();
       this._buildLayout();
       // ⚠️ 顺序：必须在 _buildLayout 之后（老存档的 plot 坐标在那里才补上），
@@ -1258,6 +1261,10 @@
       const im = this._img[spec.stem];
       if (im instanceof Image) return im;
       return this._lazyImg(spec.stem);
+    },
+    _carRearSprite(o) {
+      const spec = this._carSpec(o);
+      return this._lazyImg(spec.stem + '_rear');
     },
     _carDrawMul(o) {
       return (this._carSpec(o).draw) || 1;
@@ -2662,10 +2669,19 @@
     },
 
     // ---- render ----
-    _blit(im, cx, by, maxW, maxH) {
+    _blit(im, cx, by, maxW, maxH, flipX) {
       if (!(im instanceof Image) || !im.width) return false;
       const s = Math.min(maxW / im.width, maxH / im.height), w = im.width * s, h = im.height * s;
-      this._ctx.drawImage(im, cx - w / 2, by - h, w, h);
+      const ctx = this._ctx;
+      if (flipX) {
+        ctx.save();
+        ctx.translate(cx, by);
+        ctx.scale(-1, 1);
+        ctx.drawImage(im, -w / 2, -h, w, h);
+        ctx.restore();
+      } else {
+        ctx.drawImage(im, cx - w / 2, by - h, w, h);
+      }
       return true;
     },
     _cropSprite(id) { return this._cropArtImg(id, 2); },
@@ -4444,13 +4460,24 @@
       const rec = (idx != null && Farm.state.data && Farm.state.data.map) ? Farm.state.data.map[idx] : null;
       const homeO = ((o.type === 'home' || o.type === 'car') && rec) ? rec : o;
       const hz = o.type === 'home' ? this._homeDrawMul(homeO) : (o.type === 'car' ? this._carDrawMul(homeO) : 1);
-      const him = o.type === 'home' ? this._homeSprite(homeO) : (o.type === 'car' ? this._carSprite(homeO) : this._img[b.img]);
+      let him = o.type === 'home' ? this._homeSprite(homeO) : (o.type === 'car' ? this._carSprite(homeO) : this._img[b.img]);
+      let flipX = false;
+      if (o.type === 'car') {
+        const dv = (idx != null && Farm.farmer && Farm.farmer.carPos) ? Farm.farmer.carPos(idx) : null;
+        const face = (dv && dv.face) || homeO.face || 'r';
+        const away = dv ? !!dv.away : !!homeO.away;
+        flipX = face === 'l';
+        if (away) {
+          const rear = this._carRearSprite(homeO);
+          if (rear && rear.width) him = rear;
+        }
+      }
       if (o.type === 'fence' && him instanceof Image && him.width) {
         // deco_fence.webp 是一张两格条：上是转角、下是单片。1×1 篱笆只用单片。
         const sx = him.width * 0.46, sy = him.height * 0.54, sw = him.width * 0.50, sh = him.height * 0.44;
         const destH = th * 1.55 * BLD * pk, destW = destH * (sw / sh);
         ctx.drawImage(him, sx, sy, sw, sh, cc.x - destW / 2, by - destH * 0.92, destW, destH);
-      } else if (!this._blit(him, cc.x, by, b.w * tw * 0.92 * BLD * pk * hz, b.sc * th * 2.2 * BLD * pk * hz)) {
+      } else if (!this._blit(him, cc.x, by, b.w * tw * 0.92 * BLD * pk * hz, b.sc * th * 2.2 * BLD * pk * hz, flipX)) {
         // 贴图还在路上：留草地，onload 会重画。禁止再画调试红块。
       }
       if (o.type === 'lantern' && him instanceof Image && him.width) {

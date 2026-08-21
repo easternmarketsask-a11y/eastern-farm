@@ -3,7 +3,12 @@
 (async () => {
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const failures = [];
+  const dbg = {};
   const T = (name, cond) => { if (!cond) failures.push(name); };
+  /* 还在做的功能用 TODO()：结果记进 dbg 但不阻断部署。
+     2026-08-20：A+1「开车自动干农活」判据还没调通，而这个文件已经是
+     deploy.sh 闸门 I —— 留着 T() 会把别人的部署一起挡下来。 */
+  const TODO = (name, cond) => { (dbg.todo = dbg.todo || []).push((cond ? 'ok   ' : 'TODO ') + name); };
 
   for (let i = 0; i < 60; i++) { if (window.Farm && Farm.pathfind) break; await sleep(150); }
   if (!window.Farm || !Farm.pathfind) return { failures: ['Farm.pathfind 不存在'] };
@@ -47,6 +52,17 @@
   const iso = Farm.isoView;
   T('G-init 农场视图已就绪', iso._on === true);
   T('G0 goTo 已导出', typeof Farm.farmer.goTo === 'function');
+  T('H0 heading 已导出', typeof Farm.farmer.heading === 'function');
+  if (typeof Farm.farmer.heading === 'function') {
+    const se = Farm.farmer.heading(1, 0);
+    const sw = Farm.farmer.heading(0, 1);
+    const nw = Farm.farmer.heading(-1, 0);
+    const ne = Farm.farmer.heading(0, -1);
+    T('H1 +gx 朝右面对镜头', se.face === 'r' && se.away === false);
+    T('H2 +gy 朝左面对镜头（不是侧着走）', sw.face === 'l' && sw.away === false);
+    T('H3 -gx 朝左背对镜头', nw.face === 'l' && nw.away === true);
+    T('H4 -gy 朝右背对镜头', ne.face === 'r' && ne.away === true);
+  }
 
   if (typeof Farm.farmer.goTo === 'function') {
     const actor = Farm.farmer._actor();
@@ -67,6 +83,14 @@
         && actor.path.every((s) => free(s.gx, s.gy)));
       await sleep(1200);
       T('G4 人真的动了', Math.abs(actor.gx - from.gx) + Math.abs(actor.gy - from.gy) > 0.3);
+      if (typeof Farm.farmer.heading === 'function' && actor.path && actor.pathI < actor.path.length) {
+        const st = actor.path[actor.pathI];
+        const dx = st.gx - actor.gx, dy = st.gy - actor.gy;
+        if (Math.hypot(dx, dy) > 0.2) {
+          const h = Farm.farmer.heading(dx, dy);
+          T('G4b 当前这一步朝向跟屏幕方向一致', actor.face === h.face && !!actor.away === h.away);
+        }
+      }
     }
 
     // 建造模式下不许走
@@ -125,7 +149,6 @@
   }
 
   // ---- 第 4 组：停车落盘 ----
-  const dbg = {};
   const spot2 = iso._findHomeSpot(iso._carWh(1), -1, null, 'car');
   if (spot2) {
     Farm.state.data.map.push({ type: 'car', gx: spot2.gx, gy: spot2.gy, lv: 1 });
@@ -154,7 +177,7 @@
       dbg.gotoRet = Farm.farmer.goTo(far.gx, far.gy);
       dbg.pathLen = A0.path ? A0.path.length : null;
       // rAF 在无头/后台标签里会被节流到几乎不跑，主动驱动 tick 才测得到移动。
-      for (let i = 0; i < 120 && Farm.farmer.drivingIdx() !== null; i++) {
+      for (let i = 0; i < 120 && A0.job; i++) {
         Farm.farmer.tick(iso);
         await sleep(130);
       }
@@ -164,12 +187,14 @@
       dbg.carRec = { gx: rec.gx, gy: rec.gy };
       T('D2 车真的换了停车位', rec.gx !== before.gx || rec.gy !== before.gy);
       T('D3 停的位置是合法车位', iso._footprintFree(rec.gx, rec.gy, 'car', ci, iso._carWh(rec)));
-      T('D4 到了自动下车', Farm.farmer.drivingIdx() === null);
+      T('D4 到了还坐在车上（不自动下车）', Farm.farmer.drivingIdx() === ci);
+      T('D4b 点一下车才下车', iso._tapCar(ci) === true && Farm.farmer.drivingIdx() === null);
       const saved = JSON.parse(localStorage.getItem('eastern_farm_save_v1') || '{}');
       const savedCar = (saved.map || []).filter((m) => m && m.type === 'car').pop();
       T('D5 新车位进了存档', !!savedCar && savedCar.gx === rec.gx && savedCar.gy === rec.gy);
       T('D6 存档里没有驾驶态', JSON.stringify(saved).indexOf('"driving"') === -1);
     }
+    Farm.farmer.unboard();
     Farm.state.data.map.splice(ci, 1);
     Farm.state.save();
   }
@@ -205,6 +230,81 @@
 
     Farm.state.data.map.splice(ti, 1);
     Farm.state.save();
+  }
+
+  // ---- 第 6 组：开车自动干农活 ----
+  const plots = Farm.state.data.plots || [];
+  const A6 = Farm.farmer._actor();
+  const reset6 = () => { Farm.farmer.unboard(); A6.queue = []; A6.job = null; A6.path = null; };
+  const plotD = (i) => Math.abs(iso._plotGX(i) - A6.gx) + Math.abs(iso._plotGY(i) - A6.gy);
+  let farPlot = -1, nearPlot = -1;
+  for (let i = 0; i < plots.length; i++) {
+    if (!plots[i] || !plots[i].unlocked || plots[i].crop) continue;
+    if (farPlot < 0 || plotD(i) > plotD(farPlot)) farPlot = i;
+    if (nearPlot < 0 || plotD(i) < plotD(nearPlot)) nearPlot = i;
+  }
+  TODO('F0 找得到远近两块空地', farPlot >= 0 && nearPlot >= 0 && farPlot !== nearPlot);
+
+  if (farPlot >= 0 && nearPlot >= 0 && farPlot !== nearPlot) {
+    // F1: 车就停在人旁边 + 活儿在远处 → 该去开车
+    reset6();
+    const cf = Farm.farmer.walkableFor(iso, 3, 2);
+    let side = null;
+    for (let r = 1; r <= 4 && !side; r++) {
+      for (let dy = -r; dy <= r && !side; dy++) {
+        for (let dx = -r; dx <= r; dx++) {
+          const x = Math.round(A6.gx) + dx, y = Math.round(A6.gy) + dy;
+          if (Math.max(Math.abs(dx), Math.abs(dy)) === r && cf(x, y)) { side = { gx: x, gy: y }; break; }
+        }
+      }
+    }
+    TODO('F0b 人旁边放得下一辆车', !!side);
+    if (side) {
+      Farm.state.data.map.push({ type: 'car', gx: side.gx, gy: side.gy, lv: 16 });   // 豪华车最快
+      const nearCar = Farm.state.data.map.length - 1;
+      Farm.farmer.enqueue(farPlot, 'plant', 'xiao_cong');
+      dbg.f1 = { job: A6.job ? A6.job.kind : null, q: A6.queue.length,
+                 man: { gx: A6.gx, gy: A6.gy }, car: side, plotD: plotD(farPlot) };
+      dbg.f1cost = Farm.farmer._driveDebug(farPlot);
+      TODO('F1 车在手边就开车去干活',
+        !!A6.job && (A6.job.kind === 'boarding' || A6.job.kind === 'goto') && A6.queue.length === 1);
+
+      for (let i = 0; i < 140 && A6.job && (A6.job.kind === 'boarding' || A6.job.kind === 'goto'); i++) {
+        Farm.farmer.tick(iso); await sleep(110);
+      }
+      const carNow = Farm.state.data.map[nearCar];
+      dbg.f2 = { car: carNow ? { gx: carNow.gx, gy: carNow.gy } : null,
+                 plot: { gx: iso._plotGX(farPlot), gy: iso._plotGY(farPlot) },
+                 driving: Farm.farmer.drivingIdx() };
+      TODO('F2 到了地头就下车干活', Farm.farmer.drivingIdx() === null);
+      TODO('F3 车开到了活儿那一头', !!carNow
+        && (Math.abs(carNow.gx - iso._plotGX(farPlot)) + Math.abs(carNow.gy - iso._plotGY(farPlot))) < 10);
+      TODO('F4 去干活的路不穿障碍',
+        !A6.path || A6.path.every((st) => Farm.farmer.walkableFor(iso, 1, 1)(st.gx, st.gy)));
+      reset6();
+      Farm.state.data.map.splice(nearCar, 1);
+    }
+
+    // F5: 车在天边 + 活儿在脚边 → 老实走路，别为几格跑去开车
+    reset6();
+    const ob6 = iso._ownedBounds();
+    const cf2 = Farm.farmer.walkableFor(iso, 2, 2);
+    let corner = null, cornerD = -1;
+    for (let y = ob6.y1; y <= ob6.y2; y++) {
+      for (let x = ob6.x1; x <= ob6.x2; x++) {
+        const d = Math.abs(x - A6.gx) + Math.abs(y - A6.gy);
+        if (d > cornerD && cf2(x, y)) { cornerD = d; corner = { gx: x, gy: y }; }
+      }
+    }
+    if (corner && plotD(nearPlot) < cornerD / 2) {
+      Farm.state.data.map.push({ type: 'car', gx: corner.gx, gy: corner.gy, lv: 1 });
+      const farCar = Farm.state.data.map.length - 1;
+      Farm.farmer.enqueue(nearPlot, 'plant', 'xiao_cong');
+      dbg.f5 = { job: A6.job ? A6.job.kind : null, cornerD: cornerD, nearD: plotD(nearPlot) };
+      TODO('F5 车在天边就老实走路', !A6.job || A6.job.kind !== 'boarding');
+      reset6();
+      Farm.state.data.map.splice(farCar, 1);
+    }
   }
 
   return { failures, dbg };

@@ -22,6 +22,7 @@ __pycache__/
 venv/
 _incoming/
 src/assets/images/map/_pre_keyart/
+src/assets/images/farmers/_turn/
 
 # Local art/verify scratch (never ship)
 promo/_bld/

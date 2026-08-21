@@ -54,6 +54,7 @@
   }
 
   const _img = {};
+  const _back = {};
   function sheet(id) {
     const k = clampLook(id);
     const c = _img[k];
@@ -66,14 +67,35 @@
     im.src = DIR + 'p_farmer_' + k + '.webp';
     return null;
   }
+  function backSheet(id) {
+    const k = clampLook(id);
+    const c = _back[k];
+    if (c instanceof Image) return c;
+    if (c === 'loading' || c === 'failed') return null;
+    _back[k] = 'loading';
+    const im = new Image();
+    im.onload = () => { _back[k] = im; };
+    im.onerror = () => { _back[k] = 'failed'; };
+    im.src = DIR + 'p_farmer_' + k + '_back.webp';
+    return null;
+  }
 
   function emptyActor(look) {
     return {
-      look: clampLook(look), gx: null, gy: null, face: 'r',
+      look: clampLook(look), gx: null, gy: null, face: 'r', away: false,
       anim: 'idle', frameT: 0, pause: 0,
       queue: [], job: null, visitHold: null,
       path: null, pathI: 0, driving: null,
     };
+  }
+
+  // 等距 2:1：屏幕右 = gx-gy 增大，朝镜头 = gx+gy 增大。
+  // 贴图是 3/4 朝右下，左右靠翻转；背对镜头必须换背面行（见 blitSheet）。
+  function heading(dx, dy) {
+    const sx = dx - dy;
+    const sy = dx + dy;
+    if (sx === 0 && sy === 0) return { face: 'r', away: false };
+    return { face: sx >= 0 ? 'r' : 'l', away: sy < 0 };
   }
 
   let A = emptyActor(2);
@@ -98,7 +120,6 @@
   function enqueue(plotIdx, kind, cropId) {
     if (!kind || (kind !== 'harvest' && kind !== 'water' && kind !== 'plant')) return false;
     if (Farm.state && Farm.state._visitLock) return false;
-    if (A.driving != null) unboard();   // 派农活就自动下车，不把人困在车上
     const iso = Farm.isoView;
     if (!iso || plotIdx == null) return false;
     const plots = (Farm.state.data && Farm.state.data.plots) || [];
@@ -117,6 +138,16 @@
     }
     A.queue.push({ plotIdx: plotIdx, kind: kind, cropId: cropId || null });
     A.pause = 0;
+    // 这一批活刚开工（队列从空变非空、手上没别的事）→ 算一次开车去值不值。
+    // 只判这一次：开车只负责去干活的第一段路，菜地连片挨着，逐块上下车太吵。
+    if (A.queue.length === 1 && !A.job) {
+      const wp = plotPos(iso, plotIdx);
+      const carIdx = pickCarForWork(iso, wp.gx, wp.gy);
+      if (carIdx != null) {
+        if (A.driving === carIdx) goTo(wp.gx, wp.gy, true);
+        else board(carIdx, true);
+      }
+    }
     return true;
   }
 
@@ -225,6 +256,11 @@
     A.gx = o.gx; A.gy = o.gy;
     A.job = null; A.path = null; A.anim = 'idle';
     if (Farm.audio && Farm.audio.play) Farm.audio.play('horn');
+    // 上车是为了去干活 → 不用玩家再点一次，直接开到第一块地
+    if (A.queue.length && iso) {
+      const wp = plotPos(iso, A.queue[0].plotIdx);
+      if (goTo(wp.gx, wp.gy, true)) { if (iso.render) iso.render(); return true; }
+    }
     if (Farm.ui && Farm.ui.toast) {
       const en = Farm.state.data.language === 'en';
       Farm.ui.toast(en ? 'Tap anywhere on the farm to drive there.' : '点农场上任意一处，车就开过去。');
@@ -235,7 +271,89 @@
 
   /* 上车＝先走到车边（Chris 2026-08-20：「点上车要有人跑过来」）。
      返回 true 只代表「动身了」，人还得走完这段路才真的坐进去。 */
-  function board(mapIdx) {
+  /* 开车去干活值不值？农场就这么大，车常停在另一头 —— 跑去开车再开回来，
+     可能比直接走过去还慢。所以不拍脑袋定「超过 N 格就开车」，每次真算一遍：
+     车越贵（越快）越容易划算，玩家不用调任何参数。 */
+  const DRIVE_WORTH_IT = 1.3;   // 要快过这个倍数才值得演一段上下车
+
+  // 走路：走不到目标就不算数（人本来就该站得到地头）
+  /* 人脚下那一格永远算可走 —— 车身完全可能盖在人身上（车停过来、人走过去都会），
+     那时寻路的起点不可走，find() 直接返回 null，「走多久 / 开车值不值」全成了
+     无穷大，自动开车静默失效。你已经站在那儿了，从那儿出发当然是可以的。 */
+  function freeFromHere(free) {
+    const hx = Math.round(A.gx), hy = Math.round(A.gy);
+    return (x, y) => ((x === hx && y === hy) || free(x, y));
+  }
+
+  function walkTime(iso, fx, fy, tx, ty, free) {
+    const path = Farm.pathfind.find(fx, fy, tx, ty, freeFromHere(free));
+    if (!path) return Infinity;
+    if (path.length < 2) return 0;
+    const last = path[path.length - 1];
+    if (last.gx !== Math.round(tx) || last.gy !== Math.round(ty)) return Infinity;
+    return (path.length - 1) / WALK_SPEED;
+  }
+
+  /* 开车：车停不到地头是常态 —— 干活的落脚点紧贴菜地，2×2 甚至 4×2 的车身
+     根本放不下。所以允许车停在最近停得下的地方，剩下几步按走路补上。
+     要是要求「精确到达」，每辆车都会被判成到不了，自动开车永远不触发。 */
+  function driveTime(iso, o, carIdx, tx, ty, speed) {
+    const wh = iso._carWh(o);
+    const path = Farm.pathfind.find(o.gx, o.gy, tx, ty, walkableFor(iso, wh.w, wh.h, carIdx));
+    if (!path) return Infinity;
+    const end = path[path.length - 1];
+    const rest = Math.abs(end.gx - Math.round(tx)) + Math.abs(end.gy - Math.round(ty));
+    return (path.length - 1) / speed + rest / WALK_SPEED;
+  }
+
+  /* 开车划不划算的算式摊开给测试和调参看 —— 这个判据只要偏一点，
+     「自动开车」就会静默地永不触发（或者到处乱触发），而它不报任何错。 */
+  function driveDebug(plotIdx) {
+    const iso = Farm.isoView;
+    const tp = plotPos(iso, plotIdx);         // 与 enqueue 用的是同一个落脚点
+    const tx = tp.gx, ty = tp.gy;
+    const map = (Farm.state.data && Farm.state.data.map) || [];
+    const walkFree = walkableFor(iso, 1, 1);
+    const out = { man: { gx: A.gx, gy: A.gy }, target: { gx: tx, gy: ty },
+                  walkDirect: walkTime(iso, A.gx, A.gy, tx, ty, walkFree), cars: [] };
+    out.threshold = out.walkDirect / DRIVE_WORTH_IT;
+    for (let i = 0; i < map.length; i++) {
+      const o = map[i];
+      if (!o || o.type !== 'car') continue;
+      const side = carSideSpot(iso, o);
+      const speed = CAR_SPEED[iso._carSpec(o).cat] || WALK_SPEED;
+      const toCar = side ? walkTime(iso, A.gx, A.gy, side.gx, side.gy, walkFree) : Infinity;
+      const drive = driveTime(iso, o, i, tx, ty, speed);
+      out.cars.push({ idx: i, lv: o.lv, at: { gx: o.gx, gy: o.gy }, side: side,
+                      speed: speed, toCar: toCar, drive: drive, total: toCar + drive });
+    }
+    out.pick = pickCarForWork(iso, tx, ty);
+    return out;
+  }
+
+  function pickCarForWork(iso, tx, ty) {
+    if (A.driving != null) return A.driving;      // 已经在车上，直接开过去
+    const map = (Farm.state.data && Farm.state.data.map) || [];
+    const walkFree = walkableFor(iso, 1, 1);
+    const walkDirect = walkTime(iso, A.gx, A.gy, tx, ty, walkFree);
+    if (!isFinite(walkDirect) || walkDirect <= 0) return null;
+    let best = null, bestCost = walkDirect / DRIVE_WORTH_IT;
+    for (let i = 0; i < map.length; i++) {
+      const o = map[i];
+      if (!o || o.type !== 'car') continue;
+      const side = carSideSpot(iso, o);
+      if (!side) continue;
+      const toCar = walkTime(iso, A.gx, A.gy, side.gx, side.gy, walkFree);
+      if (!isFinite(toCar)) continue;
+      const speed = CAR_SPEED[iso._carSpec(o).cat] || WALK_SPEED;
+      const drive = driveTime(iso, o, i, tx, ty, speed);
+      if (!isFinite(drive)) continue;
+      if (toCar + drive < bestCost) { bestCost = toCar + drive; best = i; }
+    }
+    return best;
+  }
+
+  function board(mapIdx, keepQueue) {
     const iso = Farm.isoView;
     if (!iso || !iso._on || iso._build) return false;
     if (Farm.state && Farm.state._visitLock) return false;
@@ -244,10 +362,11 @@
     if (A.gx == null) spawnAt(iso);
     const spot = carSideSpot(iso, o);
     if (!spot) return false;          // 车四周站不了人，上不去
-    A.queue = [];                     // 点了上车就立刻去；手上的农活不留半截
+    if (!keepQueue) A.queue = [];     // 手动点上车＝立刻去，手上的农活不留半截；
+                                      // 自动开车去干活时要留着队列，那正是要去做的事
     A.job = null; A.path = null;
     if (Math.round(A.gx) === spot.gx && Math.round(A.gy) === spot.gy) return mountNow(mapIdx);
-    const path = Farm.pathfind.find(A.gx, A.gy, spot.gx, spot.gy, walkableFor(iso, 1, 1));
+    const path = Farm.pathfind.find(A.gx, A.gy, spot.gx, spot.gy, freeFromHere(walkableFor(iso, 1, 1)));
     if (!path || path.length < 1) return false;
     A.job = { kind: 'boarding', car: mapIdx };
     A.path = path;
@@ -298,17 +417,21 @@
     if (px == null) { px = o.gx; py = o.gy; }   // 实在没地方停 → 停回原位，不丢车
     o.gx = px; o.gy = py;
     A.gx = px; A.gy = py;
-    unboard();
+    /* 🔒 到了不自动下车（Chris 2026-08-20：「不要自动下车，点一下车才下车」）。
+       开一段就被踢下车、想接着开还得走回车边，很烦。
+       唯一例外是「开车本来就是为了去干活」—— 不下车干不成活。 */
+    A.job = null; A.path = null; A.anim = 'idle';
+    if (A.queue.length) unboard();
     if (Farm.state && Farm.state.save) Farm.state.save();
   }
 
   function drivingIdx() { return A.driving; }
   function carPos(mapIdx) {
     if (A.driving == null || A.driving !== mapIdx) return null;
-    return { gx: A.gx, gy: A.gy };
+    return { gx: A.gx, gy: A.gy, face: A.face, away: !!A.away };
   }
 
-  function goTo(gx, gy) {
+  function goTo(gx, gy, keepQueue) {
     const iso = Farm.isoView;
     if (!iso || !iso._on) return false;
     if (iso._build) return false;                           // 建造模式不抢点击
@@ -316,9 +439,9 @@
     if (A.gx == null) spawnAt(iso);
     const size = carSize();
     const free = walkableFor(iso, size.w, size.h, A.driving);
-    const path = Farm.pathfind.find(A.gx, A.gy, gx, gy, free);
+    const path = Farm.pathfind.find(A.gx, A.gy, gx, gy, freeFromHere(free));
     if (!path || path.length < 1) return false;
-    A.queue = [];
+    if (!keepQueue) A.queue = [];
     A.job = { kind: 'goto', gx: gx, gy: gy };
     A.path = path;
     A.pathI = 1;                                            // path[0] 是起点，从下一格开始走
@@ -496,6 +619,9 @@
     A.job = job;
     A.anim = 'walk';
     A.frameT = 0;
+    const jp = plotPos(iso, job.plotIdx);
+    A.path = Farm.pathfind.find(A.gx, A.gy, jp.gx, jp.gy, freeFromHere(walkableFor(iso, 1, 1)));
+    A.pathI = 1;
     return true;
   }
 
@@ -503,12 +629,17 @@
     const dx = tx - A.gx, dy = ty - A.gy;
     const dist = Math.hypot(dx, dy);
     if (dist < 0.08) { A.gx = tx; A.gy = ty; return true; }
+    const h = heading(dx, dy);
+    A.face = h.face;
+    A.away = h.away;
+    if (A.driving != null && Farm.state && Farm.state.data && Farm.state.data.map) {
+      const car = Farm.state.data.map[A.driving];
+      if (car && car.type === 'car') { car.face = A.face; car.away = !!A.away; }
+    }
     const step = (speed || WALK_SPEED) * dt;
     if (step >= dist) { A.gx = tx; A.gy = ty; return true; }
     A.gx += dx / dist * step;
     A.gy += dy / dist * step;
-    if (Math.abs(dx) >= Math.abs(dy)) A.face = dx >= 0 ? 'r' : 'l';
-    else A.face = dy >= 0 ? 'r' : 'l';
     return false;
   }
 
@@ -519,6 +650,7 @@
     _lastT = now;
     if (!(Farm.state && Farm.state._visitLock)) A.look = currentLook();
     sheet(A.look);
+    if (A.away) backSheet(A.look);
     if (A.gx == null) spawnAt(iso);
 
     if (iso._build || (Farm.state && Farm.state._visitLock && !A.visitHold)) {
@@ -576,9 +708,22 @@
     if (A.job && (A.job.kind === 'harvest' || A.job.kind === 'water' || A.job.kind === 'plant')) {
       const p = plotPos(iso, A.job.plotIdx);
       if (A.anim === 'walk') {
-        if (moveToward(dt, p.gx, p.gy)) {
+        // 先沿寻路的整格路线走，最后一小段再对齐到地头的精确落点。
+        // 原来这里是直线插值：地块近时看不出来，开车把距离拉长后会明显穿墙穿水塘。
+        let arrived = false;
+        if (A.path && A.pathI < A.path.length) {
+          const st = A.path[A.pathI];
+          if (moveToward(dt, st.gx, st.gy)) A.pathI++;
+        } else {
+          arrived = moveToward(dt, p.gx, p.gy);
+        }
+        if (arrived) {
+          A.path = null;
           const pgx = iso._plotGX(A.job.plotIdx);
-          A.face = pgx >= A.gx ? 'r' : 'l';
+          const pgy = iso._plotGY ? iso._plotGY(A.job.plotIdx) : p.gy;
+          const fh = heading(pgx - A.gx, pgy - A.gy);
+          A.face = fh.face;
+          A.away = false;
           A.anim = A.job.kind;
           A.frameT = 0;
         }
@@ -616,20 +761,26 @@
     return Math.floor(A.frameT * FPS) % n;
   }
 
-  function blitSheet(ctx, iso, look, anim, fi, x, y, face) {
-    const im = sheet(look);
+  function blitSheet(ctx, iso, look, anim, fi, x, y, face, away) {
+    const wantBack = !!away && (anim === 'walk' || anim === 'idle');
+    const back = wantBack ? backSheet(look) : null;
+    const im = (back && back.width) ? back : sheet(look);
     const th = iso._th();
     const spec = specOf(look);
     const h = th * (spec.child ? 1.45 : 2.05);
     if (im && im.width) {
-      const cw = im.width / SHEET_COLS, ch = im.height / SHEET_ROWS;
-      const row = ANIMS[anim] || 0;
+      const usingBack = !!(back && back.width && im === back);
+      const rows = usingBack ? Math.max(1, Math.round(im.height / (im.width / SHEET_COLS))) : SHEET_ROWS;
+      const cw = im.width / SHEET_COLS, ch = im.height / rows;
+      const row = usingBack ? (anim === 'walk' && rows > 1 ? 1 : 0) : (ANIMS[anim] || 0);
       const w = h * (cw / ch);
       ctx.save();
-      const bob = (anim === 'walk') ? Math.abs(Math.sin(A.frameT * 16)) * th * 0.06 : 0;
+      const bob = (anim === 'walk') ? Math.abs(Math.sin(A.frameT * 16)) * th * 0.07 : 0;
       if (iso._shadow) iso._shadow(x + (face === 'l' ? -1 : 1) * w * 0.08, y + th * 0.04, w * 0.55, 0.16);
       ctx.translate(x, y - bob);
+      if (wantBack) ctx.scale(0.94, 0.94);
       if (face === 'l') ctx.scale(-1, 1);
+      if (anim === 'walk') ctx.rotate(0.05);
       ctx.drawImage(im, fi * cw, row * ch, cw, ch, -w / 2, -h, w, h);
       ctx.restore();
       return true;
@@ -637,11 +788,11 @@
     return false;
   }
 
-  function drawActor(iso, look, anim, fi, gx, gy, face) {
+  function drawActor(iso, look, anim, fi, gx, gy, face, away) {
     const c = iso._cell(gx, gy);
     const th = iso._th();
     const x = c.x, y = c.y + th * 0.18;
-    if (blitSheet(iso._ctx, iso, look, anim, fi, x, y, face)) return;
+    if (blitSheet(iso._ctx, iso, look, anim, fi, x, y, face, away)) return;
     const spec = specOf(look);
     if (iso._drawVillager) {
       iso._drawVillager(x, y, th, {
@@ -656,10 +807,10 @@
     if (A.gx == null) return null;
     if (A.driving != null) return null;   // 人在车里，车自己会被画出来
     const fi = frameIndex();
-    const gx = A.gx, gy = A.gy, look = A.look, anim = A.anim, face = A.face;
+    const gx = A.gx, gy = A.gy, look = A.look, anim = A.anim, face = A.face, away = !!A.away;
     return {
       d: gx + gy + 0.35,
-      fn: () => drawActor(iso, look, anim, fi, gx, gy, face),
+      fn: () => drawActor(iso, look, anim, fi, gx, gy, face, away),
     };
   }
 
@@ -676,7 +827,7 @@
 
   function onEnterVisit(info) {
     A.visitHold = {
-      look: A.look, gx: A.gx, gy: A.gy, face: A.face,
+      look: A.look, gx: A.gx, gy: A.gy, face: A.face, away: !!A.away,
       queue: A.queue.slice(), job: A.job, pause: A.pause, anim: A.anim,
     };
     A.queue = [];
@@ -696,7 +847,7 @@
     A.visitHold = null;
     if (!h) { A = emptyActor(currentLook()); return; }
     A.look = h.look;
-    A.gx = h.gx; A.gy = h.gy; A.face = h.face;
+    A.gx = h.gx; A.gy = h.gy; A.face = h.face; A.away = !!h.away;
     A.queue = h.queue || [];
     A.job = h.job;
     A.pause = h.pause || 1;
@@ -717,7 +868,9 @@
     unboard: unboard,
     drivingIdx: drivingIdx,
     carPos: carPos,
+    heading: heading,
     _speedNow: moveSpeed,
+    _driveDebug: driveDebug,
     enqueueHarvestAll: enqueueHarvestAll,
     enqueueWaterAll: enqueueWaterAll,
     enqueuePlantAll: enqueuePlantAll,
@@ -727,6 +880,7 @@
     onEnterVisit: onEnterVisit,
     onExitVisit: onExitVisit,
     sheet: sheet,
+    backSheet: backSheet,
     SHEET_COLS: SHEET_COLS,
     SHEET_ROWS: SHEET_ROWS,
     previewStyle: previewStyle,

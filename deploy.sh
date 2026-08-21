@@ -59,6 +59,14 @@ if ! node scripts/verify/precache-check.mjs; then
   echo "—— 部署中止(把缺的模块补进 service-worker.js 的 PRECACHE)"
   exit 1
 fi
+if ! node scripts/verify/iso-heading-test.mjs; then
+  echo "—— 部署中止(人/车等距朝向契约)"
+  exit 1
+fi
+if ! node scripts/verify/farmer-look-test.mjs; then
+  echo "—— 部署中止(农户形象契约)"
+  exit 1
+fi
 
 # 2. 发布闸门 B: 无头 Chrome 冒烟启动(游戏能开、无未捕获异常)
 #    依赖: node + Chrome + python(起本地静态服务)。缺任一 → 跳过并大声警告。

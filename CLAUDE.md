@@ -339,6 +339,12 @@ See `docs/GAME-DESIGN.md` for full spec. TL;DR:
   走 / 浇水 / 收获 / 摊前站着。新号默认女农户。不造假名、不上照片。
   贴图按需加载，不进 SW 预缓存。规格：
   `docs/superpowers/specs/2026-08-20-painted-farmers-design.md`
+- 🔒 **等距朝向（2026-08-20）**：格子是 2:1，`_cell` 里 `x∝(gx-gy)`、`y∝(gx+gy)`。
+  人/车贴图都是 3/4 朝右下。朝向**必须**走 `farmer.heading(dx, dy)`：
+  屏幕右 = `dx-dy ≥ 0` → 水平翻转；背对镜头 = `dx+dy < 0` → 换
+  `p_farmer_N_back.webp` / `p_car_N_rear.webp`。
+  ❌ 不许再用世界轴 `|dx| vs |dy|`（+gy 会被错画成朝右，人侧着走、车侧着开）。
+  宠物已经是 `dx-dy` 翻转，人/车必须同一套。契约：`scripts/verify/iso-heading-test.mjs`。
 - **开车（2026-08-20）**：点农场任意空地，人绕开障碍走过去（`src/js/pathfind.js`
   的 BFS，只走 4 邻接不擦角）。点场上的车 →「🚗 上车」，之后点哪儿车开哪儿，
   到了人下车、车停在新位置并写进存档。车款价差＝速度差（农用 4.4 / 家用 6.0 /
