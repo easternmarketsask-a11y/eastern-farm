@@ -427,7 +427,7 @@ else
   #   · 离线回来按错过的周期补发 → 一次砸出几十张单
   #   · 告示牌被邻居贴图盖住 → 唯一的卖菜出口点不开(实测发生过)
   echo "▶ 闸门 L: 东超订单制回归测试(约 30 秒)…"
-  for t in store-demand-test store-economy-sim store-state-test no-bulk-sell-test orders-ui-test rename-test; do
+  for t in store-demand-test store-economy-sim store-state-test no-bulk-sell-test orders-ui-test rename-test steal-pay-test; do
     if ! node "scripts/verify/$t.mjs"; then
       echo "—— 部署中止：$t 没过"
       exit 1

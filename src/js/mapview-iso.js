@@ -2554,7 +2554,14 @@
         if (r && r.ok) {
           plot.crop = null; plot.plantedAt = 0;
           this.render();
-          if (Farm.ui && Farm.ui.toast) Farm.ui.toast(en ? 'Taken to your barn.' : '已放进自家谷仓。', 2000);
+          // 留下的菜钱要说出来 —— 玩家得知道自己付了钱，也知道邻居收得到
+          const paid = (r.paid || 0);
+          if (Farm.ui && Farm.ui.toast) {
+            Farm.ui.toast(paid > 0
+              ? (en ? 'Taken to your barn. Left ' + paid + ' coins for them.'
+                    : '已放进自家谷仓，留下 ' + paid + ' 农场币菜钱。')
+              : (en ? 'Taken to your barn.' : '已放进自家谷仓。'), 2400);
+          }
           if (Farm.audio) Farm.audio.play('coin');
           if (Farm.ui.refreshHUD) Farm.ui.refreshHUD();
         } else if (Farm.ui && Farm.ui.toast) {

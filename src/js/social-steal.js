@@ -27,6 +27,11 @@
     NEWBIE_PROTECT_LEVEL: 3,          // victim level < 3 不可被偷
     DOG_CATCH_CHANCE: 0.2,            // 对方有狗时小偷被抓概率
     DOG_CAUGHT_FINE: 20,              // 被抓赔礼农场币（小偷付出/受害者收到）
+    /* 顺一棵要按 5 折留下菜钱（Chris 2026-08-22：「到邻居家顺走菜要按 5 折价格留下钱」）。
+       钱从顺的人身上扣，写进事件、由被顺的人收下 —— 走的是「看家狗赔礼」那条
+       已有的跨用户通道。付不起就顺不走：这也是一道天然的刹车。
+       口径仍是「顺 / 留下菜钱」，不是「偷 / 抢」（调性红线）。 */
+    STEAL_PAY_RATIO: 0.5,
   };
 
   const steal = {
@@ -59,6 +64,16 @@
       return ((Farm.state.data && Farm.state.data.totalHarvests) || 0) >= need;
     },
 
+    /* 一棵菜要留下多少钱 = 卖价 × 5 折。
+       🔒 **唯一实现**：顺的人扣钱、被顺的人收钱夹上限，都必须用这一个函数，
+          否则两边算法一漂，收到的钱就跟付出的钱对不上。 */
+    payFor(cropId) {
+      const def = Farm.crops && Farm.crops.get(cropId);
+      if (!def) return 0;
+      const unit = (Farm.crops.sellPriceOf ? Farm.crops.sellPriceOf(def) : def.sell_price) || 0;
+      return Math.max(1, Math.round(unit * socialConfig.STEAL_PAY_RATIO));
+    },
+
     // 今日是否还能从该对象顺一棵。
     canStealFrom(targetId) {
       const c = Farm.state.data.dailyClaims;
@@ -76,8 +91,15 @@
     stealOne(targetId, cropId) {
       const can = this.canStealFrom(targetId);
       if (!can.ok) return can;
+      // 先算菜钱：付不起就别顺（钱不能扣成负数，也不能白拿）
+      const pay = this.payFor(cropId);
+      if ((Farm.state.data.coins || 0) < pay) {
+        return { ok: false, reason: 'no_coins', pay: pay };
+      }
       const wh = Farm.state.addToWarehouse(cropId);
       if (!wh.ok) return { ok: false, reason: 'warehouse_full' };
+      // 入仓成功才真扣钱，避免仓满时白付
+      if (pay > 0) Farm.state.spendCoins(pay);
       const c = Farm.state.data.dailyClaims;
       c.stolenToday = (c.stolenToday || 0) + 1;
       c.stolenFromTargets = c.stolenFromTargets || {};
@@ -90,6 +112,7 @@
       return {
         ok: true,
         stolen: cropId,
+        paid: pay,
         remainingToday: socialConfig.STEAL_MAX_PER_DAY - c.stolenToday,
         remainingTarget: this.perTargetCap(targetId) - c.stolenFromTargets[targetId],
       };
@@ -143,11 +166,18 @@
       }
 
       const r = this.stealOne(victim.uid, plotInfo.cropId);
-      if (!r.ok) return r;
+      if (!r.ok) {
+        if (r.reason === 'no_coins') {
+          r.message = lang === 'en'
+            ? 'You need ' + r.pay + ' coins to leave for this crop.'
+            : '顺这棵要留下 ' + r.pay + ' 农场币菜钱，你的钱不够。';
+        }
+        return r;
+      }
       if (Farm.fbGameSync && Farm.fbGameSync.sendStealEvent) {
         Farm.fbGameSync.sendStealEvent(victim.uid, {
           kind: 'steal', plotIdx: plotInfo.plotIdx, cropId: plotInfo.cropId,
-          plantedAt: plotInfo.plantedAt,
+          plantedAt: plotInfo.plantedAt, coins: r.paid,
         });
       }
       return r;
@@ -213,7 +243,14 @@
           p.crop = null; p.plantedAt = 0; p.harvestsLeft = 0; p.watered = false; p.fertilized = false;
         }
         lostToday += 1;
-        out.stolen.push({ kind: 'steal', name, cropId: e.cropId, count: 1, realUid: e.thiefUid });
+        /* 收下菜钱（Chris 2026-08-22：顺走要按 5 折留钱）。
+           🔒 e.coins 是别人写进来的跨用户字段，**不可信** —— 跟 'caught' 那条
+              一样，夹到本地按同一函数算出的应付额，防伪造事件刷币。 */
+        const due = this.payFor(e.cropId);
+        const sent = Number(e.coins);
+        const got = Math.max(0, Math.min(Number.isFinite(sent) ? sent : 0, due));
+        if (got > 0) Farm.state.addCoins(got);
+        out.stolen.push({ kind: 'steal', name, cropId: e.cropId, count: 1, realUid: e.thiefUid, coins: got });
       }
       c.lostToRealToday = lostToday;
       Farm.state.save();
