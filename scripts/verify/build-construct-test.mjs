@@ -25,6 +25,7 @@ const buildDurationMs = eval('(' + extract('buildDurationMs', 'type, w, h') + ')
 const buildSkipCoins = eval('(' + extract('buildSkipCoins', 'cost, remainMs, totalMs') + ')');
 const buildSkipPoints = eval('(' + extract('buildSkipPoints', 'remainMs') + ')');
 const isUnderConstruction = eval('(' + extract('isUnderConstruction', 'o, now') + ')');
+const buildReveal = eval('(' + extract('buildReveal', 'p') + ')');
 
 assert.equal(buildDurationMs('fence', 1, 1), 8000);
 assert.equal(buildDurationMs('bush', 1, 1), 8000);
@@ -109,8 +110,18 @@ assert.match(isoSrc, /_defaultMapFront[\s\S]{0,800}\{ type: 'barn'/);
 assert.ok(!/_defaultMapFront[\s\S]{0,1200}buildUntil/.test(isoSrc),
   '开局自带建筑不得带着 buildUntil');
 
+assert.ok(Math.abs(buildReveal(0) - 0) < 1e-9, '开工只露地基');
+assert.ok(buildReveal(0.35) >= 0.31 && buildReveal(0.35) <= 0.33, '第一截停在墙根');
+assert.ok(buildReveal(0.75) >= 0.71 && buildReveal(0.75) <= 0.73, '第二截停在屋檐下');
+assert.ok(Math.abs(buildReveal(1) - 1) < 1e-9, '收尾才到屋顶');
+assert.ok(buildReveal(0.5) > buildReveal(0.35) && buildReveal(0.5) < buildReveal(0.75));
+
 assert.match(isoSrc, /_drawScaffold|_drawBuildSite/);
-assert.match(isoSrc, /rise|buildProg|clip/, '贴图要从地面往上长（clip/rise）');
+assert.match(isoSrc, /_buildFalls|_spawnBuildFall/);
+assert.match(isoSrc, /_buildBoards|_spawnBuildBoard/);
+assert.match(isoSrc, /source-atop|sepia|奶油/);
+assert.match(isoSrc, /_camKick|_nudgeCam/);
+assert.match(isoSrc, /rise|buildProg|clip|buildReveal/, '贴图要从地面往上长（clip/rise）');
 assert.match(isoSrc, /_tickBuilds|_finishBuild|_completeBuild/);
 
 assert.match(audioSrc, /case 'build'/);

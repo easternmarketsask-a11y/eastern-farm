@@ -389,6 +389,12 @@
     if (!o || !o.buildUntil) return false;
     return o.buildUntil > (now == null ? Date.now() : now);
   }
+  function buildReveal(p) {
+    p = Math.max(0, Math.min(1, p));
+    if (p < 0.35) return (p / 0.35) * 0.32;
+    if (p < 0.75) return 0.32 + ((p - 0.35) / 0.40) * 0.40;
+    return 0.72 + ((p - 0.75) / 0.25) * 0.28;
+  }
 
   const iso = {
     _on: false, _cv: null, _ctx: null, _dpr: 1,
@@ -406,6 +412,9 @@
     _lastBuildHit: 0,
     _placing: null,     // ghost: {type,gx,gy,w,h,valid,cost,...} until tap-to-build
     _buildPops: {},     // "map:3" -> t0, 完工弹跳
+    _buildFalls: [],    // 脚手架倒塌
+    _buildBoards: [],   // 飞来的木板
+    _camKick: null,
     _buildBtn: null, _communityBtn: null, _driveBtn: null, _driveBtnOn: null, _musicBtn: null, _musicBtnOn: null, _langBtn: null, _langBtnCur: null, _leftUI: null, _palette: null, _hint: null, _modeTabs: null, _palBuild: null, _palTerrain: null,
 
     // DEFAULT farm view (Hay Day isometric). Chosen via Farm.state.farmStyle()
@@ -418,6 +427,7 @@
     buildSkipCoins: buildSkipCoins,
     buildSkipPoints: buildSkipPoints,
     isUnderConstruction: isUnderConstruction,
+    buildReveal: buildReveal,
 
     init() {
       if (!this.active() || this._on) return;
@@ -2528,6 +2538,7 @@
         }
       }
       if (changed && Farm.state.save) Farm.state.save();
+      this._tickBuildFx();
       const any = map.some((o) => isUnderConstruction(o, now)) || plots.some((p) => isUnderConstruction(p, now));
       if (any && now - (this._lastBuildHit || 0) > 640) {
         this._lastBuildHit = now;
@@ -2563,6 +2574,133 @@
           : (name + '建好了。'), 2200);
       }
       if (Farm.ui && Farm.ui.refreshHUD) Farm.ui.refreshHUD();
+      if (kind !== 'plot') {
+        const b = this._bldgOf(o) || BUILDINGS[o.type];
+        this._spawnBuildFall(o, b);
+        this._nudgeCam(o.gx, o.gy);
+      }
+    },
+    _nudgeCam(gx, gy) {
+      if (this._drag && this._drag.moved) return;
+      if (this._pinch) return;
+      if (this._pointers && Object.keys(this._pointers).length) return;
+      const c = this._cell(gx + 0.4, gy + 0.4);
+      const W = this._cssW(), H = this._cssH();
+      this._camKick = {
+        t0: Date.now(), ms: 340,
+        dx: (c.x - W * 0.5) * 0.09,
+        dy: (c.y - H * 0.52) * 0.09,
+      };
+    },
+    _applyCamKick() {
+      this._kickOn = null;
+      const k = this._camKick;
+      if (!k) return;
+      if (this._drag && this._drag.moved) { this._camKick = null; return; }
+      const u = (Date.now() - k.t0) / k.ms;
+      if (u >= 1) { this._camKick = null; return; }
+      const e = Math.sin(Math.min(1, u) * Math.PI);
+      const dx = k.dx * e, dy = k.dy * e;
+      this._camX += dx; this._camY += dy;
+      this._kickOn = { dx: dx, dy: dy };
+    },
+    _undoCamKick() {
+      if (!this._kickOn) return;
+      this._camX -= this._kickOn.dx;
+      this._camY -= this._kickOn.dy;
+      this._kickOn = null;
+    },
+    _scaffoldSkip(type) {
+      return type === 'tree' || type === 'bush' || type === 'fence' || type === 'lantern' || type === 'car' || type === 'plot';
+    },
+    _spawnBuildFall(o, b) {
+      if (!o || !b || this._scaffoldSkip(o.type)) return;
+      this._buildFalls = this._buildFalls || [];
+      this._buildFalls.push({ t0: Date.now(), ms: 440, gx: o.gx, gy: o.gy, w: b.w, h: b.h, sc: b.sc || 2, fill: b.fill });
+    },
+    _spawnBuildBoard(o, b) {
+      if (!o || !b || this._scaffoldSkip(o.type)) return;
+      const tw = this._tw(), th = this._th();
+      const cc = this._cell(o.gx + (b.w - 1) / 2, o.gy + (b.h - 1) / 2);
+      const side = Math.random() < 0.5 ? -1 : 1;
+      this._buildBoards = this._buildBoards || [];
+      if (this._buildBoards.length > 10) this._buildBoards.shift();
+      this._buildBoards.push({
+        t0: Date.now(), ms: 400 + Math.random() * 80,
+        x0: cc.x + side * tw * (1.15 + Math.random() * 0.45),
+        y0: cc.y - th * (0.85 + Math.random() * 0.55),
+        x1: cc.x + (Math.random() - 0.5) * tw * 0.55,
+        y1: cc.y - th * (0.15 + Math.random() * 0.45),
+        spin: (Math.random() - 0.5) * 2.4,
+        len: th * (0.26 + Math.random() * 0.16),
+      });
+    },
+    _tickBuildFx() {
+      const now = Date.now();
+      this._buildFalls = (this._buildFalls || []).filter((f) => now - f.t0 < f.ms);
+      this._buildBoards = (this._buildBoards || []).filter((f) => now - f.t0 < f.ms + 80);
+      if (this._visitLocked()) return;
+      const map = Farm.state.data.map || [];
+      if (now - (this._lastBoardAt || 0) < 340) return;
+      let spawned = false;
+      for (let i = 0; i < map.length; i++) {
+        const o = map[i];
+        if (!isUnderConstruction(o, now)) continue;
+        const b = this._bldgOf(o);
+        if (!b) continue;
+        this._spawnBuildBoard(o, b);
+        spawned = true;
+      }
+      if (spawned) this._lastBoardAt = now;
+    },
+    _drawBuildBoards() {
+      const list = this._buildBoards; if (!list || !list.length) return;
+      const ctx = this._ctx, th = this._th(), now = Date.now();
+      ctx.save();
+      ctx.lineCap = 'round';
+      for (let i = 0; i < list.length; i++) {
+        const p = list[i];
+        const u = Math.min(1, (now - p.t0) / p.ms);
+        const lift = Math.sin(u * Math.PI) * th * 0.38;
+        const x = p.x0 + (p.x1 - p.x0) * u;
+        const y = p.y0 + (p.y1 - p.y0) * u - lift;
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(p.spin * u);
+        ctx.globalAlpha = u < 0.12 ? u / 0.12 : (u > 0.88 ? (1 - u) / 0.12 : 1);
+        ctx.fillStyle = '#c4a06a';
+        ctx.fillRect(-p.len * 0.5, -th * 0.045, p.len, th * 0.09);
+        ctx.fillStyle = 'rgba(236, 214, 168, 0.55)';
+        ctx.fillRect(-p.len * 0.5, -th * 0.045, p.len, th * 0.03);
+        if (u > 0.9) {
+          ctx.fillStyle = 'rgba(255, 214, 110, 0.85)';
+          ctx.beginPath(); ctx.arc(p.len * 0.2, 0, th * 0.05, 0, 6.283); ctx.fill();
+        }
+        ctx.restore();
+      }
+      ctx.restore();
+    },
+    _drawBuildFalls() {
+      const list = this._buildFalls; if (!list || !list.length) return;
+      const now = Date.now();
+      for (let i = 0; i < list.length; i++) {
+        const f = list[i];
+        const u = Math.min(1, (now - f.t0) / f.ms);
+        const o = { gx: f.gx, gy: f.gy, type: 'barn' };
+        const b = { w: f.w, h: f.h, sc: f.sc, fill: f.fill };
+        const cc = this._cell(f.gx + (f.w - 1) / 2, f.gy + (f.h - 1) / 2);
+        const front = this._cell(f.gx + f.w - 1, f.gy + f.h - 1);
+        const by = front.y + this._th() / 2 + this._th() * 0.18;
+        const box = this._spriteBox(b, 1, b.fill);
+        const ctx = this._ctx;
+        ctx.save();
+        ctx.globalAlpha = 1 - u * 0.92;
+        ctx.translate(cc.x, by);
+        ctx.rotate((u * 0.38) * (i % 2 ? -1 : 1));
+        ctx.translate(-cc.x, -by);
+        this._drawScaffold(o, b, cc, by, box, Math.max(0.08, 1 - u));
+        ctx.restore();
+      }
     },
     _openBuildSkip(kind, idx) {
       const en = this._lang() === 'en';
@@ -2811,6 +2949,9 @@
       this._refreshPaletteAfford();
       if (Farm.ui && Farm.ui.refreshHUD) Farm.ui.refreshHUD();
       if (Farm.audio) Farm.audio.play('buildStart');
+      this._nudgeCam(rec.gx, rec.gy);
+      this._spawnBuildBoard(rec, this._bldgOf(rec) || pl.bldg);
+      this._spawnBuildBoard(rec, this._bldgOf(rec) || pl.bldg);
       this.render();
       return true;
     },
@@ -2832,13 +2973,17 @@
         this._diamond(cc2.x, cc2.y, tw, th); ctx.fill(); ctx.stroke();
       }
       ctx.translate(0, bob);
-      ctx.globalAlpha = 0.90;
       if (pl.type === '__plot') {
         const cc2 = this._cell(pl.fgx, pl.fgy);
         ctx.fillStyle = 'rgba(120, 82, 42, 0.72)';
         this._diamond(cc2.x, cc2.y, tw * 0.72, th * 0.72); ctx.fill();
       } else {
+        ctx.save();
+        ctx.filter = 'sepia(0.45) saturate(0.35) brightness(1.28)';
+        ctx.globalAlpha = 0.62;
         this._drawBuilding(o, b, false, null);
+        ctx.filter = 'none';
+        ctx.restore();
       }
       ctx.restore();
       if (!pl.valid) {
@@ -4942,6 +5087,7 @@
       this._syncMusicBtn();   // 设置面板里也能改音乐开关，外观要跟着走
       this._syncLangBtn();    // 设置里也能改语言，按钮上的字要跟着走
       this._followActorCam();
+      this._applyCamKick();
       const ctx = this._ctx, tw = this._tw(), th = this._th(), W = this._cssW(), H = this._cssH();
       const terrain = Farm.state.data.mapTerrain || {};
       ctx.clearRect(0, 0, W, H);
@@ -5101,7 +5247,10 @@
       this._drawLockedLand();
       this._drawGoldenHour(W, H);
       this._drawParticles(tw); this._drawFestival();
+      this._drawBuildBoards();
+      this._drawBuildFalls();
       if (this._placing) this._drawPlaceGhost();
+      this._undoCamKick();
     },
     _rectPath(x1, y1, x2, y2) {   // cell-rect → screen parallelogram path
       const ctx = this._ctx, a = this._cell(x1, y1), b = this._cell(x2 + 1, y1), c = this._cell(x2 + 1, y2 + 1), d = this._cell(x1, y2 + 1);
@@ -5610,7 +5759,7 @@
           const chip = this._drawCarCareChip(cc, by, tw, th);
           this._carCareHits.push({ idx: idx, x: chip.x, y: chip.y, r: chip.r });
         }
-      } else if (!this._blit(him, cc.x, by, box.w, box.h, flipX, (constructing && !grow) ? rise : 1)) {
+      } else if (!this._blit(him, cc.x, by, box.w, box.h, flipX, (constructing && !grow) ? ((o.type === 'fence' || o.type === 'lantern' || o.type === 'well' || o.type === 'bridge') ? rise : buildReveal(buildProg)) : 1)) {
         // 贴图还在路上：留草地，onload 会重画。禁止再画调试红块。
       }
       if (constructing) this._drawBuildSite(o, b, cc, by, box, rise, idx);
