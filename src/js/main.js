@@ -571,6 +571,23 @@
   window.Farm = window.Farm || {};
   Farm.openSettings = openSettings;
 
+  Farm.setLanguage = function (lang) {
+    if (lang !== 'zh' && lang !== 'en') return;
+    Farm.state.data.language = lang;
+    Farm.state.save();
+    Farm.i18n.setLanguage(lang);
+    Farm.ui.refreshHUD();
+    Farm.farm.renderGrid();
+    // 等距地图是 canvas 覆盖层，DOM 网格那次重绘碰不到它 —— 建造按钮/调色盘/
+    // 模式标签的文字要单独刷。
+    if (Farm.isoView && Farm.isoView.relang) Farm.isoView.relang();
+    Farm.events.check();
+    Farm.storekeeper.refresh();
+    // 天气 chip 的城市名和收获条的 innerHTML 都是按语言拼的，只在开页时渲染过
+    if (Farm.weather && Farm.weather.refresh) Farm.weather.refresh();
+    if (Farm.harvestStatus && Farm.harvestStatus.render) Farm.harvestStatus.render();
+  };
+
   let _collectionTab = 'crops';  // 'crops' | 'achievements' | 'journey'
 
   function openCollection() {
@@ -888,22 +905,11 @@
       if (sc) sc.scrollTop = keepY;
     }
 
+    /* 切语言要重画的东西不止一处（HUD / DOM 网格 / canvas 地图 / 节日 / 店主 /
+       天气 chip / 收获条）。抽成 Farm.setLanguage，设置面板和农场上的悬浮语言键
+       共用同一份 —— 两份实现迟早漂移，漏掉哪一处就是「切了语言但那块还是旧的」。 */
     const applyLanguage = (lang) => {
-      Farm.state.data.language = lang;
-      Farm.state.save();
-      Farm.i18n.setLanguage(lang);
-      Farm.ui.refreshHUD();
-      Farm.farm.renderGrid();
-      // The iso map is a canvas overlay the DOM grid render never touches —
-      // refresh its Build button / palette / mode-tab labels too.
-      if (Farm.isoView && Farm.isoView.relang) Farm.isoView.relang();
-      Farm.events.check();
-      Farm.storekeeper.refresh();
-      // Weather chip renders its city label per-language but only refreshed on
-      // page load before — re-render it now so it flips zh/en immediately
-      // (audit B3 P1). Same for the harvest-status pill's dynamic innerHTML.
-      if (Farm.weather && Farm.weather.refresh) Farm.weather.refresh();
-      if (Farm.harvestStatus && Farm.harvestStatus.render) Farm.harvestStatus.render();
+      Farm.setLanguage(lang);
       openSettings();
     };
     document.getElementById('langZh').onclick = () => applyLanguage('zh');

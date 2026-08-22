@@ -340,7 +340,7 @@
     _sel: -1, _moving: null,
     _pets: {},          // seed -> {fx,fy,tx,ty,pause,face,hx,hy} live walk state (not persisted)
     _lastWalkT: 0,
-    _buildBtn: null, _communityBtn: null, _driveBtn: null, _driveBtnOn: null, _musicBtn: null, _musicBtnOn: null, _palette: null, _hint: null, _modeTabs: null, _palBuild: null, _palTerrain: null,
+    _buildBtn: null, _communityBtn: null, _driveBtn: null, _driveBtnOn: null, _musicBtn: null, _musicBtnOn: null, _langBtn: null, _langBtnCur: null, _palette: null, _hint: null, _modeTabs: null, _palBuild: null, _palTerrain: null,
 
     // DEFAULT farm view (Hay Day isometric). Chosen via Farm.state.farmStyle()
     // (saved preference + URL override); players switch in the guide (ⓘ).
@@ -2614,8 +2614,29 @@
       };
       zwrap.appendChild(zMusic);
       this._musicBtn = zMusic;
+
+      /* 中英切换（Chris 2026-08-21）。设置里那两个按钮仍在，这里是农场上的快捷键 ——
+         店里给不同顾客演示时一键就能翻，不用点进设置。
+         显示的是**当前**语言（中 / EN），不是「点了会变成什么」：
+         玩家先要知道现在是哪种，才谈得上要不要换。 */
+      const zLang = mkZ('中', 1);
+      zLang.id = 'isoLangBtn';
+      zLang.style.marginTop = '6px';
+      zLang.onclick = (e) => {
+        e.preventDefault();
+        const to = this._lang() === 'en' ? 'zh' : 'en';
+        if (Farm.setLanguage) Farm.setLanguage(to);
+        if (Farm.audio) Farm.audio.play('tap');
+        this._syncLangBtn(true);
+        if (Farm.ui && Farm.ui.toast) {
+          Farm.ui.toast(to === 'en' ? 'Switched to English' : '已切换成中文');
+        }
+      };
+      zwrap.appendChild(zLang);
+      this._langBtn = zLang;
       document.body.appendChild(zwrap); this._zoomUI = zwrap;
       this._syncMusicBtn(true);
+      this._syncLangBtn(true);
 
       this._refreshModeUI(); this._layoutUI();
     },
@@ -2630,7 +2651,8 @@
       if (!this._on) return;   // map inactive → next init() builds it fresh in the right language
       [this._buildBtn, this._communityBtn, this._driveBtn, this._palette, this._hint, this._zoomUI].forEach((el) => { if (el && el.remove) el.remove(); });
       if (this._buildPulse && this._buildPulse.cancel) { try { this._buildPulse.cancel(); } catch (e) {} }
-      this._buildBtn = this._communityBtn = this._driveBtn = this._palette = this._hint = this._zoomUI = this._musicBtn = null;
+      this._buildBtn = this._communityBtn = this._driveBtn = this._palette = this._hint = this._zoomUI = this._musicBtn = this._langBtn = null;
+      this._langBtnCur = null;
       this._musicBtnOn = null;
       this._driveBtnOn = null;
       this._modeTabs = this._palBuild = this._palTerrain = null;
@@ -2686,6 +2708,19 @@
       b.style.backgroundImage = on ? 'none'
         : 'linear-gradient(45deg, transparent 43%, rgba(160,80,66,0.85) 43%, rgba(160,80,66,0.85) 57%, transparent 57%)';
       b.setAttribute('aria-label', en ? (on ? 'Music on' : 'Music off') : (on ? '背景音乐开' : '背景音乐关'));
+      b.title = b.getAttribute('aria-label');
+    },
+
+    _syncLangBtn(force) {
+      const b = this._langBtn;
+      if (!b) return;
+      const cur = this._lang() === 'en' ? 'en' : 'zh';
+      if (!force && this._langBtnCur === cur) return;
+      this._langBtnCur = cur;
+      b.textContent = cur === 'en' ? 'EN' : '中';
+      // 「EN」是两个字母，跟单个汉字用同一个字号会显得又大又挤
+      b.style.fontSize = cur === 'en' ? '13px' : '16px';
+      b.setAttribute('aria-label', cur === 'en' ? 'Switch to Chinese' : '切换成 English');
       b.title = b.getAttribute('aria-label');
     },
 
@@ -4275,6 +4310,7 @@
       if (Farm.farmer && Farm.farmer.tick) Farm.farmer.tick(this);
       this._syncDriveBtn();   // 上/下车是 tick 里发生的，按钮显隐跟着它走
       this._syncMusicBtn();   // 设置面板里也能改音乐开关，外观要跟着走
+      this._syncLangBtn();    // 设置里也能改语言，按钮上的字要跟着走
       this._followDriveCam();
       const ctx = this._ctx, tw = this._tw(), th = this._th(), W = this._cssW(), H = this._cssH();
       const terrain = Farm.state.data.mapTerrain || {};
