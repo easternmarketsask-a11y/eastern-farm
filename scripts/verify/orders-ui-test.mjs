@@ -63,6 +63,27 @@ assert.match(css, /\.order-slip\s*\{/, '货单样式要在');
 assert.match(css, /\.slip-dots\s*\{[\s\S]*?repeating-linear-gradient/, '引导点用重复渐变画');
 assert.match(css, /\.slip-total-coins[\s\S]*?tabular-nums/, '金额要等宽数字（账目感）');
 
+/* 单据上的按钮：窄、靠右、不吃全局 .btn 的全宽大药丸（Chris 2026-08-22 反馈） */
+assert.ok(!/class="btn (order-accept|order-deliver)/.test(o),
+  '单据动作不许复用全局 .btn（48px 全宽药丸，压在货单上就是设置面板）');
+assert.match(o, /slip-btn/, '单据动作用窄按钮 slip-btn');
+// 🔒「还差一点 / 接单位已满」是状态不是动作，画成大按钮正是「肥大」的来源
+assert.match(o, /slip-note[\s\S]{0,120}?还差一点/, '「还差一点」要是一行小字，不是按钮');
+assert.ok(!/order-deliver-disabled/.test(o), '不要再渲染一个禁用的大按钮');
+// 仍要守住可点下限
+assert.match(css, /\.slip-btn\{[\s\S]*?min-height:44px/, '窄按钮仍要 ≥44px 可点');
+
+/* 🔒 渲染出来的 class 和接线用的选择器必须对得上。
+   改按钮样式时最容易漏掉接线 —— 而 E2E 里的放弃是直接调 abandon()，
+   DOM 上点不动它也发现不了（这次就是靠肉眼看出来的）。 */
+for (const cls of ['order-accept', 'order-deliver', 'slip-drop', 'staple-fill']) {
+  // 用纯字符串比对，不用正则 —— 这里的反斜杠转义在生成脚本里被吃掉过好几次
+  const rendered = o.indexOf(cls + '"') >= 0 || o.indexOf(cls + ' ') >= 0;
+  const wired = o.indexOf("querySelectorAll('#modalContent ." + cls + "')") >= 0;
+  assert.ok(rendered, '没渲染出 .' + cls);
+  assert.ok(wired, '.' + cls + ' 渲染了却没接线（点了不会有反应）');
+}
+
 console.log('ok orders-ui');
 
 // ===== 实体告示牌（2026-08-22 Chris:「订单板是否有实体架在地上，可放在货仓旁」）=====

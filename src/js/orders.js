@@ -395,8 +395,8 @@
         const btn = done
           ? '<span class="staple-done">✓ ' + (lang === 'en' ? 'Done' : '今日已满') + '</span>'
           : (can
-            ? '<button class="btn staple-fill" data-staple="' + s.cropId + '">' +
-              (lang === 'en' ? 'Hand over ' : '交 ') + Math.min(room, have) + '</button>'
+            ? '<button class="slip-btn go staple-fill" data-staple="' + s.cropId + '">' +
+              (lang === 'en' ? 'Hand ' : '交 ') + Math.min(room, have) + '</button>'
             : '<span class="staple-wait">' + (lang === 'en' ? 'Grow some' : '还没有') + '</span>');
         return '<div class="staple-row">' +
           '<span class="staple-icon">' + this._cropIcon(s.cropId, 20) + '</span>' +
@@ -431,20 +431,28 @@
           (bonus > 0 ? '<span class="slip-total-bonus">' + (lang === 'en' ? 'over plain price +' : '比原价多 +') + bonus + coin + '</span>' : '') +
           '</div>';
 
+        /* 🔒 单据上的动作别用全局 .btn —— 那是 48px 全宽的渐变大药丸，压在货单上
+           就变回「设置面板」（Chris 2026-08-22：「交付/接单按键太丑了太肥大了」）。
+           这里用窄的、靠右的印章式按钮。
+           🔒「还差一点」「接单位已满」**是状态不是动作**，画成大号禁用按钮正是
+           「肥大」的主要来源 —— 改成一行小字。 */
         let actions;
         if (!o.accepted) {
           const full = accepted >= SD.ACCEPT_CAP;
           actions = full
-            ? '<button class="btn secondary" disabled>' + (lang === 'en'
-                ? 'Taken ' + accepted + '/' + SD.ACCEPT_CAP : '已接满 ' + accepted + '/' + SD.ACCEPT_CAP) + '</button>'
-            : '<button class="btn order-accept" data-accept="' + o.id + '">' +
-              (lang === 'en' ? 'Take order' : '接单') + '</button>';
+            ? '<span class="slip-note">' + (lang === 'en'
+                ? 'Slots full ' + accepted + '/' + SD.ACCEPT_CAP
+                : '接单位已满 ' + accepted + '/' + SD.ACCEPT_CAP) + '</span>'
+            : '<button class="slip-btn order-accept" data-accept="' + o.id + '">' +
+              (lang === 'en' ? 'Take' : '接单') + '</button>';
         } else {
           const deliver = canFill
-            ? '<button class="btn order-deliver" data-order="' + o.id + '">🚚 ' + (lang === 'en' ? 'Deliver' : '交付') + '</button>'
-            : '<button class="btn secondary order-deliver-disabled" disabled>' + (lang === 'en' ? 'Grow more' : '还差一点') + '</button>';
-          actions = deliver + '<button class="order-drop" data-drop="' + o.id + '" title="' +
-            (lang === 'en' ? 'Drop this order (no penalty)' : '放弃这一单（无惩罚）') + '">✕</button>';
+            ? '<button class="slip-btn go order-deliver" data-order="' + o.id + '">' +
+              (lang === 'en' ? 'Deliver' : '交付') + '</button>'
+            : '<span class="slip-note">' + (lang === 'en' ? 'Not enough yet' : '还差一点') + '</span>';
+          actions = deliver + '<button class="slip-drop" data-drop="' + o.id + '" title="' +
+            (lang === 'en' ? 'Drop this order (no penalty)' : '放弃这一单（无惩罚）') + '">' +
+            (lang === 'en' ? 'Drop' : '放弃') + '</button>';
         }
 
         /* 版式是**货单**，不是设置项（Chris 2026-08-22：「做得更像订单」）：
@@ -503,7 +511,7 @@
       document.querySelectorAll('#modalContent .order-deliver').forEach((btn) => {
         btn.onclick = () => this.fulfill(btn.getAttribute('data-order'));
       });
-      document.querySelectorAll('#modalContent .order-drop').forEach((btn) => {
+      document.querySelectorAll('#modalContent .slip-drop').forEach((btn) => {
         btn.onclick = () => this.abandon(btn.getAttribute('data-drop'));
       });
     },

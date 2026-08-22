@@ -5388,7 +5388,7 @@ body.modal-open .pwa-install-banner { display: none; }
 .staple-bar>i{display:block;height:100%;background:var(--leaf,#7bbf5a);border-radius:3px}
 .staple-qty{flex:0 0 auto;font:600 12px/1 var(--font-num,inherit);
   color:var(--warm-text-soft);min-width:42px;text-align:right;font-variant-numeric:tabular-nums}
-.staple-fill{flex:0 0 auto;padding:6px 12px;min-height:36px;font-size:13px}
+.staple-fill{flex:0 0 auto;min-height:40px;padding:0 14px;font-size:13px}
 .staple-done,.staple-wait{flex:0 0 auto;font-size:12px;color:var(--warm-text-soft);
   min-width:52px;text-align:right}
 
@@ -5435,11 +5435,26 @@ body.modal-open .pwa-install-banner { display: none; }
 .slip-total-bonus{margin-left:auto;font-size:11px;color:var(--leaf-dark,#4a7c59);
   background:rgba(123,191,90,.14);border-radius:5px;padding:3px 7px}
 
-.order-actions{display:flex;align-items:center;gap:8px;margin-top:9px}
-.order-actions .btn{flex:1 1 auto}
-.order-drop{flex:0 0 auto;border:1px solid rgba(120,95,60,.22);background:transparent;
-  color:var(--warm-text-soft);font-size:15px;line-height:1;border-radius:8px;
-  min-width:38px;min-height:38px;cursor:pointer}
+/* 单据上的动作：窄、靠右、像盖个章，不是全宽药丸。
+   🔒 别在这儿复用全局 .btn（48px 全宽渐变大按钮）—— 压在货单上就变回
+   「游戏设置面板」了（Chris 2026-08-22：「太丑了太肥大了」）。
+   仍然守住 44px 的可点下限：靠 min-height + 横向 padding，不靠把它撑满整行。 */
+.order-actions{display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-top:10px}
+.slip-btn{flex:0 0 auto;min-height:44px;padding:0 20px;border-radius:10px;cursor:pointer;
+  font:600 14px/1 var(--font-ui,inherit);letter-spacing:.06em;
+  border:1.5px solid rgba(120,95,60,.42);background:#fffdf6;color:#6b4f2c;
+  transition:transform .08s ease, background .12s ease}
+.slip-btn:active{transform:translateY(1px)}
+.slip-btn.go{border-color:#3f9657;background:#3f9657;color:#fff}
+.slip-btn.go:active{background:#34864a}
+/* 「还差一点」「接单位已满」是**状态**不是动作，一行小字就够 */
+.slip-note{flex:0 0 auto;font-size:12.5px;color:var(--warm-text-soft);padding:0 2px}
+.slip-drop{flex:0 0 auto;min-height:44px;padding:0 12px;border:none;background:transparent;
+  color:var(--warm-text-soft);font-size:12.5px;cursor:pointer;text-decoration:underline;
+  text-underline-offset:3px}
+/* 补货行本身很窄，那颗「交 N」跟着 .slip-btn 会显得墩。压小一档，
+   仍然保住 40px 的可点高度（行高就这么多，再高会把整行撑开）。 */
+.slip-btn.staple-fill{min-height:40px;padding:0 15px;font-size:13px;border-radius:9px}
 
 /* —— 备货预告：像贴在单子下面的一张排期 —— */
 .fc-list{display:flex;flex-direction:column;gap:3px}
