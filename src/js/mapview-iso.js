@@ -663,72 +663,86 @@
     /* 东超告示牌：开局就该立在谷仓旁。老存档进来时也补一块。
        🔒 它是取消无限收购之后唯一的卖菜出口，**必须保证场上一定有一块**
           （不可拆已在 _drawBuilding / 删除按钮两处挡住，这里管「一定有」）。 */
+    /* 东超告示牌：立在**谷仓附近**（Chris 2026-08-22：「订单板请移到货仓附近」）。
+       它是取消无限收购之后唯一的卖菜出口，所以三件事都要保证：
+         ① 场上一定有一块  ② 就在谷仓边上  ③ 点得开
+
+       🔒 **落点必须在附近建筑的前面**（depthOK）。等距深度按 gx+gy 排，谁大谁后画、
+          谁后画谁先吃到点击。1×1 的牌子夹在一堆 2×2 中间会被邻居贴图整个盖住 ——
+          实测摆谷仓侧面点到谷仓、摆正前方点到温室，四个探测点没一个点得中。
+       🔒 **候选一律按「离谷仓多远」从近到远排**。早先的兜底是从最靠镜头那一排
+          横扫，地界一扩就把牌子甩到农场最前沿，离谷仓十万八千里（Chris 实际存档
+          里看到的就是这个）。 */
     _ensureOrderBoard() {
       const d = Farm.state.data;
       if (!Array.isArray(d.map)) return;
-      if (d.map.some((o) => o && o.type === 'board')) return;
       const barn = d.map.filter((o) => o && o.type === 'barn')[0];
-      // 优先贴着谷仓右侧，占不下就在附近找一格空地
-      /* 🔒 优先摆在谷仓**正前方**（gy 更大），不是旁边。
-         等距深度按 gx+gy 排，摆在侧面会跟谷仓打平手，_buildingAtPoint 取
-         frontmost 时谷仓先命中 —— 实测四个探测点全部点到谷仓，**告示牌根本
-         点不开**，而它是取消无限收购之后唯一的卖菜出口。摆前面才咬得住点击，
-         朝向也对着玩家。 */
-      const tries = [];
-      if (barn) {
-        const bb = BUILDINGS.barn;
-        tries.push([barn.gx, barn.gy + bb.h], [barn.gx + 1, barn.gy + bb.h],
-                   [barn.gx + bb.w, barn.gy + bb.h], [barn.gx - 1, barn.gy + bb.h],
-                   [barn.gx + bb.w, barn.gy + 1]);
-      }
       const ob = this._ownedBounds();
-      for (let r = 1; r <= 6; r++) {
-        for (let dy = -r; dy <= r; dy++) {
-          for (let dx = -r; dx <= r; dx++) {
-            const bx = (barn ? barn.gx : Math.round((ob.x1 + ob.x2) / 2)) + dx;
-            const by2 = (barn ? barn.gy : Math.round((ob.y1 + ob.y2) / 2)) + dy;
-            tries.push([bx, by2]);
-          }
-        }
-      }
-      /* 🔒 落点必须**在附近所有建筑的前面**。
-         等距深度按 gx+gy 排，谁大谁后画、谁后画谁先吃到点击。告示牌只有 1×1，
-         夹在一堆 2×2 中间时会被邻居的贴图盖住 —— 实测摆谷仓旁边点到谷仓、
-         摆谷仓正前方点到温室，四个探测点没有一个能点中它。
-         而它是取消无限收购之后**唯一的卖菜出口**，点不开＝卖不了菜。 */
+      const hx = barn ? barn.gx : Math.round((ob.x1 + ob.x2) / 2);
+      const hy = barn ? barn.gy : Math.round((ob.y1 + ob.y2) / 2);
+      const existing = d.map.filter((o) => o && o.type === 'board')[0];
+
       const depthOK = (gx, gy) => {
         const mine = gx + gy;
         return !(d.map || []).some((o) => {
           if (!o || o.type === 'board') return false;
           const b2 = this._bldgOf(o); if (!b2) return false;
-          // 只关心画面上挨着的邻居；远处的盖不到
           if (Math.abs(o.gx - gx) > 4 || Math.abs(o.gy - gy) > 4) return false;
           return (o.gx + b2.w - 1) + (o.gy + b2.h - 1) >= mine;
         });
       };
-      const place = (gx, gy) => {
+      const usable = (gx, gy, loose) => {
         if (!this._inBounds(gx, gy) || !this._ownedCell(gx, gy)) return false;
         if (!this._footprintFree(gx, gy, 'board', -1)) return false;
-        if (!depthOK(gx, gy)) return false;
-        d.map.push({ type: 'board', gx: gx, gy: gy });
-        if (Farm.state.save) Farm.state.save();
-        return true;
+        return loose ? true : depthOK(gx, gy);
       };
-      for (const t of tries) if (place(t[0], t[1])) return;
-      // 首选位置都被挡住：从最靠镜头的一排往回找，保证一定摆得下
-      for (let gy = ob.y2; gy >= ob.y1; gy--) {
-        for (let gx = ob.x1; gx <= ob.x2; gx++) if (place(gx, gy)) return;
-      }
-      // 真的一格都不合适（极端存档）：放宽深度要求，至少要有一块牌子
-      for (let gy = ob.y2; gy >= ob.y1; gy--) {
-        for (let gx = ob.x1; gx <= ob.x2; gx++) {
-          if (!this._inBounds(gx, gy) || !this._ownedCell(gx, gy)) continue;
-          if (!this._footprintFree(gx, gy, 'board', -1)) continue;
-          d.map.push({ type: 'board', gx: gx, gy: gy });
-          if (Farm.state.save) Farm.state.save();
-          return;
+      // 谷仓正前方最理想（朝着玩家、深度也压得住邻居），其次由近及远绕圈找
+      const candidates = () => {
+        const out = [];
+        if (barn) {
+          const bb = BUILDINGS.barn;
+          out.push([barn.gx, barn.gy + bb.h], [barn.gx + 1, barn.gy + bb.h],
+                   [barn.gx + bb.w, barn.gy + bb.h], [barn.gx - 1, barn.gy + bb.h]);
         }
+        for (let r = 1; r <= 8; r++) {
+          for (let dy = -r; dy <= r; dy++) {
+            for (let dx = -r; dx <= r; dx++) {
+              if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+              out.push([hx + dx, hy + dy]);
+            }
+          }
+        }
+        return out;
+      };
+      const pick = () => {
+        const cs = candidates();
+        for (const c of cs) if (usable(c[0], c[1], false)) return c;
+        // 附近实在没有「压得住邻居」的格子：放宽这条，但**仍然就近**
+        for (const c of cs) if (usable(c[0], c[1], true)) return c;
+        return null;
+      };
+
+      if (!existing) {
+        const spot = pick();
+        if (spot) {
+          d.map.push({ type: 'board', gx: spot[0], gy: spot[1] });
+          d.boardNearBarn = true;
+          if (Farm.state.save) Farm.state.save();
+        }
+        return;
       }
+
+      /* 老存档一次性搬家：早先的兜底把牌子甩到农场最前沿。只搬这一次
+         （boardNearBarn 标记），之后玩家自己挪到哪儿就是哪儿 —— 别每次进场
+         都把它拽回谷仓边，那会跟玩家打架。 */
+      if (d.boardNearBarn) return;
+      d.boardNearBarn = true;
+      const far = Math.max(Math.abs(existing.gx - hx), Math.abs(existing.gy - hy));
+      if (far > 4) {
+        const spot = pick();
+        if (spot) { existing.gx = spot[0]; existing.gy = spot[1]; }
+      }
+      if (Farm.state.save) Farm.state.save();
     },
 
     _stampDefaultWorld() {

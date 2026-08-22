@@ -134,6 +134,55 @@
     T('E23 告示牌点得中', probes.some((p2) => p2.type === 'board'));
     // 不可拆：删除按钮不该出现
     T('E24 告示牌标了不可删除', !!(iso._bldgOf(b) && iso._bldgOf(b).noDelete));
+
+    /* E26 端到端：**真的用手指点一下它，订单板要弹出来**
+       （Chris 2026-08-22：「点击订单板可以查看订单」）。
+       前面几条只证明命中判定认得它 —— 那不等于点了有反应，本仓反复出现的
+       失败态正是「按钮在、点了没反应、也不报错」。这里派发真实指针事件走完整链路。 */
+    if (Farm.ui && Farm.ui.hideModal) Farm.ui.hideModal();
+    await sleep(120);
+    const cv = document.getElementById('isoCanvas');
+    const rect = cv.getBoundingClientRect();
+    const px = rect.left + cc.x, py = rect.top + (by - th * 0.6);
+    const ev = (type) => cv.dispatchEvent(new PointerEvent(type, {
+      pointerId: 1, bubbles: true, cancelable: true, clientX: px, clientY: py,
+      pointerType: 'touch', isPrimary: true,
+    }));
+    ev('pointerdown'); await sleep(60); ev('pointerup');
+    await sleep(400);
+    /* ⚠️ 只查 textContent 是**摆设**：hideModal 只是给 #modal 加 hidden，
+       DOM 里的文字还在，前面几步 open() 留下的「东超订单」会一直匹配到 ——
+       实测把点击派发整条删掉，这条断言照样绿。必须同时确认弹窗**真的可见**。 */
+    const modalEl = document.getElementById('modal');
+    const content = document.getElementById('modalContent');
+    const visible = !!(modalEl && !modalEl.classList.contains('hidden'));
+    const hasOrders = !!(content && /东超订单|Eastern Market Orders/.test(content.textContent || ''));
+    dbg.tapOpened = visible && hasOrders;
+    dbg.tapVisible = visible;
+    T('E26 点一下告示牌，订单板真的弹出来', visible && hasOrders);
+    if (Farm.ui && Farm.ui.hideModal) Farm.ui.hideModal();
+  }
+
+  // ---------- 老存档：牌子被甩远了要搬回谷仓边 ----------
+  {
+    const iso = Farm.isoView;
+    const barn2 = (d.map || []).filter((o) => o && o.type === 'barn')[0];
+    const bd2 = (d.map || []).filter((o) => o && o.type === 'board')[0];
+    const ob2 = iso._ownedBounds();
+    if (barn2 && bd2) {
+      bd2.gx = ob2.x1; bd2.gy = ob2.y2;          // 模拟旧兜底甩到农场最前沿
+      d.boardNearBarn = false;                    // 还没搬过家
+      iso._ensureOrderBoard();
+      const now2 = (d.map || []).filter((o) => o && o.type === 'board')[0];
+      const dist = Math.max(Math.abs(now2.gx - barn2.gx), Math.abs(now2.gy - barn2.gy));
+      dbg.relocDist = dist;
+      T('E27 老存档里被甩远的牌子会搬回谷仓边', dist <= 4);
+      // 玩家自己挪走之后不该再被拽回来（每次进场都拽＝跟玩家打架）
+      now2.gx = ob2.x1 + 1; now2.gy = ob2.y2 - 1;
+      iso._ensureOrderBoard();
+      const after2 = (d.map || []).filter((o) => o && o.type === 'board')[0];
+      T('E28 玩家自己挪走之后不再被拽回', after2.gx === ob2.x1 + 1 && after2.gy === ob2.y2 - 1);
+    }
   }
 
   // ---------- 改名 ----------
