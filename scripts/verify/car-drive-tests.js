@@ -4,7 +4,33 @@
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const failures = [];
   const dbg = {};
+  const T0 = Date.now();
   const T = (name, cond) => { if (!cond) failures.push(name); };
+  /* 等「人走到」不能写死循环次数：无头浏览器里 rAF 被节流，tick 的 dt 被
+     clamp 到 0.12s，走路 2.2 格/秒 => 每次 tick 最多推进 0.264 格。
+     路径 23 格就要 87 次以上，而人的出生位置有随机抖动 —— 写死 80 次会
+     随机地差最后一两步（本地和生产站都实测到过）。按路径长度给足余量。 */
+  /* 把人挪到车旁几格外。测试要验的是「走到了才上车」，不是「走 23 格要多久」——
+     让它真走长途会把整套测试拖到 3 分钟，而闸门只给 45 秒。 */
+  const putNear = (gx, gy) => {
+    const A = Farm.farmer._actor();
+    const free = Farm.farmer.walkableFor(Farm.isoView, 1, 1);
+    for (let r = 3; r <= 7; r++) {
+      for (let dy = -r; dy <= r; dy++) {
+        for (let dx = -r; dx <= r; dx++) {
+          if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+          const x = gx + dx, y = gy + dy;
+          if (free(x, y)) { A.gx = x; A.gy = y; return true; }
+        }
+      }
+    }
+    return false;
+  };
+
+  const waitWhile = async (cond, steps) => {
+    const n = Math.max(120, Math.ceil((steps || 30) * 5));
+    for (let i = 0; i < n && cond(); i++) { Farm.farmer.tick(Farm.isoView); await sleep(70); }
+  };
   /* 还在做的功能用 TODO()：结果记进 dbg 但不阻断部署。
      2026-08-20：A+1「开车自动干农活」判据还没调通，而这个文件已经是
      deploy.sh 闸门 I —— 留着 T() 会把别人的部署一起挡下来。 */
@@ -40,6 +66,7 @@
   const p5 = Farm.pathfind.find(2, 2, 2, 2, open);
   T('P5 原地返回单点路径', !!p5 && p5.length === 1 && p5[0].gx === 2 && p5[0].gy === 2);
 
+  dbg.t1 = Date.now() - T0;
   // ---- 第 2 组：点空地走过去 ----
   // 走真实入口进农场：直接 remove 开屏会跳过 isoView.init()，_on 永远是 false，
   // 那样测的就不是玩家看到的那个农场了。
@@ -123,6 +150,7 @@
     Farm.state._visitLock = false;
   }
 
+  dbg.t2 = Date.now() - T0;
   // ---- 第 3 组：上车 / 开车 / 车速 ----
   T('C0 board/unboard 已导出',
     typeof Farm.farmer.board === 'function' && typeof Farm.farmer.unboard === 'function');
@@ -140,13 +168,14 @@
     const realPlay = Farm.audio && Farm.audio.play;
     if (realPlay) Farm.audio.play = function (n, o) { horns.push(n); return realPlay.call(Farm.audio, n, o); };
 
+    putNear(spot.gx, spot.gy);
     T('C2 上车成功', Farm.farmer.board(carIdx) === true);
     const A1 = Farm.farmer._actor();
     T('C2b 先走过去，还没坐进车里',
       Farm.farmer.drivingIdx() === null && A1.job && A1.job.kind === 'boarding' && A1.path && A1.path.length > 1);
     dbg.c2 = { boardRet: true, spot0: { gx: spot.gx, gy: spot.gy }, man0: { gx: A1.gx, gy: A1.gy },
                pathLen: A1.path ? A1.path.length : null, job: A1.job ? A1.job.kind : null };
-    for (let i = 0; i < 80 && Farm.farmer.drivingIdx() !== carIdx; i++) { Farm.farmer.tick(iso); await sleep(120); }
+    await waitWhile(() => Farm.farmer.drivingIdx() !== carIdx, A1.path ? A1.path.length : 30);
     dbg.c3 = { driving: Farm.farmer.drivingIdx(), man: { gx: A1.gx, gy: A1.gy },
                job: A1.job ? A1.job.kind : null, pathI: A1.pathI,
                pathLen: A1.path ? A1.path.length : null, carAt: { gx: Farm.state.data.map[carIdx].gx, gy: Farm.state.data.map[carIdx].gy } };
@@ -175,6 +204,7 @@
     Farm.state.data.map.splice(carIdx, 1);
   }
 
+  dbg.t3 = Date.now() - T0;
   // ---- 第 4 组：停车落盘 ----
   const spot2 = iso._findHomeSpot(iso._carWh(1), -1, null, 'car');
   if (spot2) {
@@ -182,8 +212,9 @@
     Farm.state.data.map.push({ type: 'car', gx: spot2.gx, gy: spot2.gy, lv: 1 });
     const ci = Farm.state.data.map.length - 1;
     const before = { gx: spot2.gx, gy: spot2.gy };
+    putNear(spot2.gx, spot2.gy);
     Farm.farmer.board(ci);
-    for (let i = 0; i < 80 && Farm.farmer.drivingIdx() !== ci; i++) { Farm.farmer.tick(iso); await sleep(120); }
+    await waitWhile(() => Farm.farmer.drivingIdx() !== ci, (Farm.farmer._actor().path || []).length || 30);
 
     const wh1 = iso._carWh(1);
     const carFree = Farm.farmer.walkableFor(iso, wh1.w, wh1.h);
@@ -205,10 +236,7 @@
       dbg.gotoRet = Farm.farmer.goTo(far.gx, far.gy);
       dbg.pathLen = A0.path ? A0.path.length : null;
       // rAF 在无头/后台标签里会被节流到几乎不跑，主动驱动 tick 才测得到移动。
-      for (let i = 0; i < 120 && A0.job; i++) {
-        Farm.farmer.tick(iso);
-        await sleep(130);
-      }
+      await waitWhile(() => !!A0.job, (A0.path || []).length || 30);
       dbg.actorAfter = { gx: A0.gx, gy: A0.gy, pathI: A0.pathI, job: A0.job ? A0.job.kind : null,
                          driving: Farm.farmer.drivingIdx() };
       const rec = Farm.state.data.map[ci];
@@ -227,6 +255,7 @@
     Farm.state.save();
   }
 
+  dbg.t4 = Date.now() - T0;
   // ---- 第 5 组：点车即上车 / 换款搬到商店 ----
   T('E0 _tapCar 存在', typeof iso._tapCar === 'function');
   T('E1 换款面板搬到商店', typeof iso._openCarBuyChoice === 'function');
@@ -240,12 +269,13 @@
     const ti = Farm.state.data.map.length - 1;
     try { Farm.ui.hideModal(); } catch (e) {}
     await sleep(150);
+    putNear(spot3.gx, spot3.gy);
     T('E4a 点车＝动身上车', iso._tapCar(ti) === true);
     await sleep(150);
     // 判据是「没弹**车**卡片」——测试跑几十秒，游戏自己可能弹别的（章节信/小报），
     // 用「有没有任何弹窗」会假失败。
     T('E4b 点车不再弹车卡片', !document.querySelector('[data-car-cat],[data-car-swap],[data-car-id],[data-new-car-id]'));
-    for (let i = 0; i < 80 && Farm.farmer.drivingIdx() !== ti; i++) { Farm.farmer.tick(iso); await sleep(120); }
+    await waitWhile(() => Farm.farmer.drivingIdx() !== ti, (Farm.farmer._actor().path || []).length || 30);
     T('E5 走到后坐进车里', Farm.farmer.drivingIdx() === ti);
     // 🚶 常驻下车按钮：车可能开出视野，点车不是唯一出路
     const outBtn = document.getElementById('isoDriveOutBtn');
@@ -259,7 +289,7 @@
 
     // 点车下车这条老路也得还在
     iso._tapCar(ti);
-    for (let i = 0; i < 60 && Farm.farmer.drivingIdx() !== ti; i++) { Farm.farmer.tick(iso); await sleep(120); }
+    await waitWhile(() => Farm.farmer.drivingIdx() !== ti, (Farm.farmer._actor().path || []).length || 30);
     T('E6 驾驶中再点这辆车＝下车', iso._tapCar(ti) === true && Farm.farmer.drivingIdx() === null);
 
     // 商店里选一款车：场上已有车 → 应该问买新的还是换掉
@@ -274,6 +304,7 @@
     Farm.state.save();
   }
 
+  dbg.t5 = Date.now() - T0;
   // ---- 第 6 组：开车自动干农活 ----
   const plots = Farm.state.data.plots || [];
   const A6 = Farm.farmer._actor();
@@ -312,9 +343,8 @@
       T('F1 车在手边就开车去干活',
         !!A6.job && (A6.job.kind === 'boarding' || A6.job.kind === 'goto') && A6.queue.length === 1);
 
-      for (let i = 0; i < 140 && A6.job && (A6.job.kind === 'boarding' || A6.job.kind === 'goto'); i++) {
-        Farm.farmer.tick(iso); await sleep(110);
-      }
+      await waitWhile(() => !!A6.job && (A6.job.kind === 'boarding' || A6.job.kind === 'goto'),
+      (A6.path || []).length || 40);
       const carNow = Farm.state.data.map[nearCar];
       dbg.f2 = { car: carNow ? { gx: carNow.gx, gy: carNow.gy } : null,
                  plot: { gx: iso._plotGX(farPlot), gy: iso._plotGY(farPlot) },
@@ -356,5 +386,6 @@
     }
   }
 
+  dbg.t6 = Date.now() - T0;
   return { failures, dbg };
 })()

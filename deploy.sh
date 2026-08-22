@@ -337,7 +337,7 @@ else
   trap 'kill $CAR_PID 2>/dev/null || true' EXIT
   sleep 1
   CAR_OUT="$(mktemp)"
-  EF_MOBILE=1 EF_CDP_TIMEOUT=120000 node scripts/verify/cdp.mjs "http://127.0.0.1:8155/src/" "scripts/verify/car-drive-tests.js" 45000 >"$CAR_OUT" 2>/dev/null || true
+  EF_MOBILE=1 EF_CDP_TIMEOUT=120000 node scripts/verify/cdp.mjs "http://127.0.0.1:8155/src/" "scripts/verify/car-drive-tests.js" 25000 >"$CAR_OUT" 2>/dev/null || true
   kill $CAR_PID 2>/dev/null || true
   trap - EXIT
   if ! node -e '
