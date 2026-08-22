@@ -11,7 +11,7 @@
  *   - ambientOff (bool)     — disables the background farm ambience only.
  *
  * Available sounds: 'plant', 'harvest', 'water', 'coin', 'levelUp',
- *   'achievement', 'error', 'tap', 'buy', 'horn'. Unknown names are
+ *   'achievement', 'error', 'tap', 'buy', 'horn', 'build', 'buildDone'. Unknown names are
  *   silently ignored. play(name, opts) accepts opts.step (int) to raise
  *   the whole sound by N semitones — Hay Day-style combo on rapid harvests.
  *
@@ -635,6 +635,20 @@
           // UI 音走干声：点击带混响会显得迟钝、廉价，而且它一天要响几百次
           this._noise(t, 0.022, { bp: 2100, q: 2.2, gain: 0.14, attack: 0.001, dest: dry });
           this._tone(920, t, 0.028, { type: 'sine', gain: 0.09, attack: 0.001, lp: 2800, dest: dry });
+          break;
+        case 'build':
+          // 槌木：短噪声撞击 + 木头共鸣，工地循环敲
+          this._noise(t, 0.055, { lp: 420, gain: 0.28, attack: 0.002, pan: pan });
+          this._noise(t + 0.012, 0.04, { bp: 1800, q: 1.1, gain: 0.10, pan: pan });
+          this._tone(210, t + 0.01, 0.09, { type: 'triangle', glide: 150, gain: 0.16, lp: 900, pan: pan });
+          break;
+        case 'buildDone':
+          // 木架收起 + 清亮收尾
+          this._noise(t, 0.12, { lp: 500, gain: 0.22, attack: 0.006, pan: pan });
+          this._noise(t + 0.04, 0.08, { bp: 2400, q: 0.9, gain: 0.10, pan: pan });
+          this._tone(392, t + 0.05, 0.16, { type: 'triangle', gain: 0.22, lp: 1800, pan: pan });
+          this._tone(523, t + 0.12, 0.22, { type: 'sine', gain: 0.26, pan: pan });
+          this._tone(784, t + 0.18, 0.28, { type: 'triangle', gain: 0.18, pan: pan });
           break;
         case 'horn':
           /* 老式双簧片喇叭：两个音差小三度，谐波一直到 3–4k，起振几乎瞬间。

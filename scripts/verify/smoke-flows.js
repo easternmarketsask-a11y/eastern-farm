@@ -35,6 +35,12 @@
   await step('menu', () => { const b = document.getElementById('hamburgerButton'); if (b) b.click(); });
   await step('collection', () => { const b = document.querySelector('.action-btn[data-action=menu]'); if (b) { b.click(); const c = document.querySelector('[data-nav=collection]'); if (c) c.click(); } });
   await step('build-mode', async () => { if (F.isoView && F.isoView.toggleBuild) { F.isoView.toggleBuild(); await sleep(300); F.isoView.toggleBuild(); } });
+  await step('build-duration', () => {
+    if (!F.isoView || !F.isoView.buildDurationMs) return;
+    if (F.isoView.buildDurationMs('barn', 2, 2) !== 75000) throw new Error('barn build ms');
+    if (F.isoView.buildDurationMs('car', 2, 2) !== 0) throw new Error('car has no wait');
+    if (F.isoView.isUnderConstruction({})) throw new Error('old save must be complete');
+  });
   await step('autoframe', () => { if (F.isoView && F.isoView._autoFrame) { F.isoView._autoFrame(); F.isoView.render(); } });
   await step('relang-en', () => { F.state.data.language = 'en'; F.i18n.setLanguage('en'); F.ui.refreshHUD(); F.isoView && F.isoView.relang && F.isoView.relang(); });
   await step('relang-zh', () => { F.state.data.language = 'zh'; F.i18n.setLanguage('zh'); F.ui.refreshHUD(); F.isoView && F.isoView.relang && F.isoView.relang(); });

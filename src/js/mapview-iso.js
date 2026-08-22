@@ -361,6 +361,34 @@
     if (m >= 9 && m <= 11) return 'autumn';
     return 'winter';
   }
+  function buildDurationMs(type, w, h) {
+    if (type === 'car') return 0;
+    if (type === 'home') {
+      const span = Math.max(w || 2, h || 2);
+      if (span >= 7) return 480000;
+      if (span >= 5) return 300000;
+      if (span >= 4) return 180000;
+      return 90000;
+    }
+    if (type === 'fence' || type === 'bush' || type === 'lantern') return 8000;
+    if (type === 'tree' || type === 'well' || type === 'bridge' || type === 'plot') return 20000;
+    if (type === 'house' || type === 'stall' || type === 'coop' || type === 'greenhouse' || type === 'barn' || type === 'wheel') return 75000;
+    return 20000;
+  }
+  function buildSkipCoins(cost, remainMs, totalMs) {
+    if (!(totalMs > 0) || !(remainMs > 0)) return 0;
+    const frac = Math.min(1, remainMs / totalMs);
+    return Math.max(1, Math.ceil((cost || 0) * 0.12 * frac));
+  }
+  function buildSkipPoints(remainMs) {
+    if (!(remainMs > 0)) return 0;
+    const n = Math.ceil(remainMs / 120000);
+    return Math.max(1, Math.min(5, n));
+  }
+  function isUnderConstruction(o, now) {
+    if (!o || !o.buildUntil) return false;
+    return o.buildUntil > (now == null ? Date.now() : now);
+  }
 
   const iso = {
     _on: false, _cv: null, _ctx: null, _dpr: 1,
@@ -373,6 +401,10 @@
     _sel: -1, _moving: null,
     _pets: {},          // seed -> {fx,fy,tx,ty,pause,face,hx,hy} live walk state (not persisted)
     _lastWalkT: 0,
+    _buildHits: [],     // on-screen construction chips {kind,idx,x,y,r}
+    _carArrive: {},     // idx -> drive-in FX (memory only)
+    _lastBuildHit: 0,
+    _placing: null,     // ghost: {type,gx,gy,w,h,valid,cost,...} until tap-to-build
     _buildBtn: null, _communityBtn: null, _driveBtn: null, _driveBtnOn: null, _musicBtn: null, _musicBtnOn: null, _langBtn: null, _langBtnCur: null, _leftUI: null, _palette: null, _hint: null, _modeTabs: null, _palBuild: null, _palTerrain: null,
 
     // DEFAULT farm view (Hay Day isometric). Chosen via Farm.state.farmStyle()
@@ -381,6 +413,10 @@
     _tw() { return TW * this._zoom * FARM_SCALE; },   // farm tile size (FARM_SCALE = farm-only zoom; bg uses base TW*zoom)
     _th() { return TH * this._zoom * FARM_SCALE; },
     _lang() { return (Farm.state && Farm.state.data && Farm.state.data.language === 'en') ? 'en' : 'zh'; },
+    buildDurationMs: buildDurationMs,
+    buildSkipCoins: buildSkipCoins,
+    buildSkipPoints: buildSkipPoints,
+    isUnderConstruction: isUnderConstruction,
 
     init() {
       if (!this.active() || this._on) return;
@@ -840,7 +876,17 @@
       const p = this._local(e); this._pointers[e.pointerId] = p;
       const ids = Object.keys(this._pointers);
       if (ids.length === 2) { const [a, b] = ids.map(k => this._pointers[k]); this._pinch = { dist: Math.hypot(a.x - b.x, a.y - b.y) || 1, zoom: this._zoom }; this._drag = null; this._moving = null; this._painting = false; this._pressCell = null; this._pressBuilding = -1; return; }
+      if (this._placing) { this._placeDown = true; this._updatePlace(p); return; }
       if (this._build && this._editMode === 'terrain') { const c = this._screenToCell(p.x, p.y); this._painting = true; this._paintCell(c.gx, c.gy); return; }
+      if (this._buildHits && this._buildHits.length) {
+        for (let i = 0; i < this._buildHits.length; i++) {
+          const h = this._buildHits[i];
+          if (Math.hypot(p.x - h.x, p.y - h.y) <= h.r) {
+            this._openBuildSkip(h.kind, h.idx);
+            return;
+          }
+        }
+      }
       if (this._build) {
         if (this._sel >= 0) { const ch = this._delChip((Farm.state.data.map)[this._sel]); if (Math.hypot(p.x - ch.x, p.y - ch.y) <= ch.r) { const o = Farm.state.data.map[this._sel], b = BUILDINGS[o.type]; let refund = b ? Math.round((b.cost || 0) / 2) : 0; if (o.type === 'home') { const spec = this._homeSpec(o); refund = Math.round(Math.max(BUILDINGS.home.cost || 300, spec.cost || 0) / 2); } if (o.type === 'car') { const spec = this._carSpec(o); refund = Math.round(Math.max(BUILDINGS.car.cost || 200, spec.cost || 0) / 2); } Farm.state.data.map.splice(this._sel, 1); this._sel = -1; if (refund > 0) { Farm.state.addCoins(refund); if (Farm.ui && Farm.ui.refreshHUD) Farm.ui.refreshHUD(); if (Farm.ui && Farm.ui.toast) Farm.ui.toast(this._lang() === 'en' ? ('Removed — refunded ' + refund + ' coins') : ('已移除 — 退回 ' + refund + ' 农场币')); } this._refreshPaletteAfford(); Farm.state.save(); this.render(); return; } }
         // Grab by the VISIBLE sprite (generous), not the tiny footprint cell — on a
@@ -874,6 +920,12 @@
       this._drag = { x: p.x, y: p.y, camX: this._camX, camY: this._camY, moved: false, vx: 0, vy: 0, lastX: p.x, lastY: p.y, lastT: performance.now() };
     },
     _move(e) {
+      const loc = this._local(e);
+      if (this._placing && !this._pinch) {
+        if (e.pointerId in this._pointers) this._pointers[e.pointerId] = loc;
+        this._updatePlace(loc);
+        if (e.pointerId in this._pointers || !Object.keys(this._pointers).length) return;
+      }
       if (!(e.pointerId in this._pointers)) return;
       this._pointers[e.pointerId] = this._local(e);
       const ids = Object.keys(this._pointers);
@@ -953,6 +1005,15 @@
         }
         this._pinch = null;
       }
+      if (this._placing) {
+        if (this._pinch) return;
+        if (Object.keys(this._pointers).length) return;
+        this._drag = null;
+        const armed = !this._placeArmedAt || Date.now() >= this._placeArmedAt;
+        if (this._placeDown && armed) this._commitPlace();
+        this._placeDown = false;
+        return;
+      }
       if (this._painting) { this._painting = false; Farm.state.save(); this._drag = null; this.render(); return; }
       if (this._moving) {
         const m = this._moving; this._moving = null;
@@ -1017,7 +1078,19 @@
       const hit = this._plotAtPoint(p.x, p.y);
       if (hit) { this._tapCell(hit.gx, hit.gy); return; }
       const bidx = this._buildingAtPoint(p.x, p.y);
-      if (bidx >= 0) { this._stickyEnd(); const o = Farm.state.data.map[bidx], b = BUILDINGS[o.type]; if (o.type === 'coop') { this._collectCoop(o, p); } else if (b.tap === 'home') { this._openHomePanel(bidx); } else if (b.tap === 'car') { this._tapCar(bidx); } else if (b.tap === 'stall_sale' && Farm.stall) { Farm.stall.open(); } else if (b.tap === 'warehouse' && Farm.warehouse && Farm.warehouse.open) Farm.warehouse.open(); else if (b.tap === 'shop' && Farm.shop && Farm.shop.open) Farm.shop.open(); else if (Farm.ui && Farm.ui.toast) Farm.ui.toast(this._lang() === 'en' ? b.en : b.zh); return; }
+      if (bidx >= 0) {
+        this._stickyEnd();
+        const o = Farm.state.data.map[bidx], b = BUILDINGS[o.type];
+        if (isUnderConstruction(o)) { this._openBuildSkip('map', bidx); return; }
+        if (o.type === 'coop') { this._collectCoop(o, p); }
+        else if (b.tap === 'home') { this._openHomePanel(bidx); }
+        else if (b.tap === 'car') { this._tapCar(bidx); }
+        else if (b.tap === 'stall_sale' && Farm.stall) { Farm.stall.open(); }
+        else if (b.tap === 'warehouse' && Farm.warehouse && Farm.warehouse.open) Farm.warehouse.open();
+        else if (b.tap === 'shop' && Farm.shop && Farm.shop.open) Farm.shop.open();
+        else if (Farm.ui && Farm.ui.toast) Farm.ui.toast(this._lang() === 'en' ? b.en : b.zh);
+        return;
+      }
       this._tapCell(c.gx, c.gy);
     },
     // Frontmost plot whose on-screen sprite box contains (px,py). Planted plots get
@@ -1068,6 +1141,7 @@
         return;
       }
       const plot = Farm.state.data.plots[idx];
+      if (isUnderConstruction(plot)) { this._stickyEnd(); this._openBuildSkip('plot', idx); return; }
       if (!plot || !plot.unlocked) {
         this._stickyEnd();
         const lvl = REQUIRED_LV[idx] || 2;
@@ -1545,6 +1619,7 @@
       const en = this._lang() === 'en';
       if (Farm.ui && Farm.ui.hideModal) Farm.ui.hideModal();
       this._focusHome(o);
+      if (isNew) this._startCarArrive(o);
       if (Farm.audio) Farm.audio.play('achievement');
       if (Farm.ui && Farm.ui.refreshHUD) Farm.ui.refreshHUD();
       if (Farm.ui && Farm.ui.confettiBurst) Farm.ui.confettiBurst();
@@ -1661,21 +1736,14 @@
         if (Farm.ui.toast) Farm.ui.toast(en ? 'Car limit reached. Replace one from the shop instead.' : '车子已经停满。可以在商店里换掉其中一辆。');
         return;
       }
-      const wh = this._carWh(carId);
-      const spot = this._findHomeSpot(wh, -1, null, 'car');
-      if (!spot) {
-        if (Farm.ui.toast) Farm.ui.toast(en
-          ? ('Need a clear ' + wh.w + '×' + wh.h + ' plot')
-          : ('需要 ' + wh.w + '×' + wh.h + ' 格空地'));
-        return;
-      }
       const pay = this._carPay(null, carId);
-      if (!this._spendHomePay(pay, '买车：' + spec.zh + ' / Car: ' + spec.en)) return;
-      const rec = { type: 'car', gx: spot.gx, gy: spot.gy, lv: carId, face: 'r', away: false };
-      (Farm.state.data.map = Farm.state.data.map || []).push(rec);
-      Farm.state.save();
-      this._refreshPaletteAfford();
-      this._revealBuiltCar(rec, spec, true);
+      if (!this._canAffordPay(pay)) return;
+      if (Farm.ui && Farm.ui.hideModal) Farm.ui.hideModal();
+      this._beginPlace({
+        type: 'car', lv: carId,
+        cost: pay.coins, points: pay.points || 0,
+        payDesc: '买车：' + spec.zh + ' / Car: ' + spec.en,
+      });
     },
     // fromId 有值 = 改建补差价；null = 另建付全价（不低于落成价）。
     _homePay(fromId, toId) {
@@ -1690,6 +1758,27 @@
         coins: Math.max(0, (to.cost || 0) - (from.cost || 0)),
         points: Math.max(0, (to.points || 0) - (from.points || 0)),
       };
+    },
+    _canAffordPay(pay) {
+      const en = this._lang() === 'en';
+      const needPts = (pay && pay.points) || 0;
+      const coins = (pay && pay.coins) || 0;
+      const loggedIn = !!(Farm.fbAuth && Farm.fbAuth.isLoggedIn && Farm.fbAuth.isLoggedIn());
+      if (needPts) {
+        if (!loggedIn) {
+          if (Farm.ui.toast) Farm.ui.toast(en ? 'Mansions use store points. Sign in first.' : '豪宅要用超市积分，请先登录。');
+          return false;
+        }
+        if ((Farm.state.data.eastPoints || 0) < needPts) {
+          if (Farm.ui.toast) Farm.ui.toast(en ? 'Not enough store points' : '超市积分不足');
+          return false;
+        }
+      }
+      if (coins > 0 && Farm.state.data.coins < coins) {
+        if (Farm.ui.toast) Farm.ui.toast(en ? 'Not enough coins' : '农场币不足');
+        return false;
+      }
+      return true;
     },
     _spendHomePay(pay, desc) {
       const en = this._lang() === 'en';
@@ -1732,13 +1821,13 @@
       const en = this._lang() === 'en';
       if (Farm.ui && Farm.ui.hideModal) Farm.ui.hideModal();
       this._focusHome(o);
-      if (Farm.audio) Farm.audio.play('achievement');
       if (Farm.ui && Farm.ui.refreshHUD) Farm.ui.refreshHUD();
-      if (Farm.ui && Farm.ui.confettiBurst) Farm.ui.confettiBurst();
+      const wait = o.buildMs ? this._fmtRemain(o.buildMs) : '';
+      if (Farm.audio) Farm.audio.play('buy');
       if (Farm.ui && Farm.ui.toast) {
         Farm.ui.toast(isNew
-          ? (en ? ('Built a new ' + spec.en + '.') : ('新盖了一座：' + spec.zh + '。'))
-          : (en ? ('Moved into ' + spec.en + '.') : ('家换成了：' + spec.zh + '。')), 2600);
+          ? (en ? ('Started a new ' + spec.en + ' (' + wait + '). Tap the site to finish early.') : ('新房已经开工：' + spec.zh + '，大约 ' + wait + '。点工地可以提早完工。'))
+          : (en ? ('Remodeling into ' + spec.en + ' (' + wait + '). Tap the site to finish early.') : ('正在改建成：' + spec.zh + '，大约 ' + wait + '。点工地可以提早完工。')), 2800);
       }
     },
     _homeSprite(o) {
@@ -1893,6 +1982,7 @@
       if (!this._spendHomePay(pay, '改建：' + spec.zh + ' / Remodel: ' + spec.en)) return;
       o.lv = houseId;
       o.gx = gx; o.gy = gy;
+      this._startBuild(o, pay.coins);
       Farm.state.data.homeUpkeepOn = Farm.state.getDateString();
       Farm.state.data.homeNeglected = false;
       if (Farm.lifeStory && Farm.lifeStory.record) {
@@ -1958,28 +2048,14 @@
         if (Farm.ui.toast) Farm.ui.toast(en ? 'House limit reached. Tap a house to remodel.' : '房子已经建满。点现有的房子可以改建。');
         return;
       }
-      const wh = this._homeWh(houseId);
-      const spot = this._findHomeSpot(wh);
-      if (!spot) {
-        if (Farm.ui.toast) Farm.ui.toast(en
-          ? ('Need a clear ' + wh.w + '×' + wh.h + ' plot')
-          : ('需要 ' + wh.w + '×' + wh.h + ' 格空地'));
-        return;
-      }
       const pay = this._homePay(null, houseId);
-      if (!this._spendHomePay(pay, '建房：' + spec.zh + ' / Build: ' + spec.en)) return;
-      const rec = { type: 'home', gx: spot.gx, gy: spot.gy, lv: houseId };
-      (Farm.state.data.map = Farm.state.data.map || []).push(rec);
-      Farm.state.data.homeUpkeepOn = Farm.state.getDateString();
-      Farm.state.data.homeNeglected = false;
-      if (Farm.lifeStory && Farm.lifeStory.record) {
-        Farm.lifeStory.record('homeid_' + houseId,
-          '新盖了一座：' + spec.zh + '。',
-          'Built a new ' + spec.en + '.');
-      }
-      Farm.state.save();
-      this._refreshPaletteAfford();
-      this._revealBuiltHome(rec, spec, true);
+      if (!this._canAffordPay(pay)) return;
+      if (Farm.ui && Farm.ui.hideModal) Farm.ui.hideModal();
+      this._beginPlace({
+        type: 'home', lv: houseId,
+        cost: pay.coins, points: pay.points || 0,
+        payDesc: '建房：' + spec.zh + ' / Build: ' + spec.en,
+      });
     },
 
     _openHomePanel(idx, cat) {
@@ -2370,6 +2446,426 @@
     },
 
     _delChip(o) { const b = this._bldgOf(o) || BUILDINGS[o.type], c = this._cell(o.gx + b.w - 1, o.gy), th = this._th(); return { x: c.x + this._tw() / 2 * 0.5, y: c.y - th * 0.2, r: Math.max(12, th * 0.5) }; },
+    _visitLocked() {
+      return !!(this._visit || (Farm.state && Farm.state._visitLock));
+    },
+    _startBuild(o, cost, type) {
+      if (!o) return false;
+      const kind = type || o.type;
+      let w = 1, h = 1;
+      if (kind !== 'plot') {
+        const b = this._bldgOf(o) || BUILDINGS[kind];
+        w = (b && b.w) || 1; h = (b && b.h) || 1;
+      }
+      const ms = buildDurationMs(kind, w, h);
+      if (ms <= 0) return false;
+      o.buildUntil = Date.now() + ms;
+      o.buildMs = ms;
+      o.buildCost = cost || 0;
+      return true;
+    },
+    _startCarArrive(o) {
+      const map = Farm.state.data.map || [];
+      const idx = map.indexOf(o);
+      if (idx < 0) return;
+      this._carArrive = this._carArrive || {};
+      this._carArrive[idx] = {
+        t0: Date.now(), ms: 3500,
+        fromGx: o.gx - 3.2, fromGy: o.gy - 1.4,
+        toGx: o.gx, toGy: o.gy,
+      };
+    },
+    _arrivePos(idx) {
+      const a = this._carArrive && this._carArrive[idx];
+      if (!a) return null;
+      const k = Math.min(1, (Date.now() - a.t0) / a.ms);
+      if (k >= 1) return null;
+      const e = 1 - Math.pow(1 - k, 2);
+      return {
+        gx: a.fromGx + (a.toGx - a.fromGx) * e,
+        gy: a.fromGy + (a.toGy - a.fromGy) * e,
+        k: k, face: 'r', away: false, moving: true,
+      };
+    },
+    _fmtRemain(ms) {
+      const en = this._lang() === 'en';
+      if (ms >= 60000) return Math.ceil(ms / 60000) + (en ? ' min' : ' 分钟');
+      return Math.max(1, Math.ceil(ms / 1000)) + (en ? ' s' : ' 秒');
+    },
+    _buildName(kind, o) {
+      const en = this._lang() === 'en';
+      if (kind === 'plot') return en ? 'The plot' : '这块菜地';
+      if (o && o.type === 'home') {
+        const spec = this._homeSpec(o);
+        return spec ? (en ? spec.en : spec.zh) : (en ? 'House' : '房子');
+      }
+      const b = (o && this._bldgOf(o)) || (o && BUILDINGS[o.type]);
+      return b ? (en ? b.en : b.zh) : (en ? 'Building' : '建筑');
+    },
+    _clearBuildFields(o) {
+      if (!o) return;
+      delete o.buildUntil; delete o.buildMs; delete o.buildCost;
+    },
+    _tickBuilds() {
+      if (this._visitLocked()) return;
+      const now = Date.now();
+      const map = Farm.state.data.map || [];
+      let changed = false;
+      for (let i = 0; i < map.length; i++) {
+        const o = map[i];
+        if (o && o.buildUntil && o.buildUntil <= now) {
+          this._completeBuild('map', i, false);
+          changed = true;
+        }
+      }
+      const plots = Farm.state.data.plots || [];
+      for (let i = 0; i < plots.length; i++) {
+        const p = plots[i];
+        if (p && p.buildUntil && p.buildUntil <= now) {
+          this._completeBuild('plot', i, false);
+          changed = true;
+        }
+      }
+      if (changed && Farm.state.save) Farm.state.save();
+      const any = map.some((o) => isUnderConstruction(o, now)) || plots.some((p) => isUnderConstruction(p, now));
+      if (any && now - (this._lastBuildHit || 0) > 900) {
+        this._lastBuildHit = now;
+        if (Farm.audio) Farm.audio.play('build');
+      }
+    },
+    _completeBuild(kind, idx, skipped) {
+      const en = this._lang() === 'en';
+      const o = kind === 'plot' ? (Farm.state.data.plots || [])[idx] : (Farm.state.data.map || [])[idx];
+      if (!o) return;
+      const name = this._buildName(kind, o);
+      this._clearBuildFields(o);
+      if (Farm.audio) Farm.audio.play('buildDone');
+      if (kind !== 'plot') {
+        const b = this._bldgOf(o) || BUILDINGS[o.type];
+        const charm = b ? charmOf(b) : 0;
+        if (charm > 0 && Farm.ui && Farm.ui.floatText && this._cv) {
+          const bb = b || { w: 1, h: 1 };
+          const c = this._cell(o.gx + (bb.w - 1) / 2, o.gy + (bb.h - 1) / 2);
+          const r = this._cv.getBoundingClientRect();
+          Farm.ui.floatText('✨+' + charm + (en ? ' charm' : ' 魅力'), r.left + c.x - 20, r.top + c.y - this._th() * 2, '#e8a020');
+        }
+        if (o.type === 'home' && Farm.ui && Farm.ui.confettiBurst) Farm.ui.confettiBurst();
+      }
+      if (Farm.ui && Farm.ui.toast) {
+        Farm.ui.toast(en
+          ? (name + ' is ready' + (skipped ? '.' : '.'))
+          : (name + '建好了。'), 2200);
+      }
+      if (Farm.ui && Farm.ui.refreshHUD) Farm.ui.refreshHUD();
+    },
+    _openBuildSkip(kind, idx) {
+      const en = this._lang() === 'en';
+      const o = kind === 'plot' ? (Farm.state.data.plots || [])[idx] : (Farm.state.data.map || [])[idx];
+      if (!isUnderConstruction(o)) return;
+      if (this._visitLocked()) {
+        if (Farm.ui && Farm.ui.toast) Farm.ui.toast(en ? 'Still being built.' : '还在建造。');
+        return;
+      }
+      const remainMs = o.buildUntil - Date.now();
+      const name = this._buildName(kind, o);
+      const wait = this._fmtRemain(remainMs);
+      const coins = buildSkipCoins(o.buildCost || 0, remainMs, o.buildMs || remainMs);
+      const pts = buildSkipPoints(remainMs);
+      let body = '<div style="font-size:15px;line-height:1.55;color:var(--warm-text,#4a3a28);margin:4px 0 12px;">'
+        + (en
+          ? (name + ' is still being built. About ' + wait + ' left.')
+          : (name + '还在建造，大约还要 ' + wait + '。'))
+        + '</div>';
+      if (remainMs < 2000) {
+        body += '<div style="font-size:14px;color:var(--warm-text-soft);">'
+          + (en ? 'Almost done.' : '就快好了。') + '</div>';
+        body += '<div class="btn-row" style="margin-top:12px;"><button class="btn secondary" id="buildSkipWait" style="width:100%;">'
+          + (en ? 'OK' : '好') + '</button></div>';
+      } else {
+        body += '<div style="font-size:14px;line-height:1.5;color:var(--warm-text-soft);margin-bottom:12px;">'
+          + (en ? 'Pay with farm coins or store points to finish it now.' : '花农场币或超市积分都可以现在完工。')
+          + '</div>';
+        body += '<button class="btn" id="buildSkipCoins" style="width:100%;margin-bottom:8px;">'
+          + (en ? ('Finish now · ' + coins) : ('现在完工 · ' + coins))
+          + ' <span class="coin-icon"></span></button>';
+        body += '<button class="btn secondary" id="buildSkipPoints" style="width:100%;margin-bottom:8px;">'
+          + (en ? ('Finish now · ' + pts) : ('现在完工 · ' + pts))
+          + ' <span class="points-icon"></span></button>';
+        body += '<button class="btn secondary" id="buildSkipWait" style="width:100%;">'
+          + (en ? "I'll wait" : '先等着') + '</button>';
+      }
+      if (!(Farm.ui && Farm.ui.showModal)) return;
+      Farm.ui.showModal('<h2 class="modal-title">' + (en ? 'Under construction' : '正在建造') + '</h2>' + body);
+      const waitBtn = document.getElementById('buildSkipWait');
+      if (waitBtn) waitBtn.onclick = () => Farm.ui.hideModal();
+      const coinBtn = document.getElementById('buildSkipCoins');
+      if (coinBtn) coinBtn.onclick = () => this._payBuildSkip(kind, idx, 'coins');
+      const ptBtn = document.getElementById('buildSkipPoints');
+      if (ptBtn) ptBtn.onclick = () => this._payBuildSkip(kind, idx, 'points');
+    },
+    _payBuildSkip(kind, idx, payWith) {
+      const en = this._lang() === 'en';
+      const o = kind === 'plot' ? (Farm.state.data.plots || [])[idx] : (Farm.state.data.map || [])[idx];
+      if (!isUnderConstruction(o) || this._visitLocked()) return;
+      const remainMs = o.buildUntil - Date.now();
+      if (remainMs < 2000) return;
+      if (payWith === 'points') {
+        const pts = buildSkipPoints(remainMs);
+        const loggedIn = !!(Farm.fbAuth && Farm.fbAuth.isLoggedIn && Farm.fbAuth.isLoggedIn());
+        if (!loggedIn) {
+          if (Farm.ui && Farm.ui.toast) Farm.ui.toast(en ? 'Store points need sign-in first.' : '超市积分请先登录。');
+          return;
+        }
+        if ((Farm.state.data.eastPoints || 0) < pts) {
+          if (Farm.ui && Farm.ui.toast) Farm.ui.toast(en ? ('Need ' + (pts - (Farm.state.data.eastPoints || 0)) + ' more points') : ('还差 ' + (pts - (Farm.state.data.eastPoints || 0)) + ' 超市积分'));
+          return;
+        }
+        if (!Farm.state.spendEastPoints(pts, {
+          source: 'iso_build_skip',
+          description: (en ? 'Finish construction: ' : '建造加速：') + this._buildName(kind, o),
+        })) return;
+      } else {
+        const coins = buildSkipCoins(o.buildCost || 0, remainMs, o.buildMs || remainMs);
+        if ((Farm.state.data.coins || 0) < coins) {
+          if (Farm.ui && Farm.ui.toast) Farm.ui.toast(en ? ('Need ' + (coins - (Farm.state.data.coins || 0)) + ' more coins') : ('还差 ' + (coins - (Farm.state.data.coins || 0)) + ' 农场币'));
+          return;
+        }
+        if (!Farm.state.spendCoins(coins)) return;
+      }
+      this._completeBuild(kind, idx, true);
+      if (Farm.state.save) Farm.state.save();
+      if (Farm.ui && Farm.ui.hideModal) Farm.ui.hideModal();
+      this.render();
+    },
+    _placeBldg(opts) {
+      const type = opts.type;
+      if (type === '__plot') return { w: 1, h: 1, zh: '菜地', en: 'Plot', cost: opts.cost || 0, img: 'iso_dirt' };
+      const fake = { type: type, lv: opts.lv || 1 };
+      return this._bldgOf(fake) || BUILDINGS[type];
+    },
+    _placeValid(gx, gy, type, b) {
+      if (type === '__plot') return this._cellFreeForPlot(gx, gy);
+      return this._footprintFree(gx, gy, type, -1, { w: b.w, h: b.h });
+    },
+    _hasPlaceSpot(type, b) {
+      if (type === '__plot') {
+        const ob = this._ownedBounds();
+        for (let gy = ob.y1; gy <= ob.y2; gy++) for (let gx = ob.x1; gx <= ob.x2; gx++) {
+          if (this._cellFreeForPlot(gx, gy)) return true;
+        }
+        return false;
+      }
+      for (let gy = 0; gy + b.h <= ROWS; gy++) for (let gx = 0; gx + b.w <= COLS; gx++) {
+        if (this._footprintFree(gx, gy, type, -1, { w: b.w, h: b.h })) return true;
+      }
+      return false;
+    },
+    _beginPlace(opts) {
+      const en = this._lang() === 'en';
+      const type = opts.type;
+      const b = this._placeBldg(opts);
+      if (!b) return;
+      if (!this._hasPlaceSpot(type, b)) {
+        if (Farm.ui && Farm.ui.toast) Farm.ui.toast(en ? 'No room' : '没有空位了');
+        return;
+      }
+      if (!this._build) this.toggleBuild();
+      else if (this._editMode !== 'build') this.setEditMode('build');
+      const ctr = this._screenToCell(this._cssW() / 2, this._cssH() * 0.46);
+      const gx = ctr.gx - (b.w >> 1), gy = ctr.gy - (b.h >> 1);
+      this._placing = {
+        type: type, lv: opts.lv || 1,
+        cost: opts.cost || 0, points: opts.points || 0, payDesc: opts.payDesc || '',
+        gx: gx, gy: gy, w: b.w, h: b.h, bldg: b,
+        valid: this._placeValid(gx, gy, type, b),
+      };
+      this._sel = -1; this._moving = null;
+      this._placeDown = false;
+      this._placeArmedAt = Date.now() + 400;
+      this._bindPlaceMove();
+      this._placeHint();
+      this._highlightPalette(type);
+      this.render();
+      if (Farm.audio) Farm.audio.play('tap');
+      if (Farm.ui && Farm.ui.toast) Farm.ui.toast(en
+        ? 'Move it to a clear patch, then tap to start building.'
+        : '拖到想放的空地，点一下开始建造。', 2600);
+    },
+    _updatePlace(p) {
+      const pl = this._placing; if (!pl || !p) return;
+      const c = this._screenToCell(p.x, p.y);
+      const gx = c.gx - (pl.w >> 1), gy = c.gy - (pl.h >> 1);
+      if (gx === pl.gx && gy === pl.gy) return;
+      pl.gx = gx; pl.gy = gy;
+      pl.valid = this._placeValid(gx, gy, pl.type, pl.bldg);
+      this.render();
+    },
+    _bindPlaceMove() {
+      if (this._placeMoveBound) return;
+      this._placeMoveBound = (e) => {
+        if (!this._placing || this._pinch || !this._cv) return;
+        const r = this._cv.getBoundingClientRect();
+        this._updatePlace({ x: e.clientX - r.left, y: e.clientY - r.top });
+      };
+      window.addEventListener('pointermove', this._placeMoveBound, { passive: true });
+    },
+    _unbindPlaceMove() {
+      if (!this._placeMoveBound) return;
+      window.removeEventListener('pointermove', this._placeMoveBound);
+      this._placeMoveBound = null;
+    },
+    _endPlace() {
+      this._placing = null;
+      this._placeDown = false;
+      this._unbindPlaceMove();
+      this._highlightPalette(null);
+      this._placeHint();
+    },
+    _cancelPlace() {
+      if (!this._placing) return;
+      this._endPlace();
+      this.render();
+    },
+    _placeHint() {
+      if (!this._hint) return;
+      const s = this._hint.querySelector('span'); if (!s) return;
+      const en = this._lang() === 'en';
+      if (this._placing) {
+        s.textContent = en ? 'Move to a clear patch, then tap to start building' : '拖到空地，点一下开始建造';
+        return;
+      }
+      const terr = this._editMode === 'terrain';
+      s.textContent = terr ? (en ? 'Tap / drag to paint terrain' : '点按或拖动涂刷地形（草地=擦除）') : (en ? ('✨ Charm ' + this._farmCharm() + ' · drag house, plot or deco · ✕ remove building (50% back)') : ('✨ 农场魅力 ' + this._farmCharm() + ' · 拖房子、菜地或装饰 · ✕ 拆除建筑退一半'));
+    },
+    _highlightPalette(type) {
+      if (!this._palBuild) return;
+      this._palBuild.querySelectorAll('button[data-type]').forEach((btn) => {
+        btn.style.outline = (type && btn.dataset.type === type) ? '3px solid #FF9800' : 'none';
+      });
+    },
+    _commitPlace() {
+      const pl = this._placing, en = this._lang() === 'en';
+      if (!pl) return false;
+      if (!pl.valid) {
+        if (Farm.ui && Farm.ui.toast) Farm.ui.toast(en ? 'That patch is taken. Try another.' : '这里放不下，换一块空地。');
+        if (Farm.audio) Farm.audio.play('error');
+        return false;
+      }
+      if (pl.type === '__plot') {
+        const cost = pl.cost;
+        if (cost > 0 && !Farm.state.spendCoins(cost)) {
+          if (Farm.ui && Farm.ui.toast) Farm.ui.toast(en ? 'Not enough coins' : '农场币不足');
+          return false;
+        }
+        if (!Farm.state.addExtraPlot({ gx: pl.gx, gy: pl.gy })) {
+          if (cost > 0) Farm.state.addCoins(cost);
+          return false;
+        }
+        const plots = Farm.state.data.plots || [];
+        const rec = plots[plots.length - 1];
+        if (rec) this._startBuild(rec, cost, 'plot');
+        this._buildLayout(); this._pcs = null;
+        Farm.state.save();
+        this._endPlace();
+        this._refreshPaletteAfford();
+        if (Farm.ui && Farm.ui.refreshHUD) Farm.ui.refreshHUD();
+        if (Farm.audio) Farm.audio.play('buy');
+        const wait = rec && rec.buildMs ? this._fmtRemain(rec.buildMs) : this._fmtRemain(20000);
+        if (Farm.ui && Farm.ui.toast) Farm.ui.toast(en
+          ? ('Plot started (' + wait + '). Tap it to finish early.')
+          : ('菜地已经开工，大约 ' + wait + '。点工地可以提早完工。'), 2600);
+        this.render();
+        return true;
+      }
+      const pay = { coins: pl.cost || 0, points: pl.points || 0 };
+      if (pl.type === 'home' || pl.type === 'car' || pay.points) {
+        if (!this._spendHomePay(pay, pl.payDesc || ((en ? 'Build ' : '建造：') + (en ? pl.bldg.en : pl.bldg.zh)))) return false;
+      } else if (pay.coins > 0 && !Farm.state.spendCoins(pay.coins)) {
+        if (Farm.ui && Farm.ui.toast) Farm.ui.toast(en ? 'Not enough coins' : '农场币不足');
+        return false;
+      }
+      const rec = { type: pl.type, gx: pl.gx, gy: pl.gy };
+      if (pl.type === 'home' || pl.type === 'car') rec.lv = pl.lv || 1;
+      if (pl.type === 'car') { rec.face = 'r'; rec.away = false; }
+      (Farm.state.data.map = Farm.state.data.map || []).push(rec);
+      this._sel = Farm.state.data.map.length - 1;
+      if (pl.type === 'car') {
+        this._endPlace();
+        Farm.state.save();
+        this._refreshPaletteAfford();
+        const spec = this._carSpec(rec);
+        this._revealBuiltCar(rec, spec, true);
+        this.render();
+        return true;
+      }
+      this._startBuild(rec, pl.cost || 0);
+      if (pl.type === 'home') {
+        Farm.state.data.homeUpkeepOn = Farm.state.getDateString();
+        Farm.state.data.homeNeglected = false;
+        const spec = this._homeSpec(rec);
+        if (Farm.lifeStory && Farm.lifeStory.record && spec) {
+          Farm.lifeStory.record('homeid_' + (rec.lv || 1),
+            '新盖了一座：' + spec.zh + '。',
+            'Built a new ' + spec.en + '.');
+        }
+      }
+      Farm.state.save();
+      this._endPlace();
+      this._refreshPaletteAfford();
+      if (Farm.ui && Farm.ui.refreshHUD) Farm.ui.refreshHUD();
+      if (Farm.audio) Farm.audio.play('buy');
+      const b = rec.type === 'home' ? (this._homeSpec(rec) || pl.bldg) : pl.bldg;
+      const wait = rec.buildMs ? this._fmtRemain(rec.buildMs) : '';
+      const nm = b ? (en ? (b.en || pl.bldg.en) : (b.zh || pl.bldg.zh)) : '';
+      if (Farm.ui && Farm.ui.toast) Farm.ui.toast(en
+        ? (nm + ' started (' + wait + '). Tap the site to finish early with coins or points.')
+        : (nm + '已经开工，大约 ' + wait + '。点工地可以用农场币或超市积分提早完工。'), 2800);
+      this.render();
+      return true;
+    },
+    _drawPlaceGhost() {
+      const pl = this._placing; if (!pl) return;
+      const b = pl.bldg, o = { type: pl.type === '__plot' ? 'well' : pl.type, gx: pl.gx, gy: pl.gy, lv: pl.lv };
+      const ctx = this._ctx, tw = this._tw(), th = this._th(), en = this._lang() === 'en';
+      ctx.save();
+      ctx.fillStyle = pl.valid ? 'rgba(76,175,80,0.46)' : 'rgba(220,60,60,0.46)';
+      ctx.strokeStyle = pl.valid ? 'rgba(255,248,220,0.95)' : 'rgba(255,220,220,0.95)';
+      ctx.lineWidth = Math.max(2.5, th * 0.12);
+      for (let y = 0; y < pl.h; y++) for (let x = 0; x < pl.w; x++) {
+        const cc2 = this._cell(pl.gx + x, pl.gy + y);
+        this._diamond(cc2.x, cc2.y, tw, th); ctx.fill(); ctx.stroke();
+      }
+      if (pl.type === '__plot') {
+        const cc2 = this._cell(pl.gx, pl.gy);
+        ctx.fillStyle = 'rgba(120, 82, 42, 0.7)';
+        this._diamond(cc2.x, cc2.y, tw * 0.72, th * 0.72); ctx.fill();
+      } else {
+        this._drawBuilding(o, b, false, null);
+      }
+      ctx.restore();
+      if (!pl.valid) {
+        const mid = this._cell(pl.gx + (pl.w - 1) / 2, pl.gy + (pl.h - 1) / 2);
+        this._drawBlockedX(mid.x, mid.y);
+      }
+      const cap = this._cell(pl.gx + (pl.w - 1) / 2, pl.gy);
+      const label = pl.valid
+        ? (en ? 'Tap to build' : '点这里开工')
+        : (en ? 'Need a clear patch' : '这里放不下');
+      ctx.save();
+      ctx.font = '700 ' + Math.max(13, th * 0.48) + 'px "Noto Sans SC","Plus Jakarta Sans",sans-serif';
+      const lw = ctx.measureText(label).width + th * 0.7;
+      const lh = th * 0.7, bx = cap.x, byy = cap.y - th * 0.85;
+      ctx.beginPath();
+      if (ctx.roundRect) ctx.roundRect(bx - lw / 2, byy - lh / 2, lw, lh, lh * 0.4);
+      else ctx.rect(bx - lw / 2, byy - lh / 2, lw, lh);
+      ctx.fillStyle = pl.valid ? 'rgba(46,120,62,0.94)' : 'rgba(160,50,40,0.94)';
+      ctx.fill();
+      ctx.fillStyle = '#fff8ec';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(label, bx, byy + 0.5);
+      ctx.restore();
+    },
     _addBuilding(type) {
       const b = BUILDINGS[type], en = this._lang() === 'en', cost = b.cost || 0;
       if (type === 'home') {
@@ -2385,44 +2881,18 @@
         const map = Farm.state.data.map || [];
         const at = map.findIndex((m) => m && m.type === type);
         if (at >= 0) {
+          if (isUnderConstruction(map[at])) { this._openBuildSkip('map', at); return; }
           if (b.tap === 'stall_sale' && Farm.stall) Farm.stall.open();
           return;
         }
       }
-      // must be able to afford it (农场币) — show the shortfall, nudge to earn more.
       if (cost > 0 && Farm.state.data.coins < cost) {
         const need = cost - Farm.state.data.coins;
         if (Farm.ui && Farm.ui.toast) Farm.ui.toast(en ? ('Need ' + need + ' more coins') : ('还差 ' + need + ' 农场币'));
         return;
       }
-      const ctr = this._screenToCell(this._cssW() / 2, this._cssH() / 2);
-      const c0x = ctr.gx - (b.w >> 1), c0y = ctr.gy - (b.h >> 1);
-      // 候选位按「离屏幕中心多近」排（2026-08-15）：原来中心占着就从 (0,0) 逐行扫，
-      // 新建筑常被丢到地图角落、半个身子在画面外，玩家还以为没建成
-      const tries = [[c0x, c0y]];
-      for (let gy = 0; gy + b.h <= ROWS; gy++) for (let gx = 0; gx + b.w <= COLS; gx++) tries.push([gx, gy]);
-      tries.sort((p1, p2) => (Math.abs(p1[0] - c0x) + Math.abs(p1[1] - c0y)) - (Math.abs(p2[0] - c0x) + Math.abs(p2[1] - c0y)));
-      for (const [gx, gy] of tries) if (this._footprintFree(gx, gy, type, -1)) {
-        if (cost > 0 && !Farm.state.spendCoins(cost)) { if (Farm.ui && Farm.ui.toast) Farm.ui.toast(en ? 'Not enough coins' : '农场币不足'); return; }
-        const rec = { type, gx, gy }; if (type === 'home' || type === 'car') rec.lv = 1;
-        (Farm.state.data.map = Farm.state.data.map || []).push(rec); this._sel = Farm.state.data.map.length - 1;
-        Farm.state.save(); this.render();
-        if (Farm.ui && Farm.ui.refreshHUD) Farm.ui.refreshHUD();
-        this._refreshPaletteAfford();
-        let c = this._cell(gx + (b.w - 1) / 2, gy + (b.h - 1) / 2);
-        // 落点跑出画面（或贴边）→ 镜头挪过去，让人看见自己刚花钱建的东西
-        const W = this._cssW(), H = this._cssH(), m = this._tw();
-        if (c.x < m || c.x > W - m || c.y < m * 1.5 || c.y > H - m) {
-          this._camX += c.x - W / 2; this._camY += c.y - H * 0.55; this._clampCam(); this.render();
-          c = this._cell(gx + (b.w - 1) / 2, gy + (b.h - 1) / 2);
-        }
-        const charm = charmOf(b), r = this._cv.getBoundingClientRect();
-        if (Farm.ui && Farm.ui.floatText) Farm.ui.floatText('✨+' + charm + (en ? ' charm' : ' 魅力'), r.left + c.x - 20, r.top + c.y - this._th() * 2, '#e8a020');
-        if (Farm.audio) Farm.audio.play('coin');
-        if (Farm.ui && Farm.ui.toast) Farm.ui.toast(en ? ('Placed ' + b.en + ' (-' + cost + ' coins) — drag to move') : ('已建' + b.zh + '（-' + cost + ' 农场币）拖动可移动'));
-        return;
-      }
-      if (Farm.ui && Farm.ui.toast) Farm.ui.toast(en ? 'No room' : '没有空位了');
+      if (this._placing && this._placing.type === type) { this._cancelPlace(); return; }
+      this._beginPlace({ type: type, lv: 1, cost: cost });
     },
     _PLOT_COST: 200,
     _cellFreeForPlot(gx, gy) {
@@ -2446,35 +2916,14 @@
     },
     _addPlot() {   // buy a new garden plot (菜地) on owned land → farmable anywhere you've expanded
       const en = this._lang() === 'en';
-      // 统一上限：与商城 extra_plot 同一计数器 extraPlots + 同一帽 EXTRA_PLOT_CAP。
       if (Farm.state.extraPlotCapReached && Farm.state.extraPlotCapReached()) {
         if (Farm.ui && Farm.ui.toast) Farm.ui.toast(en ? 'Plot limit reached for now — level up to unlock more land' : '扩地已达上限 — 升级会解锁更多土地');
         return;
       }
       const cost = this._plotCost();
       if (Farm.state.data.coins < cost) { if (Farm.ui && Farm.ui.toast) Farm.ui.toast(en ? ('Need ' + (cost - Farm.state.data.coins) + ' more coins') : ('还差 ' + (cost - Farm.state.data.coins) + ' 农场币')); return; }
-      const ob = this._ownedBounds(), ctr = this._screenToCell(this._cssW() / 2, this._cssH() / 2);
-      const tries = [[ctr.gx, ctr.gy]];
-      for (let gy = ob.y1; gy <= ob.y2; gy++) for (let gx = ob.x1; gx <= ob.x2; gx++) tries.push([gx, gy]);
-      Object.keys(Farm.state.data.clearedCells || {}).forEach((k) => {
-        const a = k.split(',');
-        tries.push([+a[0], +a[1]]);
-      });
-      for (const [gx, gy] of tries) if (this._cellFreeForPlot(gx, gy)) {
-        if (!Farm.state.spendCoins(cost)) return;
-        // 走同一计数器：extraPlots +1（同帽同价），plot 带上选好的 gx,gy。
-        if (!Farm.state.addExtraPlot({ gx, gy })) { Farm.state.addCoins(cost); return; }   // 上限竞态兜底退款
-        this._buildLayout(); this._pcs = null;   // refresh cell→plot map + plotCellSet cache
-        Farm.state.save(); this.render();
-        if (Farm.ui && Farm.ui.refreshHUD) Farm.ui.refreshHUD();
-        this._refreshPaletteAfford();
-        const c = this._cell(gx, gy), r = this._cv.getBoundingClientRect();
-        if (Farm.ui && Farm.ui.floatText) Farm.ui.floatText('🌱 -' + cost, r.left + c.x - 16, r.top + c.y - this._th(), '#3a8c50');
-        if (Farm.audio) Farm.audio.play('coin');
-        if (Farm.ui && Farm.ui.toast) Farm.ui.toast(en ? 'New plot ready' : '新菜地已就绪');
-        return;
-      }
-      if (Farm.ui && Farm.ui.toast) Farm.ui.toast(en ? 'No free tile — expand land first' : '当前没有空位，请先扩地');
+      if (this._placing && this._placing.type === '__plot') { this._cancelPlace(); return; }
+      this._beginPlace({ type: '__plot', cost: cost });
     },
     _adjacentOwned(gx, gy) {
       const dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]];
@@ -2748,7 +3197,7 @@
       pit.innerHTML = '<div style="font-size:11px;color:#3a8c50;margin-top:4px;font-weight:600">🪓 ' + (en ? 'Clear' : '开垦') + '</div><div class="palCost" style="font-size:12px;font-weight:600;color:#3a8c50;margin-top:1px"><span class="coin-icon"></span> ' + this._plotCost() + '</div>';
       const pic = document.createElement('div'); pic.style.cssText = 'width:44px;height:38px;margin:0 auto;background-size:contain;background-repeat:no-repeat;background-position:center;'; pic.style.backgroundImage = "url('" + ASSET_DIR + "hd_soil.webp')"; pit.insertBefore(pic, pit.firstChild);
       pit.onclick = () => this._enterClearMode(); pb.appendChild(pit);
-      PALETTE.forEach((type) => { const b = BUILDINGS[type]; const item = document.createElement('button'); item.dataset.type = type; item.style.cssText = 'border:1px solid #e0e0e0;border-radius:14px;background:#fff;padding:8px 10px 6px;min-width:64px;flex:0 0 auto;cursor:pointer;font:500 12px/1.3 "Noto Sans SC",system-ui,sans-serif;color:#444;'; item.innerHTML = '<div style="font-size:11px;color:#888;margin-top:4px">' + (en ? b.en : b.zh) + '</div><div class="palCost" style="font-size:12px;font-weight:600;color:#3a8c50;margin-top:1px"><span class="coin-icon"></span> ' + (b.cost || 0) + '</div>'; const ic = document.createElement('div'); ic.style.cssText = 'width:44px;height:38px;margin:0 auto;background-size:contain;background-repeat:no-repeat;background-position:center;'; ic.style.backgroundImage = "url('" + ASSET_DIR + ASSET_SRC[b.img] + "')"; item.insertBefore(ic, item.firstChild); item.onclick = () => this._addBuilding(type); pb.appendChild(item); });
+      PALETTE.forEach((type) => { const b = BUILDINGS[type]; const item = document.createElement('button'); item.dataset.type = type; item.style.cssText = 'border:1px solid #e0e0d0;border-radius:14px;background:#fff;padding:8px 10px 6px;min-width:64px;flex:0 0 auto;cursor:pointer;font:500 12px/1.3 "Noto Sans SC",system-ui,sans-serif;color:#444;touch-action:manipulation;'; item.innerHTML = '<div style="font-size:11px;color:#888;margin-top:4px">' + (en ? b.en : b.zh) + '</div><div class="palCost" style="font-size:12px;font-weight:600;color:#3a8c50;margin-top:1px"><span class="coin-icon"></span> ' + (b.cost || 0) + '</div>'; const ic = document.createElement('div'); ic.style.cssText = 'width:44px;height:38px;margin:0 auto;background-size:contain;background-repeat:no-repeat;background-position:center;'; ic.style.backgroundImage = "url('" + ASSET_DIR + ASSET_SRC[b.img] + "')"; item.insertBefore(ic, item.firstChild); item.onpointerdown = (ev) => ev.stopPropagation(); item.onclick = (ev) => { ev.stopPropagation(); this._addBuilding(type); }; pb.appendChild(item); });
       this._palBuild = pb; tray.appendChild(pb);
       const pt = document.createElement('div'); pt.style.cssText = rowCss;
       BRUSHES.forEach((br) => { const item = document.createElement('button'); item.dataset.brush = br.key; item.style.cssText = 'border:1px solid #e0e0e0;border-radius:14px;background:#fff;padding:8px 10px 6px;min-width:64px;flex:0 0 auto;cursor:pointer;font:500 12px/1.3 "Noto Sans SC",system-ui,sans-serif;color:#444;'; item.innerHTML = '<div style="width:40px;height:30px;margin:0 auto;border-radius:8px;background:' + br.color + '"></div><div style="font-size:11px;color:#888;margin-top:4px">' + (en ? br.en : br.zh) + '</div>'; item.onclick = () => this.setBrush(br.key); pt.appendChild(item); });
@@ -2926,10 +3375,11 @@
       if (this._palTerrain) this._palTerrain.style.display = terr ? 'flex' : 'none';
       if (this._modeTabs) Array.from(this._modeTabs.children).forEach((t) => { const on = t.dataset.mode === this._editMode; t.style.background = on ? '#FF9800' : '#eee'; t.style.color = on ? '#fff' : '#777'; });
       if (this._palTerrain) Array.from(this._palTerrain.children).forEach((it) => { it.style.outline = (it.dataset.brush === this._brush) ? '3px solid #FF9800' : 'none'; });
-      if (this._hint) { const s = this._hint.querySelector('span'); if (s) s.textContent = terr ? (en ? 'Tap / drag to paint terrain' : '点按或拖动涂刷地形（草地=擦除）') : (en ? ('✨ Charm ' + this._farmCharm() + ' · drag house, plot or deco · ✕ remove building (50% back)') : ('✨ 农场魅力 ' + this._farmCharm() + ' · 拖房子、菜地或装饰 · ✕ 拆除建筑退一半')); }
+      this._placeHint();
+      this._highlightPalette(this._placing ? this._placing.type : null);
       this._layoutUI();
     },
-    setEditMode(m) { this._editMode = m; this._sel = -1; this._moving = null; this._refreshModeUI(); this.render(); },
+    setEditMode(m) { this._editMode = m; this._sel = -1; this._moving = null; if (m === 'terrain') this._cancelPlace(); this._refreshModeUI(); this.render(); },
     setBrush(b) { this._brush = b; this._refreshModeUI(); },
     toggleBuild() {
       this._stickyEnd();   // 进出建造模式都算「打开面板」→ 退出粘性连续种植
@@ -2948,6 +3398,7 @@
         this._setChromeHidden(true); this._resize();
         this._buildFrame(); this._refreshPaletteAfford();
       } else {
+        this._cancelPlace();
         this._sel = -1; this._moving = null; this._painting = false; this._editMode = 'build'; Farm.state.save();
         this._setChromeHidden(false); this._resize();
         if (this._savedView) { this._zoom = this._savedView.zoom; this._camX = this._savedView.camX; this._camY = this._savedView.camY; this._savedView = null; this._clampCam(); }
@@ -2987,19 +3438,26 @@
     },
 
     // ---- render ----
-    _blit(im, cx, by, maxW, maxH, flipX) {
+    _blit(im, cx, by, maxW, maxH, flipX, rise) {
       if (!(im instanceof Image) || !im.width) return false;
       const s = Math.min(maxW / im.width, maxH / im.height), w = im.width * s, h = im.height * s;
       const ctx = this._ctx;
+      const vis = (rise == null || rise >= 1) ? 1 : Math.max(0, rise);
+      if (vis <= 0) return true;
+      ctx.save();
+      if (vis < 1) {
+        ctx.beginPath();
+        ctx.rect(cx - w / 2 - 1, by - h * vis, w + 2, h * vis + 2);
+        ctx.clip();
+      }
       if (flipX) {
-        ctx.save();
         ctx.translate(cx, by);
         ctx.scale(-1, 1);
         ctx.drawImage(im, -w / 2, -h, w, h);
-        ctx.restore();
       } else {
         ctx.drawImage(im, cx - w / 2, by - h, w, h);
       }
+      ctx.restore();
       return true;
     },
     _blitCar(im, cx, by, maxW, maxH, flipX, mot) {
@@ -4490,6 +4948,15 @@
     },
     render() {
       if (!this._on) return;
+      this._tickBuilds();
+      this._buildHits = [];
+      if (this._carArrive) {
+        const nowA = Date.now();
+        Object.keys(this._carArrive).forEach((k) => {
+          const a = this._carArrive[k];
+          if (!a || nowA - a.t0 >= a.ms) delete this._carArrive[k];
+        });
+      }
       if (Farm.farmer && Farm.farmer.tick) Farm.farmer.tick(this);
       this._syncDriveBtn();   // 上/下车是 tick 里发生的，按钮显隐跟着它走
       this._syncMusicBtn();   // 设置面板里也能改音乐开关，外观要跟着走
@@ -4579,8 +5046,9 @@
         const mv = this._moving && this._moving.kind === 'building' && this._moving.idx === i;
         // 正在被开的那辆车按 actor 的实时位置画（跟 _moving 同一个套路）
         const dv = (Farm.farmer && Farm.farmer.carPos) ? Farm.farmer.carPos(i) : null;
-        const gx = mv ? this._moving.gx : (dv ? dv.gx : o.gx);
-        const gy = mv ? this._moving.gy : (dv ? dv.gy : o.gy);
+        const av = this._arrivePos(i);
+        const gx = mv ? this._moving.gx : (dv ? dv.gx : (av ? av.gx : o.gx));
+        const gy = mv ? this._moving.gy : (dv ? dv.gy : (av ? av.gy : o.gy));
         // 必须带 lv：_homeSprite / _homeDrawMul / _bldgOf 靠它换图换尺寸。只传 type+坐标会永远画 1 级。
         draws.push({ d: (gx + gy) + (b.w - 1) + (b.h - 1) + 0.5, fn: () => this._drawBuilding({ type: o.type, gx, gy, lv: o.lv }, b, mv, i) });
       }
@@ -4653,6 +5121,7 @@
       this._drawLockedLand();
       this._drawGoldenHour(W, H);
       this._drawParticles(tw); this._drawFestival();
+      if (this._placing) this._drawPlaceGhost();
     },
     _rectPath(x1, y1, x2, y2) {   // cell-rect → screen parallelogram path
       const ctx = this._ctx, a = this._cell(x1, y1), b = this._cell(x2 + 1, y1), c = this._cell(x2 + 1, y2 + 1), d = this._cell(x1, y2 + 1);
@@ -4804,6 +5273,19 @@
         if (reqLv === this._nextLockLv) this._drawLock(c.x, c.y + th * 0.02, th * 0.24, 0.40);
         return;
       }
+      if (isUnderConstruction(plot)) {
+        const remainMs = plot.buildUntil - Date.now();
+        const buildProg = Math.max(0.12, 1 - remainMs / (plot.buildMs || 1));
+        ctx.save();
+        ctx.fillStyle = 'rgba(120, 82, 42, ' + (0.28 + buildProg * 0.35) + ')';
+        this._diamond(c.x, c.y, tw * (0.55 + buildProg * 0.22), th * (0.55 + buildProg * 0.22));
+        ctx.fill();
+        ctx.restore();
+        this._drawBuildDust({ gx: gx, gy: gy }, { w: 1, h: 1 }, buildProg);
+        this._drawBuildWorkers({ gx: gx, gy: gy, type: 'plot' }, { w: 1, h: 1 }, buildProg);
+        this._drawBuildChip(plot, c, c.y + th * 0.1, { sc: 1.4 }, idx, 'plot');
+        return;
+      }
       if (!plot.crop) return;
       const p = Farm.crops.getProgress ? Farm.crops.getProgress(plot) : 1, mature = Farm.crops.isMature(plot);
       const tNow = Date.now() / 1000;
@@ -4884,6 +5366,128 @@
         bar(bx, bw * Math.max(0.06, p), 'rgba(123,192,67,0.78)');
       }
     },
+    _drawScaffold(o, b, cc, by, box, progress) {
+      const ctx = this._ctx, tw = this._tw(), th = this._th();
+      const h = box.h * Math.max(0.28, progress) * 0.92;
+      const corners = [
+        this._cell(o.gx, o.gy),
+        this._cell(o.gx + b.w - 1, o.gy),
+        this._cell(o.gx, o.gy + b.h - 1),
+        this._cell(o.gx + b.w - 1, o.gy + b.h - 1),
+      ];
+      ctx.save();
+      ctx.strokeStyle = 'rgba(150, 104, 52, 0.92)';
+      ctx.lineWidth = Math.max(2, th * 0.075);
+      ctx.lineCap = 'round';
+      corners.forEach((c) => {
+        ctx.beginPath();
+        ctx.moveTo(c.x, c.y + th * 0.18);
+        ctx.lineTo(c.x - tw * 0.05, c.y + th * 0.18 - h);
+        ctx.stroke();
+      });
+      ctx.strokeStyle = 'rgba(196, 150, 88, 0.88)';
+      ctx.lineWidth = Math.max(1.6, th * 0.055);
+      const bands = [0.32, 0.58, 0.84].filter((t) => t <= progress + 0.12);
+      bands.forEach((t) => {
+        const yOff = th * 0.18 - h * t;
+        ctx.beginPath();
+        ctx.moveTo(corners[0].x - tw * 0.05, corners[0].y + yOff);
+        ctx.lineTo(corners[1].x - tw * 0.05, corners[1].y + yOff);
+        ctx.lineTo(corners[3].x - tw * 0.05, corners[3].y + yOff);
+        ctx.lineTo(corners[2].x - tw * 0.05, corners[2].y + yOff);
+        ctx.closePath();
+        ctx.stroke();
+      });
+      ctx.restore();
+    },
+    _drawBuildWorkers(o, b, progress) {
+      const tw = this._tw(), th = this._th();
+      const t = Date.now() / 1000;
+      const n = (b.w * b.h >= 8) ? 2 : 1;
+      for (let i = 0; i < n; i++) {
+        const gx = o.gx + (i === 0 ? (b.w - 1) : 0);
+        const gy = o.gy + (b.h - 1) - (i === 1 ? Math.min(1, b.h - 1) : 0);
+        const c = this._cell(gx, gy);
+        const bob = Math.abs(Math.sin(t * 9 + i)) * th * 0.07;
+        const x = c.x + (i ? -tw * 0.18 : tw * 0.12);
+        const y = c.y + th * 0.38 + bob;
+        this._drawVillager(x, y, th, { scale: 0.52, shirt: i ? '#4a8c5c' : '#c45c2a' });
+        const ctx = this._ctx;
+        ctx.save();
+        ctx.strokeStyle = '#6a4420';
+        ctx.lineWidth = Math.max(1.5, th * 0.05);
+        ctx.lineCap = 'round';
+        const swing = Math.sin(t * 9 + i) * 0.7;
+        ctx.beginPath();
+        ctx.moveTo(x + th * 0.12, y - th * 0.55);
+        ctx.lineTo(x + th * 0.12 + Math.cos(swing) * th * 0.22, y - th * 0.55 + Math.sin(swing) * th * 0.22);
+        ctx.stroke();
+        ctx.restore();
+      }
+      if (o.type === 'well' && progress < 0.7) {
+        const c = this._cell(o.gx, o.gy);
+        const ctx = this._ctx;
+        ctx.save();
+        ctx.fillStyle = 'rgba(110, 78, 42, ' + (0.35 + (1 - progress) * 0.25) + ')';
+        ctx.beginPath();
+        ctx.ellipse(c.x, c.y + th * 0.12, tw * 0.28 * (1.1 - progress * 0.3), th * 0.16, 0, 0, 6.283);
+        ctx.fill();
+        ctx.restore();
+      }
+    },
+    _drawBuildDust(o, b, progress) {
+      const ctx = this._ctx, tw = this._tw(), th = this._th(), t = Date.now() / 1000;
+      const n = 5 + Math.min(6, b.w * b.h);
+      ctx.save();
+      for (let i = 0; i < n; i++) {
+        const seed = o.gx * 13 + o.gy * 7 + i * 19;
+        const ang = seed * 0.4 + t * (0.6 + (i % 3) * 0.2);
+        const rad = (0.15 + (i % 5) * 0.08) * tw * (0.6 + progress);
+        const gx = o.gx + (b.w - 1) / 2, gy = o.gy + (b.h - 1) / 2;
+        const c = this._cell(gx, gy);
+        const x = c.x + Math.cos(ang) * rad;
+        const y = c.y + th * 0.1 - (t * 12 + seed) % (th * 0.9 * progress + 4);
+        const a = 0.18 + 0.12 * Math.sin(t * 3 + i);
+        ctx.fillStyle = 'rgba(196, 168, 110, ' + a + ')';
+        ctx.beginPath();
+        ctx.ellipse(x, y, tw * 0.05, th * 0.035, 0.4, 0, 6.283);
+        ctx.fill();
+      }
+      ctx.restore();
+    },
+    _drawBuildChip(rec, cc, by, b, idx, kind) {
+      const remain = rec.buildUntil - Date.now();
+      if (remain <= 0) return;
+      const ctx = this._ctx, th = this._th();
+      const label = this._fmtRemain(remain);
+      ctx.save();
+      ctx.font = '700 ' + Math.max(11, th * 0.42) + 'px "Plus Jakarta Sans","Noto Sans SC",sans-serif';
+      const w = ctx.measureText(label).width + th * 0.7;
+      const h = th * 0.62, r = h * 0.42;
+      const bx = cc.x, byy = by - (b.sc || 2) * th * 1.05 * BLD;
+      ctx.beginPath();
+      if (ctx.roundRect) ctx.roundRect(bx - w / 2, byy - h / 2, w, h, r);
+      else ctx.rect(bx - w / 2, byy - h / 2, w, h);
+      ctx.fillStyle = 'rgba(255,252,240,0.96)';
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(150,120,80,0.85)';
+      ctx.lineWidth = Math.max(1.2, th * 0.04);
+      ctx.stroke();
+      ctx.fillStyle = '#6d4c28';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(label, bx, byy + 0.5);
+      ctx.restore();
+      this._buildHits.push({ kind: kind, idx: idx, x: bx, y: byy, r: Math.max(w, h) * 0.62 });
+    },
+    _drawBuildSite(o, b, cc, by, box, progress, idx) {
+      const grow = o.type === 'tree' || o.type === 'bush';
+      if (!grow) this._drawScaffold(o, b, cc, by, box, progress);
+      this._drawBuildDust(o, b, progress);
+      this._drawBuildWorkers(o, b, progress);
+      const rec = (Farm.state.data.map || [])[idx] || o;
+      this._drawBuildChip(rec, cc, by, b, idx, 'map');
+    },
     _drawBuilding(o, b, moving, idx) {
       const ctx = this._ctx, tw = this._tw(), th = this._th();
       if (moving || (this._build && this._sel === idx && idx != null)) {   // footprint highlight diamonds
@@ -4911,10 +5515,15 @@
       const pk = (!this._build && idx != null && idx === this._pressBuilding) ? 0.94 : 1;
       // 我的家：每级换图，占地与 draw 都按档次（农舍 2×2 → 豪宅 7×7）。等级读场上那条记录，不信克隆。
       const rec = (idx != null && Farm.state.data && Farm.state.data.map) ? Farm.state.data.map[idx] : null;
+      const liveRec = rec || o;
+      const constructing = isUnderConstruction(liveRec);
+      const remainMs = constructing ? (liveRec.buildUntil - Date.now()) : 0;
+      const buildProg = constructing ? Math.max(0.08, 1 - remainMs / (liveRec.buildMs || 1)) : 1;
+      const grow = constructing && (o.type === 'tree' || o.type === 'bush');
       const homeO = ((o.type === 'home' || o.type === 'car') && rec) ? rec : o;
       const hz = o.type === 'home' ? this._homeDrawMul(homeO) : (o.type === 'car' ? this._carDrawMul(homeO) : 1);
       let him = o.type === 'home' ? this._homeSprite(homeO) : (o.type === 'car' ? this._carSprite(homeO) : this._img[b.img]);
-      const box = this._spriteBox(b, pk * hz, o.type === 'home' ? 1 : b.fill);
+      const box = this._spriteBox(b, pk * hz * (grow ? (0.22 + 0.78 * buildProg) : 1), o.type === 'home' ? 1 : b.fill);
       let flipX = false;
       if (o.type === 'car') {
         const dv = (idx != null && Farm.farmer && Farm.farmer.carPos) ? Farm.farmer.carPos(idx) : null;
@@ -4930,12 +5539,21 @@
         // deco_fence.webp 是一张两格条：上是转角、下是单片。1×1 篱笆只用单片。
         const sx = him.width * 0.46, sy = him.height * 0.54, sw = him.width * 0.50, sh = him.height * 0.44;
         const destH = th * 1.55 * BLD * pk, destW = destH * (sw / sh);
+        const vis = constructing && !grow ? buildProg : 1;
+        ctx.save();
+        if (vis < 1) {
+          ctx.beginPath();
+          ctx.rect(cc.x - destW / 2 - 1, by - destH * 0.92 * vis, destW + 2, destH * vis + 2);
+          ctx.clip();
+        }
         ctx.drawImage(him, sx, sy, sw, sh, cc.x - destW / 2, by - destH * 0.92, destW, destH);
+        ctx.restore();
       } else if (o.type === 'car') {
         const fx = (Farm.farmer && Farm.farmer.driveFx) ? Farm.farmer.driveFx() : null;
         const live = fx && fx.idx === idx;
+        const arriving = !!(idx != null && this._carArrive && this._carArrive[idx] && this._arrivePos(idx));
         if (live) this._drawCarDust(fx.dust, tw, th);
-        const accel = live ? fx.accel : 0, brake = live ? fx.brake : 0, moving = !!(live && fx.moving);
+        const accel = live ? fx.accel : 0, brake = live ? fx.brake : 0, moving = !!(live && fx.moving) || arriving;
         const bob = moving ? Math.sin(fx.t * (9 + accel * 6)) * th * 0.038 * (0.35 + 0.65 * accel) : (live ? Math.sin(fx.t * 14) * th * 0.01 : 0);
         const sx = moving ? (1.03 - 0.06 * accel + 0.05 * brake) : 1;
         const sy = moving ? (0.94 + 0.07 * accel - 0.07 * brake) : 1;
@@ -4953,10 +5571,11 @@
           const chip = this._drawCarCareChip(cc, by, tw, th);
           this._carCareHits.push({ idx: idx, x: chip.x, y: chip.y, r: chip.r });
         }
-      } else if (!this._blit(him, cc.x, by, box.w, box.h, flipX)) {
+      } else if (!this._blit(him, cc.x, by, box.w, box.h, flipX, (constructing && !grow) ? buildProg : 1)) {
         // 贴图还在路上：留草地，onload 会重画。禁止再画调试红块。
       }
-      if (o.type === 'lantern' && him instanceof Image && him.width) {
+      if (constructing) this._drawBuildSite(o, b, cc, by, box, buildProg, idx);
+      if (o.type === 'lantern' && him instanceof Image && him.width && (!constructing || buildProg > 0.82)) {
         const glow = ctx.createRadialGradient(cc.x - tw * 0.12, by - th * 1.35 * BLD, th * 0.08, cc.x, by - th * 0.8 * BLD, th * 1.1);
         glow.addColorStop(0, 'rgba(255,170,70,0.28)');
         glow.addColorStop(1, 'rgba(255,140,40,0)');
@@ -4965,7 +5584,7 @@
         ctx.ellipse(cc.x - tw * 0.08, by - th * 1.2 * BLD, tw * 0.42, th * 0.55, 0, 0, 6.283);
         ctx.fill();
       }
-      if (o.type === 'house' && !moving) {
+      if (o.type === 'house' && !moving && !constructing) {
         const sign = this._spriteBox(b, 1, b.fill);
         this._drawShopSign(cc.x, by, sign.w, sign.h);
         /* 摊前的路人(2026-08-15 两轮定稿): 瘆人的是悬空的**头**(emoji 脸),
@@ -5032,7 +5651,7 @@
       // coop ready-to-collect indicator: a SMALL egg bubble nestled just above the
       // coop roof (was a big white orb floating high above → looked like a stray ball,
       // Chris 2026-06-18). Smaller + closer + gentle bob so it clearly belongs to the coop.
-      if (o.type === 'coop' && !this._build) {
+      if (o.type === 'coop' && !this._build && !constructing) {
         const real = Farm.state.data.map[idx];
         if (real && this._coopReady(real)) {
           const t = Date.now() / 1000, bob = Math.sin(t * 2.5) * th * 0.05, r = th * 0.28;
@@ -5046,7 +5665,7 @@
       // 谷仓将满提示点（UX 第 2 批 #5）：仓储 ≥80% 时谷仓头顶一个黄色小圆点
       // （细白边），满仓变红。手法与鸡舍蛋泡一致（roof 上方锚点），数据直读
       // warehouse/warehouseCapacity（与 state.isWarehouseFull 同一口径，不另算）。
-      if (o.type === 'barn' && !this._build) {
+      if (o.type === 'barn' && !this._build && !constructing) {
         const whN = (Farm.state.data.warehouse || []).length, cap = Farm.state.data.warehouseCapacity || 20;
         if (cap > 0 && whN >= cap * 0.8) {
           const r = Math.max(5, th * 0.22), byy = by - b.sc * th * 1.08 * BLD;

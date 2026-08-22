@@ -8,7 +8,7 @@ import { dirname, join } from 'node:path';
 
 const src = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '../../src/js/audio.js'), 'utf8');
 
-const names = ['plant', 'harvest', 'coin', 'buy', 'levelUp', 'achievement', 'error', 'tap', 'horn', 'water'];
+const names = ['plant', 'harvest', 'coin', 'buy', 'levelUp', 'achievement', 'error', 'tap', 'horn', 'water', 'build', 'buildDone'];
 names.forEach((n) => {
   assert.ok(new RegExp("case '" + n + "'").test(src), 'missing sound ' + n);
 });
