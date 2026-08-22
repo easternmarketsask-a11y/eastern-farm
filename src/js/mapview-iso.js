@@ -405,6 +405,7 @@
     _carArrive: {},     // idx -> drive-in FX (memory only)
     _lastBuildHit: 0,
     _placing: null,     // ghost: {type,gx,gy,w,h,valid,cost,...} until tap-to-build
+    _buildPops: {},     // "map:3" -> t0, 完工弹跳
     _buildBtn: null, _communityBtn: null, _driveBtn: null, _driveBtnOn: null, _musicBtn: null, _musicBtnOn: null, _langBtn: null, _langBtnCur: null, _leftUI: null, _palette: null, _hint: null, _modeTabs: null, _palBuild: null, _palTerrain: null,
 
     // DEFAULT farm view (Hay Day isometric). Chosen via Farm.state.farmStyle()
@@ -2539,15 +2540,20 @@
       if (!o) return;
       const name = this._buildName(kind, o);
       this._clearBuildFields(o);
+      this._buildPops = this._buildPops || {};
+      this._buildPops[kind + ':' + idx] = Date.now();
       if (Farm.audio) Farm.audio.play('buildDone');
       if (kind !== 'plot') {
         const b = this._bldgOf(o) || BUILDINGS[o.type];
         const charm = b ? charmOf(b) : 0;
-        if (charm > 0 && Farm.ui && Farm.ui.floatText && this._cv) {
+        if (this._cv) {
           const bb = b || { w: 1, h: 1 };
           const c = this._cell(o.gx + (bb.w - 1) / 2, o.gy + (bb.h - 1) / 2);
           const r = this._cv.getBoundingClientRect();
-          Farm.ui.floatText('✨+' + charm + (en ? ' charm' : ' 魅力'), r.left + c.x - 20, r.top + c.y - this._th() * 2, '#e8a020');
+          if (charm > 0 && Farm.ui && Farm.ui.floatText) {
+            Farm.ui.floatText('✨+' + charm + (en ? ' charm' : ' 魅力'), r.left + c.x - 20, r.top + c.y - this._th() * 2, '#e8a020');
+          }
+          if (Farm.ui && Farm.ui.burst) Farm.ui.burst(r.left + c.x, r.top + c.y - this._th() * 0.8, ['✨', '✨'], 8);
         }
         if (o.type === 'home' && Farm.ui && Farm.ui.confettiBurst) Farm.ui.confettiBurst();
       }
@@ -2682,6 +2688,7 @@
       this._sel = -1; this._moving = null;
       this._placeDown = false;
       this._placeArmedAt = Date.now() + 400;
+      this._placing.fgx = gx; this._placing.fgy = gy;
       this._bindPlaceMove();
       this._placeHint();
       this._highlightPalette(type);
@@ -2809,19 +2816,26 @@
     },
     _drawPlaceGhost() {
       const pl = this._placing; if (!pl) return;
-      const b = pl.bldg, o = { type: pl.type === '__plot' ? 'well' : pl.type, gx: pl.gx, gy: pl.gy, lv: pl.lv };
-      const ctx = this._ctx, tw = this._tw(), th = this._th();
+      if (pl.fgx == null) { pl.fgx = pl.gx; pl.fgy = pl.gy; }
+      pl.fgx += (pl.gx - pl.fgx) * 0.32;
+      pl.fgy += (pl.gy - pl.fgy) * 0.32;
+      const b = pl.bldg;
+      const o = { type: pl.type === '__plot' ? 'well' : pl.type, gx: pl.fgx, gy: pl.fgy, lv: pl.lv };
+      const ctx = this._ctx, tw = this._tw(), th = this._th(), t = Date.now() / 1000;
+      const bob = Math.sin(t * 3.2) * th * 0.035;
       ctx.save();
-      ctx.fillStyle = pl.valid ? 'rgba(76,175,80,0.46)' : 'rgba(220,60,60,0.46)';
-      ctx.strokeStyle = pl.valid ? 'rgba(255,248,220,0.95)' : 'rgba(255,220,220,0.95)';
-      ctx.lineWidth = Math.max(2.5, th * 0.12);
+      ctx.fillStyle = pl.valid ? 'rgba(88,148,72,0.38)' : 'rgba(196,72,56,0.38)';
+      ctx.strokeStyle = pl.valid ? 'rgba(255,236,186,0.72)' : 'rgba(255,200,190,0.70)';
+      ctx.lineWidth = Math.max(1.6, th * 0.07);
       for (let y = 0; y < pl.h; y++) for (let x = 0; x < pl.w; x++) {
         const cc2 = this._cell(pl.gx + x, pl.gy + y);
         this._diamond(cc2.x, cc2.y, tw, th); ctx.fill(); ctx.stroke();
       }
+      ctx.translate(0, bob);
+      ctx.globalAlpha = 0.90;
       if (pl.type === '__plot') {
-        const cc2 = this._cell(pl.gx, pl.gy);
-        ctx.fillStyle = 'rgba(120, 82, 42, 0.7)';
+        const cc2 = this._cell(pl.fgx, pl.fgy);
+        ctx.fillStyle = 'rgba(120, 82, 42, 0.72)';
         this._diamond(cc2.x, cc2.y, tw * 0.72, th * 0.72); ctx.fill();
       } else {
         this._drawBuilding(o, b, false, null);
@@ -5242,13 +5256,14 @@
       if (isUnderConstruction(plot)) {
         const remainMs = plot.buildUntil - Date.now();
         const buildProg = Math.max(0.12, 1 - remainMs / (plot.buildMs || 1));
+        const rise = this._buildEase(buildProg);
         ctx.save();
-        ctx.fillStyle = 'rgba(120, 82, 42, ' + (0.28 + buildProg * 0.35) + ')';
-        this._diamond(c.x, c.y, tw * (0.55 + buildProg * 0.22), th * (0.55 + buildProg * 0.22));
+        ctx.fillStyle = 'rgba(120, 82, 42, ' + (0.28 + rise * 0.35) + ')';
+        this._diamond(c.x, c.y, tw * (0.52 + rise * 0.26), th * (0.52 + rise * 0.26));
         ctx.fill();
         ctx.restore();
-        this._drawBuildDust({ gx: gx, gy: gy }, { w: 1, h: 1 }, buildProg);
-        this._drawBuildWorkers({ gx: gx, gy: gy, type: 'plot' }, { w: 1, h: 1 }, buildProg);
+        this._drawBuildDust({ gx: gx, gy: gy, type: 'plot' }, { w: 1, h: 1 }, rise);
+        this._drawBuildWorkers({ gx: gx, gy: gy, type: 'plot' }, { w: 1, h: 1 }, rise);
         this._drawBuildChip(plot, c, c.y + th * 0.1, { sc: 1.4 }, idx, 'plot');
         return;
       }
@@ -5332,91 +5347,135 @@
         bar(bx, bw * Math.max(0.06, p), 'rgba(123,192,67,0.78)');
       }
     },
+    _buildEase(p) {
+      p = Math.max(0, Math.min(1, p));
+      return 1 - Math.pow(1 - p, 2.2);
+    },
     _drawScaffold(o, b, cc, by, box, progress) {
       const ctx = this._ctx, tw = this._tw(), th = this._th();
-      const h = box.h * Math.max(0.28, progress) * 0.92;
-      const corners = [
-        this._cell(o.gx, o.gy),
-        this._cell(o.gx + b.w - 1, o.gy),
-        this._cell(o.gx, o.gy + b.h - 1),
-        this._cell(o.gx + b.w - 1, o.gy + b.h - 1),
-      ];
+      const tiny = o.type === 'fence' || o.type === 'lantern' || o.type === 'well';
+      const h = box.h * Math.max(tiny ? 0.18 : 0.26, progress) * (tiny ? 0.62 : 0.86);
+      const w = box.w * (tiny ? 0.55 : 0.74);
+      const base = by - th * 0.02;
+      const lean = tw * 0.045;
+      const posts = tiny
+        ? [{ x: cc.x - w * 0.38, y: base }, { x: cc.x + w * 0.38, y: base }]
+        : [
+          { x: cc.x - w * 0.42, y: base },
+          { x: cc.x + w * 0.42, y: base },
+          { x: cc.x - w * 0.18, y: base + th * 0.04 },
+          { x: cc.x + w * 0.18, y: base + th * 0.04 },
+        ];
+      const pw = Math.max(2.4, th * 0.085);
       ctx.save();
-      ctx.strokeStyle = 'rgba(150, 104, 52, 0.92)';
-      ctx.lineWidth = Math.max(2, th * 0.075);
       ctx.lineCap = 'round';
-      corners.forEach((c) => {
+      ctx.lineJoin = 'round';
+      const tarpA = Math.max(0, 0.22 * (1 - (progress - 0.42) / 0.45));
+      if (tarpA > 0.03 && !tiny) {
+        ctx.fillStyle = 'rgba(236, 214, 168, ' + tarpA + ')';
         ctx.beginPath();
-        ctx.moveTo(c.x, c.y + th * 0.18);
-        ctx.lineTo(c.x - tw * 0.05, c.y + th * 0.18 - h);
+        ctx.moveTo(posts[0].x, posts[0].y - h * 0.92);
+        ctx.lineTo(posts[1].x, posts[1].y - h * 0.88);
+        ctx.lineTo(posts[1].x + lean, posts[1].y - h * 0.55);
+        ctx.lineTo(posts[0].x + lean, posts[0].y - h * 0.58);
+        ctx.closePath();
+        ctx.fill();
+      }
+      posts.forEach((p) => {
+        ctx.strokeStyle = 'rgba(122, 78, 40, 0.92)';
+        ctx.lineWidth = pw;
+        ctx.beginPath();
+        ctx.moveTo(p.x, p.y);
+        ctx.lineTo(p.x - lean, p.y - h);
+        ctx.stroke();
+        ctx.strokeStyle = 'rgba(232, 198, 140, 0.55)';
+        ctx.lineWidth = Math.max(1, pw * 0.35);
+        ctx.beginPath();
+        ctx.moveTo(p.x - pw * 0.18, p.y);
+        ctx.lineTo(p.x - lean - pw * 0.18, p.y - h);
         ctx.stroke();
       });
-      ctx.strokeStyle = 'rgba(196, 150, 88, 0.88)';
-      ctx.lineWidth = Math.max(1.6, th * 0.055);
-      const bands = [0.32, 0.58, 0.84].filter((t) => t <= progress + 0.12);
-      bands.forEach((t) => {
-        const yOff = th * 0.18 - h * t;
+      ctx.strokeStyle = 'rgba(176, 122, 64, 0.90)';
+      ctx.lineWidth = Math.max(1.8, th * 0.06);
+      const bands = tiny ? [0.72] : [0.28, 0.55, 0.82];
+      bands.filter((t) => t <= progress + 0.14).forEach((t) => {
         ctx.beginPath();
-        ctx.moveTo(corners[0].x - tw * 0.05, corners[0].y + yOff);
-        ctx.lineTo(corners[1].x - tw * 0.05, corners[1].y + yOff);
-        ctx.lineTo(corners[3].x - tw * 0.05, corners[3].y + yOff);
-        ctx.lineTo(corners[2].x - tw * 0.05, corners[2].y + yOff);
-        ctx.closePath();
+        posts.forEach((p, i) => {
+          const x = p.x - lean * t, y = p.y - h * t;
+          if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        });
+        if (posts.length > 2) ctx.closePath();
         ctx.stroke();
       });
       ctx.restore();
     },
     _drawBuildWorkers(o, b, progress) {
-      const tw = this._tw(), th = this._th();
+      if (o.type === 'fence' || o.type === 'lantern' || o.type === 'bush') return;
+      const tw = this._tw(), th = this._th(), ctx = this._ctx;
       const t = Date.now() / 1000;
       const n = (b.w * b.h >= 8) ? 2 : 1;
+      const look = (Farm.farmer && Farm.farmer._actor && Farm.farmer._actor().look) || 2;
+      const im = (Farm.farmer && Farm.farmer.sheet) ? Farm.farmer.sheet(look) : null;
+      const cols = (Farm.farmer && Farm.farmer.SHEET_COLS) || 6;
+      const rows = (Farm.farmer && Farm.farmer.SHEET_ROWS) || 5;
       for (let i = 0; i < n; i++) {
-        const gx = o.gx + (i === 0 ? (b.w - 1) : 0);
-        const gy = o.gy + (b.h - 1) - (i === 1 ? Math.min(1, b.h - 1) : 0);
+        const gx = o.gx + (i === 0 ? (b.w - 1) : 0) * 0.92;
+        const gy = o.gy + (b.h - 1) - (i === 1 ? Math.min(1, b.h - 1) * 0.4 : 0);
         const c = this._cell(gx, gy);
-        const bob = Math.abs(Math.sin(t * 9 + i)) * th * 0.07;
-        const x = c.x + (i ? -tw * 0.18 : tw * 0.12);
-        const y = c.y + th * 0.38 + bob;
-        this._drawVillager(x, y, th, { scale: 0.52, shirt: i ? '#4a8c5c' : '#c45c2a' });
-        const ctx = this._ctx;
-        ctx.save();
-        ctx.strokeStyle = '#6a4420';
-        ctx.lineWidth = Math.max(1.5, th * 0.05);
-        ctx.lineCap = 'round';
-        const swing = Math.sin(t * 9 + i) * 0.7;
-        ctx.beginPath();
-        ctx.moveTo(x + th * 0.12, y - th * 0.55);
-        ctx.lineTo(x + th * 0.12 + Math.cos(swing) * th * 0.22, y - th * 0.55 + Math.sin(swing) * th * 0.22);
-        ctx.stroke();
-        ctx.restore();
+        const phase = t * 8.2 + i * 1.7;
+        const bob = Math.abs(Math.sin(phase)) * th * 0.055;
+        const x = c.x + (i ? -tw * 0.16 : tw * 0.14);
+        const y = c.y + th * 0.36 + bob;
+        if (im && im.width) {
+          const cw = im.width / cols, ch = im.height / rows;
+          const fi = 1 + Math.floor((phase * 0.55) % 4);
+          const h = th * 1.08, w = h * (cw / ch);
+          ctx.save();
+          this._shadow(x, y + th * 0.02, w * 0.5, 0.14);
+          ctx.translate(x, y);
+          ctx.drawImage(im, fi * cw, 3 * ch, cw, ch, -w / 2, -h, w, h);
+          ctx.restore();
+        } else {
+          this._drawVillager(x, y, th, { scale: 0.52, shirt: i ? '#4a8c5c' : '#c45c2a' });
+        }
+        if (Math.sin(phase) > 0.72) {
+          ctx.save();
+          ctx.fillStyle = 'rgba(255, 214, 110, 0.88)';
+          ctx.beginPath();
+          ctx.arc(x + th * 0.22, y - th * 0.62, th * 0.055, 0, 6.283);
+          ctx.fill();
+          ctx.restore();
+        }
       }
-      if (o.type === 'well' && progress < 0.7) {
+      if (o.type === 'well' && progress < 0.72) {
         const c = this._cell(o.gx, o.gy);
-        const ctx = this._ctx;
         ctx.save();
-        ctx.fillStyle = 'rgba(110, 78, 42, ' + (0.35 + (1 - progress) * 0.25) + ')';
+        ctx.fillStyle = 'rgba(110, 78, 42, ' + (0.32 + (1 - progress) * 0.28) + ')';
         ctx.beginPath();
-        ctx.ellipse(c.x, c.y + th * 0.12, tw * 0.28 * (1.1 - progress * 0.3), th * 0.16, 0, 0, 6.283);
+        ctx.ellipse(c.x, c.y + th * 0.12, tw * 0.28 * (1.12 - progress * 0.32), th * 0.16, 0, 0, 6.283);
         ctx.fill();
         ctx.restore();
       }
     },
     _drawBuildDust(o, b, progress) {
       const ctx = this._ctx, tw = this._tw(), th = this._th(), t = Date.now() / 1000;
-      const n = 5 + Math.min(6, b.w * b.h);
+      const grow = o.type === 'tree' || o.type === 'bush';
+      const n = 6 + Math.min(8, b.w * b.h);
+      const c = this._cell(o.gx + (b.w - 1) / 2, o.gy + (b.h - 1) / 2);
       ctx.save();
       for (let i = 0; i < n; i++) {
         const seed = o.gx * 13 + o.gy * 7 + i * 19;
-        const ang = seed * 0.4 + t * (0.6 + (i % 3) * 0.2);
-        const rad = (0.15 + (i % 5) * 0.08) * tw * (0.6 + progress);
-        const gx = o.gx + (b.w - 1) / 2, gy = o.gy + (b.h - 1) / 2;
-        const c = this._cell(gx, gy);
+        const life = ((t * (0.55 + (i % 4) * 0.12) + seed * 0.01) % 1);
+        const ang = seed * 0.41 + i * 0.7;
+        const rad = (0.12 + life * 0.42) * tw * (0.7 + progress * 0.5);
         const x = c.x + Math.cos(ang) * rad;
-        const y = c.y + th * 0.1 - (t * 12 + seed) % (th * 0.9 * progress + 4);
-        const a = 0.18 + 0.12 * Math.sin(t * 3 + i);
-        ctx.fillStyle = 'rgba(196, 168, 110, ' + a + ')';
+        const y = c.y + th * 0.08 - life * th * (grow ? 0.85 : 0.55);
+        const a = (1 - life) * (0.22 + 0.14 * progress);
+        ctx.fillStyle = grow
+          ? 'rgba(110, 158, 72, ' + a + ')'
+          : 'rgba(196, 168, 110, ' + a + ')';
         ctx.beginPath();
-        ctx.ellipse(x, y, tw * 0.05, th * 0.035, 0.4, 0, 6.283);
+        ctx.ellipse(x, y, tw * (grow ? 0.04 : 0.055) * (1 + life), th * 0.032 * (1 + life), 0.4, 0, 6.283);
         ctx.fill();
       }
       ctx.restore();
@@ -5425,30 +5484,39 @@
       const remain = rec.buildUntil - Date.now();
       if (remain <= 0) return;
       const ctx = this._ctx, th = this._th();
+      const total = rec.buildMs || remain;
+      const frac = Math.max(0, Math.min(1, 1 - remain / total));
       const label = this._fmtRemain(remain);
       ctx.save();
-      ctx.font = '700 ' + Math.max(11, th * 0.42) + 'px "Plus Jakarta Sans","Noto Sans SC",sans-serif';
-      const w = ctx.measureText(label).width + th * 0.7;
-      const h = th * 0.62, r = h * 0.42;
-      const bx = cc.x, byy = by - (b.sc || 2) * th * 1.05 * BLD;
+      ctx.font = '700 ' + Math.max(10, th * 0.36) + 'px "Plus Jakarta Sans","Noto Sans SC",sans-serif';
+      const twid = ctx.measureText(label).width;
+      const w = twid + th * 0.85, h = th * 0.52, rr = h * 0.46;
+      const bx = cc.x, byy = by - (b.sc || 2) * th * 0.92 * BLD;
       ctx.beginPath();
-      if (ctx.roundRect) ctx.roundRect(bx - w / 2, byy - h / 2, w, h, r);
+      if (ctx.roundRect) ctx.roundRect(bx - w / 2, byy - h / 2, w, h, rr);
       else ctx.rect(bx - w / 2, byy - h / 2, w, h);
-      ctx.fillStyle = 'rgba(255,252,240,0.96)';
+      ctx.fillStyle = 'rgba(255,250,236,0.92)';
       ctx.fill();
-      ctx.strokeStyle = 'rgba(150,120,80,0.85)';
-      ctx.lineWidth = Math.max(1.2, th * 0.04);
+      ctx.strokeStyle = 'rgba(160,120,70,0.55)';
+      ctx.lineWidth = Math.max(1, th * 0.03);
       ctx.stroke();
+      const pr = h * 0.28, px = bx - w / 2 + h * 0.38, py = byy;
+      ctx.strokeStyle = 'rgba(200, 170, 120, 0.55)';
+      ctx.lineWidth = Math.max(1.6, th * 0.055);
+      ctx.beginPath(); ctx.arc(px, py, pr, 0, 6.283); ctx.stroke();
+      ctx.strokeStyle = '#3a8c50';
+      ctx.beginPath(); ctx.arc(px, py, pr, -Math.PI / 2, -Math.PI / 2 + frac * 6.283); ctx.stroke();
       ctx.fillStyle = '#6d4c28';
-      ctx.textAlign = 'center';
+      ctx.textAlign = 'left';
       ctx.textBaseline = 'middle';
-      ctx.fillText(label, bx, byy + 0.5);
+      ctx.fillText(label, px + pr + th * 0.12, byy + 0.5);
       ctx.restore();
       this._buildHits.push({ kind: kind, idx: idx, x: bx, y: byy, r: Math.max(w, h) * 0.62 });
     },
     _drawBuildSite(o, b, cc, by, box, progress, idx) {
       const grow = o.type === 'tree' || o.type === 'bush';
-      if (!grow) this._drawScaffold(o, b, cc, by, box, progress);
+      const skipFrame = o.type === 'fence' || o.type === 'lantern';
+      if (!grow && !skipFrame) this._drawScaffold(o, b, cc, by, box, progress);
       this._drawBuildDust(o, b, progress);
       this._drawBuildWorkers(o, b, progress);
       const rec = (Farm.state.data.map || [])[idx] || o;
@@ -5484,12 +5552,17 @@
       const liveRec = rec || o;
       const constructing = isUnderConstruction(liveRec);
       const remainMs = constructing ? (liveRec.buildUntil - Date.now()) : 0;
-      const buildProg = constructing ? Math.max(0.08, 1 - remainMs / (liveRec.buildMs || 1)) : 1;
+      const buildProg = constructing ? Math.max(0.06, Math.min(1, 1 - remainMs / (liveRec.buildMs || 1))) : 1;
+      const rise = constructing ? this._buildEase(buildProg) : 1;
+      const popKey = (idx != null) ? ('map:' + idx) : '';
+      const popT = (this._buildPops && popKey && this._buildPops[popKey]) ? (Date.now() - this._buildPops[popKey]) : 9999;
+      const pop = popT < 560 ? Math.sin((popT / 560) * Math.PI) * 0.07 : 0;
+      if (popT >= 560 && this._buildPops && popKey) delete this._buildPops[popKey];
       const grow = constructing && (o.type === 'tree' || o.type === 'bush');
       const homeO = ((o.type === 'home' || o.type === 'car') && rec) ? rec : o;
       const hz = o.type === 'home' ? this._homeDrawMul(homeO) : (o.type === 'car' ? this._carDrawMul(homeO) : 1);
       let him = o.type === 'home' ? this._homeSprite(homeO) : (o.type === 'car' ? this._carSprite(homeO) : this._img[b.img]);
-      const box = this._spriteBox(b, pk * hz * (grow ? (0.22 + 0.78 * buildProg) : 1), o.type === 'home' ? 1 : b.fill);
+      const box = this._spriteBox(b, pk * hz * (grow ? (0.16 + 0.84 * rise) : 1) * (1 + pop), o.type === 'home' ? 1 : b.fill);
       let flipX = false;
       if (o.type === 'car') {
         const dv = (idx != null && Farm.farmer && Farm.farmer.carPos) ? Farm.farmer.carPos(idx) : null;
@@ -5505,7 +5578,7 @@
         // deco_fence.webp 是一张两格条：上是转角、下是单片。1×1 篱笆只用单片。
         const sx = him.width * 0.46, sy = him.height * 0.54, sw = him.width * 0.50, sh = him.height * 0.44;
         const destH = th * 1.55 * BLD * pk, destW = destH * (sw / sh);
-        const vis = constructing && !grow ? buildProg : 1;
+        const vis = constructing && !grow ? rise : 1;
         ctx.save();
         if (vis < 1) {
           ctx.beginPath();
@@ -5537,11 +5610,11 @@
           const chip = this._drawCarCareChip(cc, by, tw, th);
           this._carCareHits.push({ idx: idx, x: chip.x, y: chip.y, r: chip.r });
         }
-      } else if (!this._blit(him, cc.x, by, box.w, box.h, flipX, (constructing && !grow) ? buildProg : 1)) {
+      } else if (!this._blit(him, cc.x, by, box.w, box.h, flipX, (constructing && !grow) ? rise : 1)) {
         // 贴图还在路上：留草地，onload 会重画。禁止再画调试红块。
       }
-      if (constructing) this._drawBuildSite(o, b, cc, by, box, buildProg, idx);
-      if (o.type === 'lantern' && him instanceof Image && him.width && (!constructing || buildProg > 0.82)) {
+      if (constructing) this._drawBuildSite(o, b, cc, by, box, rise, idx);
+      if (o.type === 'lantern' && him instanceof Image && him.width && (!constructing || rise > 0.72)) {
         const glow = ctx.createRadialGradient(cc.x - tw * 0.12, by - th * 1.35 * BLD, th * 0.08, cc.x, by - th * 0.8 * BLD, th * 1.1);
         glow.addColorStop(0, 'rgba(255,170,70,0.28)');
         glow.addColorStop(1, 'rgba(255,140,40,0)');
