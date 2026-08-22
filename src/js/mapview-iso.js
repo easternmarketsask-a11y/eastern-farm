@@ -1502,7 +1502,11 @@
         }
         // 贴图还没到：宽一点、矮一点地兜个手感盒（沿用旧口径的宽松度），
         // 别用 box.h —— 那是护栏高度（宽的 2.2 倍），拿它当热区会把屋顶上方一大片空草地也算成房子。
-        w = box.w * 1.15; h = box.w * 0.95;
+        if (o.type === 'board') {
+          // 程序化画的牌子：用它真正画出来的盒子，别用通用兜底（只盖得住柱子）
+          const bx2 = this._orderBoardBox(this._tw(), th);
+          w = bx2.w; h = bx2.h;
+        } else { w = box.w * 1.15; h = box.w * 0.95; }
         if (px >= cc.x - w / 2 && px <= cc.x + w / 2 && py >= by - h && py <= by) return i;
       }
       const cell = this._screenToCell(px, py);
@@ -2315,9 +2319,19 @@
          · 都没有       → 安静的空木牌
        不加贴图是有意的：这个世界的天空/远山/林子/树都是 canvas 画的
        （USE_PAINTED_BG=false 铁律），塞一张 webp 反而不合群。 */
+    /* 告示牌的绘制尺寸 —— **画和点必须用同一份**。
+       🔒 它是程序化画的（没有贴图），所以 _buildingAtPoint 走不到「按贴图长宽比
+          收盒子」那条路，会退到通用兜底盒（宽 0.64tw × 高 0.61tw ≈ 1.22th）。
+          而牌子实际画到 2.5th 高 —— 结果只有**下面那两根柱子**能点中，点牌面
+          毫无反应（Chris 2026-08-22 实测：「点在牌子上居然都不打开，要点脚才开」）。
+          ⚠️ 我自己的 E2E 其实已经报过信号：探测点 k=1.4 返回 'none'，当时没追。 */
+    _orderBoardBox(tw, th) {
+      return { w: tw * 0.86, h: th * 2.5 };
+    },
+
     _drawOrderBoard(cx, by, tw, th) {
       const ctx = this._ctx;
-      const W = tw * 0.86, H = th * 2.5;
+      const W = this._orderBoardBox(tw, th).w, H = this._orderBoardBox(tw, th).h;
       const x0 = cx - W / 2, y0 = by - H;
       const ready = (Farm.orders && Farm.orders.fillableCount)
         ? (Farm.orders.fillableCount() + (Farm.orders.stapleReadyCount ? Farm.orders.stapleReadyCount() : 0)) : 0;

@@ -5369,30 +5369,82 @@ body.modal-open .pwa-install-banner { display: none; }
 }
 .lb-name-cta:active { transform: translateY(1px); background: #e6f2e6; }
 
-/* ===== 东超订单板 三段式（2026-08-22 取消无限收购后重做）===== */
-.order-section-title{font:500 13px/1.4 var(--font-ui,inherit);color:var(--warm-text-soft);
-  margin:14px 2px 6px;letter-spacing:.02em}
-.staple-list{display:flex;flex-direction:column;gap:6px}
-.staple-row{display:flex;align-items:center;gap:8px;background:var(--card-bg,#fffaf0);
-  border-radius:12px;padding:8px 10px}
-.staple-icon{width:22px;text-align:center;flex:0 0 auto}
-.staple-name{flex:1 1 auto;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.staple-bar{flex:0 0 62px;height:6px;border-radius:3px;background:rgba(0,0,0,.08);overflow:hidden}
+/* ===== 东超订单板：版式做成「货单」，不是设置面板（Chris 2026-08-22）=====
+   一张单 = 抬头(单号/收货方/时限) + 明细(带引导点) + 分隔线 + 结算行。
+   纸感靠：米白纸面、细虚线分隔、等宽数字、左侧一道装订边。 */
+.order-section-title{font:500 12px/1.4 var(--font-ui,inherit);color:var(--warm-text-soft);
+  margin:16px 2px 7px;letter-spacing:.08em}
+.order-section-title::after{content:'';display:block;height:1px;margin-top:5px;
+  background:repeating-linear-gradient(90deg,rgba(120,95,60,.22) 0 5px,transparent 5px 10px)}
+
+/* —— 每日基础补货：清单打勾的样子 —— */
+.staple-list{display:flex;flex-direction:column;gap:5px}
+.staple-row{display:flex;align-items:center;gap:8px;background:#fffdf6;
+  border:1px solid rgba(120,95,60,.13);border-radius:8px;padding:8px 10px}
+.staple-icon{width:20px;text-align:center;flex:0 0 auto}
+.staple-name{flex:0 0 auto;font-size:14px;max-width:6.5em;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap}
+.staple-bar{flex:1 1 auto;height:5px;border-radius:3px;background:rgba(120,95,60,.12);overflow:hidden}
 .staple-bar>i{display:block;height:100%;background:var(--leaf,#7bbf5a);border-radius:3px}
-.staple-qty{flex:0 0 auto;font:600 12px/1 var(--font-num,inherit);color:var(--warm-text-soft);
-  min-width:44px;text-align:right}
+.staple-qty{flex:0 0 auto;font:600 12px/1 var(--font-num,inherit);
+  color:var(--warm-text-soft);min-width:42px;text-align:right;font-variant-numeric:tabular-nums}
 .staple-fill{flex:0 0 auto;padding:6px 12px;min-height:36px;font-size:13px}
-.staple-done,.staple-wait{flex:0 0 auto;font-size:12px;color:var(--warm-text-soft);min-width:56px;text-align:right}
-/* 已接的单描一圈，和只是挂在板上的单一眼分得开 */
-.order-card.taken{box-shadow:inset 0 0 0 2px rgba(123,191,90,.55)}
-.order-card.big{background:linear-gradient(180deg,#fff6e2,#fffaf0)}
-.order-tag-big{display:inline-block;font:600 11px/1 var(--font-ui,inherit);color:#8a5a12;
-  background:#ffdf9e;border-radius:6px;padding:4px 7px;margin-bottom:6px;letter-spacing:.04em}
-.order-meta{font-size:11px;color:var(--warm-text-soft);margin-top:4px}
-.order-drop{margin-left:8px;border:none;background:transparent;color:var(--warm-text-soft);
-  font-size:16px;line-height:1;padding:8px;cursor:pointer;min-width:36px;min-height:36px}
-.fc-list{display:flex;flex-direction:column;gap:4px}
-.fc-day{display:flex;gap:10px;align-items:center;font-size:13px;padding:5px 8px;
-  background:rgba(0,0,0,.03);border-radius:10px}
-.fc-date{flex:0 0 46px;font:600 12px/1 var(--font-num,inherit);color:var(--warm-text-soft)}
+.staple-done,.staple-wait{flex:0 0 auto;font-size:12px;color:var(--warm-text-soft);
+  min-width:52px;text-align:right}
+
+/* —— 一张货单 —— */
+.order-slip{position:relative;background:#fffdf6;border:1px solid rgba(120,95,60,.18);
+  border-radius:8px;padding:11px 13px 12px 16px;margin-bottom:10px}
+.order-slip::before{content:'';position:absolute;left:6px;top:10px;bottom:10px;width:2px;
+  border-radius:2px;background:repeating-linear-gradient(180deg,rgba(120,95,60,.30) 0 4px,transparent 4px 9px)}
+.order-slip.taken{border-color:rgba(123,191,90,.55);background:#fbfff4}
+.order-slip.ready{box-shadow:0 0 0 2px rgba(123,191,90,.30)}
+.order-slip.big{background:#fffaef;border-color:rgba(190,140,40,.35)}
+.order-slip.clearance{background:#f7fbff;border-color:rgba(70,130,180,.32)}
+
+.slip-head{display:flex;align-items:center;gap:8px;margin-bottom:2px}
+.slip-no{font:700 11px/1 var(--font-num,monospace);letter-spacing:.10em;color:#8a6a3a;
+  font-variant-numeric:tabular-nums}
+.slip-tag{font:700 10px/1 var(--font-ui,inherit);letter-spacing:.08em;color:#8a5a12;
+  background:#ffdf9e;border-radius:4px;padding:3px 6px}
+.order-slip.clearance .slip-tag{color:#24618f;background:#d8ecff}
+.slip-due{margin-left:auto;font:600 11px/1 var(--font-num,inherit);color:var(--warm-text-soft);
+  font-variant-numeric:tabular-nums}
+.slip-to{font-size:11px;color:var(--warm-text-soft);margin-bottom:7px}
+
+.slip-lines{display:flex;flex-direction:column;gap:3px}
+.slip-line{display:flex;align-items:baseline;gap:6px;font-size:13.5px}
+.slip-ico{flex:0 0 auto;width:18px;text-align:center}
+.slip-name{flex:0 0 auto;max-width:8em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* 引导点：账目单的经典做法，让名字和数量在视觉上连成一行 */
+.slip-dots{flex:1 1 auto;min-width:14px;align-self:center;height:1px;
+  background:repeating-linear-gradient(90deg,rgba(120,95,60,.34) 0 2px,transparent 2px 5px)}
+.slip-qty{flex:0 0 auto;font:600 13px/1 var(--font-num,inherit);font-variant-numeric:tabular-nums}
+.slip-mark{flex:0 0 auto;width:14px;color:var(--leaf-dark,#4a7c59);font-weight:700}
+.slip-line.short .slip-qty{color:#b06a3a}
+.slip-line.ok .slip-qty{color:var(--leaf-dark,#4a7c59)}
+
+.slip-rule{height:1px;margin:9px 0 7px;
+  background:repeating-linear-gradient(90deg,rgba(120,95,60,.30) 0 4px,transparent 4px 8px)}
+.slip-total{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.slip-total-label{font-size:11px;color:var(--warm-text-soft);letter-spacing:.06em}
+.slip-total-coins{font:700 17px/1 var(--font-num,inherit);color:#8a6a12;
+  font-variant-numeric:tabular-nums}
+.slip-total-xp{font:600 11px/1 var(--font-num,inherit);color:var(--warm-text-soft)}
+.slip-total-pts{font:600 11px/1 var(--font-num,inherit)}
+.slip-total-bonus{margin-left:auto;font-size:11px;color:var(--leaf-dark,#4a7c59);
+  background:rgba(123,191,90,.14);border-radius:5px;padding:3px 7px}
+
+.order-actions{display:flex;align-items:center;gap:8px;margin-top:9px}
+.order-actions .btn{flex:1 1 auto}
+.order-drop{flex:0 0 auto;border:1px solid rgba(120,95,60,.22);background:transparent;
+  color:var(--warm-text-soft);font-size:15px;line-height:1;border-radius:8px;
+  min-width:38px;min-height:38px;cursor:pointer}
+
+/* —— 备货预告：像贴在单子下面的一张排期 —— */
+.fc-list{display:flex;flex-direction:column;gap:3px}
+.fc-day{display:flex;gap:10px;align-items:center;font-size:12.5px;padding:5px 9px;
+  background:#fffdf6;border:1px solid rgba(120,95,60,.10);border-radius:7px}
+.fc-date{flex:0 0 44px;font:700 11px/1 var(--font-num,inherit);color:#8a6a3a;
+  font-variant-numeric:tabular-nums}
 .fc-crops{flex:1 1 auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}

@@ -413,19 +413,22 @@
         const rows = o.items.map((it) => {
           const have = Farm.state.warehouseCount(it.cropId);
           const ok = have >= it.qty;
-          return '<div class="order-item ' + (ok ? 'ok' : 'short') + '">' +
-            '<span class="order-item-icon">' + this._cropIcon(it.cropId, 20) + '</span>' +
-            '<span class="order-item-name">' + this._cropName(it.cropId) + '</span>' +
-            '<span class="order-item-qty">' + Math.min(have, it.qty) + '/' + it.qty + (ok ? ' ✓' : '') + '</span></div>';
+          return '<div class="slip-line ' + (ok ? 'ok' : 'short') + '">' +
+            '<span class="slip-ico">' + this._cropIcon(it.cropId, 18) + '</span>' +
+            '<span class="slip-name">' + this._cropName(it.cropId) + '</span>' +
+            '<span class="slip-dots"></span>' +
+            '<span class="slip-qty">' + Math.min(have, it.qty) + ' / ' + it.qty + '</span>' +
+            '<span class="slip-mark">' + (ok ? '✓' : '') + '</span></div>';
         }).join('');
 
         const bonus = Math.max(0, o.coins - this._bulkValue(o));
         const hoursLeft = Math.max(0, Math.round((o.expiresAt - Date.now()) / 3600000));
-        const reward = '<div class="order-reward">' +
-          '<span class="order-reward-coins">+' + o.coins + coin + '</span>' +
-          '<span class="order-reward-xp">+' + o.xp + ' XP</span>' +
-          (o.points ? '<span class="order-reward-pts">+' + o.points + pts + '</span>' : '') +
-          (bonus > 0 ? '<span class="order-reward-bonus">' + (lang === 'en' ? 'vs. plain price +' : '比原价多 +') + bonus + coin + '</span>' : '') +
+        const reward = '<div class="slip-total">' +
+          '<span class="slip-total-label">' + (lang === 'en' ? 'Pays' : '结算') + '</span>' +
+          '<span class="slip-total-coins">' + o.coins + coin + '</span>' +
+          '<span class="slip-total-xp">+' + o.xp + ' XP</span>' +
+          (o.points ? '<span class="slip-total-pts">+' + o.points + pts + '</span>' : '') +
+          (bonus > 0 ? '<span class="slip-total-bonus">' + (lang === 'en' ? 'over plain price +' : '比原价多 +') + bonus + coin + '</span>' : '') +
           '</div>';
 
         let actions;
@@ -444,11 +447,23 @@
             (lang === 'en' ? 'Drop this order (no penalty)' : '放弃这一单（无惩罚）') + '">✕</button>';
         }
 
-        return '<div class="order-card ' + (o.accepted ? 'taken ' : '') + (canFill && o.accepted ? 'ready' : '') +
-          (o.kind === 'big' ? ' big' : '') + '">' +
-          (o.kind === 'big' ? '<div class="order-tag-big">' + (lang === 'en' ? 'BIG ORDER' : '大单') + '</div>' : '') +
-          '<div class="order-items">' + rows + '</div>' + reward +
-          '<div class="order-meta">' + (lang === 'en' ? 'about ' + hoursLeft + 'h left' : '大约还有 ' + hoursLeft + ' 小时') + '</div>' +
+        /* 版式是**货单**，不是设置项（Chris 2026-08-22：「做得更像订单」）：
+           抬头有单号和收货方、明细逐行带引导点、下面一条分隔线再写合计。 */
+        // 单号只取字母数字：id 形如 od_xxx_yyy，直接切尾会带出下划线（#_C1Z9 很难看）
+        const no = o.id.replace(/[^a-z0-9]/gi, '').slice(-5).toUpperCase();
+        const tag = o.kind === 'clearance'
+          ? (lang === 'en' ? 'CLEARANCE' : '清仓')
+          : (o.kind === 'big' ? (lang === 'en' ? 'BULK' : '大单') : '');
+        return '<div class="order-slip ' + (o.accepted ? 'taken ' : '') + (canFill && o.accepted ? 'ready' : '') +
+          (o.kind === 'big' ? ' big' : '') + (o.kind === 'clearance' ? ' clearance' : '') + '">' +
+          '<div class="slip-head">' +
+            '<span class="slip-no">' + (lang === 'en' ? 'ORDER ' : '订单 ') + '#' + no + '</span>' +
+            (tag ? '<span class="slip-tag">' + tag + '</span>' : '') +
+            '<span class="slip-due">' + (lang === 'en' ? hoursLeft + 'h' : hoursLeft + ' 小时内') + '</span>' +
+          '</div>' +
+          '<div class="slip-to">' + (lang === 'en' ? 'To: Eastern Market' : '收货：东方超市') + '</div>' +
+          '<div class="slip-lines">' + rows + '</div>' +
+          '<div class="slip-rule"></div>' + reward +
           '<div class="order-actions">' + actions + '</div></div>';
       }).join('');
 

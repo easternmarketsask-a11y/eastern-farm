@@ -52,6 +52,17 @@ assert.match(o, /Farm\.state\.getDateString\(/, '日期要走 Farm.state.getDate
 const dateCalls = (o.match(/new Date\(/g) || []).length;
 assert.ok(dateCalls <= 2, '算日期的地方要收在 _nextDays 一处，实际 new Date( 出现 ' + dateCalls + ' 次');
 
+/* ===== 版式要像「货单」，不像设置面板（Chris 2026-08-22）===== */
+assert.match(o, /slip-head/, '每张单要有抬头');
+assert.match(o, /slip-no/, '要有单号');
+assert.match(o, /slip-to/, '要写收货方');
+assert.match(o, /slip-dots/, '明细要有引导点（账目单的做法，名字和数量连成一行）');
+assert.match(o, /slip-total/, '要有结算行');
+const css = fs.readFileSync(join(root, 'src/css/style.css'), 'utf8');
+assert.match(css, /\.order-slip\s*\{/, '货单样式要在');
+assert.match(css, /\.slip-dots\s*\{[\s\S]*?repeating-linear-gradient/, '引导点用重复渐变画');
+assert.match(css, /\.slip-total-coins[\s\S]*?tabular-nums/, '金额要等宽数字（账目感）');
+
 console.log('ok orders-ui');
 
 // ===== 实体告示牌（2026-08-22 Chris:「订单板是否有实体架在地上，可放在货仓旁」）=====

@@ -126,12 +126,17 @@
     const cc = iso._cell(b.gx + (bb.w - 1) / 2, b.gy + (bb.h - 1) / 2);
     const front = iso._cell(b.gx + (bb.w - 1), b.gy + (bb.h - 1));
     const by = front.y + th / 2 + th * 0.18;
-    const probes = [0.3, 0.6, 1.0, 1.4].map((k) => {
+    /* ⚠️ 探测点必须覆盖**整块牌面**，不能只探底下那截。
+       早先只探到 1.0th，而牌子画到 2.5th 高 —— 于是「只有柱子能点中」这个 bug
+       从测试里溜了过去（k=1.4 当时就返回 'none'，是我没追）。 */
+    const probes = [0.3, 0.8, 1.3, 1.8, 2.2].map((k) => {
       const h = iso._buildingAtPoint(cc.x, by - th * k);
       return { k: k, type: h >= 0 ? (d.map[h] || {}).type : 'none' };
     });
     dbg.boardProbes = probes;
-    T('E23 告示牌点得中', probes.some((p2) => p2.type === 'board'));
+    const boardHits = probes.filter((p2) => p2.type === 'board').length;
+    dbg.boardHits = boardHits;
+    T('E23 整块牌面都点得中（不是只有柱子）', boardHits >= 4);
     // 不可拆：删除按钮不该出现
     T('E24 告示牌标了不可删除', !!(iso._bldgOf(b) && iso._bldgOf(b).noDelete));
 
