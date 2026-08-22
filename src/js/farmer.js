@@ -43,7 +43,7 @@
   function specOf(id) {
     return LOOKS[clampLook(id) - 1];
   }
-  // 设置九宫格 / 小东头像共用。表是 6 列 × 5 行；写成 400% 会从格子底下漏出下一行的头。
+  // 设置九宫格 / 东超头像共用。表是 6 列 × 5 行；写成 400% 会从格子底下漏出下一行的头。
   function previewStyle(look, anim) {
     const id = clampLook(look);
     const row = ANIMS[anim] || 0;

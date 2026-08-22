@@ -7,7 +7,7 @@
  *
  * 进度事件（onEvent）:
  *   plant(cropId,isNew) / harvest(cropId) / buy_seed(cropId,cost)
- *   deliver(coins)=仓库卖货 / order(coins)=交小东订单
+ *   deliver(coins)=仓库卖货 / order(coins)=交东超订单
  *
  * earn_coins 语义（2026-07-02 修正）: 进度只来自真实到账的卖货/交单金币。
  * 旧实现在 harvest 事件按「应得卖价」预记——仓库 V2 后收获并不给币，
@@ -148,7 +148,7 @@
           if (t.type === 'buy_seed') t.progress++;
           if (t.type === 'spend_coins' && payload && payload.cost > 0) t.progress += payload.cost;
         }
-        // 真实到账金币：仓库卖货(deliver)、小东订单(order)、厨房出菜(cook) 都算
+        // 真实到账金币：仓库卖货(deliver)、东超订单(order)、厨房出菜(cook) 都算
         if ((eventType === 'deliver' || eventType === 'order' || eventType === 'cook')
             && t.type === 'earn_coins' && payload && payload.coins > 0) {
           t.progress += payload.coins;

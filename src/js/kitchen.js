@@ -1,5 +1,5 @@
 /**
- * kitchen.js — 小东厨房（加工链 MVP，2026-07-02）。
+ * kitchen.js — 东超厨房（加工链 MVP，2026-07-02）。
  *
  * 农场游戏品类标配的「需求端深度」：仓库里的菜不再只有散卖/交订单两个出口，
  * 还能按真实中餐菜谱加工成菜品，计时出锅后卖给东方超市，价值 ≈ 原料散卖
@@ -176,7 +176,7 @@
       }).join('');
 
       const html = `
-        <h2 class="modal-title">${lang === 'en' ? "Xiaodong's Kitchen" : '小东厨房'}</h2>
+        <h2 class="modal-title">${lang === 'en' ? "Eastern Market's Kitchen" : '东超厨房'}</h2>
         <p class="modal-subtitle">${lang === 'en'
           ? 'Turn barn crops into real Chinese dishes — Eastern Market pays extra for cooked food!'
           : '用谷仓里的菜做真·中餐，卖给东方超市比散卖赚更多！'}</p>

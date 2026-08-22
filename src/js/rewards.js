@@ -117,7 +117,7 @@
       // 补上订单/大转盘两个真实存在但此前没写的来源。）
       const earnList = lang === 'en' ? [
         { icon: '📋', text: 'Daily tasks: some give +1~2 (3 tasks/day)' },
-        { icon: '📦', text: 'Deliver Xiaodong\'s orders: occasional +1~2 (daily cap)' },
+        { icon: '📦', text: 'Deliver Eastern Market\'s orders: occasional +1~2 (daily cap)' },
         { icon: '🌽', text: '3% lucky bonus on harvest +5' },
         { icon: '🎰', text: '0.5% Golden Nugget chance +20~100' },
         { icon: '🌅', text: 'First harvest of the day +5' },
@@ -128,7 +128,7 @@
         { icon: '🔄', text: 'Convert farm coins 10:1' },
       ] : [
         { icon: '📋', text: '每日任务：部分带 +1~2（每日 3 个）' },
-        { icon: '📦', text: '给小东交订单：不定期 +1~2（每日有上限）' },
+        { icon: '📦', text: '给东超交订单：不定期 +1~2（每日有上限）' },
         { icon: '🌽', text: '收获时 3% 幸运积分 +5' },
         { icon: '🎰', text: '0.5% 金疙瘩大奖 +20~100' },
         { icon: '🌅', text: '今日首次收获 +5' },

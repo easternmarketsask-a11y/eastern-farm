@@ -511,7 +511,7 @@ Read `docs/TASKS.md` for the full prioritized list. Summary:
   列表入场走 `_staggerModalItems`（`.ef-pop`），按钮 48px 厚边、点下去有
   轻触震动。关闭叉是奶油圆钮不是灰影。契约 `scripts/verify/modal-ux-test.mjs`。
 - **玩家可见叫法一律**：游戏名「东方农场 / Eastern Farm」（「东方农场路」是世界里的地址）；存储建筑「谷仓 / barn」（别再写 仓库 / silo / warehouse）；
-  NPC 英文名 **Xiaodong**（不是 Little East）。
+  NPC 叫「**东超**」（东方超市的简称，2026-08-22 由「小东」改名；它现在就是店本身，不是一个人，文案别再用「他」）。英文侧沿用 Eastern Market / the storekeeper。
 - 宠物显示语义：`state.petsEnabled === false` 才藏，`undefined` 视为开；买宠物自动置 true。
   开关只在「设置 → 农场显示」。
 - 部署闸门 `scripts/verify/smoke-flows.js` 走 23 个入口，任一步抛异常即中止；

@@ -2185,7 +2185,7 @@ body.mapmode #warehouseBtn { display: none !important; }
   background: linear-gradient(180deg, transparent 0%, #f5e9c8 100%);
   position: relative;
 }
-/* fillable-order count badge over 小东's avatar (orders.js) */
+/* fillable-order count badge over 东超's avatar (orders.js) */
 .storekeeper-badge {
   position: absolute;
   left: 44px;
@@ -4646,7 +4646,7 @@ body.modal-open .pwa-install-banner { display: none; }
   position: fixed;
   left: 50%;
   /* 抬到底部 dock（约 82px 高）之上：原来贴底直接把 任务/商店/谷仓/菜单 整条盖住，
-     横幅不关掉就点不到（2026-08-15 截图实证）；小东头像与建造钮也在同一带 */
+     横幅不关掉就点不到（2026-08-15 截图实证）；东超头像与建造钮也在同一带 */
   bottom: calc(96px + env(safe-area-inset-bottom, 0px));
   transform: translateX(-50%);
   z-index: 9000;
@@ -4839,7 +4839,7 @@ body.modal-open .pwa-install-banner { display: none; }
 }
 .report-revenge-btn:active { transform: scale(0.94); }
 
-/* =============== 小东订单板 / ORDER BOARD (orders.js) =============== */
+/* =============== 东超订单板 / ORDER BOARD (orders.js) =============== */
 .order-list { display: flex; flex-direction: column; gap: 10px; margin: 4px 0 2px; }
 .order-card {
   background: var(--cream-card, #fffdf6);
@@ -4963,7 +4963,7 @@ body.modal-open .pwa-install-banner { display: none; }
   z-index: 9; background: none; padding: 0; width: 52px; height: 52px;
   border-radius: 50%; box-shadow: 0 3px 10px rgba(0,0,0,0.22);
 }
-/* 480–699px：#app 仍是居中 480 栏，小东贴这一栏左下，不是窗口最左边。
+/* 480–699px：#app 仍是居中 480 栏，东超贴这一栏左下，不是窗口最左边。
    ≥700px 铺满窗口后回到 left:10px（与手机一致）。 */
 @media (min-width: 481px) and (max-width: 699px) {
   .storekeeper { left: calc(50% - 240px + 10px); }
@@ -5069,7 +5069,7 @@ body.modal-open .pwa-install-banner { display: none; }
 
 
 /* =============== 农场人生(2026-08-14) =============== */
-/* 小东的信: 信纸质感 —— 奶油底、上缘邮票位、display 字标题 */
+/* 东超的信: 信纸质感 —— 奶油底、上缘邮票位、display 字标题 */
 .ls-letter { text-align: center; }
 .ls-letter-stamp { font-size: 40px; line-height: 1; }
 .ls-letter-eyebrow {

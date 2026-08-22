@@ -197,7 +197,7 @@
       // 6c. Buildable map view init is now deferred until after splash dismiss (see wireSplash),
       // so the entry buttons are guaranteed responsive and no early canvas overlay conflicts.
 
-      // 6d. Seed 小东's order board + show his fillable-order badge
+      // 6d. Seed the Eastern Market order board + show its fillable-order badge
       if (Farm.orders) { Farm.orders.ensure(); Farm.orders.refreshBadge(); }
 
       // 6e. 底部 dock 红点首刷（谷仓将满/满 + 厨房出锅，UX 第 4 批）
@@ -488,10 +488,10 @@
     const lang = (Farm.state && Farm.state.data && Farm.state.data.language) || 'zh';
     // 图标是 index.html 内嵌 sprite 的 symbol id（视觉升级第1批：chrome 不再用 emoji）。
     const items = [
-      { a: 'orders', icon: 'orders', zh: '小东订单', en: 'Orders' },
+      { a: 'orders', icon: 'orders', zh: '东超订单', en: 'Orders' },
       { a: 'storeRewards', icon: 'receipt', zh: '领取到店奖励', en: 'Store Rewards' },
       { a: 'story', icon: 'story', zh: '农场人生', en: 'My Story' },
-      { a: 'kitchen', icon: 'kitchen', zh: '小东厨房', en: 'Kitchen' },
+      { a: 'kitchen', icon: 'kitchen', zh: '东超厨房', en: 'Kitchen' },
       { a: 'community', icon: 'community', zh: '社区', en: 'Community' },
       { a: 'expand', icon: 'expand', zh: '开垦农田', en: 'Clear land' },
       { a: 'collection', icon: 'collection', zh: '图鉴', en: 'Collection' },

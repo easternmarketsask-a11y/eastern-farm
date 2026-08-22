@@ -211,8 +211,8 @@
       "name_zh": "接单能手",
       "name_en": "Order Taker",
       "icon": "📋",
-      "desc_zh": "累计完成小东订单 50 张。",
-      "desc_en": "Fill 50 of Xiaodong's orders.",
+      "desc_zh": "累计完成东超订单 50 张。",
+      "desc_en": "Fill 50 of Eastern Market's orders.",
       "reward_coins": 400,
       "check": { "type": "stat", "key": "totalOrdersFilled", "min": 50 }
     },
@@ -221,8 +221,8 @@
       "name_zh": "订单大户",
       "name_en": "Order Champion",
       "icon": "🧾",
-      "desc_zh": "累计完成小东订单 150 张。",
-      "desc_en": "Fill 150 of Xiaodong's orders.",
+      "desc_zh": "累计完成东超订单 150 张。",
+      "desc_en": "Fill 150 of Eastern Market's orders.",
       "reward_coins": 1000,
       "check": { "type": "stat", "key": "totalOrdersFilled", "min": 150 }
     },
@@ -231,8 +231,8 @@
       "name_zh": "供货传奇",
       "name_en": "Supply Legend",
       "icon": "🏆",
-      "desc_zh": "累计完成小东订单 400 张。",
-      "desc_en": "Fill 400 of Xiaodong's orders.",
+      "desc_zh": "累计完成东超订单 400 张。",
+      "desc_en": "Fill 400 of Eastern Market's orders.",
       "reward_coins": 2500,
       "check": { "type": "stat", "key": "totalOrdersFilled", "min": 400 }
     },

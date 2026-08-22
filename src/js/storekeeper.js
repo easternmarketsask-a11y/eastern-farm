@@ -85,7 +85,7 @@
   window.Farm = window.Farm || {};
   window.Farm.storekeeper = storekeeper;
 
-  // Tap 小东 → open his order board (he IS the Eastern Market buyer, so this
+  // Tap 东超 → open the order board (东超 IS Eastern Market itself — the store
   // is the most thematic entry point). The greeting line still rotates on its
   // own via refresh() calls elsewhere.
   document.addEventListener('DOMContentLoaded', () => {

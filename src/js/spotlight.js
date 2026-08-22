@@ -194,7 +194,7 @@
           this._baseOrders = d.totalOrdersFilled || 0;
         }
       } else if (this._step === 2) {
-        // 完成条件同时接受「一键卖货」与「交小东订单」（audit P0 引导死锁）：
+        // 完成条件同时接受「一键卖货」与「交东超订单」（audit P0 引导死锁）：
         // 玩家照 all_reserved toast 的建议去交订单也算学会了变现，不再卡死。
         if ((d.totalDeliveries || 0) > this._baseDeliveries ||
             (d.totalOrdersFilled || 0) > this._baseOrders) {

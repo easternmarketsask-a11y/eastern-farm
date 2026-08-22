@@ -125,8 +125,8 @@
     warehouseCapacity: 20,      // Soft cap; harvest blocked when full
     totalDeliveries: 0,         // Lifetime count of warehouse→Eastern Market deliveries
 
-    // ============ 小东订单板 (orders.js — 2026-06-18) ============
-    // Hay Day-style order board: 小东 (Eastern Market) requests specific
+    // ============ 东超订单板 (orders.js — 2026-06-18) ============
+    // Hay Day-style order board: 东超 (Eastern Market) requests specific
     // crops; player delivers them FROM the warehouse for a coin premium
     // (~1.5× bulk-sell) + XP, and occasionally a little 超市积分. This gives
     // crop VARIETY a purpose beyond bulk selling and pulls the player back.
