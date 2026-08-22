@@ -159,7 +159,10 @@
     // 点房子=改建补差价；调色盘再建=付全价。这里的 2×2 只是农户小宅默认。
     home: { img: 'house', w: 2, h: 2, sc: 2.3, zh: '我的家', en: 'My Home', tap: 'home', cost: 300 },
     car: { img: 'p_car_1', w: 2, h: 2, sc: 1.85, zh: '汽车', en: 'Car', tap: 'car', cost: 200 },
-    barn: { img: 'barn', w: 2, h: 2, sc: 2.4, zh: '谷仓', en: 'Barn', tap: 'warehouse', cost: 350 },
+    // fill = 铺满宅基地的比例（走 _spriteBox 的 plotDriven 分支）。**不写 fill 的建筑
+    // 一律保持 2026-06-18 那套手调尺寸**，本次不动。谷仓给了 fill 是因为房子改大之后，
+    // 只占宅基地 64% 的谷仓在新农舍旁边小得像个玩具 —— 它还是仓库，玩家天天点。
+    barn: { img: 'barn', w: 2, h: 2, sc: 2.4, fill: 1.08, zh: '谷仓', en: 'Barn', tap: 'warehouse', cost: 350 },
     // 菜摊(类型名 house 是历史存档键, 不能改): 2026-08-14 二次定位 ——
     // Chris:「摊位看起来就是菜摊, 干脆作为菜摊用, 卖菜给路人; 种子店不需要实体」。
     // 点摊 → Farm.stall(路人溢价买菜); 买种子走底部「商店」按钮, 无实体入口。
@@ -177,6 +180,9 @@
     bridge: { img: 'deco_bridge', w: 2, h: 1, sc: 1.6, zh: '小桥', en: 'Bridge', cost: 140 },
   };
   const BLD = 0.7;   // global building-sprite scale (Chris 2026-06-18: buildings were too big) — shrinks all building sprites uniformly so the starter farm fits the central meadow
+  // 我的家：贴图高度的护栏（高 ≤ 宽 ÷ 这个数）。当前 30 张房子的长宽比都在
+  // 0.97–1.39，护栏一次都不会生效 —— 它只防将来加进来一张尖塔特别高的图跑出画面。
+  const HOME_MIN_ASPECT = 0.45;
   const charmOf = (b) => Math.max(1, Math.round((b.cost || 0) / 8));
   const COOP_INTERVAL = 5 * 60 * 1000, COOP_REWARD = 30;   // 鸡舍每 5 分钟产一窝蛋，收一次 +30 农场币
   const BED_W = 0.78;   // 独立苗床：格间露草。点按热区仍用满格菱形，缝里也好点
@@ -238,38 +244,49 @@
     { id: 'mansion', zh: '豪宅', en: 'Mansions', face: 'p_house_8' },
   ];
   // 占地按档次递增，贴图铺满这块地（Chris 2026-08-18：档次越高越大，尺寸不能省）。
-  // 农舍 2×2 · 小院 4×4 · 洋房 5×5 · 豪宅 7×7。draw 是在占地盒子上再略放大（屋檐探出格外）。
+  // 农舍 2×2 · 小院 4×4 · 洋房 5×5 · 豪宅 7×7。
+  //
+  // 🔒 draw = **屋檐溢出系数**：1.0 就是正好盖住宅基地，1.14 是往外探 14%。
+  // 房子画多大只由「占地 × draw」决定（见 _spriteBox 的 plotDriven 分支），
+  // 高度随贴图自己的长宽比长出来，**不再有与占地无关的高度上限**。
+  // 2026-08-21 之前 draw 是 1.28–1.90，因为那时它要去顶一个 `sc × th × 2.2` 的
+  // 高度天花板，结果宽度是被高度反推的：4×4 的院落人家画成 3.21 格宽、5×5 的
+  // 乡绅别墅只有 2.70 格 —— 花 6000 币升级，房子反而缩水。现在同占地必然同大小，
+  // 换档只可能变大。
+  // 小房子溢出多、大房子溢出少（2×2≈1.18 → 7×7≈1.00）：茅屋的屋檐本来就占比大，
+  // 而 7×7 的庄园再往外探就压到邻居的地界了。同一档内按造价微调 ±3%，
+  // 保住「更贵的更气派」，但幅度远小于档位之间的差距，跨档不可能再倒挂。
   const HOME_LEVELS = [
-    { zh: '农户小宅', en: 'Farm Cottage',     cost: 0,     needLv: 1,  charm: 40,   upkeep: 0,   stem: 'p_house_1',  w: 2, h: 2, draw: 1.28, mansion: false, cat: 'cottage' },
-    { zh: '砖瓦农居', en: 'Brick Farmhouse',  cost: 1200,  needLv: 3,  charm: 90,   upkeep: 8,   stem: 'p_house_2',  w: 2, h: 2, draw: 1.38, mansion: false, cat: 'cottage' },
-    { zh: '院落人家', en: 'Courtyard Home',   cost: 3000,  needLv: 5,  charm: 160,  upkeep: 15,  stem: 'p_house_3',  w: 4, h: 4, draw: 1.32, mansion: false, cat: 'court' },
-    { zh: '乡绅别墅', en: 'Country Villa',    cost: 6000,  needLv: 7,  charm: 260,  upkeep: 30,  stem: 'p_house_4',  w: 5, h: 5, draw: 1.36, mansion: false, cat: 'villa' },
-    { zh: '花园洋房', en: 'Garden Manor',     cost: 12000, needLv: 9,  charm: 400,  upkeep: 50,  stem: 'p_house_5',  w: 5, h: 5, draw: 1.48, mansion: false, cat: 'villa' },
-    { zh: '泳池雅墅', en: 'Pool Villa',       cost: 20000, needLv: 11, charm: 620,  upkeep: 90,  points: 100, stem: 'p_house_6',  w: 7, h: 7, draw: 1.52, mansion: true, cat: 'mansion' },
-    { zh: '湖景豪宅', en: 'Lakeside Mansion', cost: 36000, needLv: 14, charm: 920,  upkeep: 160, points: 250, stem: 'p_house_7',  w: 7, h: 7, draw: 1.68, mansion: true, cat: 'mansion' },
-    { zh: '东方庄园', en: 'Eastern Estate',   cost: 60000, needLv: 18, charm: 1400, upkeep: 250, points: 400, stem: 'p_house_8',  w: 7, h: 7, draw: 1.82, mansion: true, cat: 'mansion' },
-    { zh: '石墙农舍', en: 'Stone Hut',        cost: 1500,  needLv: 3,  charm: 95,   upkeep: 8,   stem: 'p_house_9',  w: 2, h: 2, draw: 1.36, mansion: false, cat: 'cottage' },
-    { zh: '青瓦小院', en: 'Grey-Tile Court',  cost: 3500,  needLv: 5,  charm: 175,  upkeep: 18,  stem: 'p_house_10', w: 4, h: 4, draw: 1.36, mansion: false, cat: 'court' },
-    { zh: '双翼别墅', en: 'Twin-Wing Villa',  cost: 7000,  needLv: 7,  charm: 280,  upkeep: 35,  stem: 'p_house_11', w: 5, h: 5, draw: 1.40, mansion: false, cat: 'villa' },
-    { zh: '花廊洋房', en: 'Pergola Manor',    cost: 14000, needLv: 9,  charm: 430,  upkeep: 55,  stem: 'p_house_12', w: 5, h: 5, draw: 1.50, mansion: false, cat: 'villa' },
-    { zh: '圆池雅墅', en: 'Round-Pool Villa', cost: 24000, needLv: 11, charm: 680,  upkeep: 100, points: 150, stem: 'p_house_13', w: 7, h: 7, draw: 1.56, mansion: true, cat: 'mansion' },
-    { zh: '园林庄园', en: 'Garden Estate',    cost: 68000, needLv: 18, charm: 1500, upkeep: 280, points: 500, stem: 'p_house_14', w: 7, h: 7, draw: 1.84, mansion: true, cat: 'mansion' },
-    { zh: '茅草暖屋', en: 'Thatched Cottage', cost: 800,   needLv: 1,  charm: 70,   upkeep: 5,   stem: 'p_house_15', w: 2, h: 2, draw: 1.32, mansion: false, cat: 'cottage' },
-    { zh: '木篱农舍', en: 'Timber Farmhouse', cost: 1800,  needLv: 3,  charm: 110,  upkeep: 10,  stem: 'p_house_16', w: 2, h: 2, draw: 1.42, mansion: false, cat: 'cottage' },
-    { zh: '四合小院', en: 'Siheyuan Court',   cost: 4200,  needLv: 5,  charm: 190,  upkeep: 20,  stem: 'p_house_17', w: 4, h: 4, draw: 1.40, mansion: false, cat: 'court' },
-    { zh: '竹影人家', en: 'Bamboo Home',      cost: 5000,  needLv: 5,  charm: 210,  upkeep: 22,  stem: 'p_house_18', w: 4, h: 4, draw: 1.42, mansion: false, cat: 'court' },
-    { zh: '黄墙洋楼', en: 'Ochre Villa',      cost: 8500,  needLv: 7,  charm: 310,  upkeep: 38,  stem: 'p_house_19', w: 5, h: 5, draw: 1.42, mansion: false, cat: 'villa' },
-    { zh: '玫瑰洋房', en: 'Rose Villa',       cost: 15500, needLv: 9,  charm: 460,  upkeep: 58,  stem: 'p_house_20', w: 5, h: 5, draw: 1.52, mansion: false, cat: 'villa' },
-    { zh: '白石宫墅', en: 'White Palace',     cost: 28000, needLv: 11, charm: 750,  upkeep: 110, points: 180, stem: 'p_house_21', w: 7, h: 7, draw: 1.62, mansion: true, cat: 'mansion' },
-    { zh: '金顶庄园', en: 'Golden Estate',    cost: 80000, needLv: 18, charm: 1700, upkeep: 300, points: 550, stem: 'p_house_22', w: 7, h: 7, draw: 1.90, mansion: true, cat: 'mansion' },
-    { zh: '欧式石屋', en: 'Stone Cottage',    cost: 1000,  needLv: 1,  charm: 80,   upkeep: 6,   stem: 'p_house_23', w: 2, h: 2, draw: 1.34, mansion: false, cat: 'cottage' },
-    { zh: '木屋木舍', en: 'Alpine Chalet',    cost: 1600,  needLv: 3,  charm: 105,  upkeep: 10,  stem: 'p_house_24', w: 2, h: 2, draw: 1.40, mansion: false, cat: 'cottage' },
-    { zh: '砖庭小院', en: 'Brick Court',      cost: 3800,  needLv: 5,  charm: 180,  upkeep: 18,  stem: 'p_house_25', w: 4, h: 4, draw: 1.38, mansion: false, cat: 'court' },
-    { zh: '乔治联排', en: 'Georgian House',   cost: 4800,  needLv: 5,  charm: 205,  upkeep: 22,  stem: 'p_house_26', w: 4, h: 4, draw: 1.44, mansion: false, cat: 'court' },
-    { zh: '意式别墅', en: 'Italian Villa',    cost: 9000,  needLv: 7,  charm: 320,  upkeep: 40,  stem: 'p_house_27', w: 5, h: 5, draw: 1.46, mansion: false, cat: 'villa' },
-    { zh: '法式庄园', en: 'French Manor',     cost: 16000, needLv: 9,  charm: 470,  upkeep: 60,  stem: 'p_house_28', w: 5, h: 5, draw: 1.54, mansion: false, cat: 'villa' },
-    { zh: '尖塔城堡', en: 'Chateau',          cost: 32000, needLv: 11, charm: 820,  upkeep: 120, points: 200, stem: 'p_house_29', w: 7, h: 7, draw: 1.66, mansion: true, cat: 'mansion' },
-    { zh: '巴洛克宫', en: 'Baroque Palace',   cost: 72000, needLv: 18, charm: 1580, upkeep: 290, points: 480, stem: 'p_house_30', w: 7, h: 7, draw: 1.86, mansion: true, cat: 'mansion' },
+    { zh: '农户小宅', en: 'Farm Cottage',     cost: 0,     needLv: 1,  charm: 40,   upkeep: 0,   stem: 'p_house_1',  w: 2, h: 2, draw: 1.14, mansion: false, cat: 'cottage' },
+    { zh: '砖瓦农居', en: 'Brick Farmhouse',  cost: 1200,  needLv: 3,  charm: 90,   upkeep: 8,   stem: 'p_house_2',  w: 2, h: 2, draw: 1.18, mansion: false, cat: 'cottage' },
+    { zh: '院落人家', en: 'Courtyard Home',   cost: 3000,  needLv: 5,  charm: 160,  upkeep: 15,  stem: 'p_house_3',  w: 4, h: 4, draw: 1.05, mansion: false, cat: 'court' },
+    { zh: '乡绅别墅', en: 'Country Villa',    cost: 6000,  needLv: 7,  charm: 260,  upkeep: 30,  stem: 'p_house_4',  w: 5, h: 5, draw: 1.01, mansion: false, cat: 'villa' },
+    { zh: '花园洋房', en: 'Garden Manor',     cost: 12000, needLv: 9,  charm: 400,  upkeep: 50,  stem: 'p_house_5',  w: 5, h: 5, draw: 1.044, mansion: false, cat: 'villa' },
+    { zh: '泳池雅墅', en: 'Pool Villa',       cost: 20000, needLv: 11, charm: 620,  upkeep: 90,  points: 100, stem: 'p_house_6',  w: 7, h: 7, draw: 0.97, mansion: true, cat: 'mansion' },
+    { zh: '湖景豪宅', en: 'Lakeside Mansion', cost: 36000, needLv: 14, charm: 920,  upkeep: 160, points: 250, stem: 'p_house_7',  w: 7, h: 7, draw: 1.0, mansion: true, cat: 'mansion' },
+    { zh: '东方庄园', en: 'Eastern Estate',   cost: 60000, needLv: 18, charm: 1400, upkeep: 250, points: 400, stem: 'p_house_8',  w: 7, h: 7, draw: 1.008, mansion: true, cat: 'mansion' },
+    { zh: '石墙农舍', en: 'Stone Hut',        cost: 1500,  needLv: 3,  charm: 95,   upkeep: 8,   stem: 'p_house_9',  w: 2, h: 2, draw: 1.193, mansion: false, cat: 'cottage' },
+    { zh: '青瓦小院', en: 'Grey-Tile Court',  cost: 3500,  needLv: 5,  charm: 175,  upkeep: 18,  stem: 'p_house_10', w: 4, h: 4, draw: 1.062, mansion: false, cat: 'court' },
+    { zh: '双翼别墅', en: 'Twin-Wing Villa',  cost: 7000,  needLv: 7,  charm: 280,  upkeep: 35,  stem: 'p_house_11', w: 5, h: 5, draw: 1.019, mansion: false, cat: 'villa' },
+    { zh: '花廊洋房', en: 'Pergola Manor',    cost: 14000, needLv: 9,  charm: 430,  upkeep: 55,  stem: 'p_house_12', w: 5, h: 5, draw: 1.053, mansion: false, cat: 'villa' },
+    { zh: '圆池雅墅', en: 'Round-Pool Villa', cost: 24000, needLv: 11, charm: 680,  upkeep: 100, points: 150, stem: 'p_house_13', w: 7, h: 7, draw: 0.978, mansion: true, cat: 'mansion' },
+    { zh: '园林庄园', en: 'Garden Estate',    cost: 68000, needLv: 18, charm: 1500, upkeep: 280, points: 500, stem: 'p_house_14', w: 7, h: 7, draw: 1.015, mansion: true, cat: 'mansion' },
+    { zh: '茅草暖屋', en: 'Thatched Cottage', cost: 800,   needLv: 1,  charm: 70,   upkeep: 5,   stem: 'p_house_15', w: 2, h: 2, draw: 1.153, mansion: false, cat: 'cottage' },
+    { zh: '木篱农舍', en: 'Timber Farmhouse', cost: 1800,  needLv: 3,  charm: 110,  upkeep: 10,  stem: 'p_house_16', w: 2, h: 2, draw: 1.22, mansion: false, cat: 'cottage' },
+    { zh: '四合小院', en: 'Siheyuan Court',   cost: 4200,  needLv: 5,  charm: 190,  upkeep: 20,  stem: 'p_house_17', w: 4, h: 4, draw: 1.086, mansion: false, cat: 'court' },
+    { zh: '竹影人家', en: 'Bamboo Home',      cost: 5000,  needLv: 5,  charm: 210,  upkeep: 22,  stem: 'p_house_18', w: 4, h: 4, draw: 1.11, mansion: false, cat: 'court' },
+    { zh: '黄墙洋楼', en: 'Ochre Villa',      cost: 8500,  needLv: 7,  charm: 310,  upkeep: 38,  stem: 'p_house_19', w: 5, h: 5, draw: 1.027, mansion: false, cat: 'villa' },
+    { zh: '玫瑰洋房', en: 'Rose Villa',       cost: 15500, needLv: 9,  charm: 460,  upkeep: 58,  stem: 'p_house_20', w: 5, h: 5, draw: 1.061, mansion: false, cat: 'villa' },
+    { zh: '白石宫墅', en: 'White Palace',     cost: 28000, needLv: 11, charm: 750,  upkeep: 110, points: 180, stem: 'p_house_21', w: 7, h: 7, draw: 0.985, mansion: true, cat: 'mansion' },
+    { zh: '金顶庄园', en: 'Golden Estate',    cost: 80000, needLv: 18, charm: 1700, upkeep: 300, points: 550, stem: 'p_house_22', w: 7, h: 7, draw: 1.03, mansion: true, cat: 'mansion' },
+    { zh: '欧式石屋', en: 'Stone Cottage',    cost: 1000,  needLv: 1,  charm: 80,   upkeep: 6,   stem: 'p_house_23', w: 2, h: 2, draw: 1.167, mansion: false, cat: 'cottage' },
+    { zh: '木屋木舍', en: 'Alpine Chalet',    cost: 1600,  needLv: 3,  charm: 105,  upkeep: 10,  stem: 'p_house_24', w: 2, h: 2, draw: 1.207, mansion: false, cat: 'cottage' },
+    { zh: '砖庭小院', en: 'Brick Court',      cost: 3800,  needLv: 5,  charm: 180,  upkeep: 18,  stem: 'p_house_25', w: 4, h: 4, draw: 1.074, mansion: false, cat: 'court' },
+    { zh: '乔治联排', en: 'Georgian House',   cost: 4800,  needLv: 5,  charm: 205,  upkeep: 22,  stem: 'p_house_26', w: 4, h: 4, draw: 1.098, mansion: false, cat: 'court' },
+    { zh: '意式别墅', en: 'Italian Villa',    cost: 9000,  needLv: 7,  charm: 320,  upkeep: 40,  stem: 'p_house_27', w: 5, h: 5, draw: 1.036, mansion: false, cat: 'villa' },
+    { zh: '法式庄园', en: 'French Manor',     cost: 16000, needLv: 9,  charm: 470,  upkeep: 60,  stem: 'p_house_28', w: 5, h: 5, draw: 1.07, mansion: false, cat: 'villa' },
+    { zh: '尖塔城堡', en: 'Chateau',          cost: 32000, needLv: 11, charm: 820,  upkeep: 120, points: 200, stem: 'p_house_29', w: 7, h: 7, draw: 0.992, mansion: true, cat: 'mansion' },
+    { zh: '巴洛克宫', en: 'Baroque Palace',   cost: 72000, needLv: 18, charm: 1580, upkeep: 290, points: 480, stem: 'p_house_30', w: 7, h: 7, draw: 1.022, mansion: true, cat: 'mansion' },
   ];
   const CAR_CAP = 2;
   const CAR_CATS = [
@@ -647,7 +664,12 @@
       for (let i = 0; i < plots.length; i++) acc(this._plotGX(i), this._plotGY(i));
       const map = Farm.state.data.map || [];
       for (const o of map) {
-        const b = this._bldgOf(o); const w = b ? b.w : 1, h = b ? b.h : 1; acc(o.gx, o.gy); acc(o.gx + w - 1, o.gy + h - 1);
+        // 宅基地的**四个角**都要框进来。等距下 (gx,gy) 和 (gx+w-1,gy+h-1) 只是菱形的
+        // 上下两个尖，左右两尖在 (gx,gy+h-1) 和 (gx+w-1,gy) —— 少框这两个，屏幕横轴
+        // 范围 minU/maxU 每边少算 (w+h-2)/2 格。以前贴图远窄于宅基地，看不出来；
+        // 2026-08-21 房子改成铺满宅基地之后，7×7 的庄园直接被切在屏幕左缘（390 竖屏实测）。
+        const b = this._bldgOf(o); const w = b ? b.w : 1, h = b ? b.h : 1;
+        acc(o.gx, o.gy); acc(o.gx + w - 1, o.gy + h - 1); acc(o.gx, o.gy + h - 1); acc(o.gx + w - 1, o.gy);
         // 菜摊前站着等的路人（_drawBuilding 里画在 gy+2.15 的路上）也算进镜头，
         // 否则摊子贴着屏幕左缘时，路人和「×2 💰」求购气泡被切在画外（2026-08-15 截图实证）
         if (o.type === 'house') acc(o.gx + 1, o.gy + 2);
@@ -1083,14 +1105,15 @@
       const o = map.find(m => m && m.type === 'barn');
       if (!o) return null;
       const b = BUILDINGS.barn;
-      const tw = this._tw(), th = this._th();
+      const th = this._th();
       // 与 _drawBuilding / _blit 同一套盒子：底边 by、最大宽高按 BLD 缩、再按贴图长宽比收
       //（2026-08-15 之前用 tw*sc 的近似方盒，比真实谷仓高出一倍多，聚光灯洞大半罩着
       // 谷仓上方的空草地和锁定地块，「点谷仓」指向不清）
       const cc = this._cell(o.gx + (b.w - 1) / 2, o.gy + (b.h - 1) / 2);
       const front = this._cell(o.gx + (b.w - 1), o.gy + (b.h - 1));
       const by = front.y + th / 2 + th * 0.18;
-      let w = b.w * tw * 0.92 * BLD, h = b.sc * th * 2.2 * BLD;
+      const box = this._spriteBox(b, 1, b.fill);
+      let w = box.w, h = box.h;
       const im = this._img[b.img];
       if (im && im.width && im.height) { const sc = Math.min(w / im.width, h / im.height); w = im.width * sc; h = im.height * sc; }
       const r = this._cv.getBoundingClientRect();
@@ -1162,7 +1185,7 @@
     // are very tall (roofs rise far above the footprint), so a cell hit-test misses
     // roof taps. Mirrors _drawBuilding's anchor + _blit's fit math for an exact box.
     _buildingAtPoint(px, py) {
-      const map = (Farm.state.data.map) || [], tw = this._tw(), th = this._th();
+      const map = (Farm.state.data.map) || [], th = this._th();
       const list = [];
       for (let i = 0; i < map.length; i++) { const b = this._bldgOf(map[i]); if (b) list.push({ o: map[i], i, b }); }
       list.sort((a, c) => (c.o.gx + c.b.w + c.o.gy + c.b.h) - (a.o.gx + a.b.w + a.o.gy + a.b.h));   // frontmost first
@@ -1172,8 +1195,11 @@
         const by = front.y + th / 2 + th * 0.18;
         const hz = o.type === 'home' ? this._homeDrawMul(o) : (o.type === 'car' ? this._carDrawMul(o) : 1);
         const im = o.type === 'home' ? this._homeSprite(o) : (o.type === 'car' ? this._carSprite(o) : this._img[b.img]); let w, h;
-        if (im && im.width) { const s = Math.min(b.w * tw * 0.92 * BLD * hz / im.width, b.sc * th * 2.2 * BLD * hz / im.height); w = im.width * s; h = im.height * s; }
-        else { w = b.w * tw * 1.06 * BLD * hz; h = b.sc * th * 2.0 * BLD * hz; }
+        const box = this._spriteBox(b, hz, o.type === 'home' ? 1 : b.fill);
+        if (im && im.width) { const s = Math.min(box.w / im.width, box.h / im.height); w = im.width * s; h = im.height * s; }
+        // 贴图还没到：宽一点、矮一点地兜个手感盒（沿用旧口径的宽松度），
+        // 别用 box.h —— 那是护栏高度（宽的 2.2 倍），拿它当热区会把屋顶上方一大片空草地也算成房子。
+        else { w = box.w * 1.15; h = box.w * 0.95; }
         if (px >= cc.x - w / 2 && px <= cc.x + w / 2 && py >= by - h && py <= by) return i;
       }
       const cell = this._screenToCell(px, py);
@@ -1239,13 +1265,39 @@
       if (o.type === 'home') {
         const wh = this._homeWh(o);
         if (wh.w === b.w && wh.h === b.h) return b;
-        return { img: b.img, w: wh.w, h: wh.h, sc: b.sc, zh: b.zh, en: b.en, tap: b.tap, cost: b.cost };
+        return { img: b.img, w: wh.w, h: wh.h, sc: b.sc, fill: b.fill, zh: b.zh, en: b.en, tap: b.tap, cost: b.cost };
       }
       if (o.type === 'car') {
         const wh = this._carWh(o);
-        return { img: b.img, w: wh.w, h: wh.h, sc: b.sc, zh: b.zh, en: b.en, tap: b.tap, cost: b.cost };
+        return { img: b.img, w: wh.w, h: wh.h, sc: b.sc, fill: b.fill, zh: b.zh, en: b.en, tap: b.tap, cost: b.cost };
       }
       return b;
+    },
+    /* 贴图的最大绘制盒（唯一实现）。_blit 再按贴图长宽比等比收进这个盒子。
+       曾有四处各抄一份同样的算式：_drawBuilding 两处、_buildingAtPoint、barnScreenRect
+       —— 改一处忘一处就是「房子画大了但点不中」，所以合并到这里。
+
+       两套口径，按 plotFill 分流：
+
+       · plotFill 有值（我的家 + 谷仓）——**宽度由宅基地决定**，高度随贴图自己的
+         长宽比长出来。等距 2:1 下 w×h 宅基地的屏幕宽度就是 (w+h)/2 × tw，
+         乘上 plotFill 就是「铺满这块地的百分之多少」。
+         旧算法的宽度其实是被 `b.sc * th * 2.2` 这个**与占地无关**的高度上限反推
+         出来的，于是 3000 币的 4×4 院子画得比 6000 币的 5×5 别墅还宽，7×7 的庄园
+         只盖住自家宅基地的 42–55%（2026-08-21 逐张量过）。占地才是玩家花钱买到的
+         东西，让它直接决定画多大，档次之间就不可能再倒挂。
+         我的家走 plotFill=1，溢出量交给 HOME_LEVELS.draw（hz）—— 见那张表的注释。
+
+       · plotFill 为空（其余建筑 / 车 / 装饰）—— 保持 2026-06-18 那套手调尺寸不动
+         （宽 = 占地 × 0.644）。鸡舍/温室/水井/树按「比人矮一点」量过，本来就对，
+         一并放大会把 Chris 调过的构图全推翻。 */
+    _spriteBox(b, hz, plotFill) {
+      const tw = this._tw(), th = this._th();
+      if (plotFill) {
+        const w = (b.w + b.h) / 2 * tw * plotFill * hz;
+        return { w: w, h: w / HOME_MIN_ASPECT };
+      }
+      return { w: b.w * tw * 0.92 * BLD * hz, h: b.sc * th * 2.2 * BLD * hz };
     },
     _homeFacePx(cat, slot) {
       const step = cat === 'mansion' ? 3 : cat === 'villa' ? 2 : cat === 'court' ? 1 : 0;
@@ -2793,7 +2845,11 @@
         minU = Math.min(minU, u); maxU = Math.max(maxU, u); minV = Math.min(minV, v); maxV = Math.max(maxV, v);
       };
       for (let i = 0; i < plots.length; i++) add(this._plotGX(i), this._plotGY(i));
-      (Farm.state.data.map || []).forEach((o) => { const b = this._bldgOf(o); if (b) { add(o.gx, o.gy); add(o.gx + b.w - 1, o.gy + b.h - 1); } });
+      // 同 _autoFrame：菱形的左右两尖也要加，否则大宅基地在建造模式下会被切边
+      (Farm.state.data.map || []).forEach((o) => {
+        const b = this._bldgOf(o); if (!b) return;
+        add(o.gx, o.gy); add(o.gx + b.w - 1, o.gy + b.h - 1); add(o.gx, o.gy + b.h - 1); add(o.gx + b.w - 1, o.gy);
+      });
       if (minx === Infinity) { minx = 0; miny = 0; maxx = COLS - 1; maxy = ROWS - 1; add(0, 0); add(COLS - 1, ROWS - 1); add(COLS - 1, 0); add(0, ROWS - 1); }
       minx -= 2; miny -= 2; maxx += 2; maxy += 2;   // empty-land margin to drop things into
       const span = (maxx - minx) + (maxy - miny);
@@ -4742,6 +4798,7 @@
       const homeO = ((o.type === 'home' || o.type === 'car') && rec) ? rec : o;
       const hz = o.type === 'home' ? this._homeDrawMul(homeO) : (o.type === 'car' ? this._carDrawMul(homeO) : 1);
       let him = o.type === 'home' ? this._homeSprite(homeO) : (o.type === 'car' ? this._carSprite(homeO) : this._img[b.img]);
+      const box = this._spriteBox(b, pk * hz, o.type === 'home' ? 1 : b.fill);
       let flipX = false;
       if (o.type === 'car') {
         const dv = (idx != null && Farm.farmer && Farm.farmer.carPos) ? Farm.farmer.carPos(idx) : null;
@@ -4769,7 +4826,7 @@
         let lean = 0;
         if (live && fx.turnT < 0.26) lean = Math.sin((fx.turnT / 0.26) * Math.PI) * 0.065 * (flipX ? -1 : 1);
         const mot = { bob: bob, sx: sx, sy: sy, lean: lean };
-        if (!this._blitCar(him, cc.x, by, b.w * tw * 0.92 * BLD * pk * hz, b.sc * th * 2.2 * BLD * pk * hz, flipX, mot)) {
+        if (!this._blitCar(him, cc.x, by, box.w, box.h, flipX, mot)) {
           /* 贴图还在路上 */
         }
         if (live) this._drawCarRiders(cc, by, tw, th, flipX, bob);
@@ -4780,7 +4837,7 @@
           const chip = this._drawCarCareChip(cc, by, tw, th);
           this._carCareHits.push({ idx: idx, x: chip.x, y: chip.y, r: chip.r });
         }
-      } else if (!this._blit(him, cc.x, by, b.w * tw * 0.92 * BLD * pk * hz, b.sc * th * 2.2 * BLD * pk * hz, flipX)) {
+      } else if (!this._blit(him, cc.x, by, box.w, box.h, flipX)) {
         // 贴图还在路上：留草地，onload 会重画。禁止再画调试红块。
       }
       if (o.type === 'lantern' && him instanceof Image && him.width) {
@@ -4793,7 +4850,8 @@
         ctx.fill();
       }
       if (o.type === 'house' && !moving) {
-        this._drawShopSign(cc.x, by, b.w * tw * 0.92 * BLD, b.sc * th * 2.2 * BLD);
+        const sign = this._spriteBox(b, 1, b.fill);
+        this._drawShopSign(cc.x, by, sign.w, sign.h);
         /* 摊前的路人(2026-08-15 两轮定稿): 瘆人的是悬空的**头**(emoji 脸),
            站着的**全身**人影是对的 —— Chris:「有路人要买菜就放一个路人在
            菜摊前不好吗?」。全身 🧍 站在摊前路边 + 接地影 + 头顶求购气泡。 */
