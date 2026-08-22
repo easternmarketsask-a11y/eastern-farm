@@ -455,6 +455,33 @@ else
     echo "—— 部署中止：玩家可能卖不了菜。"
     exit 1
   fi
+
+  # 闸门 M: 跨区作业要开车(约 20 秒)
+  # 2026-08-22 加。农场分成南北两片时，收完这片走去那片会慢得像个傻子
+  # （Chris 实际遇到）。开车判据原来只在「一批活刚开工」时算一次，之后每块地都靠腿。
+  echo "▶ 闸门 M: 跨区作业开车回归测试(约 20 秒)…"
+  $PYCMD -m http.server 8159 --bind 127.0.0.1 >/dev/null 2>&1 &
+  CF_PID=$!
+  trap 'kill $CF_PID 2>/dev/null || true' EXIT
+  sleep 1
+  CF_OUT="$(mktemp)"
+  EF_CDP_TIMEOUT=180000 node scripts/verify/cdp.mjs "http://127.0.0.1:8159/src/" "scripts/verify/cross-farm-drive-tests.js" 12000 >"$CF_OUT" 2>/dev/null || true
+  kill $CF_PID 2>/dev/null || true
+  trap - EXIT
+  if ! node -e '
+    const o = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
+    const r = o.evalResult;
+    if (!r || !r.failures) { console.error("✗ 跨区开车测试没跑出结果"); process.exit(1); }
+    if (r.failures.length) {
+      console.error("✗ 跨区作业的开车判断坏了:");
+      r.failures.forEach(f => console.error("  - " + f));
+      process.exit(1);
+    }
+    console.log("  ✓ 远地开车 / 近地不上车 / 活不丢 / 没车也不卡");
+  ' "$CF_OUT"; then
+    echo "—— 部署中止：人会走着穿过整个农场。"
+    exit 1
+  fi
 fi
 
 # 3. 提交未保存的改动(如果有;SW 版本注入保证至少有它)

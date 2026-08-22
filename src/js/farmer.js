@@ -399,6 +399,10 @@
      ⚠️ 唯一的下限：目的地不足 MIN_DRIVE_DIST 格就直接走 —— 两步路的距离，
      跑去上车、下车的动画比走过去还久。要更容易开车就把这个数调小。 */
   const MIN_DRIVE_DIST = 3;
+  /* 一批活干到一半、下一块地隔了这么远，就值得回去开车（Chris 2026-08-22）。
+     比 MIN_DRIVE_DIST 大得多是**故意的**：连片菜地之间才隔一两格，用同一个门槛
+     会导致每收一块就上下车一次，吵得没法看。6 格已经明显是「另一片地」了。 */
+  const REDRIVE_DIST = 6;
 
   /* 人脚下那一格永远算可走 —— 车身完全可能盖在人身上（车停过来、人走过去都会），
      那时寻路的起点不可走，find() 直接返回 null，「走多久 / 开不开车」全成了
@@ -827,10 +831,26 @@
     } else if (!plot.crop) return false;
     if (job.kind === 'harvest' && !(Farm.crops && Farm.crops.isMature && Farm.crops.isMature(plot))) return false;
     if (job.kind === 'water' && Farm.tending && Farm.tending.canWater && !Farm.tending.canWater(plot)) return false;
+    const ap = approachPos(iso, job.plotIdx);
+
+    /* 跨区作业要开车过去（Chris 2026-08-22：「南北两个区域的菜地，收完北边
+       要去收南边居然不会开车，太笨」）。
+       原来只有 enqueue 里「这批活刚开工」时算过一次开车，之后每块地都靠腿走 ——
+       菜地连成一片时没毛病，可农场一旦分成两片，中间那段长路就只会走过去。
+       这里在**下一块地明显远**的时候再判一次：连片的近地照旧不上下车（逐块上下车太吵）。 */
+    if (A.driving == null && Math.max(Math.abs(ap.gx - A.gx), Math.abs(ap.gy - A.gy)) >= REDRIVE_DIST) {
+      const carIdx = pickCarFor(iso, ap.gx, ap.gy);
+      if (carIdx != null) {
+        // 这件活先放回队列 —— mountNow 上车后会直接开去 queue[0]，正是它
+        A.queue.unshift(job);
+        if (board(carIdx, true)) return true;
+        A.queue.shift();          // 上不了车（车边站不下人等）→ 照旧走过去
+      }
+    }
+
     A.job = job;
     A.anim = 'walk';
     A.frameT = 0;
-    const ap = approachPos(iso, job.plotIdx);
     A.path = Farm.pathfind.find(A.gx, A.gy, ap.gx, ap.gy, freeFromHere(walkableFor(iso, 1, 1)));
     A.pathI = 1;
     return true;
