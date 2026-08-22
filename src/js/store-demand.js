@@ -36,11 +36,16 @@
 
   const clamp01 = (v) => (v < 0 ? 0 : (v > 1 ? 1 : v));
 
-  // 一天大概能收几茬。30 分钟的菜按一天 6 茬封顶 —— 真按 24h/30min=48 算，
-  // 快菜的配额会大到跟无限收购没区别。
-  function dailyCycles(def) {
+  /* 一天实际能收几茬 = min(生长时间允许的茬数, 玩家上线次数)。
+     🔒 **必须带上线次数**：最快的菜 5 分钟一茬，理论一天 168 茬，但一天上线
+     3 次的人最多收 3 次。只按生长时间算，配额会虚高到实际产量的好几倍，
+     于是产出几乎全被 1.0× 的基础补货吃掉、拿不到订单溢价 —— 经济模拟里
+     高等级大农场因此只有旧模式的 0.75×（扩地反而受罚）。 */
+  function dailyCycles(def, sessions) {
     const mins = Math.max(5, def.grow_minutes || 60);
-    return Math.max(1, Math.min(6, Math.round((14 * 60) / mins)));
+    const byTime = Math.max(1, Math.floor((14 * 60) / mins));
+    const s = Math.max(1, sessions || 3);
+    return Math.max(1, Math.min(byTime, s));
   }
 
   // 候选池：已解锁 ∩（种过的优先）。种过的不足 2 种就用全部已解锁，
@@ -87,15 +92,25 @@
   const storeDemand = {
     STAPLE_RATIO, ACCEPT_CAP, BOARD_CAP, PREMIUM_MIN, PREMIUM_MAX, FORECAST_DAYS,
 
-    // ① 每日基础补货
+    /* ① 每日基础补货。
+       🔒 **必有一样是玩家谷仓里最多的那种菜**（ctx.stockTop）。
+       这是整套设计的防卡死地板：店里天天要的东西，总得有一样是你手上有的 ——
+       真实的店问供货商「你手上有什么」本来也是这个顺序。
+       没有这一条的话，只种一样冷门贵菜、又不看订单板的玩家会被打到旧收入的
+       **17%**（经济模拟实测）—— 那不是「教他看订单」，那是把人赶走。
+       稀缺性仍在：配额有上限、只给 1.0× 原价、拿不到订单溢价。 */
     makeStaples(ctx) {
       const weighted = weightedPool(ctx);
       const count = 2 + (clamp01(ctx.rand()) < 0.5 ? 1 : 0);   // 2 或 3 样
       const picks = pickDistinct(weighted, count, ctx.rand);
+      const top = (ctx.stockTop || []).filter((id) => (ctx.crops || []).some((c) => c.id === id))[0];
+      if (top && !picks.some((d) => d.id === top)) {
+        picks[picks.length - 1] = (ctx.crops || []).filter((c) => c.id === top)[0];
+      }
       const plots = Math.max(1, ctx.plots || 1);
       return picks.map((def) => ({
         cropId: def.id,
-        need: Math.max(STAPLE_MIN, Math.round(plots * dailyCycles(def) * STAPLE_RATIO)),
+        need: Math.max(STAPLE_MIN, Math.round(plots * dailyCycles(def, ctx.sessionsPerDay || ctx.sessions) * STAPLE_RATIO)),
         filled: 0,
       }));
     },
@@ -117,10 +132,20 @@
       const chosen = pickDistinct(weighted, lineCount, ctx.rand);
       if (!chosen.length) return null;
 
-      // 贵的菜要得少一点，免得一张单就要一大堆榴莲
+      /* 单量按**玩家真实的日产能**定：plots × 这作物一天能收几茬。
+         🔒 两个都不能少：
+           · 少了 plots → 大农场产得出卖不掉，扩地反而受罚（模拟 0.86×）
+           · 少了「一天能收几茬」→ 25 块地但一天只上线一次的人，产能只有 25，
+             却收到要 42 棵的单；订单是全有或全无，于是几乎单单都交不出去
+             （模拟 0.22×）。这是最隐蔽的一个坑。
+         0.22 这个系数：一张单大约吃掉当天该作物产能的两成，几张单加起来
+         正好和基础补货一起把产量吃干净，又不至于多到交不出。 */
+      const plots = Math.max(1, ctx.plots || 6);
+      const sess = ctx.sessionsPerDay || ctx.sessions;
       const qtyBonus = Math.min(3, Math.floor(level / 6));
       const items = chosen.map((def) => {
-        const cap = ((def.sell_price || 5) >= 18 ? 3 : 4) + qtyBonus + (isBig ? 3 : 0);
+        const capacity = plots * dailyCycles(def, sess);
+        const cap = Math.max(2, Math.min(20, Math.round(capacity * 0.22))) + qtyBonus + (isBig ? 3 : 0);
         return { cropId: def.id, qty: 1 + Math.floor(clamp01(ctx.rand()) * cap) };
       });
 
