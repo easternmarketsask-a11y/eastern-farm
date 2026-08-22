@@ -10,7 +10,7 @@
  * upright sprites placed on cells, depth-sorted back-to-front (gx+gy).
  */
 (function () {
-  const COLS = 28, ROWS = 26;      // 东扩 8 格 + 往镜头前加 10 格。
+  const COLS = 36, ROWS = 34;      // 再东扩 8 格 + 往镜头前加 8 格（可用土地）。
   // Start zone origin. (The 2026-06-18 "forward move" to (6,6) was cancelled — Chris
   // preferred adapting via the new full-scene background instead. _undoForwardOnce()
   // shifts any save that got forwarded back to here.)
@@ -31,18 +31,18 @@
   // 🔒 每一档只许放大、不许缩小（老存档已建物不能掉出地界）。
   // 2026-08-18：东扩之后再往镜头前扩过乡路（y 变大 = 马路对面那片草甸）。
   const LAND_LEVELS_BACK = [
-    { x1: 0, y1: 0, x2: 14, y2: 20, coins: 0, points: 0 },
-    { x1: 0, y1: 0, x2: 18, y2: 22, coins: 800, points: 0 },
-    { x1: 0, y1: 0, x2: 22, y2: 24, coins: 1500, points: 0 },
-    { x1: 0, y1: 0, x2: 25, y2: 25, coins: 3000, points: 30 },
-    { x1: 0, y1: 0, x2: 27, y2: 25, coins: 6000, points: 50 },
+    { x1: 0, y1: 0, x2: 20, y2: 24, coins: 0, points: 0 },
+    { x1: 0, y1: 0, x2: 26, y2: 28, coins: 800, points: 0 },
+    { x1: 0, y1: 0, x2: 30, y2: 30, coins: 1500, points: 0 },
+    { x1: 0, y1: 0, x2: 33, y2: 32, coins: 3000, points: 30 },
+    { x1: 0, y1: 0, x2: 35, y2: 33, coins: 6000, points: 50 },
   ];
   const LAND_LEVELS_FRONT = [
-    { x1: 0, y1: 6, x2: 16, y2: 22, coins: 0, points: 0 },      // L0 含马路对面
-    { x1: 0, y1: 3, x2: 20, y2: 24, coins: 800, points: 0 },
-    { x1: 0, y1: 1, x2: 23, y2: 25, coins: 1500, points: 0 },
-    { x1: 0, y1: 0, x2: 25, y2: 25, coins: 3000, points: 30 },
-    { x1: 0, y1: 0, x2: 27, y2: 25, coins: 6000, points: 50 },  // L4 满图 28×26
+    { x1: 0, y1: 4, x2: 24, y2: 28, coins: 0, points: 0 },
+    { x1: 0, y1: 2, x2: 28, y2: 30, coins: 800, points: 0 },
+    { x1: 0, y1: 0, x2: 32, y2: 32, coins: 1500, points: 0 },
+    { x1: 0, y1: 0, x2: 34, y2: 33, coins: 3000, points: 30 },
+    { x1: 0, y1: 0, x2: 35, y2: 33, coins: 6000, points: 50 },
   ];
   // 🔒 默认水塘 v2（2026-08-13 二次修正）：谷仓正前方**隔一整排草**。
   // v1 的 (6,6) 与谷仓底座 (6,5) 是相邻格——有机水塘的波浪轮廓一溢出就贴着
@@ -397,6 +397,12 @@
     if (!o || !o.buildUntil) return false;
     return o.buildUntil > (now == null ? Date.now() : now);
   }
+  function buildReveal(p) {
+    p = Math.max(0, Math.min(1, p));
+    if (p < 0.35) return (p / 0.35) * 0.32;
+    if (p < 0.75) return 0.32 + ((p - 0.35) / 0.40) * 0.40;
+    return 0.72 + ((p - 0.75) / 0.25) * 0.28;
+  }
 
   const iso = {
     _on: false, _cv: null, _ctx: null, _dpr: 1,
@@ -413,6 +419,10 @@
     _carArrive: {},     // idx -> drive-in FX (memory only)
     _lastBuildHit: 0,
     _placing: null,     // ghost: {type,gx,gy,w,h,valid,cost,...} until tap-to-build
+    _buildPops: {},     // "map:3" -> t0, 完工弹跳
+    _buildFalls: [],    // 脚手架倒塌
+    _buildBoards: [],   // 飞来的木板
+    _camKick: null,
     _buildBtn: null, _communityBtn: null, _driveBtn: null, _driveBtnOn: null, _musicBtn: null, _musicBtnOn: null, _langBtn: null, _langBtnCur: null, _leftUI: null, _palette: null, _hint: null, _modeTabs: null, _palBuild: null, _palTerrain: null,
 
     // DEFAULT farm view (Hay Day isometric). Chosen via Farm.state.farmStyle()
@@ -425,6 +435,7 @@
     buildSkipCoins: buildSkipCoins,
     buildSkipPoints: buildSkipPoints,
     isUnderConstruction: isUnderConstruction,
+    buildReveal: buildReveal,
 
     init() {
       if (!this.active() || this._on) return;
@@ -1342,9 +1353,12 @@
       // 矩形地界 + 开垦格 + 已有菜地都不种树（否则新开的田还压着林子）
       if (inWorld && this._ownedCell(gx, gy)) return false;
       if (inWorld && this._cellToPlot && this._cellToPlot[k] != null) return false;
-      // 油画构图：农场坐在开阔草甸上，地界外 2 格留草地
-      if (gx >= ob.x1 - 2 && gx <= ob.x2 + 2 && gy >= ob.y1 - 2 && gy <= ob.y2 + 2) return false;
       const dEdge = this._walkEdgeDist(gx, gy);
+      // 🔒 最外两格是**实心**林墙，必须写在围裙之前：地界放大后围裙会盖到
+      // 可走矩形的边，若先 return false，人就会走到隐形空气墙。
+      if (dEdge <= 1) return true;
+      // 油画构图：农场坐在开阔草甸上，地界外 4 格留草地（林子别贴着院子）
+      if (gx >= ob.x1 - 4 && gx <= ob.x2 + 4 && gy >= ob.y1 - 4 && gy <= ob.y2 + 4) return false;
       const apron = gy > ob.y2;
       // 镜头前围裙中央不种树（留出正对镜头的开阔地）——但贴边那几格照种，
       // 否则这条中央走廊会一路通到硬边界，玩家撞的就是空气墙了。
@@ -1357,10 +1371,6 @@
         const dx = gx - spots[i].gx, dy = gy - spots[i].gy;
         if (dx * dx + dy * dy < 2.6) return false;
       }
-      // 🔒 最外两格是**实心**林墙：概率密度再高也总有缝，实测 0.86 时仍有 14 格
-      // 走到了硬矩形边界 —— 那就是隐形空气墙，正是这次要消灭的东西。
-      // 这两格不走 clump/密度，直接种满，保证玩家撞到的永远是看得见的树。
-      if (dEdge <= 1) return true;
       const clump = ((Math.floor(gx / 2) * 2654435761) ^ (Math.floor(gy / 2) * 1597334677)) >>> 0;
       if (!apron && (clump % 5) === 0) return false;
       const nearEdge = Math.max(0, Math.min(1, 1 - dEdge / WOODS_EDGE_RAMP));
@@ -2675,6 +2685,7 @@
         }
       }
       if (changed && Farm.state.save) Farm.state.save();
+      this._tickBuildFx();
       const any = map.some((o) => isUnderConstruction(o, now)) || plots.some((p) => isUnderConstruction(p, now));
       if (any && now - (this._lastBuildHit || 0) > 640) {
         this._lastBuildHit = now;
@@ -2687,15 +2698,20 @@
       if (!o) return;
       const name = this._buildName(kind, o);
       this._clearBuildFields(o);
+      this._buildPops = this._buildPops || {};
+      this._buildPops[kind + ':' + idx] = Date.now();
       if (Farm.audio) Farm.audio.play('buildDone');
       if (kind !== 'plot') {
         const b = this._bldgOf(o) || BUILDINGS[o.type];
         const charm = b ? charmOf(b) : 0;
-        if (charm > 0 && Farm.ui && Farm.ui.floatText && this._cv) {
+        if (this._cv) {
           const bb = b || { w: 1, h: 1 };
           const c = this._cell(o.gx + (bb.w - 1) / 2, o.gy + (bb.h - 1) / 2);
           const r = this._cv.getBoundingClientRect();
-          Farm.ui.floatText('✨+' + charm + (en ? ' charm' : ' 魅力'), r.left + c.x - 20, r.top + c.y - this._th() * 2, '#e8a020');
+          if (charm > 0 && Farm.ui && Farm.ui.floatText) {
+            Farm.ui.floatText('✨+' + charm + (en ? ' charm' : ' 魅力'), r.left + c.x - 20, r.top + c.y - this._th() * 2, '#e8a020');
+          }
+          if (Farm.ui && Farm.ui.burst) Farm.ui.burst(r.left + c.x, r.top + c.y - this._th() * 0.8, ['✨', '✨'], 8);
         }
         if (o.type === 'home' && Farm.ui && Farm.ui.confettiBurst) Farm.ui.confettiBurst();
       }
@@ -2705,6 +2721,133 @@
           : (name + '建好了。'), 2200);
       }
       if (Farm.ui && Farm.ui.refreshHUD) Farm.ui.refreshHUD();
+      if (kind !== 'plot') {
+        const b = this._bldgOf(o) || BUILDINGS[o.type];
+        this._spawnBuildFall(o, b);
+        this._nudgeCam(o.gx, o.gy);
+      }
+    },
+    _nudgeCam(gx, gy) {
+      if (this._drag && this._drag.moved) return;
+      if (this._pinch) return;
+      if (this._pointers && Object.keys(this._pointers).length) return;
+      const c = this._cell(gx + 0.4, gy + 0.4);
+      const W = this._cssW(), H = this._cssH();
+      this._camKick = {
+        t0: Date.now(), ms: 340,
+        dx: (c.x - W * 0.5) * 0.09,
+        dy: (c.y - H * 0.52) * 0.09,
+      };
+    },
+    _applyCamKick() {
+      this._kickOn = null;
+      const k = this._camKick;
+      if (!k) return;
+      if (this._drag && this._drag.moved) { this._camKick = null; return; }
+      const u = (Date.now() - k.t0) / k.ms;
+      if (u >= 1) { this._camKick = null; return; }
+      const e = Math.sin(Math.min(1, u) * Math.PI);
+      const dx = k.dx * e, dy = k.dy * e;
+      this._camX += dx; this._camY += dy;
+      this._kickOn = { dx: dx, dy: dy };
+    },
+    _undoCamKick() {
+      if (!this._kickOn) return;
+      this._camX -= this._kickOn.dx;
+      this._camY -= this._kickOn.dy;
+      this._kickOn = null;
+    },
+    _scaffoldSkip(type) {
+      return type === 'tree' || type === 'bush' || type === 'fence' || type === 'lantern' || type === 'car' || type === 'plot';
+    },
+    _spawnBuildFall(o, b) {
+      if (!o || !b || this._scaffoldSkip(o.type)) return;
+      this._buildFalls = this._buildFalls || [];
+      this._buildFalls.push({ t0: Date.now(), ms: 440, gx: o.gx, gy: o.gy, w: b.w, h: b.h, sc: b.sc || 2, fill: b.fill });
+    },
+    _spawnBuildBoard(o, b) {
+      if (!o || !b || this._scaffoldSkip(o.type)) return;
+      const tw = this._tw(), th = this._th();
+      const cc = this._cell(o.gx + (b.w - 1) / 2, o.gy + (b.h - 1) / 2);
+      const side = Math.random() < 0.5 ? -1 : 1;
+      this._buildBoards = this._buildBoards || [];
+      if (this._buildBoards.length > 10) this._buildBoards.shift();
+      this._buildBoards.push({
+        t0: Date.now(), ms: 400 + Math.random() * 80,
+        x0: cc.x + side * tw * (1.15 + Math.random() * 0.45),
+        y0: cc.y - th * (0.85 + Math.random() * 0.55),
+        x1: cc.x + (Math.random() - 0.5) * tw * 0.55,
+        y1: cc.y - th * (0.15 + Math.random() * 0.45),
+        spin: (Math.random() - 0.5) * 2.4,
+        len: th * (0.26 + Math.random() * 0.16),
+      });
+    },
+    _tickBuildFx() {
+      const now = Date.now();
+      this._buildFalls = (this._buildFalls || []).filter((f) => now - f.t0 < f.ms);
+      this._buildBoards = (this._buildBoards || []).filter((f) => now - f.t0 < f.ms + 80);
+      if (this._visitLocked()) return;
+      const map = Farm.state.data.map || [];
+      if (now - (this._lastBoardAt || 0) < 340) return;
+      let spawned = false;
+      for (let i = 0; i < map.length; i++) {
+        const o = map[i];
+        if (!isUnderConstruction(o, now)) continue;
+        const b = this._bldgOf(o);
+        if (!b) continue;
+        this._spawnBuildBoard(o, b);
+        spawned = true;
+      }
+      if (spawned) this._lastBoardAt = now;
+    },
+    _drawBuildBoards() {
+      const list = this._buildBoards; if (!list || !list.length) return;
+      const ctx = this._ctx, th = this._th(), now = Date.now();
+      ctx.save();
+      ctx.lineCap = 'round';
+      for (let i = 0; i < list.length; i++) {
+        const p = list[i];
+        const u = Math.min(1, (now - p.t0) / p.ms);
+        const lift = Math.sin(u * Math.PI) * th * 0.38;
+        const x = p.x0 + (p.x1 - p.x0) * u;
+        const y = p.y0 + (p.y1 - p.y0) * u - lift;
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(p.spin * u);
+        ctx.globalAlpha = u < 0.12 ? u / 0.12 : (u > 0.88 ? (1 - u) / 0.12 : 1);
+        ctx.fillStyle = '#c4a06a';
+        ctx.fillRect(-p.len * 0.5, -th * 0.045, p.len, th * 0.09);
+        ctx.fillStyle = 'rgba(236, 214, 168, 0.55)';
+        ctx.fillRect(-p.len * 0.5, -th * 0.045, p.len, th * 0.03);
+        if (u > 0.9) {
+          ctx.fillStyle = 'rgba(255, 214, 110, 0.85)';
+          ctx.beginPath(); ctx.arc(p.len * 0.2, 0, th * 0.05, 0, 6.283); ctx.fill();
+        }
+        ctx.restore();
+      }
+      ctx.restore();
+    },
+    _drawBuildFalls() {
+      const list = this._buildFalls; if (!list || !list.length) return;
+      const now = Date.now();
+      for (let i = 0; i < list.length; i++) {
+        const f = list[i];
+        const u = Math.min(1, (now - f.t0) / f.ms);
+        const o = { gx: f.gx, gy: f.gy, type: 'barn' };
+        const b = { w: f.w, h: f.h, sc: f.sc, fill: f.fill };
+        const cc = this._cell(f.gx + (f.w - 1) / 2, f.gy + (f.h - 1) / 2);
+        const front = this._cell(f.gx + f.w - 1, f.gy + f.h - 1);
+        const by = front.y + this._th() / 2 + this._th() * 0.18;
+        const box = this._spriteBox(b, 1, b.fill);
+        const ctx = this._ctx;
+        ctx.save();
+        ctx.globalAlpha = 1 - u * 0.92;
+        ctx.translate(cc.x, by);
+        ctx.rotate((u * 0.38) * (i % 2 ? -1 : 1));
+        ctx.translate(-cc.x, -by);
+        this._drawScaffold(o, b, cc, by, box, Math.max(0.08, 1 - u));
+        ctx.restore();
+      }
     },
     _openBuildSkip(kind, idx) {
       const en = this._lang() === 'en';
@@ -2830,6 +2973,7 @@
       this._sel = -1; this._moving = null;
       this._placeDown = false;
       this._placeArmedAt = Date.now() + 400;
+      this._placing.fgx = gx; this._placing.fgy = gy;
       this._bindPlaceMove();
       this._placeHint();
       this._highlightPalette(type);
@@ -2952,27 +3096,41 @@
       this._refreshPaletteAfford();
       if (Farm.ui && Farm.ui.refreshHUD) Farm.ui.refreshHUD();
       if (Farm.audio) Farm.audio.play('buildStart');
+      this._nudgeCam(rec.gx, rec.gy);
+      this._spawnBuildBoard(rec, this._bldgOf(rec) || pl.bldg);
+      this._spawnBuildBoard(rec, this._bldgOf(rec) || pl.bldg);
       this.render();
       return true;
     },
     _drawPlaceGhost() {
       const pl = this._placing; if (!pl) return;
-      const b = pl.bldg, o = { type: pl.type === '__plot' ? 'well' : pl.type, gx: pl.gx, gy: pl.gy, lv: pl.lv };
-      const ctx = this._ctx, tw = this._tw(), th = this._th();
+      if (pl.fgx == null) { pl.fgx = pl.gx; pl.fgy = pl.gy; }
+      pl.fgx += (pl.gx - pl.fgx) * 0.32;
+      pl.fgy += (pl.gy - pl.fgy) * 0.32;
+      const b = pl.bldg;
+      const o = { type: pl.type === '__plot' ? 'well' : pl.type, gx: pl.fgx, gy: pl.fgy, lv: pl.lv };
+      const ctx = this._ctx, tw = this._tw(), th = this._th(), t = Date.now() / 1000;
+      const bob = Math.sin(t * 3.2) * th * 0.035;
       ctx.save();
-      ctx.fillStyle = pl.valid ? 'rgba(76,175,80,0.46)' : 'rgba(220,60,60,0.46)';
-      ctx.strokeStyle = pl.valid ? 'rgba(255,248,220,0.95)' : 'rgba(255,220,220,0.95)';
-      ctx.lineWidth = Math.max(2.5, th * 0.12);
+      ctx.fillStyle = pl.valid ? 'rgba(88,148,72,0.38)' : 'rgba(196,72,56,0.38)';
+      ctx.strokeStyle = pl.valid ? 'rgba(255,236,186,0.72)' : 'rgba(255,200,190,0.70)';
+      ctx.lineWidth = Math.max(1.6, th * 0.07);
       for (let y = 0; y < pl.h; y++) for (let x = 0; x < pl.w; x++) {
         const cc2 = this._cell(pl.gx + x, pl.gy + y);
         this._diamond(cc2.x, cc2.y, tw, th); ctx.fill(); ctx.stroke();
       }
+      ctx.translate(0, bob);
       if (pl.type === '__plot') {
-        const cc2 = this._cell(pl.gx, pl.gy);
-        ctx.fillStyle = 'rgba(120, 82, 42, 0.7)';
+        const cc2 = this._cell(pl.fgx, pl.fgy);
+        ctx.fillStyle = 'rgba(120, 82, 42, 0.72)';
         this._diamond(cc2.x, cc2.y, tw * 0.72, th * 0.72); ctx.fill();
       } else {
+        ctx.save();
+        ctx.filter = 'sepia(0.45) saturate(0.35) brightness(1.28)';
+        ctx.globalAlpha = 0.62;
         this._drawBuilding(o, b, false, null);
+        ctx.filter = 'none';
+        ctx.restore();
       }
       ctx.restore();
       if (!pl.valid) {
@@ -3539,8 +3697,11 @@
         const b = this._bldgOf(o); if (!b) return;
         add(o.gx, o.gy); add(o.gx + b.w - 1, o.gy + b.h - 1); add(o.gx, o.gy + b.h - 1); add(o.gx + b.w - 1, o.gy);
       });
+      // 已买地界四个角都要进取景，不然东边/镜头前刚扩出来的空地在建造里看不见、放不进去
+      const ob = this._ownedBounds();
+      add(ob.x1, ob.y1); add(ob.x2, ob.y2); add(ob.x1, ob.y2); add(ob.x2, ob.y1);
       if (minx === Infinity) { minx = 0; miny = 0; maxx = COLS - 1; maxy = ROWS - 1; add(0, 0); add(COLS - 1, ROWS - 1); add(COLS - 1, 0); add(0, ROWS - 1); }
-      minx -= 2; miny -= 2; maxx += 2; maxy += 2;   // empty-land margin to drop things into
+      minx -= 1; miny -= 1; maxx += 1; maxy += 1;
       const span = (maxx - minx) + (maxy - miny);
       const screenW = span * TW / 2, screenH = span * TH / 2 + TH * 3;
       // reserve ~38% of height for the palette tray so content frames into the top area
@@ -4898,7 +5059,7 @@
               ctx.quadraticCurveTo(bx + i * tw * 0.05, byy - th * 0.08, bx + i * tw * 0.075, byy - th * 0.18);
               ctx.stroke();
             }
-          } else if ((owned || apron) && r2 < 0.07 && dHl > 1.15) {
+          } else if ((owned || apron) && r2 < 0.11 && dHl > 1.15) {
             const pk = this._cellToPlot && this._cellToPlot[gx + ',' + gy];
             if (pk == null) this._daisy(c.x + (r1 - 0.5) * tw * 0.5, c.y + (r2 - 0.4) * th * 0.45, tw * 0.046);
           }
@@ -5076,6 +5237,7 @@
       this._syncMusicBtn();   // 设置面板里也能改音乐开关，外观要跟着走
       this._syncLangBtn();    // 设置里也能改语言，按钮上的字要跟着走
       this._followActorCam();
+      this._applyCamKick();
       const ctx = this._ctx, tw = this._tw(), th = this._th(), W = this._cssW(), H = this._cssH();
       const terrain = Farm.state.data.mapTerrain || {};
       ctx.clearRect(0, 0, W, H);
@@ -5235,7 +5397,10 @@
       this._drawLockedLand();
       this._drawGoldenHour(W, H);
       this._drawParticles(tw); this._drawFestival();
+      this._drawBuildBoards();
+      this._drawBuildFalls();
       if (this._placing) this._drawPlaceGhost();
+      this._undoCamKick();
     },
     _rectPath(x1, y1, x2, y2) {   // cell-rect → screen parallelogram path
       const ctx = this._ctx, a = this._cell(x1, y1), b = this._cell(x2 + 1, y1), c = this._cell(x2 + 1, y2 + 1), d = this._cell(x1, y2 + 1);
@@ -5390,13 +5555,14 @@
       if (isUnderConstruction(plot)) {
         const remainMs = plot.buildUntil - Date.now();
         const buildProg = Math.max(0.12, 1 - remainMs / (plot.buildMs || 1));
+        const rise = this._buildEase(buildProg);
         ctx.save();
-        ctx.fillStyle = 'rgba(120, 82, 42, ' + (0.28 + buildProg * 0.35) + ')';
-        this._diamond(c.x, c.y, tw * (0.55 + buildProg * 0.22), th * (0.55 + buildProg * 0.22));
+        ctx.fillStyle = 'rgba(120, 82, 42, ' + (0.28 + rise * 0.35) + ')';
+        this._diamond(c.x, c.y, tw * (0.52 + rise * 0.26), th * (0.52 + rise * 0.26));
         ctx.fill();
         ctx.restore();
-        this._drawBuildDust({ gx: gx, gy: gy }, { w: 1, h: 1 }, buildProg);
-        this._drawBuildWorkers({ gx: gx, gy: gy, type: 'plot' }, { w: 1, h: 1 }, buildProg);
+        this._drawBuildDust({ gx: gx, gy: gy, type: 'plot' }, { w: 1, h: 1 }, rise);
+        this._drawBuildWorkers({ gx: gx, gy: gy, type: 'plot' }, { w: 1, h: 1 }, rise);
         this._drawBuildChip(plot, c, c.y + th * 0.1, { sc: 1.4 }, idx, 'plot');
         return;
       }
@@ -5480,91 +5646,135 @@
         bar(bx, bw * Math.max(0.06, p), 'rgba(123,192,67,0.78)');
       }
     },
+    _buildEase(p) {
+      p = Math.max(0, Math.min(1, p));
+      return 1 - Math.pow(1 - p, 2.2);
+    },
     _drawScaffold(o, b, cc, by, box, progress) {
       const ctx = this._ctx, tw = this._tw(), th = this._th();
-      const h = box.h * Math.max(0.28, progress) * 0.92;
-      const corners = [
-        this._cell(o.gx, o.gy),
-        this._cell(o.gx + b.w - 1, o.gy),
-        this._cell(o.gx, o.gy + b.h - 1),
-        this._cell(o.gx + b.w - 1, o.gy + b.h - 1),
-      ];
+      const tiny = o.type === 'fence' || o.type === 'lantern' || o.type === 'well';
+      const h = box.h * Math.max(tiny ? 0.18 : 0.26, progress) * (tiny ? 0.62 : 0.86);
+      const w = box.w * (tiny ? 0.55 : 0.74);
+      const base = by - th * 0.02;
+      const lean = tw * 0.045;
+      const posts = tiny
+        ? [{ x: cc.x - w * 0.38, y: base }, { x: cc.x + w * 0.38, y: base }]
+        : [
+          { x: cc.x - w * 0.42, y: base },
+          { x: cc.x + w * 0.42, y: base },
+          { x: cc.x - w * 0.18, y: base + th * 0.04 },
+          { x: cc.x + w * 0.18, y: base + th * 0.04 },
+        ];
+      const pw = Math.max(2.4, th * 0.085);
       ctx.save();
-      ctx.strokeStyle = 'rgba(150, 104, 52, 0.92)';
-      ctx.lineWidth = Math.max(2, th * 0.075);
       ctx.lineCap = 'round';
-      corners.forEach((c) => {
+      ctx.lineJoin = 'round';
+      const tarpA = Math.max(0, 0.22 * (1 - (progress - 0.42) / 0.45));
+      if (tarpA > 0.03 && !tiny) {
+        ctx.fillStyle = 'rgba(236, 214, 168, ' + tarpA + ')';
         ctx.beginPath();
-        ctx.moveTo(c.x, c.y + th * 0.18);
-        ctx.lineTo(c.x - tw * 0.05, c.y + th * 0.18 - h);
+        ctx.moveTo(posts[0].x, posts[0].y - h * 0.92);
+        ctx.lineTo(posts[1].x, posts[1].y - h * 0.88);
+        ctx.lineTo(posts[1].x + lean, posts[1].y - h * 0.55);
+        ctx.lineTo(posts[0].x + lean, posts[0].y - h * 0.58);
+        ctx.closePath();
+        ctx.fill();
+      }
+      posts.forEach((p) => {
+        ctx.strokeStyle = 'rgba(122, 78, 40, 0.92)';
+        ctx.lineWidth = pw;
+        ctx.beginPath();
+        ctx.moveTo(p.x, p.y);
+        ctx.lineTo(p.x - lean, p.y - h);
+        ctx.stroke();
+        ctx.strokeStyle = 'rgba(232, 198, 140, 0.55)';
+        ctx.lineWidth = Math.max(1, pw * 0.35);
+        ctx.beginPath();
+        ctx.moveTo(p.x - pw * 0.18, p.y);
+        ctx.lineTo(p.x - lean - pw * 0.18, p.y - h);
         ctx.stroke();
       });
-      ctx.strokeStyle = 'rgba(196, 150, 88, 0.88)';
-      ctx.lineWidth = Math.max(1.6, th * 0.055);
-      const bands = [0.32, 0.58, 0.84].filter((t) => t <= progress + 0.12);
-      bands.forEach((t) => {
-        const yOff = th * 0.18 - h * t;
+      ctx.strokeStyle = 'rgba(176, 122, 64, 0.90)';
+      ctx.lineWidth = Math.max(1.8, th * 0.06);
+      const bands = tiny ? [0.72] : [0.28, 0.55, 0.82];
+      bands.filter((t) => t <= progress + 0.14).forEach((t) => {
         ctx.beginPath();
-        ctx.moveTo(corners[0].x - tw * 0.05, corners[0].y + yOff);
-        ctx.lineTo(corners[1].x - tw * 0.05, corners[1].y + yOff);
-        ctx.lineTo(corners[3].x - tw * 0.05, corners[3].y + yOff);
-        ctx.lineTo(corners[2].x - tw * 0.05, corners[2].y + yOff);
-        ctx.closePath();
+        posts.forEach((p, i) => {
+          const x = p.x - lean * t, y = p.y - h * t;
+          if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        });
+        if (posts.length > 2) ctx.closePath();
         ctx.stroke();
       });
       ctx.restore();
     },
     _drawBuildWorkers(o, b, progress) {
-      const tw = this._tw(), th = this._th();
+      if (o.type === 'fence' || o.type === 'lantern' || o.type === 'bush') return;
+      const tw = this._tw(), th = this._th(), ctx = this._ctx;
       const t = Date.now() / 1000;
       const n = (b.w * b.h >= 8) ? 2 : 1;
+      const look = (Farm.farmer && Farm.farmer._actor && Farm.farmer._actor().look) || 2;
+      const im = (Farm.farmer && Farm.farmer.sheet) ? Farm.farmer.sheet(look) : null;
+      const cols = (Farm.farmer && Farm.farmer.SHEET_COLS) || 6;
+      const rows = (Farm.farmer && Farm.farmer.SHEET_ROWS) || 5;
       for (let i = 0; i < n; i++) {
-        const gx = o.gx + (i === 0 ? (b.w - 1) : 0);
-        const gy = o.gy + (b.h - 1) - (i === 1 ? Math.min(1, b.h - 1) : 0);
+        const gx = o.gx + (i === 0 ? (b.w - 1) : 0) * 0.92;
+        const gy = o.gy + (b.h - 1) - (i === 1 ? Math.min(1, b.h - 1) * 0.4 : 0);
         const c = this._cell(gx, gy);
-        const bob = Math.abs(Math.sin(t * 9 + i)) * th * 0.07;
-        const x = c.x + (i ? -tw * 0.18 : tw * 0.12);
-        const y = c.y + th * 0.38 + bob;
-        this._drawVillager(x, y, th, { scale: 0.52, shirt: i ? '#4a8c5c' : '#c45c2a' });
-        const ctx = this._ctx;
-        ctx.save();
-        ctx.strokeStyle = '#6a4420';
-        ctx.lineWidth = Math.max(1.5, th * 0.05);
-        ctx.lineCap = 'round';
-        const swing = Math.sin(t * 9 + i) * 0.7;
-        ctx.beginPath();
-        ctx.moveTo(x + th * 0.12, y - th * 0.55);
-        ctx.lineTo(x + th * 0.12 + Math.cos(swing) * th * 0.22, y - th * 0.55 + Math.sin(swing) * th * 0.22);
-        ctx.stroke();
-        ctx.restore();
+        const phase = t * 8.2 + i * 1.7;
+        const bob = Math.abs(Math.sin(phase)) * th * 0.055;
+        const x = c.x + (i ? -tw * 0.16 : tw * 0.14);
+        const y = c.y + th * 0.36 + bob;
+        if (im && im.width) {
+          const cw = im.width / cols, ch = im.height / rows;
+          const fi = 1 + Math.floor((phase * 0.55) % 4);
+          const h = th * 1.08, w = h * (cw / ch);
+          ctx.save();
+          this._shadow(x, y + th * 0.02, w * 0.5, 0.14);
+          ctx.translate(x, y);
+          ctx.drawImage(im, fi * cw, 3 * ch, cw, ch, -w / 2, -h, w, h);
+          ctx.restore();
+        } else {
+          this._drawVillager(x, y, th, { scale: 0.52, shirt: i ? '#4a8c5c' : '#c45c2a' });
+        }
+        if (Math.sin(phase) > 0.72) {
+          ctx.save();
+          ctx.fillStyle = 'rgba(255, 214, 110, 0.88)';
+          ctx.beginPath();
+          ctx.arc(x + th * 0.22, y - th * 0.62, th * 0.055, 0, 6.283);
+          ctx.fill();
+          ctx.restore();
+        }
       }
-      if (o.type === 'well' && progress < 0.7) {
+      if (o.type === 'well' && progress < 0.72) {
         const c = this._cell(o.gx, o.gy);
-        const ctx = this._ctx;
         ctx.save();
-        ctx.fillStyle = 'rgba(110, 78, 42, ' + (0.35 + (1 - progress) * 0.25) + ')';
+        ctx.fillStyle = 'rgba(110, 78, 42, ' + (0.32 + (1 - progress) * 0.28) + ')';
         ctx.beginPath();
-        ctx.ellipse(c.x, c.y + th * 0.12, tw * 0.28 * (1.1 - progress * 0.3), th * 0.16, 0, 0, 6.283);
+        ctx.ellipse(c.x, c.y + th * 0.12, tw * 0.28 * (1.12 - progress * 0.32), th * 0.16, 0, 0, 6.283);
         ctx.fill();
         ctx.restore();
       }
     },
     _drawBuildDust(o, b, progress) {
       const ctx = this._ctx, tw = this._tw(), th = this._th(), t = Date.now() / 1000;
-      const n = 5 + Math.min(6, b.w * b.h);
+      const grow = o.type === 'tree' || o.type === 'bush';
+      const n = 6 + Math.min(8, b.w * b.h);
+      const c = this._cell(o.gx + (b.w - 1) / 2, o.gy + (b.h - 1) / 2);
       ctx.save();
       for (let i = 0; i < n; i++) {
         const seed = o.gx * 13 + o.gy * 7 + i * 19;
-        const ang = seed * 0.4 + t * (0.6 + (i % 3) * 0.2);
-        const rad = (0.15 + (i % 5) * 0.08) * tw * (0.6 + progress);
-        const gx = o.gx + (b.w - 1) / 2, gy = o.gy + (b.h - 1) / 2;
-        const c = this._cell(gx, gy);
+        const life = ((t * (0.55 + (i % 4) * 0.12) + seed * 0.01) % 1);
+        const ang = seed * 0.41 + i * 0.7;
+        const rad = (0.12 + life * 0.42) * tw * (0.7 + progress * 0.5);
         const x = c.x + Math.cos(ang) * rad;
-        const y = c.y + th * 0.1 - (t * 12 + seed) % (th * 0.9 * progress + 4);
-        const a = 0.18 + 0.12 * Math.sin(t * 3 + i);
-        ctx.fillStyle = 'rgba(196, 168, 110, ' + a + ')';
+        const y = c.y + th * 0.08 - life * th * (grow ? 0.85 : 0.55);
+        const a = (1 - life) * (0.22 + 0.14 * progress);
+        ctx.fillStyle = grow
+          ? 'rgba(110, 158, 72, ' + a + ')'
+          : 'rgba(196, 168, 110, ' + a + ')';
         ctx.beginPath();
-        ctx.ellipse(x, y, tw * 0.05, th * 0.035, 0.4, 0, 6.283);
+        ctx.ellipse(x, y, tw * (grow ? 0.04 : 0.055) * (1 + life), th * 0.032 * (1 + life), 0.4, 0, 6.283);
         ctx.fill();
       }
       ctx.restore();
@@ -5573,30 +5783,39 @@
       const remain = rec.buildUntil - Date.now();
       if (remain <= 0) return;
       const ctx = this._ctx, th = this._th();
+      const total = rec.buildMs || remain;
+      const frac = Math.max(0, Math.min(1, 1 - remain / total));
       const label = this._fmtRemain(remain);
       ctx.save();
-      ctx.font = '700 ' + Math.max(11, th * 0.42) + 'px "Plus Jakarta Sans","Noto Sans SC",sans-serif';
-      const w = ctx.measureText(label).width + th * 0.7;
-      const h = th * 0.62, r = h * 0.42;
-      const bx = cc.x, byy = by - (b.sc || 2) * th * 1.05 * BLD;
+      ctx.font = '700 ' + Math.max(10, th * 0.36) + 'px "Plus Jakarta Sans","Noto Sans SC",sans-serif';
+      const twid = ctx.measureText(label).width;
+      const w = twid + th * 0.85, h = th * 0.52, rr = h * 0.46;
+      const bx = cc.x, byy = by - (b.sc || 2) * th * 0.92 * BLD;
       ctx.beginPath();
-      if (ctx.roundRect) ctx.roundRect(bx - w / 2, byy - h / 2, w, h, r);
+      if (ctx.roundRect) ctx.roundRect(bx - w / 2, byy - h / 2, w, h, rr);
       else ctx.rect(bx - w / 2, byy - h / 2, w, h);
-      ctx.fillStyle = 'rgba(255,252,240,0.96)';
+      ctx.fillStyle = 'rgba(255,250,236,0.92)';
       ctx.fill();
-      ctx.strokeStyle = 'rgba(150,120,80,0.85)';
-      ctx.lineWidth = Math.max(1.2, th * 0.04);
+      ctx.strokeStyle = 'rgba(160,120,70,0.55)';
+      ctx.lineWidth = Math.max(1, th * 0.03);
       ctx.stroke();
+      const pr = h * 0.28, px = bx - w / 2 + h * 0.38, py = byy;
+      ctx.strokeStyle = 'rgba(200, 170, 120, 0.55)';
+      ctx.lineWidth = Math.max(1.6, th * 0.055);
+      ctx.beginPath(); ctx.arc(px, py, pr, 0, 6.283); ctx.stroke();
+      ctx.strokeStyle = '#3a8c50';
+      ctx.beginPath(); ctx.arc(px, py, pr, -Math.PI / 2, -Math.PI / 2 + frac * 6.283); ctx.stroke();
       ctx.fillStyle = '#6d4c28';
-      ctx.textAlign = 'center';
+      ctx.textAlign = 'left';
       ctx.textBaseline = 'middle';
-      ctx.fillText(label, bx, byy + 0.5);
+      ctx.fillText(label, px + pr + th * 0.12, byy + 0.5);
       ctx.restore();
       this._buildHits.push({ kind: kind, idx: idx, x: bx, y: byy, r: Math.max(w, h) * 0.62 });
     },
     _drawBuildSite(o, b, cc, by, box, progress, idx) {
       const grow = o.type === 'tree' || o.type === 'bush';
-      if (!grow) this._drawScaffold(o, b, cc, by, box, progress);
+      const skipFrame = o.type === 'fence' || o.type === 'lantern';
+      if (!grow && !skipFrame) this._drawScaffold(o, b, cc, by, box, progress);
       this._drawBuildDust(o, b, progress);
       this._drawBuildWorkers(o, b, progress);
       const rec = (Farm.state.data.map || [])[idx] || o;
@@ -5632,12 +5851,17 @@
       const liveRec = rec || o;
       const constructing = isUnderConstruction(liveRec);
       const remainMs = constructing ? (liveRec.buildUntil - Date.now()) : 0;
-      const buildProg = constructing ? Math.max(0.08, 1 - remainMs / (liveRec.buildMs || 1)) : 1;
+      const buildProg = constructing ? Math.max(0.06, Math.min(1, 1 - remainMs / (liveRec.buildMs || 1))) : 1;
+      const rise = constructing ? this._buildEase(buildProg) : 1;
+      const popKey = (idx != null) ? ('map:' + idx) : '';
+      const popT = (this._buildPops && popKey && this._buildPops[popKey]) ? (Date.now() - this._buildPops[popKey]) : 9999;
+      const pop = popT < 560 ? Math.sin((popT / 560) * Math.PI) * 0.07 : 0;
+      if (popT >= 560 && this._buildPops && popKey) delete this._buildPops[popKey];
       const grow = constructing && (o.type === 'tree' || o.type === 'bush');
       const homeO = ((o.type === 'home' || o.type === 'car') && rec) ? rec : o;
       const hz = o.type === 'home' ? this._homeDrawMul(homeO) : (o.type === 'car' ? this._carDrawMul(homeO) : 1);
       let him = o.type === 'home' ? this._homeSprite(homeO) : (o.type === 'car' ? this._carSprite(homeO) : this._img[b.img]);
-      const box = this._spriteBox(b, pk * hz * (grow ? (0.22 + 0.78 * buildProg) : 1), o.type === 'home' ? 1 : b.fill);
+      const box = this._spriteBox(b, pk * hz * (grow ? (0.16 + 0.84 * rise) : 1) * (1 + pop), o.type === 'home' ? 1 : b.fill);
       let flipX = false;
       if (o.type === 'car') {
         const dv = (idx != null && Farm.farmer && Farm.farmer.carPos) ? Farm.farmer.carPos(idx) : null;
@@ -5653,7 +5877,7 @@
         // deco_fence.webp 是一张两格条：上是转角、下是单片。1×1 篱笆只用单片。
         const sx = him.width * 0.46, sy = him.height * 0.54, sw = him.width * 0.50, sh = him.height * 0.44;
         const destH = th * 1.55 * BLD * pk, destW = destH * (sw / sh);
-        const vis = constructing && !grow ? buildProg : 1;
+        const vis = constructing && !grow ? rise : 1;
         ctx.save();
         if (vis < 1) {
           ctx.beginPath();
@@ -5687,11 +5911,11 @@
         }
       } else if (o.type === 'board') {
         this._drawOrderBoard(cc.x, by, tw, th);
-      } else if (!this._blit(him, cc.x, by, box.w, box.h, flipX, (constructing && !grow) ? buildProg : 1)) {
+      } else if (!this._blit(him, cc.x, by, box.w, box.h, flipX, (constructing && !grow) ? ((o.type === 'fence' || o.type === 'lantern' || o.type === 'well' || o.type === 'bridge') ? rise : buildReveal(buildProg)) : 1)) {
         // 贴图还在路上：留草地，onload 会重画。禁止再画调试红块。
       }
-      if (constructing) this._drawBuildSite(o, b, cc, by, box, buildProg, idx);
-      if (o.type === 'lantern' && him instanceof Image && him.width && (!constructing || buildProg > 0.82)) {
+      if (constructing) this._drawBuildSite(o, b, cc, by, box, rise, idx);
+      if (o.type === 'lantern' && him instanceof Image && him.width && (!constructing || rise > 0.72)) {
         const glow = ctx.createRadialGradient(cc.x - tw * 0.12, by - th * 1.35 * BLD, th * 0.08, cc.x, by - th * 0.8 * BLD, th * 1.1);
         glow.addColorStop(0, 'rgba(255,170,70,0.28)');
         glow.addColorStop(1, 'rgba(255,140,40,0)');

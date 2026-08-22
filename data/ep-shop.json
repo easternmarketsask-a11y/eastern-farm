@@ -564,9 +564,9 @@
       "cost_coins": 3000,
       "category": "upgrade",
       "kind": "extra_plot",
-      "max_owned": 4,
-      "desc_zh": "永久 +1 块地（最多再加 4 块）。攒农场币也能扩农场。",
-      "desc_en": "Permanently add 1 plot (max +4). Grow your farm with coins too."
+      "max_owned": 8,
+      "desc_zh": "永久 +1 块地（最多再加 8 块）。攒农场币也能扩农场。",
+      "desc_en": "Permanently add 1 plot (max +8). Grow your farm with coins too."
     },
     {
       "id": "extra_plot",
@@ -576,9 +576,9 @@
       "cost_ep": 100,
       "category": "upgrade",
       "kind": "extra_plot",
-      "max_owned": 4,
-      "desc_zh": "永久 +1 块地（最多再加 4 块）。从 12 块扩到 16 块。",
-      "desc_en": "Permanently add 1 plot (max +4). Expand from 12 to 16 plots total."
+      "max_owned": 8,
+      "desc_zh": "永久 +1 块地（最多再加 8 块）。",
+      "desc_en": "Permanently add 1 plot (max +8)."
     }
   ],
   "_lottery_prizes": [

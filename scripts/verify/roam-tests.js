@@ -86,7 +86,7 @@
   if (!R) continue;
 
   const outside = R.cells.filter(([x, y]) => !owned(x, y));
-  const offGrid = R.cells.filter(([x, y]) => x < 0 || y < 0 || x >= 28 || y >= 26);
+  const offGrid = R.cells.filter(([x, y]) => x < 0 || y < 0 || x >= 36 || y >= 34);
   dbg[sc.id + '.reachable'] = R.cells.length;
   dbg[sc.id + '.outsideOwned'] = outside.length;
   dbg[sc.id + '.offGrid'] = offGrid.length;
@@ -95,7 +95,7 @@
   // ① 真的走得出去。150 格 ≈ 地界外一整圈还多，低于这个数就是林子还堵着。
   T(P('W1 能走到已买地界之外(>=150 格)'), outside.length >= 150);
   // ② 连农场网格都能走出去（Chris 要的是「看得见的地面」，不是「网格内」）。
-  T(P('W2 能走出 28x26 农场网格'), offGrid.length >= 20);
+  T(P('W2 能走出 36x34 农场网格'), offGrid.length >= 20);
 
   // ③ 树是真障碍：随机抽有树的格子，寻路必须拒绝。
   let treeCells = 0, treeWalkable = 0;
