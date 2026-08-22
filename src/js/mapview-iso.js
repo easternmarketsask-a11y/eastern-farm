@@ -10,7 +10,7 @@
  * upright sprites placed on cells, depth-sorted back-to-front (gx+gy).
  */
 (function () {
-  const COLS = 28, ROWS = 26;      // 东扩 8 格 + 往镜头前加 10 格。
+  const COLS = 36, ROWS = 34;      // 再东扩 8 格 + 往镜头前加 8 格（可用土地）。
   // Start zone origin. (The 2026-06-18 "forward move" to (6,6) was cancelled — Chris
   // preferred adapting via the new full-scene background instead. _undoForwardOnce()
   // shifts any save that got forwarded back to here.)
@@ -31,18 +31,18 @@
   // 🔒 每一档只许放大、不许缩小（老存档已建物不能掉出地界）。
   // 2026-08-18：东扩之后再往镜头前扩过乡路（y 变大 = 马路对面那片草甸）。
   const LAND_LEVELS_BACK = [
-    { x1: 0, y1: 0, x2: 14, y2: 20, coins: 0, points: 0 },
-    { x1: 0, y1: 0, x2: 18, y2: 22, coins: 800, points: 0 },
-    { x1: 0, y1: 0, x2: 22, y2: 24, coins: 1500, points: 0 },
-    { x1: 0, y1: 0, x2: 25, y2: 25, coins: 3000, points: 30 },
-    { x1: 0, y1: 0, x2: 27, y2: 25, coins: 6000, points: 50 },
+    { x1: 0, y1: 0, x2: 20, y2: 24, coins: 0, points: 0 },
+    { x1: 0, y1: 0, x2: 26, y2: 28, coins: 800, points: 0 },
+    { x1: 0, y1: 0, x2: 30, y2: 30, coins: 1500, points: 0 },
+    { x1: 0, y1: 0, x2: 33, y2: 32, coins: 3000, points: 30 },
+    { x1: 0, y1: 0, x2: 35, y2: 33, coins: 6000, points: 50 },
   ];
   const LAND_LEVELS_FRONT = [
-    { x1: 0, y1: 6, x2: 16, y2: 22, coins: 0, points: 0 },      // L0 含马路对面
-    { x1: 0, y1: 3, x2: 20, y2: 24, coins: 800, points: 0 },
-    { x1: 0, y1: 1, x2: 23, y2: 25, coins: 1500, points: 0 },
-    { x1: 0, y1: 0, x2: 25, y2: 25, coins: 3000, points: 30 },
-    { x1: 0, y1: 0, x2: 27, y2: 25, coins: 6000, points: 50 },  // L4 满图 28×26
+    { x1: 0, y1: 4, x2: 24, y2: 28, coins: 0, points: 0 },
+    { x1: 0, y1: 2, x2: 28, y2: 30, coins: 800, points: 0 },
+    { x1: 0, y1: 0, x2: 32, y2: 32, coins: 1500, points: 0 },
+    { x1: 0, y1: 0, x2: 34, y2: 33, coins: 3000, points: 30 },
+    { x1: 0, y1: 0, x2: 35, y2: 33, coins: 6000, points: 50 },
   ];
   // 🔒 默认水塘 v2（2026-08-13 二次修正）：谷仓正前方**隔一整排草**。
   // v1 的 (6,6) 与谷仓底座 (6,5) 是相邻格——有机水塘的波浪轮廓一溢出就贴着
@@ -1272,9 +1272,12 @@
       // 矩形地界 + 开垦格 + 已有菜地都不种树（否则新开的田还压着林子）
       if (inWorld && this._ownedCell(gx, gy)) return false;
       if (inWorld && this._cellToPlot && this._cellToPlot[k] != null) return false;
-      // 油画构图：农场坐在开阔草甸上，地界外 2 格留草地
-      if (gx >= ob.x1 - 2 && gx <= ob.x2 + 2 && gy >= ob.y1 - 2 && gy <= ob.y2 + 2) return false;
       const dEdge = this._walkEdgeDist(gx, gy);
+      // 🔒 最外两格是**实心**林墙，必须写在围裙之前：地界放大后围裙会盖到
+      // 可走矩形的边，若先 return false，人就会走到隐形空气墙。
+      if (dEdge <= 1) return true;
+      // 油画构图：农场坐在开阔草甸上，地界外 4 格留草地（林子别贴着院子）
+      if (gx >= ob.x1 - 4 && gx <= ob.x2 + 4 && gy >= ob.y1 - 4 && gy <= ob.y2 + 4) return false;
       const apron = gy > ob.y2;
       // 镜头前围裙中央不种树（留出正对镜头的开阔地）——但贴边那几格照种，
       // 否则这条中央走廊会一路通到硬边界，玩家撞的就是空气墙了。
@@ -1287,10 +1290,6 @@
         const dx = gx - spots[i].gx, dy = gy - spots[i].gy;
         if (dx * dx + dy * dy < 2.6) return false;
       }
-      // 🔒 最外两格是**实心**林墙：概率密度再高也总有缝，实测 0.86 时仍有 14 格
-      // 走到了硬矩形边界 —— 那就是隐形空气墙，正是这次要消灭的东西。
-      // 这两格不走 clump/密度，直接种满，保证玩家撞到的永远是看得见的树。
-      if (dEdge <= 1) return true;
       const clump = ((Math.floor(gx / 2) * 2654435761) ^ (Math.floor(gy / 2) * 1597334677)) >>> 0;
       if (!apron && (clump % 5) === 0) return false;
       const nearEdge = Math.max(0, Math.min(1, 1 - dEdge / WOODS_EDGE_RAMP));
@@ -3550,8 +3549,11 @@
         const b = this._bldgOf(o); if (!b) return;
         add(o.gx, o.gy); add(o.gx + b.w - 1, o.gy + b.h - 1); add(o.gx, o.gy + b.h - 1); add(o.gx + b.w - 1, o.gy);
       });
+      // 已买地界四个角都要进取景，不然东边/镜头前刚扩出来的空地在建造里看不见、放不进去
+      const ob = this._ownedBounds();
+      add(ob.x1, ob.y1); add(ob.x2, ob.y2); add(ob.x1, ob.y2); add(ob.x2, ob.y1);
       if (minx === Infinity) { minx = 0; miny = 0; maxx = COLS - 1; maxy = ROWS - 1; add(0, 0); add(COLS - 1, ROWS - 1); add(COLS - 1, 0); add(0, ROWS - 1); }
-      minx -= 2; miny -= 2; maxx += 2; maxy += 2;   // empty-land margin to drop things into
+      minx -= 1; miny -= 1; maxx += 1; maxy += 1;
       const span = (maxx - minx) + (maxy - miny);
       const screenW = span * TW / 2, screenH = span * TH / 2 + TH * 3;
       // reserve ~38% of height for the palette tray so content frames into the top area
@@ -4909,7 +4911,7 @@
               ctx.quadraticCurveTo(bx + i * tw * 0.05, byy - th * 0.08, bx + i * tw * 0.075, byy - th * 0.18);
               ctx.stroke();
             }
-          } else if ((owned || apron) && r2 < 0.07 && dHl > 1.15) {
+          } else if ((owned || apron) && r2 < 0.11 && dHl > 1.15) {
             const pk = this._cellToPlot && this._cellToPlot[gx + ',' + gy];
             if (pk == null) this._daisy(c.x + (r1 - 0.5) * tw * 0.5, c.y + (r2 - 0.4) * th * 0.45, tw * 0.046);
           }

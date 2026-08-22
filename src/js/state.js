@@ -252,11 +252,11 @@
   // 历史遗留：iso 建造菜地 200 币无上限、ep-shop 3000 币限 4 块——两套矛盾。
   // 现在两个「农场币」购买入口（iso 建造面板 + 商城 extra_plot_coins）都读同一
   // 递增价格 extraPlotCoinCost() + 同一计数器 extraPlots + 同一上限 EXTRA_PLOT_CAP。
-  // 「等级解锁数 + 4」= 靠等级解锁的基础地块（随 PLOT_UNLOCK_AT 增长）再 + 4 块可买。
+  // 「等级解锁数 + 8」= 靠等级解锁的基础地块（随 PLOT_UNLOCK_AT 增长）再 + 8 块可买。
   // EP 版 extra_plot（100 EP）沿用同计数器同帽，但价格是 EP 侧红线不动。
   // 存档字段 extraPlots/plots[] 已存在，无需迁移。
-  const EXTRA_PLOT_CAP = 4;
-  const EXTRA_PLOT_COSTS = [200, 600, 1500, 3000];   // 第 1..4 块递增（首块仍便宜，第 4 块对齐旧 3000）
+  const EXTRA_PLOT_CAP = 8;
+  const EXTRA_PLOT_COSTS = [200, 600, 1500, 3000, 4500, 6000, 8000, 10000];
 
   // Title tiers — purely cosmetic. Rewritten 2026-05-25: previous
   // titles (新手/小工/学徒/农夫) sounded like a hierarchy of menial
