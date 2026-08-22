@@ -417,6 +417,44 @@ else
     echo "—— 部署中止：点房子点不中，或者点旁边的地也弹房子。"
     exit 1
   fi
+
+  # 闸门 L: 东超订单制(约 30 秒)
+  # 2026-08-22 加。东方超市不再无限收购，卖菜只能按订单供货——这条链上任何一环
+  # 坏掉都不报错，只是玩家卖不了菜：
+  #   · 谷仓卖货入口没删干净 → 改了等于没改
+  #   · totalDeliveries 没人加 → 人生故事/排行榜/新手引导第三步全静默失效
+  #   · 未接的单能交 → 接单上限形同虚设
+  #   · 离线回来按错过的周期补发 → 一次砸出几十张单
+  #   · 告示牌被邻居贴图盖住 → 唯一的卖菜出口点不开(实测发生过)
+  echo "▶ 闸门 L: 东超订单制回归测试(约 30 秒)…"
+  for t in store-demand-test store-economy-sim store-state-test no-bulk-sell-test orders-ui-test rename-test; do
+    if ! node "scripts/verify/$t.mjs"; then
+      echo "—— 部署中止：$t 没过"
+      exit 1
+    fi
+  done
+  $PYCMD -m http.server 8158 --bind 127.0.0.1 >/dev/null 2>&1 &
+  ORD_PID=$!
+  trap 'kill $ORD_PID 2>/dev/null || true' EXIT
+  sleep 1
+  ORD_OUT="$(mktemp)"
+  EF_CDP_TIMEOUT=180000 node scripts/verify/cdp.mjs "http://127.0.0.1:8158/src/" "scripts/verify/store-order-tests.js" 12000 >"$ORD_OUT" 2>/dev/null || true
+  kill $ORD_PID 2>/dev/null || true
+  trap - EXIT
+  if ! node -e '
+    const o = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
+    const r = o.evalResult;
+    if (!r || !r.failures) { console.error("✗ 订单制测试没跑出结果(evalResult=" + JSON.stringify(r) + ")"); process.exit(1); }
+    if (r.failures.length) {
+      console.error("✗ 订单制是坏的:");
+      r.failures.forEach(f => console.error("  - " + f));
+      process.exit(1);
+    }
+    console.log("  ✓ 三层需求 / 接单上限 / 离线不追发 / 计数接管 / 告示牌点得开");
+  ' "$ORD_OUT"; then
+    echo "—— 部署中止：玩家可能卖不了菜。"
+    exit 1
+  fi
 fi
 
 # 3. 提交未保存的改动(如果有;SW 版本注入保证至少有它)

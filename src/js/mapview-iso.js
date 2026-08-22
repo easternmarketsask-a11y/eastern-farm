@@ -658,11 +658,17 @@
       if (d.map.some((o) => o && o.type === 'board')) return;
       const barn = d.map.filter((o) => o && o.type === 'barn')[0];
       // 优先贴着谷仓右侧，占不下就在附近找一格空地
+      /* 🔒 优先摆在谷仓**正前方**（gy 更大），不是旁边。
+         等距深度按 gx+gy 排，摆在侧面会跟谷仓打平手，_buildingAtPoint 取
+         frontmost 时谷仓先命中 —— 实测四个探测点全部点到谷仓，**告示牌根本
+         点不开**，而它是取消无限收购之后唯一的卖菜出口。摆前面才咬得住点击，
+         朝向也对着玩家。 */
       const tries = [];
       if (barn) {
         const bb = BUILDINGS.barn;
-        tries.push([barn.gx + bb.w, barn.gy], [barn.gx - 1, barn.gy],
-                   [barn.gx + bb.w, barn.gy + 1], [barn.gx, barn.gy + bb.h]);
+        tries.push([barn.gx, barn.gy + bb.h], [barn.gx + 1, barn.gy + bb.h],
+                   [barn.gx + bb.w, barn.gy + bb.h], [barn.gx - 1, barn.gy + bb.h],
+                   [barn.gx + bb.w, barn.gy + 1]);
       }
       const ob = this._ownedBounds();
       for (let r = 1; r <= 6; r++) {
@@ -674,13 +680,43 @@
           }
         }
       }
-      for (const t of tries) {
-        const gx = t[0], gy = t[1];
-        if (!this._inBounds(gx, gy) || !this._ownedCell(gx, gy)) continue;
-        if (!this._footprintFree(gx, gy, 'board', -1)) continue;
+      /* 🔒 落点必须**在附近所有建筑的前面**。
+         等距深度按 gx+gy 排，谁大谁后画、谁后画谁先吃到点击。告示牌只有 1×1，
+         夹在一堆 2×2 中间时会被邻居的贴图盖住 —— 实测摆谷仓旁边点到谷仓、
+         摆谷仓正前方点到温室，四个探测点没有一个能点中它。
+         而它是取消无限收购之后**唯一的卖菜出口**，点不开＝卖不了菜。 */
+      const depthOK = (gx, gy) => {
+        const mine = gx + gy;
+        return !(d.map || []).some((o) => {
+          if (!o || o.type === 'board') return false;
+          const b2 = this._bldgOf(o); if (!b2) return false;
+          // 只关心画面上挨着的邻居；远处的盖不到
+          if (Math.abs(o.gx - gx) > 4 || Math.abs(o.gy - gy) > 4) return false;
+          return (o.gx + b2.w - 1) + (o.gy + b2.h - 1) >= mine;
+        });
+      };
+      const place = (gx, gy) => {
+        if (!this._inBounds(gx, gy) || !this._ownedCell(gx, gy)) return false;
+        if (!this._footprintFree(gx, gy, 'board', -1)) return false;
+        if (!depthOK(gx, gy)) return false;
         d.map.push({ type: 'board', gx: gx, gy: gy });
         if (Farm.state.save) Farm.state.save();
-        return;
+        return true;
+      };
+      for (const t of tries) if (place(t[0], t[1])) return;
+      // 首选位置都被挡住：从最靠镜头的一排往回找，保证一定摆得下
+      for (let gy = ob.y2; gy >= ob.y1; gy--) {
+        for (let gx = ob.x1; gx <= ob.x2; gx++) if (place(gx, gy)) return;
+      }
+      // 真的一格都不合适（极端存档）：放宽深度要求，至少要有一块牌子
+      for (let gy = ob.y2; gy >= ob.y1; gy--) {
+        for (let gx = ob.x1; gx <= ob.x2; gx++) {
+          if (!this._inBounds(gx, gy) || !this._ownedCell(gx, gy)) continue;
+          if (!this._footprintFree(gx, gy, 'board', -1)) continue;
+          d.map.push({ type: 'board', gx: gx, gy: gy });
+          if (Farm.state.save) Farm.state.save();
+          return;
+        }
       }
     },
 
