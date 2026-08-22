@@ -340,7 +340,7 @@
     _sel: -1, _moving: null,
     _pets: {},          // seed -> {fx,fy,tx,ty,pause,face,hx,hy} live walk state (not persisted)
     _lastWalkT: 0,
-    _buildBtn: null, _communityBtn: null, _driveBtn: null, _driveBtnOn: null, _musicBtn: null, _musicBtnOn: null, _langBtn: null, _langBtnCur: null, _palette: null, _hint: null, _modeTabs: null, _palBuild: null, _palTerrain: null,
+    _buildBtn: null, _communityBtn: null, _driveBtn: null, _driveBtnOn: null, _musicBtn: null, _musicBtnOn: null, _langBtn: null, _langBtnCur: null, _leftUI: null, _palette: null, _hint: null, _modeTabs: null, _palBuild: null, _palTerrain: null,
 
     // DEFAULT farm view (Hay Day isometric). Chosen via Farm.state.farmStyle()
     // (saved preference + URL override); players switch in the guide (ⓘ).
@@ -2597,7 +2597,6 @@
          并进缩放那一列：位置和玻璃钮样式直接复用，不另起一套浮动 UI。 */
       const zMusic = mkZ('♪', 1);
       zMusic.id = 'isoMusicBtn';
-      zMusic.style.marginTop = '6px';
       zMusic.style.fontSize = '19px';
       zMusic.onclick = (e) => {
         e.preventDefault();
@@ -2612,7 +2611,6 @@
                            : (en2 ? 'Background music off' : '背景音乐已关闭'));
         }
       };
-      zwrap.appendChild(zMusic);
       this._musicBtn = zMusic;
 
       /* 中英切换（Chris 2026-08-21）。设置里那两个按钮仍在，这里是农场上的快捷键 ——
@@ -2621,7 +2619,6 @@
          玩家先要知道现在是哪种，才谈得上要不要换。 */
       const zLang = mkZ('中', 1);
       zLang.id = 'isoLangBtn';
-      zLang.style.marginTop = '6px';
       zLang.onclick = (e) => {
         e.preventDefault();
         const to = this._lang() === 'en' ? 'zh' : 'en';
@@ -2632,9 +2629,17 @@
           Farm.ui.toast(to === 'en' ? 'Switched to English' : '已切换成中文');
         }
       };
-      zwrap.appendChild(zLang);
       this._langBtn = zLang;
       document.body.appendChild(zwrap); this._zoomUI = zwrap;
+
+      /* 左上角自己一列：语言在上、音乐在下（Chris 2026-08-21 指定）。
+         右上角只留缩放 —— 四个钮挤一列太长，而且缩放是高频操作、
+         语言和音乐是设一次就不动的，本来就该分开放。 */
+      const zleft = document.createElement('div'); zleft.id = 'isoLeftUI';
+      zleft.style.cssText = 'position:fixed;z-index:20;display:flex;flex-direction:column;gap:10px;';
+      zleft.appendChild(zLang);
+      zleft.appendChild(zMusic);
+      document.body.appendChild(zleft); this._leftUI = zleft;
       this._syncMusicBtn(true);
       this._syncLangBtn(true);
 
@@ -2649,9 +2654,9 @@
     // mode/zoom/camera state lives on `this` and survives the rebuild.
     relang() {
       if (!this._on) return;   // map inactive → next init() builds it fresh in the right language
-      [this._buildBtn, this._communityBtn, this._driveBtn, this._palette, this._hint, this._zoomUI].forEach((el) => { if (el && el.remove) el.remove(); });
+      [this._buildBtn, this._communityBtn, this._driveBtn, this._palette, this._hint, this._zoomUI, this._leftUI].forEach((el) => { if (el && el.remove) el.remove(); });
       if (this._buildPulse && this._buildPulse.cancel) { try { this._buildPulse.cancel(); } catch (e) {} }
-      this._buildBtn = this._communityBtn = this._driveBtn = this._palette = this._hint = this._zoomUI = this._musicBtn = this._langBtn = null;
+      this._buildBtn = this._communityBtn = this._driveBtn = this._palette = this._hint = this._zoomUI = this._musicBtn = this._langBtn = this._leftUI = null;
       this._langBtnCur = null;
       this._musicBtnOn = null;
       this._driveBtnOn = null;
@@ -2668,6 +2673,11 @@
         const tbBottom = tb ? tb.getBoundingClientRect().bottom : 0;
         this._zoomUI.style.left = (r.left + r.width - 46) + 'px';   // 36px 玻璃钮 + 10px 右边距
         this._zoomUI.style.top = Math.max(r.top + 10, tbBottom + 8) + 'px';
+        if (this._leftUI) {
+          // 左上角与右上角同高，左右对称；同样压在顶栏之下
+          this._leftUI.style.left = (r.left + 10) + 'px';
+          this._leftUI.style.top = this._zoomUI.style.top;
+        }
       }
       if (this._palette) { this._palette.style.display = this._build ? 'flex' : 'none'; this._palette.style.left = r.left + 'px'; this._palette.style.right = Math.max(0, window.innerWidth - (r.left + r.width)) + 'px'; this._palette.style.bottom = fromBottom + 'px'; }
       if (this._buildBtn) { const ph = (this._build && this._palette) ? (this._palette.getBoundingClientRect().height || 74) : 0; this._buildBtn.style.right = (Math.max(0, window.innerWidth - (r.left + r.width)) + 14) + 'px'; this._buildBtn.style.bottom = (fromBottom + (this._build ? ph + 10 : 14)) + 'px'; this._buildBtn.textContent = this._build ? (en ? '✓ Done' : '✓ 完成') : (en ? '🔨 Build' : '🔨 建造'); this._buildBtn.style.background = this._build ? '#FF9800' : '#4CAF50'; }
