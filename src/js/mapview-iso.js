@@ -1023,7 +1023,8 @@
       const idx = this._cellToPlot[gx + ',' + gy];
       if (idx == null) {
         this._stickyEnd();
-        if (Farm.farmer && Farm.farmer.goTo) Farm.farmer.goTo(gx, gy);
+        // travelTo 而不是 goTo：目的地比车远就自动开车去（Chris 2026-08-21）
+        if (Farm.farmer && Farm.farmer.travelTo) Farm.farmer.travelTo(gx, gy);
         return;
       }
       const plot = Farm.state.data.plots[idx];

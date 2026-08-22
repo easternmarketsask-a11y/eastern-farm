@@ -86,7 +86,7 @@
       look: clampLook(look), gx: null, gy: null, face: 'r', away: false,
       anim: 'idle', frameT: 0, pause: 0,
       queue: [], job: null, visitHold: null,
-      path: null, pathI: 0, driving: null,
+      path: null, pathI: 0, driving: null, pendingGoto: null,
       driveT: 0, driveAccel: 0, driveBrake: 0, driveTurnT: 9,
       driveDust: [], driveDustAcc: 0, driveDx: 0, driveDy: 0,
       boardHop: 0, alightHop: 0,
@@ -146,7 +146,7 @@
     // 只判这一次：开车只负责去干活的第一段路，菜地连片挨着，逐块上下车太吵。
     if (A.queue.length === 1 && !A.job) {
       const wp = approachPos(iso, plotIdx);
-      const carIdx = pickCarForWork(iso, wp.gx, wp.gy);
+      const carIdx = pickCarFor(iso, wp.gx, wp.gy);
       if (carIdx != null) {
         if (A.driving === carIdx) goTo(wp.gx, wp.gy, true);
         else board(carIdx, true);
@@ -361,7 +361,12 @@
     A.boardHop = 0.32;
     A.job = null; A.path = null; A.anim = 'idle';
     if (Farm.audio && Farm.audio.play) Farm.audio.play('horn');
-    // 上车是为了去干活 → 不用玩家再点一次，直接开到第一块地
+    // 上车是为了去某处 → 不用玩家再点一次，直接开过去
+    if (A.pendingGoto && iso) {
+      const g = A.pendingGoto; A.pendingGoto = null;
+      if (goTo(g.gx, g.gy, true)) { if (iso.render) iso.render(); return true; }
+    }
+    // 上车是为了去干活 → 直接开到第一块地
     if (A.queue.length && iso) {
       const wp = approachPos(iso, A.queue[0].plotIdx);
       if (goTo(wp.gx, wp.gy, true)) { if (iso.render) iso.render(); return true; }
@@ -380,86 +385,101 @@
 
   /* 上车＝先走到车边（Chris 2026-08-20：「点上车要有人跑过来」）。
      返回 true 只代表「动身了」，人还得走完这段路才真的坐进去。 */
-  /* 开车去干活值不值？农场就这么大，车常停在另一头 —— 跑去开车再开回来，
-     可能比直接走过去还慢。所以不拍脑袋定「超过 N 格就开车」，每次真算一遍：
-     车越贵（越快）越容易划算，玩家不用调任何参数。 */
-  const DRIVE_WORTH_IT = 1.3;   // 要快过这个倍数才值得演一段上下车
+  /* 🔒 开不开车的判据（Chris 2026-08-21 定）：
+       **只要目的地比车还远，就去开车** —— 不分是去干活还是随便走走。
+     早先算的是「开车省不省时间」（含 1.3 倍门槛），触发得太少；
+     而且开车本身是有乐趣的（有引擎声、扬尘、悬挂弹跳），玩家想看车动。
+     ⚠️ 唯一的下限：目的地不足 MIN_DRIVE_DIST 格就直接走 —— 两步路的距离，
+     跑去上车、下车的动画比走过去还久。要更容易开车就把这个数调小。 */
+  const MIN_DRIVE_DIST = 3;
 
-  // 走路：走不到目标就不算数（人本来就该站得到地头）
   /* 人脚下那一格永远算可走 —— 车身完全可能盖在人身上（车停过来、人走过去都会），
-     那时寻路的起点不可走，find() 直接返回 null，「走多久 / 开车值不值」全成了
-     无穷大，自动开车静默失效。你已经站在那儿了，从那儿出发当然是可以的。 */
+     那时寻路的起点不可走，find() 直接返回 null，「走多久 / 开不开车」全成了
+     无穷大，自动开车静默失效。你已经站在那儿了，从那儿出发当然是可以的。
+     ⚠️ goTo / board / startJob 都依赖它，别再连着别的块一起删掉（2026-08-21 犯过）。 */
   function freeFromHere(free) {
     const hx = Math.round(A.gx), hy = Math.round(A.gy);
     return (x, y) => ((x === hx && y === hy) || free(x, y));
   }
 
-  function walkTime(iso, fx, fy, tx, ty, free) {
+  // 走得到吗、几步。走不到返回 Infinity（那条路不算数）
+  function walkSteps(iso, fx, fy, tx, ty, free) {
     const path = Farm.pathfind.find(fx, fy, tx, ty, freeFromHere(free));
     if (!path) return Infinity;
     if (path.length < 2) return 0;
     const last = path[path.length - 1];
     if (last.gx !== Math.round(tx) || last.gy !== Math.round(ty)) return Infinity;
-    return (path.length - 1) / WALK_SPEED;
+    return path.length - 1;
   }
 
-  /* 开车：车停不到地头是常态 —— 干活的落脚点紧贴菜地，2×2 甚至 4×2 的车身
-     根本放不下。所以允许车停在最近停得下的地方，剩下几步按走路补上。
-     要是要求「精确到达」，每辆车都会被判成到不了，自动开车永远不触发。 */
-  function driveTime(iso, o, carIdx, tx, ty, speed) {
+  /* 车能不能开到目的地附近。车停不到地头是常态（落脚点紧贴菜地，车身放不下），
+     所以只要求「开得过去」，剩下几步走过去。 */
+  function carCanReach(iso, o, carIdx, tx, ty) {
     const wh = iso._carWh(o);
     const path = Farm.pathfind.find(o.gx, o.gy, tx, ty, walkableFor(iso, wh.w, wh.h, carIdx));
-    if (!path) return Infinity;
+    if (!path) return false;
     const end = path[path.length - 1];
-    const rest = Math.abs(end.gx - Math.round(tx)) + Math.abs(end.gy - Math.round(ty));
-    return (path.length - 1) / speed + rest / WALK_SPEED;
+    return (Math.abs(end.gx - Math.round(tx)) + Math.abs(end.gy - Math.round(ty))) <= 4;
   }
 
-  /* 开车划不划算的算式摊开给测试和调参看 —— 这个判据只要偏一点，
-     「自动开车」就会静默地永不触发（或者到处乱触发），而它不报任何错。 */
-  function driveDebug(plotIdx) {
-    const iso = Farm.isoView;
-    const tp = approachPos(iso, plotIdx);         // 车停邻格；人再走进垄前缘
-    const tx = tp.gx, ty = tp.gy;
+  // 选车：走得到、且「人→车」比「人→目的地」近的，取最近的那辆
+  function pickCarFor(iso, tx, ty) {
+    if (A.driving != null) return A.driving;            // 已经在车上
     const map = (Farm.state.data && Farm.state.data.map) || [];
     const walkFree = walkableFor(iso, 1, 1);
-    const out = { man: { gx: A.gx, gy: A.gy }, target: { gx: tx, gy: ty },
-                  walkDirect: walkTime(iso, A.gx, A.gy, tx, ty, walkFree), cars: [] };
-    out.threshold = out.walkDirect / DRIVE_WORTH_IT;
-    for (let i = 0; i < map.length; i++) {
-      const o = map[i];
-      if (!o || o.type !== 'car') continue;
-      const side = carSideSpot(iso, o);
-      const speed = cruiseSpeed(o);
-      const toCar = side ? walkTime(iso, A.gx, A.gy, side.gx, side.gy, walkFree) : Infinity;
-      const drive = driveTime(iso, o, i, tx, ty, speed);
-      out.cars.push({ idx: i, lv: o.lv, at: { gx: o.gx, gy: o.gy }, side: side,
-                      speed: speed, toCar: toCar, drive: drive, total: toCar + drive });
-    }
-    out.pick = pickCarForWork(iso, tx, ty);
-    return out;
-  }
-
-  function pickCarForWork(iso, tx, ty) {
-    if (A.driving != null) return A.driving;      // 已经在车上，直接开过去
-    const map = (Farm.state.data && Farm.state.data.map) || [];
-    const walkFree = walkableFor(iso, 1, 1);
-    const walkDirect = walkTime(iso, A.gx, A.gy, tx, ty, walkFree);
-    if (!isFinite(walkDirect) || walkDirect <= 0) return null;
-    let best = null, bestCost = walkDirect / DRIVE_WORTH_IT;
+    const toTarget = walkSteps(iso, A.gx, A.gy, tx, ty, walkFree);
+    if (!isFinite(toTarget) || toTarget < MIN_DRIVE_DIST) return null;
+    let best = null, bestToCar = Infinity;
     for (let i = 0; i < map.length; i++) {
       const o = map[i];
       if (!o || o.type !== 'car') continue;
       const side = carSideSpot(iso, o);
       if (!side) continue;
-      const toCar = walkTime(iso, A.gx, A.gy, side.gx, side.gy, walkFree);
+      const toCar = walkSteps(iso, A.gx, A.gy, side.gx, side.gy, walkFree);
       if (!isFinite(toCar)) continue;
-      const speed = cruiseSpeed(o);
-      const drive = driveTime(iso, o, i, tx, ty, speed);
-      if (!isFinite(drive)) continue;
-      if (toCar + drive < bestCost) { bestCost = toCar + drive; best = i; }
+      if (toCar >= toTarget) continue;                  // 车比目的地还远 → 不值当
+      if (!carCanReach(iso, o, i, tx, ty)) continue;
+      if (toCar < bestToCar) { bestToCar = toCar; best = i; }
     }
     return best;
+  }
+
+  /* 判据摊开给测试和调参看。这个判据一偏，「自动开车」就会静默地
+     永不触发或到处乱触发，而它不报任何错。 */
+  function driveDebug(plotIdx) {
+    const iso = Farm.isoView;
+    const tp = (plotIdx && plotIdx.gx != null) ? plotIdx : plotPos(iso, plotIdx);
+    const tx = tp.gx, ty = tp.gy;
+    const map = (Farm.state.data && Farm.state.data.map) || [];
+    const walkFree = walkableFor(iso, 1, 1);
+    const out = { man: { gx: A.gx, gy: A.gy }, target: { gx: tx, gy: ty },
+                  toTarget: walkSteps(iso, A.gx, A.gy, tx, ty, walkFree),
+                  minDist: MIN_DRIVE_DIST, cars: [] };
+    for (let i = 0; i < map.length; i++) {
+      const o = map[i];
+      if (!o || o.type !== 'car') continue;
+      const side = carSideSpot(iso, o);
+      out.cars.push({ idx: i, at: { gx: o.gx, gy: o.gy }, side: side,
+        toCar: side ? walkSteps(iso, A.gx, A.gy, side.gx, side.gy, walkFree) : Infinity,
+        reach: carCanReach(iso, o, i, tx, ty) });
+    }
+    out.pick = pickCarFor(iso, tx, ty);
+    return out;
+  }
+
+  /* 去某处 —— 该开车就开车，否则走路。点空地、派农活都走它。 */
+  function travelTo(gx, gy, keepQueue) {
+    const iso = Farm.isoView;
+    if (!iso || !iso._on || iso._build) return false;
+    if (Farm.state && Farm.state._visitLock) return false;
+    if (A.gx == null) spawnAt(iso);
+    if (A.driving != null) return goTo(gx, gy, keepQueue);   // 已经在车上，直接开
+    const carIdx = pickCarFor(iso, gx, gy);
+    if (carIdx == null) return goTo(gx, gy, keepQueue);      // 走过去
+    A.pendingGoto = { gx: gx, gy: gy };                      // 上车后接着开过去
+    if (board(carIdx, true)) return true;
+    A.pendingGoto = null;
+    return goTo(gx, gy, keepQueue);
   }
 
   function board(mapIdx, keepQueue) {
@@ -1096,6 +1116,7 @@
     applyLook: applyLook,
     enqueue: enqueue,
     goTo: goTo,
+    travelTo: travelTo,
     walkableFor: walkableFor,
     board: board,
     unboard: unboard,
