@@ -1216,6 +1216,50 @@
     },
     // _roadClearSet() 每次要跑 48×9 次采样；_wildTreeAt 在寻路里一趟要问上千格，
     // 不缓存的话每走一步都重算一遍整条路。路是常量，算一次就够。
+    /* 贴图不透明蒙版（懒建 + 挂在 Image 上缓存）。
+       等距贴图是不规则形状，**用包围盒当点击热区就会把旁边的草地也算成房子**。
+       2026-08-22 房子按宅基地放大之后这事从「偶尔」变成「天天」：实测 7×7 庄园
+       的矩形热区吃掉了宅基地外 95 格地面，点房子旁边的草地也弹「我的家」。
+       128×128：最大的庄园画到 ~700px 时每格约 5px，远小于一根手指；96 时
+       宅基地外还残留 1 格误触（贴图边缘的量化误差），128 归零。每张 16KB。 */
+    _spriteMask(im) {
+      if (!(im instanceof Image) || !im.width) return null;
+      if (im._efMask) return im._efMask;
+      const N = 128;
+      try {
+        const cv = document.createElement('canvas');
+        cv.width = N; cv.height = N;
+        const g = cv.getContext('2d', { willReadFrequently: true });
+        // 🔒 关掉平滑：缩图默认会把 alpha 平均掉，源图里 1px 的铁艺栅栏就能把整个
+        // 8×8 块染成实心，蒙版被「撑胖」——实测乔治联排的花园栅栏旁边有 2 个空点被判成房子。
+        g.imageSmoothingEnabled = false;
+        g.drawImage(im, 0, 0, N, N);
+        const px = g.getImageData(0, 0, N, N).data;
+        const m = new Uint8Array(N * N);
+        /* 阈值取得**宽松**(沾到就算实心)：蒙版只用来否掉「明显点空了」的情况，
+           宁可多认一点也不能让塔尖、烟囱、栅栏这些细长部件点不中。
+           试过收紧到 128(半格覆盖)，误触只从 34 降到 32，却让四合小院多出一处点不中
+           —— 不划算。真正的大头本来就不在这里(见 _buildingAtPoint 的落地格兜底)。 */
+        for (let i = 0; i < N * N; i++) m[i] = px[i * 4 + 3] > 24 ? 1 : 0;
+        im._efMask = { n: N, m: m };
+      } catch (e) {
+        im._efMask = { n: 0, m: null };   // 读不到像素就退回矩形，宁可多点中也不能让房子点不动
+      }
+      return im._efMask;
+    },
+    // 点 (px,py) 是否真的落在这张贴图的**不透明部分**上。盒子取的是 _blit 实际画的那个盒。
+    _spriteHit(im, px, py, cx, by, w, h, flipX) {
+      if (!(w > 0) || !(h > 0)) return false;
+      const left = cx - w / 2, top = by - h;
+      if (px < left || px > left + w || py < top || py > top + h) return false;
+      const mask = this._spriteMask(im);
+      if (!mask || !mask.m) return true;
+      let fx = (px - left) / w;
+      if (flipX) fx = 1 - fx;
+      const u = Math.min(mask.n - 1, Math.max(0, Math.floor(fx * mask.n)));
+      const v = Math.min(mask.n - 1, Math.max(0, Math.floor((py - top) / h * mask.n)));
+      return mask.m[v * mask.n + u] === 1;
+    },
     _roadClearCached() {
       if (!this._roadClearMemo) this._roadClearMemo = this._roadClearSet();
       return this._roadClearMemo;
@@ -1270,10 +1314,16 @@
         const hz = o.type === 'home' ? this._homeDrawMul(o) : (o.type === 'car' ? this._carDrawMul(o) : 1);
         const im = o.type === 'home' ? this._homeSprite(o) : (o.type === 'car' ? this._carSprite(o) : this._img[b.img]); let w, h;
         const box = this._spriteBox(b, hz, o.type === 'home' ? 1 : b.fill);
-        if (im && im.width) { const s = Math.min(box.w / im.width, box.h / im.height); w = im.width * s; h = im.height * s; }
+        if (im && im.width) {
+          const s = Math.min(box.w / im.width, box.h / im.height); w = im.width * s; h = im.height * s;
+          // 必须真的点在贴图上，不能只是落进包围盒 —— 等距形状的盒角全是旁边的草地。
+          const flip = o.type === 'car' && ((o.face || 'r') === 'l');
+          if (this._spriteHit(im, px, py, cc.x, by, w, h, flip)) return i;
+          continue;
+        }
         // 贴图还没到：宽一点、矮一点地兜个手感盒（沿用旧口径的宽松度），
         // 别用 box.h —— 那是护栏高度（宽的 2.2 倍），拿它当热区会把屋顶上方一大片空草地也算成房子。
-        else { w = box.w * 1.15; h = box.w * 0.95; }
+        w = box.w * 1.15; h = box.w * 0.95;
         if (px >= cc.x - w / 2 && px <= cc.x + w / 2 && py >= by - h && py <= by) return i;
       }
       const cell = this._screenToCell(px, py);

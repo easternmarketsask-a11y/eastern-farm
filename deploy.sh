@@ -384,6 +384,35 @@ else
     echo "—— 部署中止：人走不出地界，或者撞的是隐形墙。"
     exit 1
   fi
+
+  # 闸门 K: 点击必须真的点中建筑(约 25 秒)
+  # 2026-08-22 加。房子按宅基地放大后，矩形热区把旁边的草地也吃了进去 ——
+  # 点房子旁边的地也弹「我的家」(实测 7×7 庄园吃掉宅基地外 95 格)。
+  # 两个方向都要钉：点在房子上必须命中(别改成点不动)、宅基地外的地面格一格都不许误触。
+  echo "▶ 闸门 K: 点击精度回归测试(约 25 秒)…"
+  $PYCMD -m http.server 8157 --bind 127.0.0.1 >/dev/null 2>&1 &
+  TAP_PID=$!
+  trap 'kill $TAP_PID 2>/dev/null || true' EXIT
+  sleep 1
+  TAP_OUT="$(mktemp)"
+  EF_CDP_TIMEOUT=180000 node scripts/verify/cdp.mjs "http://127.0.0.1:8157/src/" "scripts/verify/tap-precision-test.js" 14000 >"$TAP_OUT" 2>/dev/null || true
+  kill $TAP_PID 2>/dev/null || true
+  trap - EXIT
+  if ! node -e '
+    const o = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
+    const r = o.evalResult;
+    if (!r || !r.failures) { console.error("✗ 点击精度测试没跑出结果(evalResult=" + JSON.stringify(r) + ")"); process.exit(1); }
+    if (r.failures.length) {
+      console.error("✗ 点击热区是坏的:");
+      r.failures.forEach(f => console.error("  - " + f));
+      if (r.dbg) console.error("  实测: 房子上漏点=" + r.dbg.solidMissed + " 宅基地外误触格=" + r.dbg.groundCellsFalseHit);
+      process.exit(1);
+    }
+    console.log("  ✓ 30 档房子点得中，宅基地外一格不误触");
+  ' "$TAP_OUT"; then
+    echo "—— 部署中止：点房子点不中，或者点旁边的地也弹房子。"
+    exit 1
+  fi
 fi
 
 # 3. 提交未保存的改动(如果有;SW 版本注入保证至少有它)
