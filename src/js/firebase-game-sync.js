@@ -58,16 +58,43 @@
     // 对外名字：有农场昵称用昵称；没有就用会员真名（Chris 2026-08-18）。
     _selfDisplayName() {
       const s = Farm.state.data;
-      if (s.nickname && String(s.nickname).trim()) return String(s.nickname).trim();
+      const nick = String(s.nickname || '').trim();
+      if (nick && !this._isPlaceholderName(nick)) return nick;
       const md = (Farm.fbAuth && Farm.fbAuth.memberDoc) || {};
       const realName = (md.name || md.firstName || md.username || '').trim();
-      if (realName) return realName;
+      if (realName && !this._isPlaceholderName(realName)) return realName;
       return this._fallbackName();
+    },
+
+    /* 占位名不算名字（2026-08-21）。排行榜上出现过「E邻居」「X邻居」「S邻居」——
+       代码里从来不会拼出这种格式，是会员档案的姓名字段里真存着这串字
+       （早期测试账号 / 收银台补录时随手填的占位）。
+       真人不会给自己起名叫「X邻居」，所以识别出来当作没名字处理，
+       走正常兜底，本人还能看到「起个名字」的入口。
+       🔒 只认这几种明确的占位形态，别扩大到模糊匹配 —— 误伤真名比显示占位名更糟。 */
+    _isPlaceholderName(v) {
+      const t = String(v || '').trim();
+      if (!t) return true;
+      if (/^[A-Za-z]?邻居\d*$/.test(t)) return true;              // 邻居 / X邻居 / 邻居2
+      if (/^萨城邻居$/.test(t)) return true;                       // 兜底名被回写进档的情况
+      if (/^Neighbou?r\s*\d*$/i.test(t)) return true;
+      if (/^Saskatoon\s+farmer$/i.test(t)) return true;
+      /* ⚠️ 这里必须是**整词**，不能用前缀 —— 写成 /^(test|demo)/ 会把
+         「Testudo」「Demolition Dave」这类真名一起吃掉（实测踩到过）。
+         宁可漏判一个测试账号，也不能把真人的名字抹成「萨城邻居」。 */
+      if (/^(test|demo)\s*\d*$/i.test(t)) return true;
+      if (/^测试\s*\d*$/.test(t)) return true;
+      return false;
     },
 
     _fallbackName() {
       const en = (Farm.state && Farm.state.data && Farm.state.data.language) === 'en';
       return en ? 'Saskatoon farmer' : '萨城邻居';
+    },
+
+    // 这条记录到底有没有真名字 —— 排行榜据此决定要不要给「起个名字」入口
+    hasRealName(doc) {
+      return this.displayName(doc) !== this._fallbackName();
     },
 
     // Compute the gameStats payload from local state. Pure function.
@@ -404,10 +431,12 @@
     displayName(doc) {
       if (!doc) return this._fallbackName();
       const stats = doc.gameStats || {};
-      if (stats.nickname && String(stats.nickname).trim()) return String(stats.nickname).trim();
+      const nick = String(stats.nickname || '').trim();
+      if (nick && !this._isPlaceholderName(nick)) return nick;
       const realName = (doc.name || doc.firstName || doc.username || '').trim();
-      if (realName) return realName;
-      if (stats.displayName && String(stats.displayName).trim()) return String(stats.displayName).trim();
+      if (realName && !this._isPlaceholderName(realName)) return realName;
+      const dn = String(stats.displayName || '').trim();
+      if (dn && !this._isPlaceholderName(dn)) return dn;
       return this._fallbackName();
     },
 

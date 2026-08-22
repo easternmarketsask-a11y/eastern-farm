@@ -156,6 +156,7 @@
               totalHarvests: gs.totalHarvests || 0,
               likesReceived: gs.likesReceived || 0,
               isSelf: r.uid === myId,
+              needsName: !Farm.fbGameSync.hasRealName(r.doc),
               champion: !!cw && (cw === thisW || cw === lastW),
               online: Farm.fbGameSync.onlineStatus(r.doc),
             };
@@ -423,7 +424,7 @@
               <div class="leaderboard-row ${m.isSelf ? 'is-self' : 'is-visitable'}" ${m.isSelf ? '' : 'data-lb-uid="' + m.uid + '"'}>
                 <span class="lb-rank">${medal}</span>
                 <span class="lb-avatar">${m.emoji}${onlineDot}</span>
-                <span class="lb-name">${m.champion ? '👑 ' : ''}${esc(m.name)}${m.isSelf ? ' <span class="lb-you">' + (lang === 'en' ? '(you)' : '(你)') + '</span>' : ''}</span>
+                <span class="lb-name">${m.champion ? '👑 ' : ''}${esc(m.name)}${m.isSelf ? ' <span class="lb-you">' + (lang === 'en' ? '(you)' : '(你)') + '</span>' : ''}${m.isSelf && m.needsName ? ' <button class="lb-name-cta" data-lb-name="1">' + (lang === 'en' ? 'Name it' : '起个名字') + '</button>' : ''}</span>
                 <span class="lb-level">${m.value}</span>
                 ${m.isSelf ? '' : '<span class="lb-visit">🏘</span>'}
               </div>
@@ -446,6 +447,15 @@
         });
         // Tap any leaderboard row → visit that player's farm (like/help/sticker).
         // This is how players reach anyone beyond today's 3 neighbors.
+        /* 榜上看到自己是「萨城邻居」时，一步就能起名 —— 不用去翻设置。
+           这也是同名问题的出口：榜上几个「萨城邻居」谁也分不清谁。 */
+        document.querySelectorAll('[data-lb-name]').forEach((b) => {
+          b.onclick = (e) => {
+            e.stopPropagation();
+            if (Farm.audio) Farm.audio.play('tap');
+            if (Farm.lifeStory && Farm.lifeStory.promptNickname) Farm.lifeStory.promptNickname();
+          };
+        });
         document.querySelectorAll('.leaderboard-row.is-visitable[data-lb-uid]').forEach(row => {
           row.onclick = () => {
             const uid = row.dataset.lbUid;

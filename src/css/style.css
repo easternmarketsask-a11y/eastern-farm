@@ -5352,3 +5352,19 @@ body.modal-open .pwa-install-banner { display: none; }
   line-height: 2;
   color: var(--warm-text-soft);
 }
+
+/* 排行榜上「起个名字」：只在自己这一行、且还没有名字时出现。
+   做成低调的小胶囊 —— 它是邀请，不是警告，不该抢走名次和数字的注意力。 */
+.lb-name-cta {
+  margin-left: 6px;
+  padding: 2px 9px;
+  border: 1px solid #cfe3d0;
+  border-radius: 999px;
+  background: #f2f9f2;
+  color: #2f7343;
+  font: 500 11.5px/1.5 "Noto Sans SC", system-ui, sans-serif;
+  cursor: pointer;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+.lb-name-cta:active { transform: translateY(1px); background: #e6f2e6; }
