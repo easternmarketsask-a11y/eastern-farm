@@ -134,6 +134,21 @@
     totalOrdersFilled: 0,       // Lifetime count of fulfilled orders
     orderEp: { date: '', earned: 0 },  // self-resetting daily cap on 超市积分 from orders
 
+    /* ============ 东超需求（store-demand.js — 2026-08-22）============
+       取代「谷仓无限收购」：卖菜只能按东方超市的订单供货。
+       三层 —— 每日基础补货(地板·限量·1.0×) / 不定期订单(主收入) / 大单(少见·高回报)。
+       🔒 时刻一律绝对时间戳，离线自然到点；日期一律 getDateString()（萨省 UTC-6）。 */
+    storeDemand: {
+      day: '',              // 上次重铺 staples/forecast 的日子（getDateString）
+      staples: [],          // [{cropId, need, filled}] 每日基础补货
+      board: [],            // [{id, kind, items, coins, xp, points, postedAt, expiresAt, accepted}]
+      forecast: [],         // [{date, cropIds, reason}] 备货预告
+      nextPostAt: 0,        // 下一张单什么时候贴（绝对时间戳）
+      lastSyncAt: 0,        // 上次拉真店特价的时刻（二期）
+      source: 'local',      // 'live' = 真店数据，'local' = 纯游戏内
+      clearedLegacy: false, // 老存档的一次性开业清仓单是否已发
+    },
+
     // ============ Neighbor system (Phase 1 — 2026-05-24) ============
     nickname: null,             // 玩家自起；空则对外显示会员真名
     visibleToNeighbors: true,   // privacy toggle (settings)
@@ -199,6 +214,21 @@
     // 比较本地与云端谁更新，决定是否从云端拉回（见 firebase-game-sync）。
     lastSavedAt: 0,
   };
+
+  // 见 STARTER_STATE.storeDemand。老存档缺子字段时补齐，不覆盖已有值。
+  function _fillStoreDemand(data) {
+    const def = STARTER_STATE.storeDemand;
+    if (!data.storeDemand || typeof data.storeDemand !== 'object') {
+      data.storeDemand = JSON.parse(JSON.stringify(def));
+      return;
+    }
+    const sd = data.storeDemand;
+    for (const k of Object.keys(def)) {
+      const want = def[k];
+      if (Array.isArray(want)) { if (!Array.isArray(sd[k])) sd[k] = []; }
+      else if (typeof sd[k] !== typeof want) sd[k] = want;
+    }
+  }
 
   function getDateString(d) {
     d = d || new Date();
@@ -435,6 +465,10 @@
               visitFootprints: [],     // 今日已留足迹的 host uids
             };
           }
+          /* storeDemand 嵌套守卫：Object.assign 只补顶层，
+             半个对象（比如只有 day、没有 board）会让后面每一处 .board.forEach 炸掉。
+             缺什么补什么，已有的值一律保留。 */
+          _fillStoreDemand(this.data);
         } catch (e) {
           console.error('Save corrupted, starting fresh', e);
           // 存档神圣：确认损坏、要放弃之前，先把原始串备份一份（能救就救）。
