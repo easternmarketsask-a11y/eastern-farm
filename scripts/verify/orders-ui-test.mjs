@@ -72,3 +72,11 @@ const pal = (iso.match(/const PALETTE = \[[^\]]*\]/) || [''])[0];
 assert.ok(pal && !/'board'/.test(pal), '告示牌不该出现在建造调色盘里（它是免费自动摆的）');
 
 console.log('ok orders-ui + board');
+
+// ===== 老存档的一次性开业清仓单 =====
+assert.match(o, /clearedLegacy/, '老存档要有一次性清仓单');
+assert.match(o, /sd\.clearedLegacy = true;/, '发过就置位，只发一次');
+assert.match(o, /kind: 'clearance'/, '清仓单要有自己的类型');
+// 不占接单位，否则老玩家一进来就少一个位置
+assert.match(o, /o\.kind !== 'clearance'/, '清仓单不该占接单位');
+console.log('ok clearance');

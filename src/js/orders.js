@@ -116,6 +116,37 @@
         o.items.length && o.items.every((it) => Farm.crops.get(it.cropId)));
       if (sd.board.length !== before) dirty = true;
 
+      /* 老存档的一次性「开业清仓单」。
+         老玩家的谷仓里躺着一堆按「随时能大宗卖」攒下来的菜。收购一关，这批货
+         可能既不在补货单里、也不在订单里 —— 一上线就是「我的东西卖不掉了」。
+         所以首次进入新版本时，按**旧的大宗价**把当前库存一次收掉（可以不交，
+         留着等溢价更高的订单）。只发一次。 */
+      if (!sd.clearedLegacy) {
+        const bag = {};
+        (d.warehouse || []).forEach((it) => { bag[it.cropId] = (bag[it.cropId] || 0) + 1; });
+        const ids = Object.keys(bag).filter((id) => Farm.crops.get(id));
+        if (ids.length) {
+          let coins = 0;
+          const items = ids.map((id) => {
+            const def = Farm.crops.get(id);
+            const unit = (Farm.crops.sellPriceOf ? Farm.crops.sellPriceOf(def) : def.sell_price) || 0;
+            coins += unit * bag[id];
+            return { cropId: id, qty: bag[id] };
+          });
+          sd.board.unshift({
+            id: 'od_clearance_' + now.toString(36),
+            kind: 'clearance', items: items,
+            coins: coins, xp: Math.max(4, Math.round(coins / 20)), points: 0,
+            postedAt: now,
+            // 清仓单给足 7 天，别让老玩家一上线没看见就过期了
+            expiresAt: now + 7 * 86400000,
+            accepted: true,   // 直接接好，不占接单位（它是迁移用的一次性单）
+          });
+        }
+        sd.clearedLegacy = true;
+        dirty = true;
+      }
+
       // 到点补单 —— 一次只补到上限，不按错过的周期数补发
       if (!sd.nextPostAt || sd.nextPostAt <= now) {
         let guard = 0;
@@ -135,7 +166,8 @@
 
     acceptedCount() {
       const sd = this._demand();
-      return sd ? sd.board.filter((o) => o.accepted).length : 0;
+      // 清仓单是迁移用的一次性单，不占接单位（否则老玩家一进来就少一个位置）
+      return sd ? sd.board.filter((o) => o.accepted && o.kind !== 'clearance').length : 0;
     },
 
     accept(orderId) {
