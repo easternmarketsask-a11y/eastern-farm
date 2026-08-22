@@ -397,7 +397,7 @@ V2 (later): API connection to Clover POS for real-time validation.
   老存档的 map / plots / clearedCells 坐标一律不改。世界往东加格（COLS），
   也往镜头前加格（ROWS，镜头前那片草甸）。默认不画程序化乡路（2026-08-19 Chris）；
   玩家在建造里刷的小路仍在。`SHOW_COUNTRY_ROAD=true` 可恢复旧乡路。
-  开垦菜地帽仍是 `EXTRA_PLOT_CAP=4`。
+  开垦菜地帽 `EXTRA_PLOT_CAP=8`（state.js 为准；ep-shop 的 `item.max_owned` 只是兜底）。
 - 🔒 **房子计价**（2026-08-18）：点现有房子=改建，只补与现款的差价（降档不退款）；
   调色盘再建=按图册全价（农户小宅另建至少 300）。全场最多 4 座。
   图册分农舍 / 小院 / 洋房 / 豪宅四类卡片。章节 `home_level` 按造价档，不按图册序号。
