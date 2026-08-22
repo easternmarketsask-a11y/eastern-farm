@@ -84,6 +84,18 @@ for (const cls of ['order-accept', 'order-deliver', 'slip-drop', 'staple-fill'])
   assert.ok(wired, '.' + cls + ' 渲染了却没接线（点了不会有反应）');
 }
 
+/* 缺货行要给去处（Chris 2026-08-22） */
+assert.match(o, /_shortcutFor\(cropId\)/, '要能判断这样菜该去收还是该去种');
+assert.match(o, /goReap\(cropId\)/, '要有「去收」');
+assert.match(o, /goSow\(cropId\)/, '要有「去种」');
+assert.match(o, /data-reap=/, '缺货行要渲染「去收」入口');
+assert.match(o, /data-sow=/, '缺货行要渲染「去种」入口');
+// 🔒 不给假入口：既没熟的也没空地时只说「还要等」，不放一个点了没用的按钮
+assert.match(o, /kind: 'wait'/, '都没有时要给「还要等」，不是假按钮');
+// 去收/去种要走既有的真实通道，别在这儿再实现一套种地逻辑
+assert.match(o, /enqueueHarvestAll|Farm\.farmer\.enqueue\(/, '「去收」走既有的派活通道');
+assert.match(o, /Farm\.shop\.plantAllEmpty|Farm\.shop\._plantOne/, '「去种」走 shop 的种植通道');
+
 console.log('ok orders-ui');
 
 // ===== 实体告示牌（2026-08-22 Chris:「订单板是否有实体架在地上，可放在货仓旁」）=====

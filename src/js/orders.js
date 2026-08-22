@@ -222,6 +222,55 @@
         s.filled < s.need && Farm.state.warehouseCount(s.cropId) > 0).length;
     },
 
+    /* 缺的货旁边给个去处（Chris 2026-08-22：「缺的货旁给个链接『去种』或者『去收』」）。
+       光告诉玩家「还差 3 棵」，他还得自己去农场里找哪块地有、哪块地空 ——
+       这一步该由界面替他走完。
+         · 地里已经熟了  → 去收（派人去收，会自己算走还是开车过去）
+         · 有空地        → 去种（连买带种，不够钱会自己提示）
+         · 都没有        → 一句「还要等」，不给假入口 */
+    _shortcutFor(cropId) {
+      const d = Farm.state.data;
+      const plots = d.plots || [];
+      let ripe = -1, empty = -1, growing = false;
+      for (let i = 0; i < plots.length; i++) {
+        const p2 = plots[i];
+        if (!p2 || !p2.unlocked) continue;
+        if (p2.crop === cropId) {
+          if (Farm.crops.isMature && Farm.crops.isMature(p2)) { if (ripe < 0) ripe = i; }
+          else growing = true;
+        } else if (!p2.crop && empty < 0) empty = i;
+      }
+      if (ripe >= 0) return { kind: 'reap', idx: ripe };
+      if (empty >= 0) return { kind: 'sow', idx: empty };
+      if (growing) return { kind: 'wait' };
+      return null;
+    },
+
+    // 去收：派人去收这一块（走还是开车由 farmer 自己判断）
+    goReap(cropId) {
+      const sc = this._shortcutFor(cropId);
+      if (!sc || sc.kind !== 'reap') return;
+      Farm.ui.hideModal();
+      if (Farm.farmer && Farm.farmer.enqueueHarvestAll) Farm.farmer.enqueueHarvestAll(sc.idx);
+      else if (Farm.farmer && Farm.farmer.enqueue) Farm.farmer.enqueue(sc.idx, 'harvest');
+      if (Farm.isoView && Farm.isoView.render) Farm.isoView.render();
+    },
+
+    // 去种：种在最近的一块空地上（种子不够时 shop 会自己买 / 提示钱不够）
+    goSow(cropId) {
+      const sc = this._shortcutFor(cropId);
+      if (!sc || sc.kind !== 'sow') return;
+      Farm.ui.hideModal();
+      if (Farm.shop && Farm.shop.plantAllEmpty) { Farm.shop.plantAllEmpty(cropId); return; }
+      if (Farm.shop && Farm.shop._plantOne) {
+        if ((Farm.state.data.seeds[cropId] || 0) <= 0 && Farm.shop._buyOneForPlanting) {
+          if (Farm.shop._buyOneForPlanting(cropId) === false) return;
+        }
+        Farm.shop._plantOne(sc.idx, cropId);
+        if (Farm.isoView && Farm.isoView.render) Farm.isoView.render();
+      }
+    },
+
     _bulkValue(order) {
       return order.items.reduce((s, it) => {
         const def = Farm.crops.get(it.cropId);
@@ -413,12 +462,26 @@
         const rows = o.items.map((it) => {
           const have = Farm.state.warehouseCount(it.cropId);
           const ok = have >= it.qty;
+          // 缺货才给去处；够了就只留一个勾，别把行塞满
+          let go = '';
+          if (!ok) {
+            const sc = this._shortcutFor(it.cropId);
+            if (sc && sc.kind === 'reap') {
+              go = '<button class="slip-go" data-reap="' + it.cropId + '">' +
+                (lang === 'en' ? 'Harvest' : '去收') + '</button>';
+            } else if (sc && sc.kind === 'sow') {
+              go = '<button class="slip-go" data-sow="' + it.cropId + '">' +
+                (lang === 'en' ? 'Plant' : '去种') + '</button>';
+            } else if (sc && sc.kind === 'wait') {
+              go = '<span class="slip-waiting">' + (lang === 'en' ? 'growing' : '还要等') + '</span>';
+            }
+          }
           return '<div class="slip-line ' + (ok ? 'ok' : 'short') + '">' +
             '<span class="slip-ico">' + this._cropIcon(it.cropId, 18) + '</span>' +
             '<span class="slip-name">' + this._cropName(it.cropId) + '</span>' +
             '<span class="slip-dots"></span>' +
             '<span class="slip-qty">' + Math.min(have, it.qty) + ' / ' + it.qty + '</span>' +
-            '<span class="slip-mark">' + (ok ? '✓' : '') + '</span></div>';
+            (go || '<span class="slip-mark">' + (ok ? '✓' : '') + '</span>') + '</div>';
         }).join('');
 
         const bonus = Math.max(0, o.coins - this._bulkValue(o));
@@ -515,6 +578,12 @@
       });
       document.querySelectorAll('#modalContent .order-deliver').forEach((btn) => {
         btn.onclick = () => this.fulfill(btn.getAttribute('data-order'));
+      });
+      document.querySelectorAll('#modalContent .slip-go[data-reap]').forEach((btn) => {
+        btn.onclick = () => this.goReap(btn.getAttribute('data-reap'));
+      });
+      document.querySelectorAll('#modalContent .slip-go[data-sow]').forEach((btn) => {
+        btn.onclick = () => this.goSow(btn.getAttribute('data-sow'));
       });
       document.querySelectorAll('#modalContent .slip-drop').forEach((btn) => {
         btn.onclick = () => this.abandon(btn.getAttribute('data-drop'));
