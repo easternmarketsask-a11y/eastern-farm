@@ -11,7 +11,8 @@
  *   - ambientOff (bool)     — disables the background farm ambience only.
  *
  * Available sounds: 'plant', 'harvest', 'water', 'coin', 'levelUp',
- *   'achievement', 'error', 'tap', 'buy', 'horn', 'build', 'buildDone'. Unknown names are
+ *   'achievement', 'error', 'tap', 'buy', 'horn', 'build', 'buildStart',
+ *   'buildSaw', 'buildDone'. Unknown names are
  *   silently ignored. play(name, opts) accepts opts.step (int) to raise
  *   the whole sound by N semitones — Hay Day-style combo on rapid harvests.
  *
@@ -636,19 +637,36 @@
           this._noise(t, 0.022, { bp: 2100, q: 2.2, gain: 0.14, attack: 0.001, dest: dry });
           this._tone(920, t, 0.028, { type: 'sine', gain: 0.09, attack: 0.001, lp: 2800, dest: dry });
           break;
+        case 'buildStart':
+          // 木料落地 + 两下钉桩，开工那一下要听得见
+          this._noise(t, 0.16, { lp: 340, gain: 0.42, attack: 0.004, pan: pan });
+          this._noise(t + 0.04, 0.09, { bp: 1100, q: 0.8, gain: 0.18, pan: pan });
+          this._tone(170, t + 0.02, 0.14, { type: 'triangle', glide: 105, gain: 0.24, lp: 750, pan: pan });
+          this._noise(t + 0.20, 0.08, { lp: 480, gain: 0.36, attack: 0.002, pan: pan });
+          this._tone(230, t + 0.21, 0.11, { type: 'triangle', gain: 0.20, lp: 900, pan: pan });
+          this._noise(t + 0.36, 0.06, { bp: 2100, q: 1.3, gain: 0.14, pan: pan });
+          this._tone(310, t + 0.37, 0.09, { type: 'sine', gain: 0.12, lp: 1400, pan: pan });
+          break;
         case 'build':
-          // 槌木：短噪声撞击 + 木头共鸣，工地循环敲
-          this._noise(t, 0.055, { lp: 420, gain: 0.28, attack: 0.002, pan: pan });
-          this._noise(t + 0.012, 0.04, { bp: 1800, q: 1.1, gain: 0.10, pan: pan });
-          this._tone(210, t + 0.01, 0.09, { type: 'triangle', glide: 150, gain: 0.16, lp: 900, pan: pan });
+          // 槌木：撞击噪声 + 木头腔 + 钉尖，工地循环敲
+          this._noise(t, 0.08, { lp: 480, gain: 0.42, attack: 0.001, pan: pan });
+          this._noise(t + 0.008, 0.055, { bp: 2100, q: 1.35, gain: 0.20, pan: pan });
+          this._tone(155, t, 0.09, { type: 'triangle', gain: 0.24, lp: 700, pan: pan });
+          this._tone(390, t + 0.016, 0.07, { type: 'sine', gain: 0.12, lp: 1700, pan: pan });
+          break;
+        case 'buildSaw':
+          // 锯木：带通噪声刮一下，夹在槌声之间
+          this._noise(t, 0.22, { bp: 1700, q: 0.55, gain: 0.24, attack: 0.02, pan: pan });
+          this._noise(t + 0.04, 0.16, { hp: 2400, lp: 5200, gain: 0.10, attack: 0.01, pan: pan });
+          this._tone(280, t + 0.05, 0.12, { type: 'triangle', glide: 210, gain: 0.10, lp: 1200, pan: pan });
           break;
         case 'buildDone':
           // 木架收起 + 清亮收尾
-          this._noise(t, 0.12, { lp: 500, gain: 0.22, attack: 0.006, pan: pan });
-          this._noise(t + 0.04, 0.08, { bp: 2400, q: 0.9, gain: 0.10, pan: pan });
-          this._tone(392, t + 0.05, 0.16, { type: 'triangle', gain: 0.22, lp: 1800, pan: pan });
-          this._tone(523, t + 0.12, 0.22, { type: 'sine', gain: 0.26, pan: pan });
-          this._tone(784, t + 0.18, 0.28, { type: 'triangle', gain: 0.18, pan: pan });
+          this._noise(t, 0.12, { lp: 500, gain: 0.28, attack: 0.006, pan: pan });
+          this._noise(t + 0.04, 0.08, { bp: 2400, q: 0.9, gain: 0.12, pan: pan });
+          this._tone(392, t + 0.05, 0.16, { type: 'triangle', gain: 0.24, lp: 1800, pan: pan });
+          this._tone(523, t + 0.12, 0.22, { type: 'sine', gain: 0.28, pan: pan });
+          this._tone(784, t + 0.18, 0.28, { type: 'triangle', gain: 0.20, pan: pan });
           break;
         case 'horn':
           /* 老式双簧片喇叭：两个音差小三度，谐波一直到 3–4k，起振几乎瞬间。

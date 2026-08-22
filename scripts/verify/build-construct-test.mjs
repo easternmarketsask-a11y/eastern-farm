@@ -114,9 +114,16 @@ assert.match(isoSrc, /rise|buildProg|clip/, '贴图要从地面往上长（clip/
 assert.match(isoSrc, /_tickBuilds|_finishBuild|_completeBuild/);
 
 assert.match(audioSrc, /case 'build'/);
+assert.match(audioSrc, /case 'buildStart'/);
+assert.match(audioSrc, /case 'buildSaw'/);
 assert.match(audioSrc, /case 'buildDone'/);
 const buildSnd = audioSrc.match(/case 'build':[\s\S]*?break;/);
 assert.ok(buildSnd && /_noise/.test(buildSnd[0]), '建造音要有槌木噪声，不能是单音蜂鸣');
+const startSnd = audioSrc.match(/case 'buildStart':[\s\S]*?break;/);
+assert.ok(startSnd && /_noise/.test(startSnd[0]) && /_tone/.test(startSnd[0]),
+  '开工要噪声质感 + 乐音收尾');
+const sawSnd = audioSrc.match(/case 'buildSaw':[\s\S]*?break;/);
+assert.ok(sawSnd && /_noise/.test(sawSnd[0]), '锯木必须是噪声层');
 const doneSnd = audioSrc.match(/case 'buildDone':[\s\S]*?break;/);
 assert.ok(doneSnd && /_noise/.test(doneSnd[0]) && /_tone/.test(doneSnd[0]),
   '完工要噪声质感 + 乐音收尾');

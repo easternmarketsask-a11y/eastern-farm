@@ -2528,9 +2528,9 @@
       }
       if (changed && Farm.state.save) Farm.state.save();
       const any = map.some((o) => isUnderConstruction(o, now)) || plots.some((p) => isUnderConstruction(p, now));
-      if (any && now - (this._lastBuildHit || 0) > 900) {
+      if (any && now - (this._lastBuildHit || 0) > 640) {
         this._lastBuildHit = now;
-        if (Farm.audio) Farm.audio.play('build');
+        if (Farm.audio) Farm.audio.play(Math.random() < 0.28 ? 'buildSaw' : 'build');
       }
     },
     _completeBuild(kind, idx, skipped) {
@@ -2687,9 +2687,6 @@
       this._highlightPalette(type);
       this.render();
       if (Farm.audio) Farm.audio.play('tap');
-      if (Farm.ui && Farm.ui.toast) Farm.ui.toast(en
-        ? 'Move it to a clear patch, then tap to start building.'
-        : '拖到想放的空地，点一下开始建造。', 2600);
     },
     _updatePlace(p) {
       const pl = this._placing; if (!pl || !p) return;
@@ -2729,11 +2726,8 @@
     _placeHint() {
       if (!this._hint) return;
       const s = this._hint.querySelector('span'); if (!s) return;
+      if (this._placing) { this._hint.style.display = 'none'; return; }
       const en = this._lang() === 'en';
-      if (this._placing) {
-        s.textContent = en ? 'Move to a clear patch, then tap to start building' : '拖到空地，点一下开始建造';
-        return;
-      }
       const terr = this._editMode === 'terrain';
       s.textContent = terr ? (en ? 'Tap / drag to paint terrain' : '点按或拖动涂刷地形（草地=擦除）') : (en ? ('✨ Charm ' + this._farmCharm() + ' · drag house, plot or deco · ✕ remove building (50% back)') : ('✨ 农场魅力 ' + this._farmCharm() + ' · 拖房子、菜地或装饰 · ✕ 拆除建筑退一半'));
     },
@@ -2769,11 +2763,7 @@
         this._endPlace();
         this._refreshPaletteAfford();
         if (Farm.ui && Farm.ui.refreshHUD) Farm.ui.refreshHUD();
-        if (Farm.audio) Farm.audio.play('buy');
-        const wait = rec && rec.buildMs ? this._fmtRemain(rec.buildMs) : this._fmtRemain(20000);
-        if (Farm.ui && Farm.ui.toast) Farm.ui.toast(en
-          ? ('Plot started (' + wait + '). Tap it to finish early.')
-          : ('菜地已经开工，大约 ' + wait + '。点工地可以提早完工。'), 2600);
+        if (Farm.audio) Farm.audio.play('buildStart');
         this.render();
         return true;
       }
@@ -2813,20 +2803,14 @@
       this._endPlace();
       this._refreshPaletteAfford();
       if (Farm.ui && Farm.ui.refreshHUD) Farm.ui.refreshHUD();
-      if (Farm.audio) Farm.audio.play('buy');
-      const b = rec.type === 'home' ? (this._homeSpec(rec) || pl.bldg) : pl.bldg;
-      const wait = rec.buildMs ? this._fmtRemain(rec.buildMs) : '';
-      const nm = b ? (en ? (b.en || pl.bldg.en) : (b.zh || pl.bldg.zh)) : '';
-      if (Farm.ui && Farm.ui.toast) Farm.ui.toast(en
-        ? (nm + ' started (' + wait + '). Tap the site to finish early with coins or points.')
-        : (nm + '已经开工，大约 ' + wait + '。点工地可以用农场币或超市积分提早完工。'), 2800);
+      if (Farm.audio) Farm.audio.play('buildStart');
       this.render();
       return true;
     },
     _drawPlaceGhost() {
       const pl = this._placing; if (!pl) return;
       const b = pl.bldg, o = { type: pl.type === '__plot' ? 'well' : pl.type, gx: pl.gx, gy: pl.gy, lv: pl.lv };
-      const ctx = this._ctx, tw = this._tw(), th = this._th(), en = this._lang() === 'en';
+      const ctx = this._ctx, tw = this._tw(), th = this._th();
       ctx.save();
       ctx.fillStyle = pl.valid ? 'rgba(76,175,80,0.46)' : 'rgba(220,60,60,0.46)';
       ctx.strokeStyle = pl.valid ? 'rgba(255,248,220,0.95)' : 'rgba(255,220,220,0.95)';
@@ -2847,24 +2831,6 @@
         const mid = this._cell(pl.gx + (pl.w - 1) / 2, pl.gy + (pl.h - 1) / 2);
         this._drawBlockedX(mid.x, mid.y);
       }
-      const cap = this._cell(pl.gx + (pl.w - 1) / 2, pl.gy);
-      const label = pl.valid
-        ? (en ? 'Tap to build' : '点这里开工')
-        : (en ? 'Need a clear patch' : '这里放不下');
-      ctx.save();
-      ctx.font = '700 ' + Math.max(13, th * 0.48) + 'px "Noto Sans SC","Plus Jakarta Sans",sans-serif';
-      const lw = ctx.measureText(label).width + th * 0.7;
-      const lh = th * 0.7, bx = cap.x, byy = cap.y - th * 0.85;
-      ctx.beginPath();
-      if (ctx.roundRect) ctx.roundRect(bx - lw / 2, byy - lh / 2, lw, lh, lh * 0.4);
-      else ctx.rect(bx - lw / 2, byy - lh / 2, lw, lh);
-      ctx.fillStyle = pl.valid ? 'rgba(46,120,62,0.94)' : 'rgba(160,50,40,0.94)';
-      ctx.fill();
-      ctx.fillStyle = '#fff8ec';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(label, bx, byy + 0.5);
-      ctx.restore();
     },
     _addBuilding(type) {
       const b = BUILDINGS[type], en = this._lang() === 'en', cost = b.cost || 0;
@@ -3325,7 +3291,7 @@
         this._driveBtnOn = null;            // 强制下一次 _syncDriveBtn 重算显隐
         this._syncDriveBtn();
       }
-      if (this._hint) { this._hint.style.display = this._build ? 'block' : 'none'; this._hint.style.left = r.left + 'px'; this._hint.style.right = Math.max(0, window.innerWidth - (r.left + r.width)) + 'px'; this._hint.style.top = (r.top + 8) + 'px'; }
+      if (this._hint) { this._hint.style.display = (this._build && !this._placing) ? 'block' : 'none'; this._hint.style.left = r.left + 'px'; this._hint.style.right = Math.max(0, window.innerWidth - (r.left + r.width)) + 'px'; this._hint.style.top = (r.top + 8) + 'px'; }
     },
     /* 音符按钮的外观。设置面板里也能改音乐开关，所以这里不能只在自己被点时更新。
        挂在 render 上，用 _musicBtnOn 记住上次状态 —— 状态没变就不碰 DOM。 */
