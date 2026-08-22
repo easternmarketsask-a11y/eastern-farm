@@ -400,9 +400,12 @@
      跑去上车、下车的动画比走过去还久。要更容易开车就把这个数调小。 */
   const MIN_DRIVE_DIST = 3;
   /* 一批活干到一半、下一块地隔了这么远，就值得回去开车（Chris 2026-08-22）。
-     比 MIN_DRIVE_DIST 大得多是**故意的**：连片菜地之间才隔一两格，用同一个门槛
-     会导致每收一块就上下车一次，吵得没法看。6 格已经明显是「另一片地」了。 */
-  const REDRIVE_DIST = 6;
+     比 MIN_DRIVE_DIST 大是**故意的**：连片菜地之间才隔一两格，门槛太低会变成
+     每干完一块就上下车一次，吵得没法看。
+     ⚠️ 6 格太保守 —— Chris 的南北两片地实测没触发（「种地的时候他还是从北走到南」）。
+     降到 4：仍然是连片菜地间距（1–2 格）的两倍以上，不会逐块上下车；
+     而且 pickCarFor 还压着一道「目的地必须比车还远」，不会为了几步路专门跑去开车。 */
+  const REDRIVE_DIST = 4;
 
   /* 人脚下那一格永远算可走 —— 车身完全可能盖在人身上（车停过来、人走过去都会），
      那时寻路的起点不可走，find() 直接返回 null，「走多久 / 开不开车」全成了
@@ -1154,6 +1157,7 @@
     driveFx: driveFx,
     _speedNow: catalogSpeed,
     _driveDebug: driveDebug,
+    _approachPos: approachPos,   // 测试要量「干活落脚点」的真实距离，不能照地块坐标心算
     enqueueHarvestAll: enqueueHarvestAll,
     enqueueWaterAll: enqueueWaterAll,
     enqueuePlantAll: enqueuePlantAll,
