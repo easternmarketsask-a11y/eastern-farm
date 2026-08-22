@@ -59,42 +59,56 @@
     _selfDisplayName() {
       const s = Farm.state.data;
       const nick = String(s.nickname || '').trim();
-      if (nick && !this._isPlaceholderName(nick)) return nick;
+      if (nick) return nick;
       const md = (Farm.fbAuth && Farm.fbAuth.memberDoc) || {};
       const realName = (md.name || md.firstName || md.username || '').trim();
-      if (realName && !this._isPlaceholderName(realName)) return realName;
-      return this._fallbackName();
+      if (realName) return realName;
+      return this._fallbackName(meId());
     },
 
-    /* 占位名不算名字（2026-08-21）。排行榜上出现过「E邻居」「X邻居」「S邻居」——
-       代码里从来不会拼出这种格式，是会员档案的姓名字段里真存着这串字
-       （早期测试账号 / 收银台补录时随手填的占位）。
-       真人不会给自己起名叫「X邻居」，所以识别出来当作没名字处理，
-       走正常兜底，本人还能看到「起个名字」的入口。
-       🔒 只认这几种明确的占位形态，别扩大到模糊匹配 —— 误伤真名比显示占位名更糟。 */
-    _isPlaceholderName(v) {
-      const t = String(v || '').trim();
-      if (!t) return true;
-      if (/^[A-Za-z]?邻居\d*$/.test(t)) return true;              // 邻居 / X邻居 / 邻居2
-      if (/^萨城邻居$/.test(t)) return true;                       // 兜底名被回写进档的情况
-      if (/^Neighbou?r\s*\d*$/i.test(t)) return true;
-      if (/^Saskatoon\s+farmer$/i.test(t)) return true;
-      /* ⚠️ 这里必须是**整词**，不能用前缀 —— 写成 /^(test|demo)/ 会把
-         「Testudo」「Demolition Dave」这类真名一起吃掉（实测踩到过）。
-         宁可漏判一个测试账号，也不能把真人的名字抹成「萨城邻居」。 */
-      if (/^(test|demo)\s*\d*$/i.test(t)) return true;
-      if (/^测试\s*\d*$/.test(t)) return true;
-      return false;
+    /* 🔒 兜底名必须**可区分**（Chris 2026-08-21）。
+       第一版让所有没名字的人都叫「萨城邻居」，榜上一排同名，比原来那些
+       「E邻居 / X邻居」还糟 —— 至少那几个还分得开。
+       现在挂一个从 uid 算出来的短编号：同一个人永远是同一个号，
+       不冒充真人（这不是名字，明摆着是编号），也不编造「王阿姨」那种假身份。
+
+       ⚠️ 曾经在这里加过一套「占位名识别」（把 X邻居 之类判成假名），已删。
+       上传的 displayName 只可能是农场昵称或会员真名，生成占位名的逻辑早就不在了，
+       所以那是在防一件不会再发生的事，代价却是误伤真名 ——
+       实测 /^(test|demo)/ 这种前缀匹配会把「Testudo」「Demolition Dave」一起吃掉。
+       名字录错属于数据录入问题，在录入端解决，显示端不猜。 */
+    _nameTag(seed) {
+      const t = String(seed || '');
+      if (!t) return '';
+      let h = 0;
+      for (let i = 0; i < t.length; i++) h = (h * 31 + t.charCodeAt(i)) >>> 0;
+      return ('00' + h.toString(36).toUpperCase()).slice(-3);
     },
 
-    _fallbackName() {
+    _fallbackName(seed) {
       const en = (Farm.state && Farm.state.data && Farm.state.data.language) === 'en';
-      return en ? 'Saskatoon farmer' : '萨城邻居';
+      const tag = this._nameTag(seed);
+      const base = en ? 'Saskatoon farmer' : '萨城邻居';
+      return tag ? (base + ' ' + tag) : base;
+    },
+
+    /* 有没有一个能用的真名字。displayName 和 hasRealName 共用它 ——
+       早先 hasRealName 是拿 displayName 跟兜底名比字符串，兜底名一带编号就失灵了。 */
+    _realNameOf(doc) {
+      if (!doc) return null;
+      const stats = doc.gameStats || {};
+      const nick = String(stats.nickname || '').trim();
+      if (nick) return nick;
+      const realName = (doc.name || doc.firstName || doc.username || '').trim();
+      if (realName) return realName;
+      const dn = String(stats.displayName || '').trim();
+      if (dn) return dn;
+      return null;
     },
 
     // 这条记录到底有没有真名字 —— 排行榜据此决定要不要给「起个名字」入口
     hasRealName(doc) {
-      return this.displayName(doc) !== this._fallbackName();
+      return !!this._realNameOf(doc);
     },
 
     // Compute the gameStats payload from local state. Pure function.
@@ -428,16 +442,10 @@
       this.push();
     },
 
-    displayName(doc) {
-      if (!doc) return this._fallbackName();
-      const stats = doc.gameStats || {};
-      const nick = String(stats.nickname || '').trim();
-      if (nick && !this._isPlaceholderName(nick)) return nick;
-      const realName = (doc.name || doc.firstName || doc.username || '').trim();
-      if (realName && !this._isPlaceholderName(realName)) return realName;
-      const dn = String(stats.displayName || '').trim();
-      if (dn && !this._isPlaceholderName(dn)) return dn;
-      return this._fallbackName();
+    displayName(doc, uid) {
+      const real = this._realNameOf(doc);
+      if (real) return real;
+      return this._fallbackName(uid || (doc && (doc.id || doc.uid)) || '');
     },
 
     _lastSeenMs(doc) {

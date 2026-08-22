@@ -114,7 +114,7 @@
       const list = real.map((m, order) => ({
         isReal: true,
         uid: m.uid,
-        name: Farm.fbGameSync.displayName(m.doc),
+        name: Farm.fbGameSync.displayName(m.doc, m.uid),
         emoji: avatarFor(m.uid),
         level: (m.doc.gameStats || {}).level || 1,
         totalHarvests: (m.doc.gameStats || {}).totalHarvests || 0,
@@ -149,7 +149,7 @@
             return {
               uid: r.uid,
               id: 'real_' + r.uid,        // stable visit id (matches today-list)
-              name: Farm.fbGameSync.displayName(r.doc),
+              name: Farm.fbGameSync.displayName(r.doc, r.uid),
               emoji: avatarFor(r.uid),
               level: r.level,
               value: r.value,
@@ -806,7 +806,7 @@
       const docs = await Farm.fbGameSync.fetchFriendDocs();
       const giftAvailable = Farm.fbGameSync.canSendGiftToday();
       const cardsHtml = docs.map(m => {
-        const name = Farm.fbGameSync.displayName(m.doc);
+        const name = Farm.fbGameSync.displayName(m.doc, m.uid);
         const stats = m.doc.gameStats || {};
         const level = stats.level || 1;
         const harvests = stats.totalHarvests || 0;
@@ -850,7 +850,7 @@
             this.viewFarm({
               id: 'friend_' + uid,
               uid,
-              name: Farm.fbGameSync.displayName(friendDoc.doc),
+              name: Farm.fbGameSync.displayName(friendDoc.doc, uid),
               emoji: avatarFor(uid),
               level: (friendDoc.doc.gameStats || {}).level || 1,
               totalHarvests: (friendDoc.doc.gameStats || {}).totalHarvests || 0,
