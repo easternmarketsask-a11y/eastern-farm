@@ -71,7 +71,8 @@
       const price = this.priceOf(item);
       const balance = price.currency === 'coins' ? data.coins : data.eastPoints;
       if (balance < price.amount) {
-        return { ok: false, reason: price.currency === 'coins' ? 'insufficient_coins' : 'insufficient_ep' };
+        // 带回价格：钱不够面板要算「还差多少」
+        return { ok: false, reason: price.currency === 'coins' ? 'insufficient_coins' : 'insufficient_ep', price: price };
       }
       const cap = (Farm.state.EXTRA_PLOT_CAP != null) ? Farm.state.EXTRA_PLOT_CAP : (item.max_owned || 4);
       if (item.kind === 'extra_plot' && data.extraPlots >= cap) {

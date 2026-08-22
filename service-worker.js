@@ -70,7 +70,7 @@ self.addEventListener('notificationclick', (event) => {
 
 // CACHE_VERSION 由 deploy.sh 在每次部署时自动注入时间戳（ef-YYMMDDHHMM），
 // 不再手动 +1 —— 忘 bump 会让全体 PWA 用户静默停在旧版（iOS 要删 App 才能救）。
-const CACHE_VERSION = 'ef-2608211735';
+const CACHE_VERSION = 'ef-2608211824';
 const CACHE = 'eastern-farm-' + CACHE_VERSION;
 // Precache the FULL app shell — HTML + CSS + every JS module + data JSON — so a SW
 // update (which clears the old cache) followed by a flaky mobile network can never leave
@@ -98,7 +98,7 @@ const PRECACHE = [
   '/src/js/shop.js', '/src/js/tasks.js', '/src/js/events.js', '/src/js/storekeeper.js',
   '/src/js/rewards.js', '/src/js/store-rewards.js', '/src/js/achievements.js', '/src/js/tutorial.js', '/src/js/guide.js', '/src/js/feedback.js',
   '/src/js/spotlight.js', '/src/js/login-nudge.js', '/src/js/promo.js', '/src/js/share.js',
-  '/src/js/music.js', '/src/js/pathfind.js', '/src/js/farmer.js', '/src/js/mapview-iso.js', '/src/js/main.js', '/src/js/pwa-install.js',
+  '/src/js/shortfall.js', '/src/js/music.js', '/src/js/pathfind.js', '/src/js/farmer.js', '/src/js/mapview-iso.js', '/src/js/main.js', '/src/js/pwa-install.js',
   '/data/achievements.json', '/data/ai-neighbors.json', '/data/coupons.json', '/data/crops.json',
   '/data/ep-shop.json', '/data/events.json', '/data/i18n.json', '/data/news.json', '/data/tasks.json',
   '/data/recipes.json', '/data/chapters.json',

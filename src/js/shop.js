@@ -247,7 +247,14 @@
           if (!ep) return;
           const r = ep.buy(btn.dataset.buy);
           if (!r.ok) {
-            Farm.ui.toast(r.reason === 'insufficient_coins' || r.reason === 'insufficient_ep'
+            const lack = r.reason === 'insufficient_coins' || r.reason === 'insufficient_ep';
+            if (lack && Farm.shortfall && Farm.shortfall.show(
+                r.reason === 'insufficient_coins' ? 'coins' : 'points',
+                r.price ? r.price.amount : 0, 'ep:' + btn.dataset.buy)) {
+              if (Farm.audio) Farm.audio.play('error');
+              return;
+            }
+            Farm.ui.toast(lack
               ? (EN ? 'Not enough coins or points' : '余额不足')
               : r.reason === 'daily_cap'
                 ? (EN ? 'Daily purchase limit reached' : '今日购买次数已满')
@@ -300,8 +307,11 @@
       if (!def) return;
       const price = (Farm.daily && Farm.daily.discountedSeedCost(cropId)) || def.seed_cost;
       if (!Farm.state.spendCoins(price)) {
-        Farm.ui.toast(Farm.i18n.t('toast_not_enough_coins'));
         if (Farm.audio) Farm.audio.play('error');
+        // 钱不够不是死胡同：给几条真能凑够的路（面板算得出各条能拿多少）
+        if (!(Farm.shortfall && Farm.shortfall.show('coins', price, 'seed:' + cropId))) {
+          Farm.ui.toast(Farm.i18n.t('toast_not_enough_coins'));
+        }
         return;
       }
       Farm.state.addSeed(cropId, 1);
