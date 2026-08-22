@@ -130,7 +130,8 @@
     // crops; player delivers them FROM the warehouse for a coin premium
     // (~1.5× bulk-sell) + XP, and occasionally a little 超市积分. This gives
     // crop VARIETY a purpose beyond bulk selling and pulls the player back.
-    orders: [],                 // Array of { id, items:[{cropId,qty}], coins, xp, points, createdAt }
+    // 🗑 orders[] 已于 2026-08-22 退役：订单板搬进 storeDemand.board（见下）。
+    //    单一数据源 —— 别再恢复这个数组，否则两处存同一种东西。
     totalOrdersFilled: 0,       // Lifetime count of fulfilled orders
     orderEp: { date: '', earned: 0 },  // self-resetting daily cap on 超市积分 from orders
 

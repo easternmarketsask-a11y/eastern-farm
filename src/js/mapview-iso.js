@@ -194,6 +194,14 @@
     fence: { img: 'deco_fence', w: 1, h: 1, sc: 1.9, zh: '篱笆', en: 'Fence', cost: 40 },
     wheel: { img: 'deco_wheel', w: 2, h: 2, sc: 2.2, zh: '水车', en: 'Water Wheel', cost: 480 },
     bridge: { img: 'deco_bridge', w: 2, h: 1, sc: 1.6, zh: '小桥', en: 'Bridge', cost: 140 },
+    /* 东超告示牌（2026-08-22 Chris:「订单板是否有实体架在地上，可放在货仓旁」）。
+       🔒 免费、开局自动立在谷仓旁、**不可拆除**：它是取消无限收购之后**唯一的
+          卖菜出口**，做成要花钱买或者能拆掉，玩家就可能把自己锁死。可以搬位置。
+       🔒 不进建造调色盘（PALETTE），所以没有购买入口。
+       画法走程序化（_drawOrderBoard），不加贴图 —— 这个世界的天空/远山/林子/树
+       本来就是 canvas 画的（USE_PAINTED_BG=false 那条铁律），塞张 webp 不合群。 */
+    board: { img: null, w: 1, h: 1, sc: 2.2, zh: '东超告示牌', en: 'Order Board',
+             tap: 'orders', cost: 0, unique: true, noDelete: true },
   };
   const BLD = 0.7;   // global building-sprite scale (Chris 2026-06-18: buildings were too big) — shrinks all building sprites uniformly so the starter farm fits the central meadow
   // 我的家：贴图高度的护栏（高 ≤ 宽 ÷ 这个数）。当前 30 张房子的长宽比都在
@@ -641,6 +649,41 @@
       if (Farm.state.save) Farm.state.save();
     },
     // 只在 map / mapTerrain 还是空的时候盖默认世界。老号已经有数组/对象 → 一格不碰。
+    /* 东超告示牌：开局就该立在谷仓旁。老存档进来时也补一块。
+       🔒 它是取消无限收购之后唯一的卖菜出口，**必须保证场上一定有一块**
+          （不可拆已在 _drawBuilding / 删除按钮两处挡住，这里管「一定有」）。 */
+    _ensureOrderBoard() {
+      const d = Farm.state.data;
+      if (!Array.isArray(d.map)) return;
+      if (d.map.some((o) => o && o.type === 'board')) return;
+      const barn = d.map.filter((o) => o && o.type === 'barn')[0];
+      // 优先贴着谷仓右侧，占不下就在附近找一格空地
+      const tries = [];
+      if (barn) {
+        const bb = BUILDINGS.barn;
+        tries.push([barn.gx + bb.w, barn.gy], [barn.gx - 1, barn.gy],
+                   [barn.gx + bb.w, barn.gy + 1], [barn.gx, barn.gy + bb.h]);
+      }
+      const ob = this._ownedBounds();
+      for (let r = 1; r <= 6; r++) {
+        for (let dy = -r; dy <= r; dy++) {
+          for (let dx = -r; dx <= r; dx++) {
+            const bx = (barn ? barn.gx : Math.round((ob.x1 + ob.x2) / 2)) + dx;
+            const by2 = (barn ? barn.gy : Math.round((ob.y1 + ob.y2) / 2)) + dy;
+            tries.push([bx, by2]);
+          }
+        }
+      }
+      for (const t of tries) {
+        const gx = t[0], gy = t[1];
+        if (!this._inBounds(gx, gy) || !this._ownedCell(gx, gy)) continue;
+        if (!this._footprintFree(gx, gy, 'board', -1)) continue;
+        d.map.push({ type: 'board', gx: gx, gy: gy });
+        if (Farm.state.save) Farm.state.save();
+        return;
+      }
+    },
+
     _stampDefaultWorld() {
       const d = Farm.state.data;
       if (!d) return;
@@ -653,6 +696,7 @@
         d.mapTerrain = Object.assign({}, this._isFrontLand() ? DEFAULT_POND_FRONT : DEFAULT_POND);
         if (Farm.state.save) Farm.state.save();
       }
+      this._ensureOrderBoard();
     },
     _defaultMapFront() {
       const now = Date.now();
@@ -888,7 +932,7 @@
         }
       }
       if (this._build) {
-        if (this._sel >= 0) { const ch = this._delChip((Farm.state.data.map)[this._sel]); if (Math.hypot(p.x - ch.x, p.y - ch.y) <= ch.r) { const o = Farm.state.data.map[this._sel], b = BUILDINGS[o.type]; let refund = b ? Math.round((b.cost || 0) / 2) : 0; if (o.type === 'home') { const spec = this._homeSpec(o); refund = Math.round(Math.max(BUILDINGS.home.cost || 300, spec.cost || 0) / 2); } if (o.type === 'car') { const spec = this._carSpec(o); refund = Math.round(Math.max(BUILDINGS.car.cost || 200, spec.cost || 0) / 2); } Farm.state.data.map.splice(this._sel, 1); this._sel = -1; if (refund > 0) { Farm.state.addCoins(refund); if (Farm.ui && Farm.ui.refreshHUD) Farm.ui.refreshHUD(); if (Farm.ui && Farm.ui.toast) Farm.ui.toast(this._lang() === 'en' ? ('Removed — refunded ' + refund + ' coins') : ('已移除 — 退回 ' + refund + ' 农场币')); } this._refreshPaletteAfford(); Farm.state.save(); this.render(); return; } }
+        if (this._sel >= 0) { const ch = this._delChip((Farm.state.data.map)[this._sel]); if (Math.hypot(p.x - ch.x, p.y - ch.y) <= ch.r) { const o = Farm.state.data.map[this._sel], b = BUILDINGS[o.type]; if (b && b.noDelete) return; let refund = b ? Math.round((b.cost || 0) / 2) : 0; if (o.type === 'home') { const spec = this._homeSpec(o); refund = Math.round(Math.max(BUILDINGS.home.cost || 300, spec.cost || 0) / 2); } if (o.type === 'car') { const spec = this._carSpec(o); refund = Math.round(Math.max(BUILDINGS.car.cost || 200, spec.cost || 0) / 2); } Farm.state.data.map.splice(this._sel, 1); this._sel = -1; if (refund > 0) { Farm.state.addCoins(refund); if (Farm.ui && Farm.ui.refreshHUD) Farm.ui.refreshHUD(); if (Farm.ui && Farm.ui.toast) Farm.ui.toast(this._lang() === 'en' ? ('Removed — refunded ' + refund + ' coins') : ('已移除 — 退回 ' + refund + ' 农场币')); } this._refreshPaletteAfford(); Farm.state.save(); this.render(); return; } }
         // Grab by the VISIBLE sprite (generous), not the tiny footprint cell — on a
         // phone you tap the building/decoration you see, which sits above its cell.
         const phit = this._plotAtPoint(p.x, p.y);
@@ -1086,6 +1130,7 @@
         else if (b.tap === 'home') { this._openHomePanel(bidx); }
         else if (b.tap === 'car') { this._tapCar(bidx); }
         else if (b.tap === 'stall_sale' && Farm.stall) { Farm.stall.open(); }
+        else if (b.tap === 'orders' && Farm.orders) { Farm.orders.open(); }
         else if (b.tap === 'warehouse' && Farm.warehouse && Farm.warehouse.open) Farm.warehouse.open();
         else if (b.tap === 'shop' && Farm.shop && Farm.shop.open) Farm.shop.open();
         else if (Farm.ui && Farm.ui.toast) Farm.ui.toast(this._lang() === 'en' ? b.en : b.zh);
@@ -2203,6 +2248,66 @@
     /* 种子店招牌(2026-08-14): 摊位贴图自带一块空白招牌(雨棚下方偏左),
        把「种子」写上去 —— 招牌是最强的「这是商店」信号, 也点明卖什么。
        位置按贴图比例手调(截图校准), 字随建筑一起缩放。 */
+    /* 东超告示牌（程序化，2026-08-22 Chris:「订单板是否有实体架在地上」）。
+       状态一眼可见 —— 这是「回来看一眼」的理由，不用点开菜单：
+         · 有能交的东西 → 挂绿旗、纸更白
+         · 接了几单     → 板上就钉几张纸
+         · 都没有       → 安静的空木牌
+       不加贴图是有意的：这个世界的天空/远山/林子/树都是 canvas 画的
+       （USE_PAINTED_BG=false 铁律），塞一张 webp 反而不合群。 */
+    _drawOrderBoard(cx, by, tw, th) {
+      const ctx = this._ctx;
+      const W = tw * 0.86, H = th * 2.5;
+      const x0 = cx - W / 2, y0 = by - H;
+      const ready = (Farm.orders && Farm.orders.fillableCount)
+        ? (Farm.orders.fillableCount() + (Farm.orders.stapleReadyCount ? Farm.orders.stapleReadyCount() : 0)) : 0;
+      const taken = (Farm.orders && Farm.orders.acceptedCount) ? Farm.orders.acceptedCount() : 0;
+
+      ctx.save();
+      ctx.fillStyle = '#7a5a34';
+      ctx.fillRect(x0 + W * 0.14, y0 + H * 0.42, W * 0.09, H * 0.58);
+      ctx.fillRect(x0 + W * 0.77, y0 + H * 0.42, W * 0.09, H * 0.58);
+
+      const bw = W, bh = H * 0.52, bx = x0, byy = y0;
+      ctx.fillStyle = '#8b6740';
+      if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(bx, byy, bw, bh, 3); ctx.fill(); }
+      else ctx.fillRect(bx, byy, bw, bh);
+      ctx.fillStyle = '#c8a271';
+      const iw = bw * 0.9, ih = bh * 0.82;
+      if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(bx + (bw - iw) / 2, byy + (bh - ih) / 2, iw, ih, 2); ctx.fill(); }
+      else ctx.fillRect(bx + (bw - iw) / 2, byy + (bh - ih) / 2, iw, ih);
+
+      const sheets = Math.max(1, Math.min(3, taken || 1));
+      for (let i = 0; i < sheets; i++) {
+        const pw = iw * 0.26, ph = ih * 0.6;
+        const px = bx + (bw - iw) / 2 + iw * (0.08 + i * 0.31);
+        const py = byy + (bh - ih) / 2 + ih * 0.18;
+        ctx.save();
+        ctx.translate(px + pw / 2, py + ph / 2);
+        ctx.rotate((i - 1) * 0.05);
+        ctx.fillStyle = ready > 0 ? '#fffdf2' : '#f1ead8';
+        ctx.fillRect(-pw / 2, -ph / 2, pw, ph);
+        ctx.strokeStyle = 'rgba(90,70,40,.28)'; ctx.lineWidth = 1;
+        for (let l = 1; l <= 3; l++) {
+          const ly = -ph / 2 + (ph * l) / 4;
+          ctx.beginPath(); ctx.moveTo(-pw * 0.34, ly); ctx.lineTo(pw * 0.34, ly); ctx.stroke();
+        }
+        ctx.restore();
+      }
+
+      if (ready > 0) {
+        ctx.strokeStyle = '#6b4f2c'; ctx.lineWidth = Math.max(1, tw * 0.02);
+        ctx.beginPath(); ctx.moveTo(bx + bw * 0.86, byy - th * 0.34); ctx.lineTo(bx + bw * 0.86, byy + bh * 0.2); ctx.stroke();
+        ctx.fillStyle = '#4caf50';
+        ctx.beginPath();
+        ctx.moveTo(bx + bw * 0.86, byy - th * 0.30);
+        ctx.lineTo(bx + bw * 1.16, byy - th * 0.18);
+        ctx.lineTo(bx + bw * 0.86, byy - th * 0.06);
+        ctx.closePath(); ctx.fill();
+      }
+      ctx.restore();
+    },
+
     _drawShopSign(cx, by, boxW, boxH) {
       const ctx = this._ctx, im = this._img.stall;
       let w = boxW, h = boxH;
@@ -5537,6 +5642,8 @@
           const chip = this._drawCarCareChip(cc, by, tw, th);
           this._carCareHits.push({ idx: idx, x: chip.x, y: chip.y, r: chip.r });
         }
+      } else if (o.type === 'board') {
+        this._drawOrderBoard(cc.x, by, tw, th);
       } else if (!this._blit(him, cc.x, by, box.w, box.h, flipX, (constructing && !grow) ? buildProg : 1)) {
         // 贴图还在路上：留草地，onload 会重画。禁止再画调试红块。
       }
@@ -5640,7 +5747,8 @@
           ctx.strokeStyle = 'rgba(255,255,255,0.95)'; ctx.lineWidth = Math.max(1.2, th * 0.05); ctx.stroke();
         }
       }
-      if (this._build && this._sel === idx && idx != null && !moving) {   // delete chip
+      // noDelete 的建筑不画删除按钮（东超告示牌 —— 拆了就没地方卖菜了）
+      if (this._build && this._sel === idx && idx != null && !moving && !b.noDelete) {   // delete chip
         const ch = this._delChip(o);
         ctx.beginPath(); ctx.arc(ch.x, ch.y, ch.r, 0, Math.PI * 2); ctx.fillStyle = '#e8522a'; ctx.fill();
         ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();

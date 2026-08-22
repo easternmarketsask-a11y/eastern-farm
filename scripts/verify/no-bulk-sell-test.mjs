@@ -48,7 +48,11 @@ assert.ok(!/每日首单\s*\+20%/.test(coach), 'coach 里的旧首卖加成文�
 // 只留 if 判断，测试照样绿（变异体验证过）——那样加成会每次交单都发。
 assert.match(ord, /dailyClaims\.firstDeliveryDone\s*=\s*true/,
   '每日首单加成发完要置位，否则每交一单都白送 20%');
-assert.match(ord, /firstBonus\s*=\s*Math\.round\(order\.coins\s*\*\s*0\.2\)/,
+assert.match(ord, /Math\.round\(baseCoins \* 0\.2\)/,
   '每日首单加成要真的算出来（回访钩子不能丢）');
+// 补货和订单**两条通道**都要能吃到这个加成 —— 新手的第一笔交付走的是补货那条，
+// 只挂在订单上的话，第一天最容易拿到的那份鼓励就没了。
+assert.match(ord, /_dailyFirstBonus\(coins\)/, '交基础补货也要能拿今日首单加成');
+assert.match(ord, /_dailyFirstBonus\(order\.coins\)/, '交订单也要能拿今日首单加成');
 
 console.log('ok no-bulk-sell');
