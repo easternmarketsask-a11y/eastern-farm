@@ -354,6 +354,36 @@ else
     echo "—— 部署中止：人会穿墙，或者车停的位置存不进档。"
     exit 1
   fi
+
+  # 闸门 J: 「走到看得见的地方」回归(约 25 秒)
+  # 2026-08-22 加。三种失败态都不抛异常、冒烟也看不见：
+  #  ① 疏林疏得不够 → 放开了范围却一步走不出去(四邻接寻路=方格渗流,
+  #     空地率低于约 0.593 就没有贯穿通路)，「改了等于没改」
+  #  ② 树的判据在渲染/寻路两边漂移 → 人从树干里穿过去
+  #  ③ 走到的是硬矩形边界(隐形空气墙)而不是那圈密林
+  echo "▶ 闸门 J: 可走范围/疏林连通性回归测试(约 25 秒)…"
+  $PYCMD -m http.server 8156 --bind 127.0.0.1 >/dev/null 2>&1 &
+  ROAM_PID=$!
+  trap 'kill $ROAM_PID 2>/dev/null || true' EXIT
+  sleep 1
+  ROAM_OUT="$(mktemp)"
+  EF_CDP_TIMEOUT=120000 node scripts/verify/cdp.mjs "http://127.0.0.1:8156/src/" "scripts/verify/roam-tests.js" 9000 >"$ROAM_OUT" 2>/dev/null || true
+  kill $ROAM_PID 2>/dev/null || true
+  trap - EXIT
+  if ! node -e '
+    const o = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
+    const r = o.evalResult;
+    if (!r || !r.failures) { console.error("✗ 可走范围测试没跑出结果(evalResult=" + JSON.stringify(r) + ")"); process.exit(1); }
+    if (r.failures.length) {
+      console.error("✗ 可走范围/疏林是坏的:");
+      r.failures.forEach(f => console.error("  - " + f));
+      process.exit(1);
+    }
+    console.log("  ✓ 三种地界都走得出去、树是真障碍、边界是密林不是空气墙");
+  ' "$ROAM_OUT"; then
+    echo "—— 部署中止：人走不出地界，或者撞的是隐形墙。"
+    exit 1
+  fi
 fi
 
 # 3. 提交未保存的改动(如果有;SW 版本注入保证至少有它)

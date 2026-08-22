@@ -12,6 +12,13 @@
      随机地差最后一两步（本地和生产站都实测到过）。按路径长度给足余量。 */
   /* 把人挪到车旁几格外。测试要验的是「走到了才上车」，不是「走 23 格要多久」——
      让它真走长途会把整套测试拖到 3 分钟，而闸门只给 45 秒。 */
+  /* 🔒 落点必须留在**已买地界内**（2026-08-22 加）。可走范围放开到「看得见的地方」
+     之后，这些取景助手会把人塞到地界外（实测到 gx=-1），于是「车在手边 + 活儿在远处」
+     这个前提本身就变了，F1/F3 随机翻车。要测的是开车决策，不是人能站多远。 */
+  const onFarm = (x, y) => {
+    const ob = Farm.isoView._ownedBounds();
+    return x >= ob.x1 && x <= ob.x2 && y >= ob.y1 && y <= ob.y2;
+  };
   const putNear = (gx, gy) => {
     const A = Farm.farmer._actor();
     const free = Farm.farmer.walkableFor(Farm.isoView, 1, 1);
@@ -20,7 +27,7 @@
         for (let dx = -r; dx <= r; dx++) {
           if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
           const x = gx + dx, y = gy + dy;
-          if (free(x, y)) { A.gx = x; A.gy = y; return true; }
+          if (onFarm(x, y) && free(x, y)) { A.gx = x; A.gy = y; return true; }
         }
       }
     }
@@ -93,7 +100,7 @@
         for (let dx = -r; dx <= r; dx++) {
           if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
           const x = mx + dx, y = my + dy;
-          if (!inside(x, y) && free(x, y)) { A.gx = x; A.gy = y; return; }
+          if (!inside(x, y) && onFarm(x, y) && free(x, y)) { A.gx = x; A.gy = y; return; }
         }
       }
     }

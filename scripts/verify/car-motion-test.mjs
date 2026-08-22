@@ -23,7 +23,14 @@ assert.ok(/remainingPath|driveBrake/.test(farmer), '到站前要减速');
 
 assert.match(iso, /_blitCar\(/);
 assert.match(iso, /_drawCarDust|_carDust/);
-assert.match(iso, /_followDriveCam/);
+/* 2026-08-22：`_followDriveCam` 改名 `_followActorCam`（开车照旧居中跟，
+   走路改成「快出画才推镜头」的死区跟随）。这里钉两件事：
+   ① 开车仍然跟；② 走路那条死区分支还在 —— 否则可走范围放开之后，
+   人走出视野镜头不动，玩家会把自己的农民走丢。 */
+assert.match(iso, /_followActorCam/);
+assert.ok(!/_followDriveCam/.test(iso), '旧名不该再出现（改名要改干净）');
+assert.match(iso, /_followActorCam\(\)[\s\S]{0,1400}?A\.path[\s\S]{0,500}?W \* 0\.30[\s\S]{0,200}?H \* 0\.28/,
+  '走路要有死区跟随(W*0.30 / H*0.28)，不是每步都把人居中');
 assert.match(iso, /mot\.bob|motion\.bob/);
 assert.match(iso, /headlight|headlamp|_carLights/);
 assert.ok(!/ctx\.rotate\(0\.05\)/.test(farmer), '人走路不得再歪');

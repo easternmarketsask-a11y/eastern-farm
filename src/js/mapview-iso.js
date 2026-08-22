@@ -67,6 +67,22 @@
   // 2026-08-19 Chris:「土路看着奇怪，默认不要」。关掉后不画、不挡格、
   // 也不再沿路走人。建造里玩家自己刷的「小路」不受影响。true = 恢复乡路。
   const SHOW_COUNTRY_ROAD = false;
+  /* ===== 可走世界（2026-08-22 Chris:「汽车和人能够走动的范围是所有能见到的地方」）=====
+     以前只能在**买下的矩形**里走，看得见一大片草甸却被围在一小块地里。
+     现在放开到「画得出地面的那一圈」，并往里收一格 —— 外圈那道密林正好当围墙，
+     玩家撞到的是**看得见的树**，不是隐形空气墙。
+     🔒 买地的意义不变：仍然只有买下的地能盖房、能开田。 */
+  const WALK = { x0: -5, y0: -3, x1: COLS + 5, y1: ROWS + 7 };
+  /* 林线以北是雾和远山，地面只有渐变底色、没有菱形地砖，不许走进去。
+     阈值不是拍脑袋：渲染侧用 dHl = (c.y − hl) / (th·4.4) 判，而 hl = _cell(0,−3).y，
+     两者的 camY/oy 相消 → dHl ≡ (gx+gy+3)/8.8，**与镜头和缩放无关**。
+     地砖在 dHl ≥ 0.7 才画 ⟹ gx+gy ≥ 3.16，取 4 留一格余量。 */
+  const WALK_HORIZON_MIN = 4;
+  /* 疏林梯度。四邻接寻路就是标准的**方格站点渗流**：空地率必须高于约 0.593
+     才存在贯穿通路。旧密度 0.55（场内未买）/ 0.78（场外）＝空地率 0.45 / 0.22，
+     林子是实心墙 —— 只放开地界判据的话，人一步也走不出去。
+     所以内部压到 0.22（空地率 0.78，随便逛），贴边升到 0.86（空地率 0.14，过不去）。 */
+  const WOODS_DENS_IN = 0.22, WOODS_DENS_EDGE = 0.86, WOODS_EDGE_RAMP = 5;
   // 2026-08-15 宣传图同款光色：左上侧光、金色黄昏、草地偏暖黄绿。
   // 只改程序化调色/影子方向，不引入位图背景（USE_PAINTED_BG 铁律照旧）。
   const GRASS_A = '#7eaa3d', GRASS_B = '#72963a', GRASS_EDGE = 'rgba(60,90,40,0.18)';
@@ -799,7 +815,9 @@
         return;
       }
       // Fallback before the bg image loads: keep the grid roughly on-screen.
-      const minU = (0 - (ROWS - 1)), maxU = ((COLS - 1) - 0), maxV = (COLS - 1) + (ROWS - 1);
+      // 范围按**可走世界**算，不是农场网格 —— 人能走到那儿，镜头就得跟得过去
+      // （2026-08-22 之前这里是 COLS/ROWS，人走出网格后镜头会卡住不跟）。
+      const minU = WALK.x0 - WALK.y1, maxU = WALK.x1 - WALK.y0, maxV = WALK.x1 + WALK.y1;
       this._camX = Math.max(minU * tw / 2 - W * 0.6, Math.min(maxU * tw / 2 + W * 0.6, this._camX));
       this._camY = Math.max(this._oy - H * 1.05, Math.min(this._oy + maxV * th / 2 - H * 0.2, this._camY));
     },
@@ -1146,6 +1164,62 @@
       return !!(Farm.state.data && Farm.state.data.clearedCells && Farm.state.data.clearedCells[gx + ',' + gy]);
     },
     _nextLand() { const t = this._landTable(), lv = this._landLevel(); return lv + 1 < t.length ? t[lv + 1] : null; },
+    // 到可走边界还有几格（贴边=0）。疏林梯度和可走判据都用它。
+    _walkEdgeDist(gx, gy) {
+      return Math.min(gx - WALK.x0, WALK.x1 - gx, gy - WALK.y0, WALK.y1 - gy);
+    },
+    _inWalkWorld(gx, gy) {
+      // 🔒 已买地界永远可走：老存档用 BACK 地界（含 gx+gy<4 的西北角），
+      // 新规矩不能反过来把人关得比以前还小。
+      if (this._ownedCell(gx, gy)) return true;
+      if (gx + gy < WALK_HORIZON_MIN) return false;
+      return this._walkEdgeDist(gx, gy) >= 0;
+    },
+    /* 这格有没有野树 —— **渲染和寻路共用的唯一判据**。
+       纯世界函数：只看格子坐标 + 存档，不含任何相机/视口项。
+       （抄成两份的话，「画出来的树」和「挡路的树」会随镜头漂移，
+       表现为人从树里穿过去、或者撞上一棵看不见的树。） */
+    _wildTreeAt(gx, gy) {
+      if (gx + gy < 1.4) return false;              // 林线以北（渲染侧原 dHl<0.50，等价）
+      const ob = this._ownedBounds();
+      const inWorld = gx >= 0 && gy >= 0 && gx < COLS && gy < ROWS;
+      const k = gx + ',' + gy;
+      // 矩形地界 + 开垦格 + 已有菜地都不种树（否则新开的田还压着林子）
+      if (inWorld && this._ownedCell(gx, gy)) return false;
+      if (inWorld && this._cellToPlot && this._cellToPlot[k] != null) return false;
+      // 油画构图：农场坐在开阔草甸上，地界外 2 格留草地
+      if (gx >= ob.x1 - 2 && gx <= ob.x2 + 2 && gy >= ob.y1 - 2 && gy <= ob.y2 + 2) return false;
+      const dEdge = this._walkEdgeDist(gx, gy);
+      const apron = gy > ob.y2;
+      // 镜头前围裙中央不种树（留出正对镜头的开阔地）——但贴边那几格照种，
+      // 否则这条中央走廊会一路通到硬边界，玩家撞的就是空气墙了。
+      if (apron && Math.abs(gx - (ob.x1 + ob.x2) / 2) < 6 && dEdge >= 3) return false;
+      const terr = this._terrain();
+      if (terr[k] === 'water' || terr[k] === 'path') return false;
+      if (this._roadClearCached()[k]) return false;
+      const spots = this.NEIGHBOR_SPOTS || [];
+      for (let i = 0; i < spots.length; i++) {
+        const dx = gx - spots[i].gx, dy = gy - spots[i].gy;
+        if (dx * dx + dy * dy < 2.6) return false;
+      }
+      // 🔒 最外两格是**实心**林墙：概率密度再高也总有缝，实测 0.86 时仍有 14 格
+      // 走到了硬矩形边界 —— 那就是隐形空气墙，正是这次要消灭的东西。
+      // 这两格不走 clump/密度，直接种满，保证玩家撞到的永远是看得见的树。
+      if (dEdge <= 1) return true;
+      const clump = ((Math.floor(gx / 2) * 2654435761) ^ (Math.floor(gy / 2) * 1597334677)) >>> 0;
+      if (!apron && (clump % 5) === 0) return false;
+      const nearEdge = Math.max(0, Math.min(1, 1 - dEdge / WOODS_EDGE_RAMP));
+      let dens = WOODS_DENS_IN + (WOODS_DENS_EDGE - WOODS_DENS_IN) * nearEdge * nearEdge;
+      if (apron && dEdge >= 3) dens = Math.min(dens, 0.16);
+      const hsh = ((gx * 73856093) ^ (gy * 19349663)) >>> 0;
+      return (hsh % 997) / 997 <= dens;
+    },
+    // _roadClearSet() 每次要跑 48×9 次采样；_wildTreeAt 在寻路里一趟要问上千格，
+    // 不缓存的话每走一步都重算一遍整条路。路是常量，算一次就够。
+    _roadClearCached() {
+      if (!this._roadClearMemo) this._roadClearMemo = this._roadClearSet();
+      return this._roadClearMemo;
+    },
     _footprintFree(gx, gy, type, exceptIdx, wh) {
       const map = (Farm.state.data.map) || [];
       let w, h;
@@ -3000,17 +3074,38 @@
       });
       return html;
     },
-    _followDriveCam() {
+    /* 镜头跟着「正在动的那位」。
+       开车照旧居中跟（车快，不居中会跟丢）。
+       🔒 走路只在**快出画时**才推镜头（2026-08-22 放开可走范围之后加的）：
+       世界大了，人能走出视野；但走一步就把镜头居中一次，整片农场会跟着人晃。
+       所以中间那块是死区，人在里面镜头一动不动。 */
+    _followActorCam() {
       if (this._drag && this._drag.moved) return;
       if (this._build) return;
-      const fx = Farm.farmer && Farm.farmer.driveFx && Farm.farmer.driveFx();
-      if (!fx || !fx.moving) return;
-      const dv = Farm.farmer.carPos(fx.idx);
-      if (!dv) return;
-      const c = this._cell(dv.gx, dv.gy);
+      const F = Farm.farmer;
+      if (!F) return;
+      const fx = F.driveFx && F.driveFx();
+      if (fx && fx.moving) {
+        const dv = F.carPos(fx.idx);
+        if (!dv) return;
+        const c = this._cell(dv.gx, dv.gy);
+        const W = this._cssW(), H = this._cssH();
+        this._camX += (c.x - W * 0.50) * 0.11;
+        this._camY += (c.y - H * 0.52) * 0.11;
+        this._clampCam();
+        return;
+      }
+      const A = F._actor && F._actor();
+      if (!A || !A.path || A.gx == null || A.gy == null) return;
+      const c = this._cell(A.gx, A.gy);
       const W = this._cssW(), H = this._cssH();
-      this._camX += (c.x - W * 0.50) * 0.11;
-      this._camY += (c.y - H * 0.52) * 0.11;
+      const mx = W * 0.30, my = H * 0.28;   // 死区半径：人在这块里镜头不动
+      let dx = 0, dy = 0;
+      if (c.x < mx) dx = c.x - mx; else if (c.x > W - mx) dx = c.x - (W - mx);
+      if (c.y < my) dy = c.y - my; else if (c.y > H - my) dy = c.y - (H - my);
+      if (dx === 0 && dy === 0) return;
+      this._camX += dx * 0.18;
+      this._camY += dy * 0.18;
       this._clampCam();
     },
     _cropSprite(id) { return this._cropArtImg(id, 2); },
@@ -3217,11 +3312,6 @@
     // 未开发农地 + 场外：油画树连成林。扩地后这片格变草地，树从缓存里消失。
     _drawWildWoods() {
       const tw = this._tw(), th = this._th(), W = this._cssW(), H = this._cssH();
-      const ob = this._ownedBounds();
-      const terr = this._terrain();
-      const road = this._roadClearSet();
-      const hl = this._cell(0, -3).y;
-      const spots = this.NEIGHBOR_SPOTS || [];
       const corners = [this._screenToCell(0, 0), this._screenToCell(W, 0),
                        this._screenToCell(0, H), this._screenToCell(W, H)];
       let gx0 = Infinity, gx1 = -Infinity, gy0 = Infinity, gy1 = -Infinity;
@@ -3234,38 +3324,14 @@
       const list = [];
       for (let gy = gy0; gy <= gy1; gy++) {
         for (let gx = gx0; gx <= gx1; gx++) {
-          if (gx + gy < -2) continue;
-          const inWorld = gx >= 0 && gy >= 0 && gx < COLS && gy < ROWS;
-          const k = gx + ',' + gy;
-          // 矩形地界 + 开垦格 + 已有菜地都不种树（否则新开的田还压着林子）
-          if (inWorld && this._ownedCell(gx, gy)) continue;
-          if (inWorld && this._cellToPlot && this._cellToPlot[k] != null) continue;
-          // 油画构图：农场坐在开阔草甸上。地界外 2 格是草地；
-          // 再往镜头前的围裙中央也不种树，两侧极疏留边角圆树。
-          const apron = gy > ob.y2;
-          const midX = (ob.x1 + ob.x2) / 2;
-          const inRing = gx >= ob.x1 - 2 && gx <= ob.x2 + 2 && gy >= ob.y1 - 2 && gy <= ob.y2 + 2;
-          if (inRing) continue;
-          if (apron && Math.abs(gx - midX) < 6) continue;
-          if (terr[k] === 'water' || terr[k] === 'path' || road[k]) continue;
-          let nearNb = false;
-          for (let i = 0; i < spots.length; i++) {
-            const dx = gx - spots[i].gx, dy = gy - spots[i].gy;
-            if (dx * dx + dy * dy < 2.6) { nearNb = true; break; }
-          }
-          if (nearNb) continue;
+          // 「这格有没有树」归 _wildTreeAt 一家说了算（寻路问的是同一个函数）。
+          // 这里只补**跟视角有关**的裁剪 —— 出屏不画。那些不能进世界判据，
+          // 否则树会随镜头出现/消失，挡路的位置也跟着变。
+          if (!this._wildTreeAt(gx, gy)) continue;
           const c = this._cell(gx, gy);
           if (c.x + tw * 2 < 0 || c.x - tw * 2 > W || c.y + th * 3 < 0 || c.y - th * 4 > H) continue;
-          const dHl = (c.y - hl) / (th * 4.4);
-          // 油画后山有疏树。原先 0.85 把中景整片裁掉，只剩地平线上三棵。
-          if (dHl < 0.50) continue;
           const hsh = ((gx * 73856093) ^ (gy * 19349663)) >>> 0;
           const r1 = (hsh % 997) / 997, r2 = ((hsh >> 8) % 991) / 991;
-          const clump = ((Math.floor(gx / 2) * 2654435761) ^ (Math.floor(gy / 2) * 1597334677)) >>> 0;
-          if (!apron && (clump % 5) === 0) continue;
-          const uphill = gy < ob.y1 - 1;
-          const dens = apron ? 0.16 : (uphill ? 0.64 : (inWorld ? 0.55 : 0.78));
-          if (r1 > dens) continue;
           list.push({ gx: gx, gy: gy, r1: r1, r2: r2, flip: (hsh & 1) === 0 });
         }
       }
@@ -4378,7 +4444,7 @@
       this._syncDriveBtn();   // 上/下车是 tick 里发生的，按钮显隐跟着它走
       this._syncMusicBtn();   // 设置面板里也能改音乐开关，外观要跟着走
       this._syncLangBtn();    // 设置里也能改语言，按钮上的字要跟着走
-      this._followDriveCam();
+      this._followActorCam();
       const ctx = this._ctx, tw = this._tw(), th = this._th(), W = this._cssW(), H = this._cssH();
       const terrain = Farm.state.data.mapTerrain || {};
       ctx.clearRect(0, 0, W, H);

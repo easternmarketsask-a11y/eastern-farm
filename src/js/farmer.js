@@ -193,9 +193,16 @@
 
   /* exceptIdx：把 map 里的某一条当作「不存在」。开车时必须排除车自己 ——
      车本身就是一个 building，不排除的话它脚下那格永远不可走，寻路起点直接失败。 */
+  /* 能不能站这一格。
+     🔒 2026-08-22（Chris:「走动的范围是所有能见到的地方」）：判据从
+     「在网格内 **且** 是我买下的地」放宽成「在可走世界里」—— 看得见的草甸
+     都能走，不再被围在已买的矩形里。买地照旧只管**能在哪盖房、在哪开田**。
+     野树现在是真障碍（`_wildTreeAt` 与渲染共用同一份判据），所以人不会
+     从树干里穿过去；外圈的密林就是走不过去的那道墙。 */
   function cellWalkable(iso, gx, gy, exceptIdx) {
     const x = Math.round(gx), y = Math.round(gy);
-    if (!iso._inBounds(x, y) || !iso._ownedCell(x, y)) return false;
+    if (!iso._inWalkWorld(x, y)) return false;
+    if (iso._wildTreeAt(x, y)) return false;
     if (iso._plotCellSet()[x + ',' + y]) return false;
     const b = iso._buildingAt(x, y);
     if (b >= 0 && !(exceptIdx != null && b === exceptIdx)) return false;
