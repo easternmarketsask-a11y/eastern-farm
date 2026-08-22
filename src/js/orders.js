@@ -484,9 +484,14 @@
 
       const html =
         '<h2 class="modal-title">' + (lang === 'en' ? 'Eastern Market Orders' : '东超订单') + '</h2>' +
+        /* 🔒 这句是 Chris 2026-08-22 给的原句，别改回去。
+           原来写的是「东方超市只收它订的货」—— 那是站在**限制**的角度说话，
+           读起来像在告诉玩家「你不能怎样」。他改成从**机会**的角度说：
+           订单多得是，你只管照着备货。同一件事，一个像规矩一个像生意。
+           英文另写，不做中文的翻译腔（双语各自成立）。 */
         '<p class="modal-subtitle">' + (lang === 'en'
-          ? 'Eastern Market only buys what it ordered. Plan ahead with the forecast below.'
-          : '东方超市只收它订的货。看下面的预告提前备货。') + '</p>' +
+          ? 'Eastern Market posts new orders every day — grow what they ask for.'
+          : '东超每天都有很多订单，请按订单备货') + '</p>' +
         '<div class="order-section-title">' + (lang === 'en' ? 'Daily restock' : '每日基础补货') + '</div>' +
         '<div class="staple-list">' + (stapleRows || '<div class="ef-empty-hint">' +
           (lang === 'en' ? 'Nothing today.' : '今天没有。') + '</div>') + '</div>' +
