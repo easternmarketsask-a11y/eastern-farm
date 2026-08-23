@@ -83,6 +83,10 @@ if ! node scripts/verify/car-shine-test.mjs; then
   echo "—— 部署中止(车辆保养奖励型契约)"
   exit 1
 fi
+if ! node scripts/verify/edge-view-test.mjs; then
+  echo "—— 部署中止(地界外画面契约)"
+  exit 1
+fi
 if ! node scripts/verify/build-construct-test.mjs; then
   echo "—— 部署中止(建造过程契约)"
   exit 1

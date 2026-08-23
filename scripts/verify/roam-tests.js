@@ -182,10 +182,59 @@
     const pathLen = (A8.path || []).length;
     dbg.w8.pathLen = pathLen;
     T('W8b 寻路寻得出一条到地界外的路', pathLen > 1);
-    for (let i = 0; i < pathLen * 12 + 80 && (A8.path || A8.job); i++) await sleep(50);
+    for (let i = 0; i < pathLen * 24 + 80 && (A8.path || (A8.job && A8.job.kind === 'goto')); i++) {
+      if (Farm.farmer && Farm.farmer.tick) Farm.farmer.tick(iso);
+      if (i % 8 === 0 && iso.render) iso.render();
+      await sleep(30);
+    }
     dbg.w8.arrived = { gx: Math.round(A8.gx), gy: Math.round(A8.gy) };
     dbg.w8.outsideNow = A8.gx < ob8.x1 || A8.gx > ob8.x2 || A8.gy < ob8.y1 || A8.gy > ob8.y2;
     T('W8c 人真的走到了地界外', !!dbg.w8.outsideNow);
+  }
+
+  /* W9 地界外画面：人/车走到已买地界外时，镜头、地面循环、画布状态必须还干净。
+     回归过的失败态：半透明椭圆铺满东侧、ctx.filter 把整屏染花、镜头跟进虚空后
+     `_screenToCell` 给出几千格循环。 */
+  d.landOrigin = 'front'; d.landLevel = 0;
+  if (iso._buildLayout) iso._buildLayout();
+  const ob9 = iso._ownedBounds();
+  const A9 = Farm.farmer._actor();
+  A9.path = null; A9.job = null; A9.queue = []; A9.driving = null;
+  const cx9 = Math.round((ob9.x1 + ob9.x2) / 2), cy9 = Math.round((ob9.y1 + ob9.y2) / 2);
+  const edgeCells = [
+    { n: 'east', gx: ob9.x2 + 3, gy: cy9 },
+    { n: 'west', gx: ob9.x1 - 3, gy: cy9 },
+    { n: 'south', gx: cx9, gy: ob9.y2 + 3 },
+    { n: 'north', gx: cx9, gy: ob9.y1 - 3 },
+  ];
+  dbg.w9 = [];
+  for (const D of edgeCells) {
+    A9.gx = D.gx; A9.gy = D.gy;
+    const c = iso._cell(D.gx, D.gy);
+    iso._camX += c.x - iso._cssW() * 0.5;
+    iso._camY += c.y - iso._cssH() * 0.52;
+    iso._clampCam();
+    iso._bgKey = null;
+    let threw = false;
+    const t0 = performance.now();
+    try { iso.render(); } catch (e) { threw = String(e && e.message || e); }
+    const dt = performance.now() - t0;
+    const W = iso._cssW(), H = iso._cssH();
+    const corners = [iso._screenToCell(0, 0), iso._screenToCell(W, 0), iso._screenToCell(0, H), iso._screenToCell(W, H)];
+    const rawX = corners.map((p) => p.gx), rawY = corners.map((p) => p.gy);
+    const rng = iso._walkViewRange(Math.min.apply(null, rawX), Math.max.apply(null, rawX), Math.min.apply(null, rawY), Math.max.apply(null, rawY));
+    const rec = {
+      n: D.n, gx: D.gx, gy: D.gy, camX: iso._camX, camY: iso._camY, dt: Math.round(dt),
+      spanX: rng.gx1 - rng.gx0, spanY: rng.gy1 - rng.gy0, threw: threw,
+      alpha: iso._ctx.globalAlpha, filter: iso._ctx.filter || 'none',
+    };
+    dbg.w9.push(rec);
+    T('W9 ' + D.n + ' 渲染不抛', !threw);
+    T('W9 ' + D.n + ' 镜头是有限数', Number.isFinite(iso._camX) && Number.isFinite(iso._camY));
+    T('W9 ' + D.n + ' 地面循环有界', rng.gx1 - rng.gx0 <= 90 && rng.gy1 - rng.gy0 <= 90);
+    T('W9 ' + D.n + ' alpha 收干净', iso._ctx.globalAlpha === 1);
+    T('W9 ' + D.n + ' 无 filter 残留', !iso._ctx.filter || iso._ctx.filter === 'none');
+    T('W9 ' + D.n + ' 一帧 < 400ms', dt < 400);
   }
 
   return { failures, dbg };

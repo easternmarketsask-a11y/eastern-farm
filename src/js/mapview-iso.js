@@ -955,9 +955,10 @@
         this._camY = Math.max(cyLo, Math.min(cyHi, this._camY));
         return;
       }
-      // Fallback before the bg image loads: keep the grid roughly on-screen.
-      // 范围按**可走世界**算，不是农场网格 —— 人能走到那儿，镜头就得跟得过去
-      // （2026-08-22 之前这里是 COLS/ROWS，人走出网格后镜头会卡住不跟）。
+      // 范围按**可走世界**算，不是农场网格 —— 人能走到那儿，镜头就得跟得过去。
+      // 余量保持宽松：收太紧会把开局 `_autoFrame` 挤偏，车被 `_findHomeSpot`
+      // 塞进建筑堆里，开车去干活的闸门就会假红。地界外花屏靠地面循环钳制
+      // 和林墙画法修，不靠把镜头锁死。
       const minU = WALK.x0 - WALK.y1, maxU = WALK.x1 - WALK.y0, maxV = WALK.x1 + WALK.y1;
       this._camX = Math.max(minU * tw / 2 - W * 0.6, Math.min(maxU * tw / 2 + W * 0.6, this._camX));
       this._camY = Math.max(this._oy - H * 1.05, Math.min(this._oy + maxV * th / 2 - H * 0.2, this._camY));
@@ -1354,6 +1355,18 @@
       if (this._ownedCell(gx, gy)) return true;
       if (gx + gy < WALK_HORIZON_MIN) return false;
       return this._walkEdgeDist(gx, gy) >= 0;
+    },
+    /* 视口反解出来的格子范围，钳在可走世界外两格。
+       `_screenToCell` 对天空像素会给出很远的代数解；不钳的话地面循环
+       会画几千格重叠椭圆，人一走到地界外整屏就花。 */
+    _walkViewRange(gx0, gx1, gy0, gy1) {
+      const loX = WALK.x0 - 2, hiX = WALK.x1 + 2, loY = WALK.y0 - 2, hiY = WALK.y1 + 2;
+      const n = (v, fb) => Number.isFinite(v) ? v : fb;
+      gx0 = Math.max(loX, Math.min(hiX, Math.floor(n(gx0, loX)) - 1));
+      gx1 = Math.max(gx0, Math.min(hiX, Math.ceil(n(gx1, hiX)) + 1));
+      gy0 = Math.max(loY, Math.min(hiY, Math.floor(n(gy0, loY)) - 1));
+      gy1 = Math.max(gy0, Math.min(hiY, Math.ceil(n(gy1, hiY)) + 1));
+      return { gx0: gx0, gx1: gx1, gy0: gy0, gy1: gy1 };
     },
     /* 这格有没有野树 —— **渲染和寻路共用的唯一判据**。
        纯世界函数：只看格子坐标 + 存档，不含任何相机/视口项。
@@ -2118,8 +2131,11 @@
           c0x = near.gx; c0y = near.gy;
         }
       } else {
-        const ctr = this._screenToCell(this._cssW() / 2, this._cssH() / 2);
-        c0x = ctr.gx - (w >> 1); c0y = ctr.gy - (h >> 1);
+        // 按已买地界中心搜，不跟镜头。镜头跟人走，用屏幕中心会把新车
+        // 塞进当时扫到的建筑缝里（人一走出院子画面一快，停车点就漂）。
+        const ob = this._ownedBounds();
+        c0x = Math.round((ob.x1 + ob.x2) / 2 - (w - 1) / 2);
+        c0y = Math.round((ob.y1 + ob.y2) / 2 - (h - 1) / 2);
       }
       const tries = [[c0x, c0y]];
       for (let gy = 0; gy + h <= ROWS; gy++) for (let gx = 0; gx + w <= COLS; gx++) tries.push([gx, gy]);
@@ -3924,7 +3940,9 @@
         const dv = F.carPos(fx.idx);
         if (!dv) return;
         const look = 1.15 * (0.40 + 0.60 * (fx.accel || 0));
-        const c = this._cell(dv.gx + (fx.dx || 0) * look, dv.gy + (fx.dy || 0) * look);
+        let lgx = dv.gx + (fx.dx || 0) * look, lgy = dv.gy + (fx.dy || 0) * look;
+        if (!this._inWalkWorld(Math.round(lgx), Math.round(lgy))) { lgx = dv.gx; lgy = dv.gy; }
+        const c = this._cell(lgx, lgy);
         const W = this._cssW(), H = this._cssH();
         this._camX += (c.x - W * 0.50) * 0.16;
         this._camY += (c.y - H * 0.50) * 0.16;
@@ -4044,20 +4062,23 @@
       const ctx = this._ctx;
       const im = this._img && this._img.tree;
       seed = seed || 0;
-      if (im && im instanceof Image && im.width) {
+      if (im && im instanceof Image && im.width && im.height) {
         const h = s * (1.68 + (seed % 4) * 0.10), w = h * (im.width / im.height);
         this._shadow(x + (flip ? -1 : 1) * s * 0.14, y + s * 0.05, s * 0.58, 0.16);
         ctx.save();
-        ctx.translate(x, y);
-        if (flip) ctx.scale(-1, 1);
-        ctx.filter = 'hue-rotate(' + (((seed % 5) * 11) - 22) + 'deg) saturate(1.08)';
-        ctx.drawImage(im, -w / 2, -h + s * 0.08, w, h);
-        ctx.filter = 'none';
-        ctx.fillStyle = 'rgba(255,220,140,0.18)';
-        ctx.beginPath();
-        ctx.ellipse(-w * 0.12, -h * 0.58, w * 0.22, h * 0.16, -0.5, 0, 6.283);
-        ctx.fill();
-        ctx.restore();
+        try {
+          ctx.translate(x, y);
+          if (flip) ctx.scale(-1, 1);
+          // 不用 ctx.filter：林墙一格一棵，WebKit 上 filter 会把整张缓存画布染花，
+          // 人一走到地界外（镜头跟进密林）整个画面就错乱。深浅靠尺寸和侧光。
+          ctx.drawImage(im, -w / 2, -h + s * 0.08, w, h);
+          ctx.fillStyle = 'rgba(255,220,140,0.18)';
+          ctx.beginPath();
+          ctx.ellipse(-w * 0.12, -h * 0.58, w * 0.22, h * 0.16, -0.5, 0, 6.283);
+          ctx.fill();
+        } finally {
+          ctx.restore();
+        }
         return;
       }
       ctx.fillStyle = '#5a3a22';
@@ -4155,8 +4176,8 @@
         gx0 = Math.min(gx0, c.gx); gx1 = Math.max(gx1, c.gx);
         gy0 = Math.min(gy0, c.gy); gy1 = Math.max(gy1, c.gy);
       }
-      gx0 = Math.max(-6, Math.floor(gx0) - 1); gy0 = Math.max(-4, Math.floor(gy0) - 1);
-      gx1 = Math.min(COLS + 6, Math.ceil(gx1) + 1); gy1 = Math.min(ROWS + 8, Math.ceil(gy1) + 1);
+      const wr = this._walkViewRange(gx0, gx1, gy0, gy1);
+      gx0 = wr.gx0; gx1 = wr.gx1; gy0 = wr.gy0; gy1 = wr.gy1;
       const list = [];
       for (let gy = gy0; gy <= gy1; gy++) {
         for (let gx = gx0; gx <= gx1; gx++) {
@@ -5038,7 +5059,8 @@
         gx0 = Math.min(gx0, c.gx); gx1 = Math.max(gx1, c.gx);
         gy0 = Math.min(gy0, c.gy); gy1 = Math.max(gy1, c.gy);
       }
-      gx0 -= 2; gy0 -= 2; gx1 += 2; gy1 += 2;
+      const wr = this._walkViewRange(gx0 - 2, gx1 + 2, gy0 - 2, gy1 + 2);
+      gx0 = wr.gx0; gx1 = wr.gx1; gy0 = wr.gy0; gy1 = wr.gy1;
       const hl = this._cell(0, -3).y;   // 林线 y(与 _drawHorizon 同一条对角线)
       // 整面铺草甸底色: 菱形之间的反锯齿细缝不再漏出天空色(亮格线的元凶)。
       // 从林脚以下起铺(hl+0.8th), 树脚由菱形格自然探上去咬合, 不再一刀切。
@@ -5063,23 +5085,22 @@
           const hsh = ((gx * 73856093) ^ (gy * 19349663)) >>> 0;
           const r1 = (hsh % 997) / 997, r2 = ((hsh >> 8) % 991) / 991;
           const inWorld = gx >= 0 && gy >= 0 && gx < COLS && gy < ROWS;
-          const owned = inWorld && gx >= ob.x1 && gx <= ob.x2 && gy >= ob.y1 && gy <= ob.y2;
-          const apron = gy > ob.y2;
-          // 基色: 农场内亮耕作金绿, 镜头前围裙同色（油画是一整片草甸）
+          const owned = this._ownedCell(gx, gy);
+          // 与 `_wildTreeAt` 同一圈 4 格草甸：东南西北都是院子外的开阔地，
+          // 以前只把镜头前（gy>y2）当围裙，人往东/西一跨出地界就变成半透明
+          // 椭圆叠在一起，整屏花斑。
+          const meadow = owned || (gx >= ob.x1 - 4 && gx <= ob.x2 + 4 && gy >= ob.y1 - 4 && gy <= ob.y2 + 4);
           let rr, gg, bb2;
           const patch = Math.sin(gx * 0.52 + gy * 0.37) * 7 + Math.sin(gx * 0.19 - gy * 0.24) * 5;
-          const stripe = (owned || apron) ? 0 : (((gx + gy) & 1) ? -0.35 : 0);
+          const stripe = meadow ? 0 : (((gx + gy) & 1) ? -0.35 : 0);
           const nzIn = (r1 - 0.5) * 6;
           let fr = 170 + patch + stripe + nzIn, fg = 172 + patch * 0.7 + stripe + nzIn * 0.6, fb = 54 + patch * 0.3 + stripe * 0.45 + nzIn * 0.35;
-          if (inWorld && !owned && !apron) { fr = 96 + nzIn; fg = 122 + nzIn * 0.6; fb = 52 + nzIn * 0.3; }
-          // 场外林下：更深的荫地，不是亮黄野草
+          if (inWorld && !meadow) { fr = 96 + nzIn; fg = 122 + nzIn * 0.6; fb = 52 + nzIn * 0.3; }
           const nzOut = (r1 - 0.5) * 8;
-          const wr = 78 + nzOut, wg = 104 + nzOut * 0.7, wb = 50 + (r2 - 0.5) * 6;
-          // 农场↔野地按「出界距离」渐变(6 格内过渡), 不出现生硬色阶边框
+          const wildR = 78 + nzOut, wildG = 104 + nzOut * 0.7, wildB = 50 + (r2 - 0.5) * 6;
           const dOut = Math.max(0, Math.max(-gx, -gy, gx - (COLS - 1), gy - (ROWS - 1)));
-          const wMix = Math.max(0, Math.min(1, dOut / 6));
-          rr = fr * (1 - wMix) + wr * wMix; gg = fg * (1 - wMix) + wg * wMix; bb2 = fb * (1 - wMix) + wb * wMix;
-          // 地平：近山脚不画菱形格（宣传图远坡是一整片），再往前才淡入草地格
+          const wMix = meadow ? 0 : Math.max(0, Math.min(1, dOut / 6));
+          rr = fr * (1 - wMix) + wildR * wMix; gg = fg * (1 - wMix) + wildG * wMix; bb2 = fb * (1 - wMix) + wildB * wMix;
           const dHl = (c.y - hl) / (th * 4.4);
           if (dHl < 0.7) continue;
           if (dHl < 1) {
@@ -5092,15 +5113,13 @@
             gg = gg * (1 - fade) + 160 * fade;
             bb2 = bb2 * (1 - fade) + 80 * fade;
           }
-          if (!(owned || apron)) {
+          if (!meadow) {
+            ctx.globalAlpha = dHl < 1.15 ? Math.max(0.35, (dHl - 0.7) / 0.45) : 1;
             ctx.fillStyle = 'rgb(' + (rr | 0) + ',' + (gg | 0) + ',' + (bb2 | 0) + ')';
-            ctx.globalAlpha = dHl < 1.15 ? Math.max(0.10, (dHl - 0.7) / 0.45 * 0.40) : 0.40;
-            ctx.beginPath();
-            ctx.ellipse(c.x, c.y, tw * 0.78, th * 0.68, 0, 0, 6.283);
+            this._diamond(c.x, c.y, tw, th);
             ctx.fill();
             ctx.globalAlpha = 1;
           }
-          // 点缀: 草簇 / 油画那种贴地雏菊
           const tuftP = inWorld ? 0.74 : 0.68;
           if (r2 > tuftP && dHl > 1.15) {
             ctx.strokeStyle = inWorld ? '#5e8a38' : '#6d8840';
@@ -5112,7 +5131,7 @@
               ctx.quadraticCurveTo(bx + i * tw * 0.05, byy - th * 0.08, bx + i * tw * 0.075, byy - th * 0.18);
               ctx.stroke();
             }
-          } else if ((owned || apron) && r2 < 0.11 && dHl > 1.15) {
+          } else if (meadow && r2 < 0.11 && dHl > 1.15) {
             const pk = this._cellToPlot && this._cellToPlot[gx + ',' + gy];
             if (pk == null) this._daisy(c.x + (r1 - 0.5) * tw * 0.5, c.y + (r2 - 0.4) * th * 0.45, tw * 0.046);
           }
@@ -5269,7 +5288,10 @@
         const cv = this._bgCache, dpr = this._dpr, pw = Math.round(W * dpr), ph = Math.round(H * dpr);
         if (cv.width !== pw || cv.height !== ph) { cv.width = pw; cv.height = ph; }
         const g = cv.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, W, H);
-        const real = this._ctx; this._ctx = g; this._drawBackdrop(W, H); this._ctx = real;
+        const real = this._ctx;
+        this._ctx = g;
+        try { this._drawBackdrop(W, H); }
+        finally { this._ctx = real; }
         this._bgKey = key;
       }
       ctx.drawImage(this._bgCache, 0, 0, W, H);
@@ -5293,6 +5315,8 @@
       this._applyCamKick();
       const ctx = this._ctx, tw = this._tw(), th = this._th(), W = this._cssW(), H = this._cssH();
       const terrain = Farm.state.data.mapTerrain || {};
+      ctx.globalAlpha = 1;
+      if (ctx.filter) ctx.filter = 'none';
       ctx.clearRect(0, 0, W, H);
       // Landscape backdrop (sky/hills/trees/meadow/tufts) — only changes when the
       // camera pans/zooms, so it's rendered once into an offscreen canvas and reused
