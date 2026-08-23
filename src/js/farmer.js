@@ -89,7 +89,8 @@
       path: null, pathI: 0, driving: null, pendingGoto: null,
       driveT: 0, driveAccel: 0, driveBrake: 0, driveTurnT: 9,
       driveDust: [], driveDustAcc: 0, driveDx: 0, driveDy: 0,
-      boardHop: 0, alightHop: 0,
+      walkAccel: 0, walkDust: [], walkPlant: 0,
+      boardHop: 0, alightHop: 0, _driveWasGoing: false,
     };
   }
 
@@ -266,6 +267,8 @@
     s *= 1 + SHINE_BONUS * shineOf(drivingCar());
     s *= 0.38 + 0.62 * Math.min(1, A.driveAccel || 0);
     s *= 1 - 0.58 * Math.min(1, A.driveBrake || 0);
+    // 转弯那一下收一点油：90° 格子路本来会瞬间甩头，减速让车身跟上
+    s *= 1 - 0.26 * Math.max(0, 1 - (A.driveTurnT == null ? 9 : A.driveTurnT) / 0.30);
     return s;
   }
 
@@ -278,36 +281,55 @@
     return d;
   }
 
+  function pushDriveDust(side) {
+    A.driveDust = A.driveDust || [];
+    if (A.driveDust.length >= 36) return;
+    const dx = A.driveDx || 0, dy = A.driveDy || 0;
+    const px = -dy, py = dx;
+    A.driveDust.push({
+      gx: A.gx - dx * 0.34,
+      gy: A.gy - dy * 0.34,
+      t: 0,
+      life: 0.44 + Math.random() * 0.34,
+      ox: side * 0.24 + (Math.random() - 0.5) * 0.16,
+      oy: (Math.random() - 0.06) * 0.22,
+      vx: -dx * (1.05 + Math.random() * 0.45) + px * side * 0.18 + (Math.random() - 0.5) * 0.38,
+      vy: -dy * (1.05 + Math.random() * 0.45) + py * side * 0.18 + (Math.random() - 0.5) * 0.30,
+      r: 0.10 + Math.random() * 0.16,
+      dark: Math.random() < 0.52,
+      kind: Math.random() < 0.20 ? 'grass' : 'dust',
+    });
+  }
+
   function spawnDriveDust(dt) {
     A.driveDust = A.driveDust || [];
     A.driveDustAcc = (A.driveDustAcc || 0) + dt;
-    const gap = 0.046;
-    while (A.driveDustAcc >= gap && A.driveDust.length < 24) {
+    const accel = A.driveAccel || 0, brake = A.driveBrake || 0;
+    const gap = Math.max(0.022, 0.050 - 0.024 * accel - 0.010 * brake);
+    while (A.driveDustAcc >= gap && A.driveDust.length < 36) {
       A.driveDustAcc -= gap;
-      const dx = A.driveDx || 0, dy = A.driveDy || 0;
-      A.driveDust.push({
-        gx: A.gx - dx * 0.28,
-        gy: A.gy - dy * 0.28,
-        t: 0,
-        life: 0.38 + Math.random() * 0.28,
-        ox: (Math.random() - 0.5) * 0.42,
-        oy: (Math.random() - 0.12) * 0.28,
-        vx: -dx * 0.85 + (Math.random() - 0.5) * 0.45,
-        vy: -dy * 0.85 + (Math.random() - 0.5) * 0.35,
-        r: 0.12 + Math.random() * 0.14,
-        dark: Math.random() < 0.45,
-      });
+      pushDriveDust(1);
+      pushDriveDust(-1);
+      if ((A.driveTurnT == null ? 9 : A.driveTurnT) < 0.22) {
+        pushDriveDust(Math.random() < 0.5 ? 1 : -1);
+      }
     }
+  }
+
+  function burstDriveDust(n) {
+    for (let i = 0; i < n; i++) pushDriveDust(i % 2 ? 1 : -1);
   }
 
   function tickDrive(dt) {
     A.driveT = (A.driveT || 0) + dt;
     A.driveTurnT = (A.driveTurnT == null ? 9 : A.driveTurnT) + dt;
     const going = !!(A.job && A.job.kind === 'goto' && A.path);
+    if (A._driveWasGoing && !going) burstDriveDust(10);
+    A._driveWasGoing = going;
     if (going) {
-      A.driveAccel = Math.min(1, (A.driveAccel || 0) + dt / 0.40);
+      A.driveAccel = Math.min(1, (A.driveAccel || 0) + dt / 0.46);
       const left = remainingPath();
-      A.driveBrake = left < 1.35 ? Math.min(1, (1.35 - left) / 1.35) : 0;
+      A.driveBrake = left < 1.55 ? Math.min(1, (1.55 - left) / 1.55) : 0;
       spawnDriveDust(dt);
       // 转速跟着这辆车的速度走：皮卡低沉，豪华车高亢
       if (Farm.audio && Farm.audio.startEngine) {
@@ -317,11 +339,46 @@
       const car = drivingCar();
       if (car && shineOf(car) > 0) car.shine = Math.max(0, shineOf(car) - dt * SHINE_DECAY);
     } else {
-      A.driveAccel = Math.max(0, (A.driveAccel || 0) - dt / 0.20);
+      A.driveAccel = Math.max(0, (A.driveAccel || 0) - dt / 0.26);
       A.driveBrake = 0;
       if (Farm.audio && Farm.audio.stopEngine) Farm.audio.stopEngine();
     }
     const dust = A.driveDust || [];
+    for (let i = dust.length - 1; i >= 0; i--) {
+      dust[i].t += dt;
+      dust[i].ox += (dust[i].vx || 0) * dt;
+      dust[i].oy += (dust[i].vy || 0) * dt;
+      if (dust[i].t >= dust[i].life) dust.splice(i, 1);
+    }
+  }
+
+  function tickWalkDust(dt) {
+    A.walkDust = A.walkDust || [];
+    if (A.anim === 'walk' && A.driving == null) {
+      const phase = A.frameT * Math.PI * (FPS / 3);
+      const plant = Math.abs(Math.sin(phase));
+      const prev = A.walkPlant || 0;
+      A.walkPlant = plant;
+      if (prev < 0.86 && plant >= 0.86 && A.walkDust.length < 14) {
+        const dx = A.driveDx || 0, dy = A.driveDy || 0;
+        const side = (A.walkDust.length % 2) ? 1 : -1;
+        A.walkDust.push({
+          gx: A.gx - dx * 0.06,
+          gy: A.gy - dy * 0.06,
+          t: 0,
+          life: 0.26 + Math.random() * 0.16,
+          ox: side * 0.14 + (Math.random() - 0.5) * 0.06,
+          oy: 0.05 + Math.random() * 0.07,
+          vx: -dx * 0.32 + (Math.random() - 0.5) * 0.22,
+          vy: -dy * 0.32 + (Math.random() - 0.5) * 0.16,
+          r: 0.045 + Math.random() * 0.06,
+          dark: Math.random() < 0.30,
+          kind: Math.random() < 0.55 ? 'grass' : 'dust',
+        });
+        if (Farm.audio && Farm.audio.play) Farm.audio.play('step');
+      }
+    }
+    const dust = A.walkDust;
     for (let i = dust.length - 1; i >= 0; i--) {
       dust[i].t += dt;
       dust[i].ox += (dust[i].vx || 0) * dt;
@@ -342,6 +399,8 @@
       turnT: A.driveTurnT == null ? 9 : A.driveTurnT,
       face: A.face,
       away: !!A.away,
+      dx: A.driveDx || 0,
+      dy: A.driveDy || 0,
       dust: A.driveDust || [],
     };
   }
@@ -874,7 +933,12 @@
       const car = Farm.state.data.map[A.driving];
       if (car && car.type === 'car') { car.face = A.face; car.away = !!A.away; }
     }
-    const step = (speed || WALK_SPEED) * dt;
+    let spd = speed || WALK_SPEED;
+    if (A.driving == null) {
+      A.walkAccel = Math.min(1, (A.walkAccel || 0) + dt / 0.22);
+      spd *= 0.70 + 0.30 * A.walkAccel;
+    }
+    const step = spd * dt;
     if (step >= dist) { A.gx = tx; A.gy = ty; return true; }
     A.gx += dx / dist * step;
     A.gy += dy / dist * step;
@@ -906,15 +970,21 @@
         A.pause = IDLE_PAUSE[0] + Math.random() * (IDLE_PAUSE[1] - IDLE_PAUSE[0]);
       }
       if (A.job && A.job.kind === 'idlewalk') {
+        A.anim = 'walk';
         if (moveToward(dt, A.job.gx, A.job.gy)) { A.job = null; A.anim = 'idle'; }
       }
+      tickWalkDust(dt);
       return;
     }
 
     A.frameT += dt;
     if (A.boardHop > 0) A.boardHop = Math.max(0, A.boardHop - dt);
     if (A.alightHop > 0) A.alightHop = Math.max(0, A.alightHop - dt);
+    if (A.anim !== 'walk' || A.driving != null) {
+      A.walkAccel = Math.max(0, (A.walkAccel || 0) - dt / 0.16);
+    }
     if (A.driving != null) tickDrive(dt);
+    else tickWalkDust(dt);
 
     // 车停着等指令，不自己乱逛 —— 闲逛逻辑是给人写的，驾驶中它会把整辆车挪走。
     if (A.driving != null && !A.job) { A.anim = 'idle'; return; }
@@ -1045,16 +1115,34 @@
       const row = usingBack ? (anim === 'walk' && backRows > 1 ? 1 : 0) : (ANIMS[anim] || 0);
       const w = h * (cw / ch);
       ctx.save();
-      const bob = (anim === 'walk') ? Math.abs(Math.sin(A.frameT * 16)) * th * 0.07 : 0;
+      // 步伐：两步一循环，落地质心下沉、步间抬起，左右换重心。
+      // 不许 rotate —— 等距贴图一转就侧着迈。
+      const walking = anim === 'walk';
+      const phase = A.frameT * Math.PI * (FPS / 3);
+      const plant = walking ? Math.pow(Math.abs(Math.sin(phase)), 1.35) : 0;
+      const bob = walking
+        ? (1 - plant) * th * 0.040
+        : (anim === 'idle' ? Math.sin(A.frameT * 2.15) * th * 0.010 : 0);
+      const sway = walking ? Math.sin(phase) * w * 0.030 : 0;
+      const squash = walking ? 1 - plant * 0.048 : 1;
       let dip = 0;
       if (anim === 'harvest' || anim === 'plant') {
         const t = Math.min(1, A.frameT / WORK_HOLD);
         const squat = t < 0.22 ? t / 0.22 : (t > 0.82 ? 1 - (t - 0.82) / 0.18 * 0.45 : 1);
         dip = th * (anim === 'plant' ? 0.05 : 0.08) * squat;
       }
-      if (iso._shadow) iso._shadow(x + (face === 'l' ? -1 : 1) * w * 0.08, y + th * 0.04, w * 0.55, 0.16);
+      if (iso._shadow) {
+        iso._shadow(
+          x + (face === 'l' ? -1 : 1) * w * 0.08,
+          y + th * 0.04,
+          w * (0.52 + plant * 0.10),
+          0.16 + plant * 0.05
+        );
+      }
       ctx.translate(x, y - bob + dip);
       if (face === 'l') ctx.scale(-1, 1);
+      ctx.translate(sway, 0);
+      if (squash !== 1) ctx.scale(1, squash);
       ctx.drawImage(im, fi * cw, row * ch, cw, ch, -w / 2, -h, w, h);
       ctx.restore();
       return true;
@@ -1073,6 +1161,9 @@
     const th = iso._th();
     const yOff = (anim === 'harvest' || anim === 'plant') ? 0.10 : 0.18;
     const x = c.x, y = c.y + th * yOff - hopLift(th);
+    if (A.walkDust && A.walkDust.length && iso._drawCarDust) {
+      iso._drawCarDust(A.walkDust, iso._tw(), th);
+    }
     if (blitSheet(iso._ctx, iso, look, anim, fi, x, y, face, away)) return;
     const spec = specOf(look);
     if (iso._drawVillager) {

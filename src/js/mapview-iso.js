@@ -3787,42 +3787,66 @@
         const p = dust[i];
         const a = Math.max(0, 1 - p.t / p.life);
         const c = this._cell(p.gx, p.gy);
-        const rx = (p.r + p.t * 0.22) * tw;
-        const col = p.dark ? 'rgba(132,110,62,' : 'rgba(210,188,108,';
-        ctx.fillStyle = col + (0.38 * a * a) + ')';
-        ctx.beginPath();
-        ctx.ellipse(c.x + p.ox * tw, c.y + p.oy * th + th * 0.18, rx, rx * 0.42, 0.5, 0, 6.283);
-        ctx.fill();
-        if (!p.dark) {
-          ctx.fillStyle = 'rgba(255,236,180,' + (0.16 * a * a) + ')';
+        const rx = (p.r + p.t * 0.24) * tw;
+        const px = c.x + p.ox * tw, py = c.y + p.oy * th + th * 0.18;
+        if (p.kind === 'grass') {
+          ctx.fillStyle = 'rgba(92,138,48,' + (0.46 * a * a) + ')';
           ctx.beginPath();
-          ctx.ellipse(c.x + p.ox * tw, c.y + p.oy * th + th * 0.14, rx * 0.45, rx * 0.2, 0.5, 0, 6.283);
+          ctx.ellipse(px, py, rx * 0.55, rx * 0.22, 0.55, 0, 6.283);
           ctx.fill();
+          continue;
         }
+        const col = p.dark ? 'rgba(126,104,58,' : 'rgba(214,190,108,';
+        ctx.fillStyle = col + (0.42 * a * a) + ')';
+        ctx.beginPath();
+        ctx.ellipse(px, py, rx, rx * 0.42, 0.5, 0, 6.283);
+        ctx.fill();
+        ctx.fillStyle = (p.dark ? 'rgba(92,74,40,' : 'rgba(255,236,180,') + (0.18 * a * a) + ')';
+        ctx.beginPath();
+        ctx.ellipse(px, py - rx * 0.12, rx * 0.52, rx * 0.22, 0.5, 0, 6.283);
+        ctx.fill();
       }
     },
-    _carLights(cc, by, tw, th, flipX, away, moving) {
-      if (!moving) return;
+    _carLights(cc, by, tw, th, flipX, away, moving, brake) {
+      brake = brake || 0;
+      if (!moving && brake < 0.2) return;
       const ctx = this._ctx;
       const dir = flipX ? -1 : 1;
       ctx.save();
       if (away) {
-        ctx.fillStyle = 'rgba(220,50,40,0.55)';
+        const a = 0.50 + 0.42 * Math.min(1, brake);
+        ctx.fillStyle = 'rgba(220,48,38,' + a + ')';
         ctx.beginPath();
-        ctx.ellipse(cc.x + dir * tw * 0.22, by - th * 0.72, tw * 0.05, th * 0.035, 0, 0, 6.283);
+        ctx.ellipse(cc.x + dir * tw * 0.22, by - th * 0.72, tw * 0.055, th * 0.038, 0, 0, 6.283);
         ctx.fill();
         ctx.beginPath();
-        ctx.ellipse(cc.x + dir * tw * 0.38, by - th * 0.62, tw * 0.05, th * 0.035, 0, 0, 6.283);
+        ctx.ellipse(cc.x + dir * tw * 0.38, by - th * 0.62, tw * 0.055, th * 0.038, 0, 0, 6.283);
         ctx.fill();
       } else {
-        const hx = cc.x + dir * tw * 0.42, hy = by - th * 0.38;
-        const g = ctx.createRadialGradient(hx, hy, th * 0.02, hx + dir * tw * 0.18, hy + th * 0.12, tw * 0.55);
-        g.addColorStop(0, 'rgba(255,220,140,0.42)');
-        g.addColorStop(1, 'rgba(255,180,80,0)');
-        ctx.fillStyle = g;
-        ctx.beginPath();
-        ctx.ellipse(hx + dir * tw * 0.12, hy + th * 0.08, tw * 0.38, th * 0.22, dir * 0.4, 0, 6.283);
-        ctx.fill();
+        if (moving) {
+          const hx = cc.x + dir * tw * 0.42, hy = by - th * 0.38;
+          const g = ctx.createRadialGradient(hx, hy, th * 0.02, hx + dir * tw * 0.28, hy + th * 0.22, tw * 0.72);
+          g.addColorStop(0, 'rgba(255,226,160,0.50)');
+          g.addColorStop(0.45, 'rgba(255,196,110,0.16)');
+          g.addColorStop(1, 'rgba(255,180,80,0)');
+          ctx.fillStyle = g;
+          ctx.beginPath();
+          ctx.ellipse(hx + dir * tw * 0.16, hy + th * 0.12, tw * 0.48, th * 0.28, dir * 0.38, 0, 6.283);
+          ctx.fill();
+          ctx.fillStyle = 'rgba(255,214,130,0.14)';
+          ctx.beginPath();
+          ctx.ellipse(hx + dir * tw * 0.22, by + th * 0.04, tw * 0.42, th * 0.16, dir * 0.5, 0, 6.283);
+          ctx.fill();
+        }
+        if (brake > 0.2) {
+          ctx.fillStyle = 'rgba(210,40,36,' + (0.28 + 0.45 * brake) + ')';
+          ctx.beginPath();
+          ctx.ellipse(cc.x - dir * tw * 0.28, by - th * 0.78, tw * 0.045, th * 0.032, 0, 0, 6.283);
+          ctx.fill();
+          ctx.beginPath();
+          ctx.ellipse(cc.x - dir * tw * 0.12, by - th * 0.70, tw * 0.045, th * 0.032, 0, 0, 6.283);
+          ctx.fill();
+        }
       }
       ctx.restore();
     },
@@ -3899,10 +3923,11 @@
       if (fx && fx.moving) {
         const dv = F.carPos(fx.idx);
         if (!dv) return;
-        const c = this._cell(dv.gx, dv.gy);
+        const look = 1.15 * (0.40 + 0.60 * (fx.accel || 0));
+        const c = this._cell(dv.gx + (fx.dx || 0) * look, dv.gy + (fx.dy || 0) * look);
         const W = this._cssW(), H = this._cssH();
-        this._camX += (c.x - W * 0.50) * 0.11;
-        this._camY += (c.y - H * 0.52) * 0.11;
+        this._camX += (c.x - W * 0.50) * 0.16;
+        this._camY += (c.y - H * 0.50) * 0.16;
         this._clampCam();
         return;
       }
@@ -5920,17 +5945,21 @@
         const arriving = !!(idx != null && this._carArrive && this._carArrive[idx] && this._arrivePos(idx));
         if (live) this._drawCarDust(fx.dust, tw, th);
         const accel = live ? fx.accel : 0, brake = live ? fx.brake : 0, moving = !!(live && fx.moving) || arriving;
-        const bob = moving ? Math.sin(fx.t * (9 + accel * 6)) * th * 0.038 * (0.35 + 0.65 * accel) : (live ? Math.sin(fx.t * 14) * th * 0.01 : 0);
-        const sx = moving ? (1.03 - 0.06 * accel + 0.05 * brake) : 1;
-        const sy = moving ? (0.94 + 0.07 * accel - 0.07 * brake) : 1;
+        if (moving) this._shadow(cc.x + tw * 0.40, by - th * 0.08, b.w * tw * 1.04, 0.10);
+        const bounce = moving ? Math.sin((fx.t || 0) * (8 + accel * 9)) * th * 0.034 * (0.28 + 0.72 * accel) : 0;
+        const bump = (live && fx.turnT < 0.40) ? Math.sin((fx.turnT / 0.40) * Math.PI) * th * 0.046 : 0;
+        const idle = (live && !moving) ? Math.sin((fx.t || 0) * 12.5) * th * 0.008 : 0;
+        const bob = bounce + bump + idle;
+        const sx = moving ? (1.032 - 0.068 * accel + 0.055 * brake) : 1;
+        const sy = moving ? (0.935 + 0.078 * accel - 0.078 * brake) : 1;
         let lean = 0;
-        if (live && fx.turnT < 0.26) lean = Math.sin((fx.turnT / 0.26) * Math.PI) * 0.065 * (flipX ? -1 : 1);
+        if (live && fx.turnT < 0.42) lean = Math.sin((fx.turnT / 0.42) * Math.PI) * 0.088 * (flipX ? -1 : 1);
         const mot = { bob: bob, sx: sx, sy: sy, lean: lean };
         if (!this._blitCar(him, cc.x, by, box.w, box.h, flipX, mot)) {
           /* 贴图还在路上 */
         }
         if (live) this._drawCarRiders(cc, by, tw, th, flipX, bob);
-        this._carLights(cc, by + bob, tw, th, flipX, live ? fx.away : !!homeO.away, moving);
+        this._carLights(cc, by + bob, tw, th, flipX, live ? fx.away : !!homeO.away, moving, live ? fx.brake : 0);
         const shine = (homeO && typeof homeO.shine === 'number') ? homeO.shine : 0;
         if (shine > 0.18) this._drawCarGlint(cc, by + bob, tw, th, shine);
         if (!live && shine < 0.85 && !this._build && !this._visit) {

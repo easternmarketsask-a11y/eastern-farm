@@ -17,6 +17,9 @@ assert.match(farmer, /driveFx:\s*driveFx/);
 assert.match(farmer, /driveAccel|driveBrake/);
 assert.match(farmer, /driveDust/);
 assert.match(farmer, /driveTurnT/);
+assert.match(farmer, /dx:\s*A\.driveDx/);
+assert.match(farmer, /pushDriveDust/);
+assert.match(iso, /\(fx\.dx \|\| 0\) \* look/);
 assert.ok(/moveSpeed[\s\S]{0,500}driveAccel/.test(farmer) || /driveAccel[\s\S]{0,400}moveSpeed/.test(farmer),
   '车速必须吃起步加速');
 assert.ok(/remainingPath|driveBrake/.test(farmer), '到站前要减速');

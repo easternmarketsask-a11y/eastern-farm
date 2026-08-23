@@ -8,7 +8,7 @@ import { dirname, join } from 'node:path';
 
 const src = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '../../src/js/audio.js'), 'utf8');
 
-const names = ['plant', 'harvest', 'coin', 'buy', 'levelUp', 'achievement', 'error', 'tap', 'horn', 'water', 'build', 'buildStart', 'buildSaw', 'buildDone'];
+const names = ['plant', 'harvest', 'coin', 'buy', 'levelUp', 'achievement', 'error', 'tap', 'horn', 'water', 'build', 'buildStart', 'buildSaw', 'buildDone', 'step'];
 names.forEach((n) => {
   assert.ok(new RegExp("case '" + n + "'").test(src), 'missing sound ' + n);
 });
@@ -42,6 +42,10 @@ assert.ok(/startEngine[\s\S]{0,900}lowpass/.test(src), '引擎必须低通，不
 assert.ok(/tending[\s\S]{0,80}water|play\('water'\)/.test(readFileSync(
   join(dirname(fileURLToPath(import.meta.url)), '../../src/js/tending.js'), 'utf8'
 )) || /play\('water'\)/.test(src), '浇水路径要播 water');
+
+const stepSnd = src.match(/case 'step':[\s\S]*?break;/);
+assert.ok(stepSnd && /_noise/.test(stepSnd[0]) && /_tone/.test(stepSnd[0]),
+  '脚步必须是土扑噪声 + 闷腔，不能是蜂鸣');
 
 const tend = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '../../src/js/tending.js'), 'utf8');
 assert.ok(/play\('water'\)/.test(tend), 'tending.waterPlot 播 water，不得再播 coin');

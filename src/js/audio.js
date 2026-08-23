@@ -12,7 +12,7 @@
  *
  * Available sounds: 'plant', 'harvest', 'water', 'coin', 'levelUp',
  *   'achievement', 'error', 'tap', 'buy', 'horn', 'build', 'buildStart',
- *   'buildSaw', 'buildDone'. Unknown names are
+ *   'buildSaw', 'buildDone', 'step'. Unknown names are
  *   silently ignored. play(name, opts) accepts opts.step (int) to raise
  *   the whole sound by N semitones — Hay Day-style combo on rapid harvests.
  *
@@ -562,6 +562,11 @@
         if (this._lastTapAt && now - this._lastTapAt < 60) return;
         this._lastTapAt = now;
       }
+      if (name === 'step') {
+        const nowS = performance.now();
+        if (this._lastStepAt && nowS - this._lastStepAt < 240) return;
+        this._lastStepAt = nowS;
+      }
       if (this.ctx.state === 'suspended') this.ctx.resume();
       const step = Math.max(0, Math.min(7, opts.step || 0));
       this._pitchShift = step ? Math.pow(2, step / 12) : 1;
@@ -667,6 +672,12 @@
           this._tone(392, t + 0.05, 0.16, { type: 'triangle', gain: 0.24, lp: 1800, pan: pan });
           this._tone(523, t + 0.12, 0.22, { type: 'sine', gain: 0.28, pan: pan });
           this._tone(784, t + 0.18, 0.28, { type: 'triangle', gain: 0.20, pan: pan });
+          break;
+        case 'step':
+          // 落在草地上的软土步：短噪声 + 闷腔，别做成节拍器
+          this._noise(t, 0.055, { lp: 260, gain: 0.11, attack: 0.002, pan: pan });
+          this._noise(t + 0.008, 0.03, { bp: 1650, q: 1.05, gain: 0.045, pan: pan });
+          this._tone(88, t, 0.07, { type: 'sine', gain: 0.055, lp: 220, pan: pan });
           break;
         case 'horn':
           /* 老式双簧片喇叭：两个音差小三度，谐波一直到 3–4k，起振几乎瞬间。

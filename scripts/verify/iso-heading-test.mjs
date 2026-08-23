@@ -47,8 +47,12 @@ assert.match(farmerSrc, /A\.away = h\.away/);
 assert.match(farmerSrc, /backSheet|p_farmer_.*_back/);
 assert.match(farmerSrc, /Farm\.farmer\.heading\s*=\s*heading|heading:\s*heading/);
 
-assert.ok(!/ctx\.rotate\(0\.05\)/.test(farmerSrc),
-  '走路不得 rotate(0.05)，那会看起来像侧着歪着走');
+assert.ok(!/ctx\.rotate\(/.test(farmerSrc),
+  '走路不得 rotate，那会看起来像侧着歪着走');
+assert.match(farmerSrc, /const squash = walking/);
+assert.match(farmerSrc, /ctx\.scale\(1, squash\)/);
+assert.ok(!/Math\.abs\(Math\.sin\(A\.frameT \* 16\)\)/.test(farmerSrc),
+  '走路不得再原地蹦（abs-sin hop）');
 assert.match(farmerSrc, /anim === 'walk' && (backRows|rows) > 1|usingBack[\s\S]{0,200}walk/,
   '背面表必须分行：站立 idle / 走路 walk');
 assert.match(farmerSrc, /blitSheet\([^)]*'r',\s*true\)/,
