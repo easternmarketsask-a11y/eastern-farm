@@ -75,12 +75,12 @@
       items: [
         {
           icon: 'sprout',
-          zh: { title: '种 · 收 · 交货', body: '点空地<b>种</b>下种子，熟了点一下<b>收</b>进谷仓，再去<b>东超告示牌</b>（谷仓旁边那块牌子）按订单<b>交货</b>换农场币。' },
+          zh: { title: '种 · 收 · 交货', body: '点空地<b>种</b>下种子，长熟之后点一下<b>收</b>进谷仓，再到谷仓旁边的<b>东超告示牌</b>按订单<b>交货</b>，换农场币。' },
           en: { title: 'Plant · harvest · deliver', body: 'Tap soil to <b>plant</b>, tap a ripe crop to <b>harvest</b> it into your barn, then take it to the <b>Eastern Market board</b> next to the barn and <b>fill an order</b> for coins.' },
         },
         {
           icon: 'can',
-          zh: { title: '让菜长得快一点', body: '点正在长的菜可以<b>浇水</b>，剩下的时间少两成；有化肥就<b>施肥</b>，收成翻倍。盖起<b>温室</b>或<b>水井</b>，全场一起快。忘了也不要紧——菜不会枯死，没有倒计时。' },
+          zh: { title: '让菜长得更快', body: '点正在生长的菜可以<b>浇水</b>，剩余时间减少两成；有化肥时可以<b>施肥</b>，收成加倍。建了<b>温室</b>或<b>水井</b>，全场作物一起加快。菜不会枯死，也没有倒计时，隔几天再来都可以。' },
           en: { title: 'Speed things up', body: 'Tap a growing crop to <b>water</b> it (20% off the time left) or <b>fertilize</b> (double the yield). A <b>greenhouse</b> or <b>well</b> speeds up the whole farm. Forget about it and nothing wilts — there are no timers here.' },
         },
       ],
@@ -91,37 +91,37 @@
       items: [
         {
           icon: 'board',
-          zh: { title: '按订单供货给东超', body: '点<b>东超告示牌</b>。每天有基础补货，还会不定期冒出订单，给的价是平常的一倍半到两倍多，大单更高。牌子顶上<b>提前五天</b>就告诉你要什么，照着备货就行。' },
+          zh: { title: '按订单供货给东超', body: '点开<b>东超告示牌</b>。每天有基础补货，另外还会不定期发布订单，价格是平常的一倍半到两倍，大单更高。告示牌顶部<b>提前五天</b>预告要收什么，可以照着提前备货。' },
           en: { title: 'Fill store orders', body: 'Tap the <b>Eastern Market board</b>. There are daily restocks plus orders that appear through the day, paying 1.5–2.2× the base price — big orders more. The board shows what is wanted <b>five days ahead</b>, so you can stock up.' },
         },
         {
           icon: 'wok',
-          zh: { title: '做成菜再卖', body: '<b>东超厨房</b>能把原料做成一道中餐，做好的菜比原料值钱一倍多。手上菜多的时候最划算。' },
+          zh: { title: '做成菜再卖', body: '<b>东超厨房</b>可以把原料做成一道中餐，成品比原料值钱一倍以上。谷仓存货多的时候，做成菜再卖更划算。' },
           en: { title: 'Cook it first', body: 'The <b>Kitchen</b> turns raw crops into a finished dish worth more than twice the ingredients. Best when your barn is full.' },
         },
         {
           icon: 'stall',
-          zh: { title: '摆个菜摊', body: '盖一个<b>菜摊</b>，隔一阵就有路人经过，买走一两棵，出价比平常高一截。不用你守着。' },
+          zh: { title: '自己摆菜摊', body: '建一个<b>菜摊</b>，会有路人陆续经过，买走一两棵，出价比平常高。不需要一直守着，回来收钱就可以。' },
           en: { title: 'Run a veggie stand', body: 'Build a <b>veggie stand</b> and passers-by will stop for a crop or two, paying above the base price. You do not need to be watching.' },
         },
       ],
     },
     {
-      zh: '把农场盖成自己的', en: 'Make it yours',
+      zh: '建设自己的农场', en: 'Make it yours',
       items: [
         {
           icon: 'house',
-          zh: { title: '盖自己的家', body: '30 款房子，从两格的农舍一路到七格的庄园——占地越大，画在农场上也真的越大。点现有的房子<b>改建</b>，只补差价。' },
+          zh: { title: '盖自己的家', body: '一共 30 款房子，从两格的农舍到七格的庄园。占地越大，在农场上看着也越大。点现有的房子<b>改建</b>，只补差价。' },
           en: { title: 'Build your home', body: '30 houses, from a 2×2 cottage to a 7×7 estate — the bigger the plot, the bigger it actually looks on your farm. Tap your house to <b>upgrade</b>; you pay only the difference.' },
         },
         {
           icon: 'car',
-          zh: { title: '买辆车，还能开', body: '16 辆车，越贵的跑越快（走路 2.2 格／秒，最贵的 9.0）。<b>点车上车，点哪儿开哪儿</b>。要走远路的时候，人自己会跑去把车开来。不加油、不会坏。' },
+          zh: { title: '买车，也可以开', body: '一共 16 辆车，越贵的跑得越快（走路每秒 2.2 格，最贵的 9.0）。<b>点车上车，再点想去的地方就开过去</b>。要走远路时，农户会自己去把车开来。不用加油，也不会坏。' },
           en: { title: 'Get a car and drive it', body: '16 cars — the pricier, the faster (walking is 2.2 cells/s, the top car 9.0). <b>Tap a car to get in, then tap anywhere to drive there.</b> For long trips your farmer goes and fetches the car on their own. No fuel, no breakdowns.' },
         },
         {
           icon: 'yard',
-          zh: { title: '布置院子', body: '37 种装饰和小动物，花圃、樱花树、风车、许愿池……摆错了按住拖着挪，拆掉退一半。地跟着等级解锁，另外还能自己<b>开垦 8 块</b>。' },
+          zh: { title: '布置院子', body: '37 种装饰和小动物：花圃、樱花树、风车、许愿池等等。位置不满意可以按住拖动，拆掉退回一半。地块随等级解锁，另外还可以自己<b>开垦 8 块</b>。' },
           en: { title: 'Decorate the yard', body: '37 decorations and animals — flower beds, cherry trees, a windmill, a wishing well. Press and drag to move anything; remove it and you get half back. Plots unlock as you level, plus <b>8 more you can clear yourself</b>.' },
         },
       ],
@@ -131,17 +131,17 @@
       items: [
         {
           icon: 'cal',
-          zh: { title: '来了就有得领', body: '每日<b>签到</b>（连签七天有大奖，漏了一天还有补签卡）、每天三个<b>任务</b>、每天免费转一次<b>大转盘</b>。五分钟的事。' },
+          zh: { title: '每天都有可以领的', body: '每日<b>签到</b>，连续七天有大奖，漏了一天可以用补签卡补上；每天三个<b>任务</b>；每天还可以免费转一次<b>大转盘</b>。五分钟就能领完。' },
           en: { title: 'Something every day', body: 'Daily <b>sign-in</b> (7 days in a row = big prize; miss one and a repair card covers you), three daily <b>tasks</b>, and one free <b>wheel spin</b>. Five minutes does it.' },
         },
         {
           icon: 'nbr',
-          zh: { title: '串门看街坊', body: '右下角<b>邻居</b>是今天在线的人，都是真的会员。进去帮人浇水，也能在熟了的地里顺一棵——<b>按半价留下菜钱</b>。叫上一个街坊，两个人各得 200 农场币。' },
+          zh: { title: '到街坊家串门', body: '右下角<b>邻居</b>列出今天在线的人。可以进去帮忙浇水，也可以在熟了的地里顺走一棵，<b>按半价留下菜钱</b>。叫上一个街坊，两个人各得 200 农场币。' },
           en: { title: 'Visit the neighbours', body: '<b>Neighbours</b> (bottom right) lists who is farming today — all real members. Water their crops, or take one ripe crop and <b>leave half the price behind</b>. Invite a neighbour and you both get 200 coins.' },
         },
         {
           icon: 'star',
-          zh: { title: '农场人生', body: '升级会收到东超的来信，每一章有几个小目标，做完领农场币。<b>农场日记</b>自己记下你的第一次收获、第一次改建、菜摊的第 50 位客人。' },
+          zh: { title: '农场人生', body: '升级会收到东超的来信，每一章有几个小目标，完成后领农场币。<b>农场日记</b>会自动记下你的第一次收获、第一次改建、菜摊的第 50 位客人。' },
           en: { title: 'Your farm story', body: 'Leveling up brings a letter from Eastern Market; each chapter has a few goals worth coins. The <b>Farm Diary</b> quietly records your first harvest, your first upgrade, customer #50 at the stand.' },
         },
       ],
@@ -151,17 +151,17 @@
       items: [
         {
           icon: 'coin',
-          zh: { title: '两种钱', body: '<b>农场币</b>天天花：种子、房子、车、装饰、开地。<b>东方积分</b>少得多，也值钱得多——顶配的豪宅和豪华车要用它买。' },
+          zh: { title: '两种钱', body: '<b>农场币</b>日常都在用：买种子、盖房子、买车、买装饰、开地。<b>东方积分</b>少得多，也珍贵得多，顶配的豪宅和豪华车要用它来买。' },
           en: { title: 'Two currencies', body: '<b>Farm coins</b> are for everyday play — seeds, houses, cars, décor, new plots. <b>Eastern points</b> are far scarcer and worth far more; the top-tier estates and luxury cars cost them.' },
         },
         {
           icon: 'card',
-          zh: { title: '积分是真的', body: '游戏里挣的<b>东方积分</b>，就是你会员卡上那本账，每天凌晨进账户，到店买菜直接抵钱。<b>每天有上限</b>，慢慢攒。' },
+          zh: { title: '积分是真的', body: '游戏里挣的<b>东方积分</b>，和你在店里消费攒的是同一本账，每天凌晨自动入账，到店买菜可以直接抵钱。<b>每天有上限</b>。' },
           en: { title: 'The points are real', body: 'The <b>Eastern points</b> you earn here are the same points on your member card. They sync to your account overnight and come off your grocery bill in store. There is a <b>daily cap</b>, so they build up over time.' },
         },
         {
           icon: 'lantern',
-          zh: { title: '过我们自己的节', body: '春节、清明、端午、中秋、重阳、冬至——每个节都有自己的活动、种子和音乐。收菜、交货、做任务都涨经验，<b>升级</b>解锁新的菜、新地块和新玩法。' },
+          zh: { title: '过我们自己的节', body: '春节、清明、端午、中秋、重阳、冬至，每个节日都有各自的活动、种子和音乐。收菜、交货、做任务都会涨经验，<b>升级</b>可以解锁新的菜、新的地块和新玩法。' },
           en: { title: 'Our own festivals', body: 'Spring Festival, Qingming, Dragon Boat, Mid-Autumn, Double Ninth, Winter Solstice — each brings its own event, seeds and music. Harvesting, delivering and tasks all give XP, and <b>leveling up</b> unlocks new crops, plots and features.' },
         },
       ],

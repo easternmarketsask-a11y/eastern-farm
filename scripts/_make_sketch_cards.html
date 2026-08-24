@@ -1,9 +1,8 @@
 <!doctype html>
 <meta charset="utf-8">
 <title>东方农场 · 简笔画海报</title>
-<!-- 字体走 Google Fonts CDN。⚠️ 无网络会静默回退成系统字体，出图前肉眼确认
-     标题是 ZCOOL XiaoWei 的书法骨架，不是黑体。渲染命令见 promo/README.md。
-     _logo.png 是抠掉白底的东方超市 logo，由 _make_poster_onart.logo_keyed() 生成。 -->
+<!-- 字体走 Google Fonts CDN；出图前肉眼确认标题是 ZCOOL XiaoWei 不是黑体。
+     _logo.png 由 _make_poster_onart.logo_keyed() 生成。渲染命令见 promo/README.md。 -->
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=ZCOOL+XiaoWei&family=Plus+Jakarta+Sans:wght@500;700&display=swap">
 <style>
 /* 🔒 ZCOOL XiaoWei 的「回」是坏字形（字体自带豆腐块，不回退）。
@@ -75,7 +74,7 @@ const P = [
 {
  eye:'为什么值得玩', zh:'越玩越省，<br>不是越玩越花',
  en:'Play to save, not to spend.',
- sub:'别的农场游戏让你往里充钱。这个里面没有一样东西要花真钱，玩出来的最后回到你的会员卡上。',
+ sub:'别的农场游戏靠卖道具赚钱。这里没有一样东西要花真钱，不管玩多久都不用花一分钱。',
  svg:`
   <path class="wash" d="M254 100h176v298l-176 6z"/>
   <path class="ink" d="M244 90h180v300l-22 14-23-14-22 14-23-14-22 14-23-14-22 14-23-14z"/>
@@ -98,9 +97,9 @@ const P = [
   <path class="hotline thin" d="M598 176l6 15 15 6-15 6-6 15-6-15-15-6 15-6z"/>`
 },
 {
- eye:'积分', zh:'积分回到会员卡，<br>下次买菜能抵',
- en:'Farm points land on your member card.',
- sub:'游戏里挣的东方积分，和在店里消费攒的是同一本账，到店直接能用。（每天有上限）',
+ eye:'积分', zh:'种菜挣的积分，<br>到店买菜能抵钱',
+ en:'Earn points farming. Spend them on groceries.',
+ sub:'和你在店里消费攒的是同一本账，不是另一套游戏币。每天有上限。',
  svg:`
   <circle class="wash" cx="286" cy="94" r="30"/>
   <circle class="ink" cx="282" cy="96" r="30"/>
@@ -124,9 +123,9 @@ const P = [
   <ellipse class="wash" cx="342" cy="440" rx="150" ry="16"/>`
 },
 {
- eye:'开局', zh:'现在进来，<br>先送 3000 农场币',
- en:'3,000 farm coins to start.',
- sub:'登录、留个邮箱就到账。<b>8 月 31 日截止。</b>',
+ eye:'开局', zh:'8 月 31 日前，<br>登录送 3000 农场币',
+ en:'Sign in before Aug 31 — 3,000 farm coins.',
+ sub:'留下邮箱，农场币就到账。买种子、盖房子、开地都用它。<b>过期不再发。</b>',
  svg:`
   <circle class="ink" cx="248" cy="140" r="28"/><circle class="ink thin" cx="248" cy="140" r="15"/>
   <circle class="wash" cx="342" cy="86" r="32"/>
@@ -180,9 +179,9 @@ const P = [
   <circle class="ink" cx="564" cy="224" r="48"/><circle class="ink thin" cx="564" cy="224" r="29"/>`
 },
 {
- eye:'不占时间', zh:'一天五分钟，<br>菜也不会枯死',
- en:'Five minutes a day. Nothing ever dies.',
- sub:'没有倒计时。有空收一收、种一种，几分钟的事。',
+ eye:'不占时间', zh:'隔几天再来，<br>菜都还在',
+ en:'Come back whenever. Nothing wilts.',
+ sub:'没有倒计时，一天五分钟就够。隔几天不来，也不会有任何损失。',
  svg:`
   <path class="ink thin" d="M196 232c-12-18 10-30-2-50M234 220c-12-18 10-30-2-50M272 232c-12-18 10-30-2-50"/>
   <ellipse class="wash" cx="240" cy="412" rx="120" ry="20"/>
@@ -202,9 +201,9 @@ const P = [
   </g>`
 },
 {
- eye:'一起玩', zh:'妈妈和孩子<br>一起玩',
- en:'Chinese and English, one tap apart.',
- sub:'中英双语随时切换：孩子看英文名，妈妈看中文名。',
+ eye:'一起玩', zh:'和孩子一起种，<br>中英文随时换',
+ en:'Play with your kids — in Chinese or English.',
+ sub:'孩子看英文名，你看中文名，一个键切过来。种熟一棵，下次逛超市他自己就认得出。',
  svg:`
   <ellipse class="wash" cx="330" cy="430" rx="240" ry="20"/>
   <circle class="ink" cx="224" cy="164" r="48"/>
@@ -239,7 +238,7 @@ const P = [
 {
  eye:'街坊', zh:'看看街坊家<br>的农场',
  en:'See what your neighbours are growing.',
- sub:'串门帮人浇水，也能顺走一棵熟了的菜——按半价留下菜钱。',
+ sub:'可以帮人浇水，也可以顺走一棵熟了的菜，按半价留下菜钱。',
  svg:`
   <ellipse class="wash" cx="330" cy="424" rx="292" ry="20"/>
   <path class="wash" d="M62 356v-84h108v84z"/>
@@ -278,9 +277,9 @@ const P = [
   </g>`
 },
 {
- eye:'我们的节日', zh:'过我们<br>自己的节',
- en:'Our own festivals, all year.',
- sub:'春节、清明、端午、中秋、重阳、冬至——每个节都有自己的活动、种子和音乐。',
+ eye:'我们的节日', zh:'我们的节日，<br>一个都不少',
+ en:'Every festival that matters to us.',
+ sub:'春节、清明、端午、中秋、重阳、冬至，每个节日都有各自的活动、种子和音乐。',
  svg:`
   <path class="ink thin" d="M46 70c150 26 468 26 574 0"/>
   <path class="ink thin" d="M124 74v26"/>
@@ -346,8 +345,8 @@ const P = [
 },
 {
  eye:'真实世界', zh:'外面下雨，<br>农场也下雨',
- en:'Live Saskatoon weather.',
- sub:'接萨斯卡通的实时天气。下雨那天全场的菜自动浇一遍——你不用管。',
+ en:'When it rains here, it rains there.',
+ sub:'接萨斯卡通的实时天气。下雨那天，全场的菜会自动浇一遍。',
  svg:`
   <path class="wash" d="M144 132c-38 0-38 56 0 56h186c44 0 44-62 0-60-8-36-62-40-76-6-22-14-54 2-54 24-22-8-36 2-36 22z"/>
   <path class="ink" d="M148 138c-40 0-40 58 0 58h184c46 0 46-64 0-62-8-38-64-42-78-6-22-14-56 2-56 24-22-8-38 2-38 22z"/>
@@ -367,9 +366,9 @@ const P = [
   <path class="ink" d="M387 388c17-5 28-20 26-36-19 4-29 19-26 36"/>`
 },
 {
- eye:'盖房子', zh:'从两格茅屋，<br>盖到七格庄园',
- en:'30 houses. Yours gets bigger.',
- sub:'四档 30 款。宅基地从 2×2 长到 7×7，房子越大，画在农场上真的越大。改建只补差价。',
+ eye:'盖房子', zh:'从一间茅屋，<br>盖成一座庄园',
+ en:'30 houses. Start small, end big.',
+ sub:'四档 30 款，越往上占地越大：从 2×2 的农舍到 7×7 的庄园，在农场上看着也越来越大。改建只补差价。',
  svg:`
   <ellipse class="wash" cx="330" cy="424" rx="292" ry="20"/>
   <path class="ink thin" d="M42 420c160 10 420 10 578-2"/>
@@ -405,9 +404,9 @@ const P = [
   <path class="hotline thin" d="M614 214l6 15 15 6-15 6-6 15-6-15-15-6 15-6z"/>`
 },
 {
- eye:'买车', zh:'贵多少，<br>就快多少',
- en:'16 cars. You are buying time.',
- sub:'走路 2.2 格／秒，最贵的车 9.0——快四倍。不加油、不会坏，猫狗还会自己跳上车斗。',
+ eye:'买车', zh:'挑一辆车，<br>农活快四倍',
+ en:'Pick a car. Get around 4x faster.',
+ sub:'一共 16 辆，从老皮卡到老爷车。走路每秒 2.2 格，最贵的车 9.0。不用加油，也不会坏，猫狗还会自己跳上车斗。',
  svg:`
   <ellipse class="wash" cx="336" cy="418" rx="266" ry="20"/>
   <path class="ink thin" d="M44 414c170 12 350 12 574-2"/>
@@ -437,7 +436,7 @@ const P = [
 {
  eye:'布置院子', zh:'院子摆成<br>自己的样子',
  en:'37 things to place. Drag them anywhere.',
- sub:'花圃、樱花树、风车、许愿池、灯笼……另有 13 种会走动的小动物。摆错了拖着挪，拆掉退一半。',
+ sub:'花圃、樱花树、风车、许愿池、灯笼等等，另有 13 种会走动的小动物。位置不满意可以拖着挪，拆掉退回一半。',
  svg:`
   <ellipse class="wash" cx="330" cy="420" rx="290" ry="20"/>
   <path class="ink thin" d="M66 400v-72M172 400v-72M278 400v-72M384 400v-72M490 400v-72M596 400v-72"/>
