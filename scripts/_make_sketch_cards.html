@@ -3,7 +3,8 @@
 <title>东方农场 · 简笔画海报</title>
 <!-- 重新生成时：字体走 Google Fonts CDN。⚠️ 无网络会静默回退成系统字体，
      出图前务必肉眼确认标题是 ZCOOL XiaoWei 的书法骨架，不是黑体。
-     渲染命令见 promo/README.md「简笔画卡片」一节。 -->
+     渲染命令见 promo/README.md「简笔画卡片」一节。
+     _logo.png 是抠掉白底的东方超市 logo，由 scripts/_make_poster_onart.logo_keyed() 生成。 -->
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=ZCOOL+XiaoWei&family=Plus+Jakarta+Sans:wght@500;700&display=swap">
 <style>
 /* 🔒 ZCOOL XiaoWei 的「回」是坏字形（字体自带豆腐块，不回退）。
@@ -26,25 +27,34 @@
 html,body{background:#888}
 .card{position:relative;width:1080px;height:1350px;background:var(--paper);
   overflow:hidden;display:flex;flex-direction:column}
-.frame{position:absolute;left:0;top:0;right:0;height:1124px;pointer-events:none;z-index:3}
-.eyebrow{position:absolute;top:74px;left:0;width:100%;text-align:center;
-  font:500 27px/1 var(--sans);letter-spacing:.34em;color:var(--green)}
-.art{flex:0 0 578px;margin-top:100px;display:flex;align-items:center;justify-content:center}
-.art svg{width:800px;height:auto;display:block}
+.frame{position:absolute;left:0;top:0;right:0;height:1146px;pointer-events:none;z-index:3}
+/* 🔒 抬头：东方超市 logo + 产品名。Chris 2026-08-23「所有宣传图都要有
+   东方超市 LOGO 以及东方农场」。EASTERN FARM 与中文并排同一行、不做下注脚
+   （CLAUDE.md 画面口味：「Eastern Farm 要醒目并跟中文拉开，不许当下注脚」）。 */
+.mast{flex:0 0 auto;margin:52px 0 0;display:flex;align-items:center;
+  justify-content:center;gap:24px}
+.mast img{height:66px;width:auto;display:block}
+.mast .bar{width:2px;height:48px;background:var(--ink);opacity:.2}
+.mast .names{display:flex;align-items:center;gap:18px}
+.mast .nzh{font:400 45px/1 var(--display);color:var(--deep)}
+.mast .nen{font:700 21px/1 var(--en);letter-spacing:.2em;color:var(--green)}
+.rule{flex:0 0 auto;margin:22px 86px 0;height:2px;background:var(--ink);opacity:.16}
+.art{flex:0 0 536px;margin-top:24px;display:flex;align-items:center;justify-content:center}
+.art svg{width:770px;height:auto;display:block}
 .words{flex:1 1 auto;padding:0 86px 30px;display:flex;flex-direction:column;justify-content:center}
-h1{font:400 82px/1.26 var(--display);color:var(--deep);letter-spacing:.02em;text-wrap:balance}
+h1{font:400 78px/1.26 var(--display);color:var(--deep);letter-spacing:.02em;text-wrap:balance}
 h1 .hot{color:var(--spark)}
 .en{margin-top:26px;font:700 35px/1.3 var(--en);color:var(--ink);opacity:.9}
-.sub{margin-top:22px;font:400 30px/1.6 var(--sans);color:var(--ink);opacity:.74;max-width:23em}
+.sub{margin-top:20px;font:400 29px/1.58 var(--sans);color:var(--ink);opacity:.74;max-width:23em}
 .sub b{color:var(--spark);font-weight:500;opacity:1}
-.band{flex:0 0 226px;background:var(--band);display:flex;align-items:center;
+.band{flex:0 0 204px;background:var(--band);display:flex;align-items:center;
   gap:38px;padding:0 76px;position:relative}
 .band::before{content:"";position:absolute;top:0;left:0;right:0;height:4px;
   background:repeating-linear-gradient(90deg,var(--ink) 0 13px,transparent 13px 26px);opacity:.36}
-.band img{width:158px;height:158px;display:block;border-radius:6px}
-.bt1{font:400 42px/1.15 var(--display);color:var(--deep)}
-.bt2{margin-top:11px;font:700 33px/1.15 var(--en);color:var(--green)}
-.bt3{margin-top:11px;font:400 25px/1.2 var(--sans);color:var(--ink);opacity:.62}
+.band img{width:142px;height:142px;display:block;border-radius:6px}
+.bt1{font:400 39px/1.15 var(--display);color:var(--deep)}
+.bt2{margin-top:10px;font:700 31px/1.15 var(--en);color:var(--green)}
+.bt3{margin-top:10px;font:400 24px/1.2 var(--sans);color:var(--ink);opacity:.62}
 svg .ink{fill:none;stroke:var(--ink);stroke-width:7.5;stroke-linecap:round;stroke-linejoin:round}
 svg .thin{stroke-width:4.6}
 svg .hair{stroke-width:5.6}
@@ -195,7 +205,7 @@ const P = [
 {
  eye:'一起玩', zh:'妈妈和孩子<br>一起玩',
  en:'Chinese and English, one tap apart.',
- sub:'全站中英双语随时切换：孩子看英文名，妈妈看中文名。',
+ sub:'中英双语随时切换：孩子看英文名，妈妈看中文名。',
  svg:`
   <ellipse class="wash" cx="330" cy="430" rx="240" ry="20"/>
   <circle class="ink" cx="224" cy="164" r="48"/>
@@ -356,7 +366,7 @@ const P = [
   <path class="ink" d="M387 388c17-5 28-20 26-36-19 4-29 19-26 36"/>`
 }];
 
-const FRAME = `<svg class="frame" viewBox="0 0 1080 1124" preserveAspectRatio="none">
+const FRAME = `<svg class="frame" viewBox="0 0 1080 1146" preserveAspectRatio="none">
   <path d="M40 44C300 36 780 52 1040 42" fill="none" stroke="var(--ink)" stroke-width="5"
         stroke-linecap="round" opacity=".55"/>
   <path d="M42 48C34 360 50 800 44 1090" fill="none" stroke="var(--ink)" stroke-width="5"
@@ -367,7 +377,12 @@ const FRAME = `<svg class="frame" viewBox="0 0 1080 1124" preserveAspectRatio="n
 
 function card(p){
   return `<div class="card">${FRAME}
-    <div class="eyebrow">${[...p.eye].join(' ')}</div>
+    <div class="mast">
+      <img src="_logo.png" alt="东方超市 Eastern Market">
+      <span class="bar"></span>
+      <span class="names"><span class="nzh">东方农场</span><span class="nen">EASTERN FARM</span></span>
+    </div>
+    <div class="rule"></div>
     <div class="art"><svg viewBox="0 0 660 470">${p.svg}</svg></div>
     <div class="words">
       <h1>${p.zh}</h1>
@@ -379,7 +394,7 @@ function card(p){
       <div>
         <div class="bt1">扫码就能玩</div>
         <div class="bt2">farm.easternmarket.ca</div>
-        <div class="bt3">东方超市出品 · 免费 · 不用下载</div>
+        <div class="bt3">免费 · 不用下载 · 不用注册</div>
       </div>
     </div>
   </div>`;

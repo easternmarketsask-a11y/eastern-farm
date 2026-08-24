@@ -79,6 +79,53 @@ def make_qr(px):
     return Image.open(buf).convert('RGBA').resize((px, px), Image.Resampling.LANCZOS)
 
 
+_LOGO_KEYED = None
+
+
+def logo_keyed():
+    """logo-horizontal.png 是白底 RGB，直接贴在奶油纸上会露出白方块。
+    从四角洪水抠白 —— 橙块里的「東方超市」四个白字被橙色围住，洪水到不了，
+    所以不会被误抠（换 logo 后请重新确认这一点）。"""
+    global _LOGO_KEYED
+    if _LOGO_KEYED is None:
+        im = Image.open(LOGO).convert('RGBA')
+        for c in ((0, 0), (im.width - 1, 0), (0, im.height - 1), (im.width - 1, im.height - 1)):
+            ImageDraw.floodfill(im, c, (0, 0, 0, 0), thresh=70)
+        _LOGO_KEYED = im.crop(im.split()[3].getbbox())
+    return _LOGO_KEYED
+
+
+def brand_lockup(canvas, draw, canvas_w, y, logo_h=38):
+    """一行居中的品牌抬头：[东方超市 logo] │ 东方农场  Eastern Farm
+
+    Chris 2026-08-23：「所有这些宣传图都要有东方超市 LOGO 以及东方农场。」
+    🔒 唯一实现 —— feature-cards 和 house/car 两个脚本都调它，别再各抄一份
+    （原来那两份 kicker 代码就是抄重的，改一处忘一处）。
+    🔒 Eastern Farm 与中文**并排同一行**，不做中文底下的小注脚
+    （CLAUDE.md 画面口味：「Eastern Farm 要醒目并跟中文拉开」）。
+    返回这一行占用的高度。
+    """
+    logo = logo_keyed()
+    lw = int(logo.width * logo_h / logo.height)
+    logo = logo.resize((lw, logo_h), Image.Resampling.LANCZOS)
+    zh_f = vf(SANS, 26, 600, SANS_BD)
+    en_f = ImageFont.truetype(GEORGIA, 19)
+    zh, en = '东方农场', 'Eastern Farm'
+    zh_w, _ = measure(draw, zh, zh_f)
+    en_w, _ = measure(draw, en, en_f)
+    gap, bar_w = 16, 2
+    total = lw + gap + bar_w + gap + zh_w + 14 + en_w
+    x = (canvas_w - total) / 2
+    canvas.paste(logo, (int(x), int(y)), logo)
+    x += lw + gap
+    draw.rectangle([x, y + 5, x + bar_w, y + logo_h - 5], fill=(42, 74, 40, 90))
+    x += bar_w + gap
+    draw.text((x, y + logo_h / 2 - 15), zh, font=zh_f, fill=INK)
+    x += zh_w + 14
+    draw.text((x, y + logo_h / 2 - 11), en, font=en_f, fill=FOREST)
+    return logo_h
+
+
 def paste_logo(canvas, w, top, max_w):
     logo = Image.open(LOGO).convert('RGBA')
     lw = max_w

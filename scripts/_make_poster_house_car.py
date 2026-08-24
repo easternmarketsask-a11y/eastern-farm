@@ -9,7 +9,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from _make_poster_onart import (
     ROOT, CREAM, INK, FOREST,
-    vf, cover, spaced, center, paste_logo, kicker_pill, make_qr,
+    vf, cover, spaced, center, paste_logo, kicker_pill, make_qr, brand_lockup,
     SERIF, SANS, SANS_BD, GEORGIA, measure,
 )
 from _make_poster_community import dusk, scan_bar
@@ -33,17 +33,10 @@ def square(art_path, stem, bias_y, zh, en):
     ld.rectangle([0, top + 8, SIZE, top + 11], fill=(42, 74, 40, 220))
     canvas = Image.alpha_composite(canvas, layer)
     draw = ImageDraw.Draw(canvas)
-    kick = vf(SANS, 22, 600, SANS_BD)
-    kick_en = ImageFont.truetype(GEORGIA, 18)
     zh_f = vf(SANS, 36, 700, SANS_BD)
     en_f = ImageFont.truetype(GEORGIA, 22)
-    y = top + 22
-    kw, _ = measure(draw, '东方农场  ·  Eastern Farm', kick)
-    kx = (SIZE - kw) / 2
-    draw.text((kx, y), '东方农场  ·  ', font=kick, fill=FOREST)
-    mid_w, _ = measure(draw, '东方农场  ·  ', kick)
-    draw.text((kx + mid_w, y + 2), 'Eastern Farm', font=kick_en, fill=FOREST)
-    y += 40
+    y = top + 20
+    y += brand_lockup(canvas, draw, SIZE, y) + 12
     zw, zh_h = measure(draw, zh, zh_f)
     draw.text(((SIZE - zw) / 2, y), zh, font=zh_f, fill=INK)
     y += zh_h + 8

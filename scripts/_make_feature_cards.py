@@ -5,7 +5,8 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from _make_poster_onart import vf, cover, measure, SANS, SANS_BD, GEORGIA, CREAM, INK, FOREST
+from _make_poster_onart import (vf, cover, measure, brand_lockup,
+                                SANS, SANS_BD, GEORGIA, CREAM, INK, FOREST)
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SRC = os.path.join(ROOT, 'promo', 'feature-cards')
@@ -24,7 +25,7 @@ CARDS = [
     ('05-invite', '_art-invite.jpg',
      '邀请好友，双方各得 200 农场币', 'Invite a friend — 200 coins each'),
     ('06-orders', '_art-orders.jpg',
-     '给小东送货，比散卖更划算', 'Fill store orders. They pay better.'),
+     '给东超送货，比散卖更划算', 'Fill store orders. They pay better.'),
 ]
 
 
@@ -52,19 +53,11 @@ def card(stem, art_name, zh, en):
     canvas = Image.alpha_composite(canvas, layer)
     draw = ImageDraw.Draw(canvas)
 
-    kick = vf(SANS, 22, 600, SANS_BD)
-    kick_en = ImageFont.truetype(GEORGIA, 18)
     zh_f, _, zh_h = fit_zh(draw, zh, SIZE - 72)
     en_f = ImageFont.truetype(GEORGIA, 24)
 
-    y = top + 22
-    kw, _ = measure(draw, '东方农场  ·  Eastern Farm', kick)
-    kx = (SIZE - kw) / 2
-    draw.text((kx, y), '东方农场  ·  ', font=kick, fill=FOREST)
-    mid_w, _ = measure(draw, '东方农场  ·  ', kick)
-    draw.text((kx + mid_w, y + 2), 'Eastern Farm', font=kick_en, fill=FOREST)
-
-    y += 40
+    y = top + 20
+    y += brand_lockup(canvas, draw, SIZE, y) + 12
     zw, _ = measure(draw, zh, zh_f)
     draw.text(((SIZE - zw) / 2, y), zh, font=zh_f, fill=INK)
     y += zh_h + 10

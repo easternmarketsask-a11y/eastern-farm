@@ -8,6 +8,31 @@ FarmVille）都是免费入门 + 内购逼氪 —— **你往游戏里掏钱**�
 
 ---
 
+## 🔒 每张对外的图都要有 LOGO + 东方农场（2026-08-23 Chris 定）
+
+Chris：「所有这些宣传图都要有东方超市 LOGO 以及东方农场。」
+
+| 哪一套 | 抬头长什么样 | 谁画的 |
+|---|---|---|
+| 手机海报 / A4 / 桌牌 | 顶部 logo 牌 + 东方农场 / Eastern Farm | `paste_logo()` |
+| feature-cards（油画方卡） | 底栏 `[logo] │ 东方农场  Eastern Farm` | `brand_lockup()` |
+| sketch-cards（简笔画） | 顶部同款一行抬头 | `_make_sketch_cards.html` 的 `.mast` |
+| hero-* / keyart-*（无字底图） | **原图不动**，带牌版在 `branded/` | `_make_branded_art.py` |
+
+🔒 **`brand_lockup()` 是唯一实现**（`scripts/_make_poster_onart.py`），
+feature-cards 与 house/car 两个脚本都调它。原来那两处各抄了一份 kicker 代码，
+改一处忘一处 —— 别再抄第三份。
+
+🔒 **Eastern Farm 和中文并排同一行**，不做中文底下的小注脚
+（CLAUDE.md 画面口味：「Eastern Farm 要醒目并跟中文拉开」）。
+
+🔒 **logo 源文件 `src/assets/images/logo-horizontal.png` 是白底 RGB**，
+直接贴在奶油纸上会露出白方块。一律走 `logo_keyed()`：从四角洪水抠白，
+橙块里的「東方超市」四个白字被橙色围住、洪水到不了，所以不会被误抠。
+**换 logo 之后要重新确认这一点。**
+
+---
+
 ## 📁 这个文件夹里有什么
 
 | 文件 | 用途 | 怎么用 |
@@ -35,6 +60,7 @@ FarmVille）都是免费入门 + 内购逼氪 —— **你往游戏里掏钱**�
 | `poster-phone-onart-05-community.png` | **社区宣传**（串门看邻居） | 朋友圈 / 微信群；构图同 04c，不覆盖店内主海报 |
 | `poster-phone-onart-06-house.png` | **盖房子**竖版 | 微信群 / 朋友圈，带扫码 |
 | `poster-phone-onart-07-cars.png` | **汽车**竖版 | 微信群 / 朋友圈，带扫码 |
+| `branded/` | **带牌版底图**（hero / keyart 压上 logo + 东方农场） | 直接发朋友圈 / 店内电视 / 网页横幅时用这一份；根目录那些无字原图留作海报底图与**美术对照基准**，不许覆盖 |
 | `feature-cards/01`–`06` | **功能小图 1080×1080** | 微信一条一图。积分、店里的菜、盖房子、串门、邀请、小东订单 |
 | `feature-cards/03b-house` / `07-cars` | 房子新图 / 汽车 | 一条一图。汽车：商店 → 汽车 |
 | `poster-phone-onart-04d.png` | 备选 D 对联上天 | 承诺句在天空，店名贴扫码栏 |
