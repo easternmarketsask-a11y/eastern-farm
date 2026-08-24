@@ -491,7 +491,7 @@
       { a: 'orders', icon: 'orders', zh: '东超订单', en: 'Orders' },
       { a: 'storeRewards', icon: 'receipt', zh: '领取到店奖励', en: 'Store Rewards' },
       { a: 'story', icon: 'story', zh: '农场人生', en: 'My Story' },
-      { a: 'kitchen', icon: 'kitchen', zh: '东超厨房', en: 'Kitchen' },
+      { a: 'kitchen', icon: 'kitchen', zh: '农场厨房', en: 'Farm Kitchen' },
       { a: 'community', icon: 'community', zh: '社区', en: 'Community' },
       { a: 'expand', icon: 'expand', zh: '开垦农田', en: 'Clear land' },
       { a: 'collection', icon: 'collection', zh: '图鉴', en: 'Collection' },

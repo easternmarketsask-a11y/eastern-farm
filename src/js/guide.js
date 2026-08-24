@@ -96,18 +96,18 @@
         },
         {
           icon: 'wok',
-          zh: { title: '做成菜再卖', body: '<b>东超厨房</b>可以把原料做成一道中餐，成品比原料值钱一倍以上。谷仓存货多的时候，做成菜再卖更划算。' },
-          en: { title: 'Cook it first', body: 'The <b>Kitchen</b> turns raw crops into a finished dish worth more than twice the ingredients. Best when your barn is full.' },
+          zh: { title: '农场厨房', body: '<b>农场厨房</b>可以把原料做成一道中餐，成品比原料值钱一倍以上。谷仓存货多的时候，做成菜再卖更划算。' },
+          en: { title: 'Farm Kitchen', body: 'The <b>Farm Kitchen</b> turns raw crops into a finished dish worth more than twice the ingredients. Best when your barn is full.' },
         },
         {
           icon: 'stall',
-          zh: { title: '自己摆菜摊', body: '建一个<b>菜摊</b>，会有路人陆续经过，买走一两棵，出价比平常高。不需要一直守着，回来收钱就可以。' },
+          zh: { title: '摆个菜摊', body: '建一个<b>菜摊</b>，会有路人陆续经过，买走一两棵，出价比平常高。不需要一直守着，回来收钱就可以。' },
           en: { title: 'Run a veggie stand', body: 'Build a <b>veggie stand</b> and passers-by will stop for a crop or two, paying above the base price. You do not need to be watching.' },
         },
       ],
     },
     {
-      zh: '建设自己的农场', en: 'Make it yours',
+      zh: '建设农场', en: 'Build your farm',
       items: [
         {
           icon: 'house',
@@ -116,8 +116,8 @@
         },
         {
           icon: 'car',
-          zh: { title: '买车，也可以开', body: '一共 16 辆车，越贵的跑得越快（走路每秒 2.2 格，最贵的 9.0）。<b>点车上车，再点想去的地方就开过去</b>。要走远路时，农户会自己去把车开来。不用加油，也不会坏。' },
-          en: { title: 'Get a car and drive it', body: '16 cars — the pricier, the faster (walking is 2.2 cells/s, the top car 9.0). <b>Tap a car to get in, then tap anywhere to drive there.</b> For long trips your farmer goes and fetches the car on their own. No fuel, no breakdowns.' },
+          zh: { title: '农场车辆', body: '一共 16 辆车，越贵的跑得越快（走路每秒 2.2 格，最贵的 9.0）。<b>点车上车，再点想去的地方就开过去</b>。要走远路时，农户会自己去把车开来。不用加油，也不会坏。' },
+          en: { title: 'Farm vehicles', body: '16 cars — the pricier, the faster (walking is 2.2 cells/s, the top car 9.0). <b>Tap a car to get in, then tap anywhere to drive there.</b> For long trips your farmer goes and fetches the car on their own. No fuel, no breakdowns.' },
         },
         {
           icon: 'yard',
@@ -131,13 +131,13 @@
       items: [
         {
           icon: 'cal',
-          zh: { title: '每天都有可以领的', body: '每日<b>签到</b>，连续七天有大奖，漏了一天可以用补签卡补上；每天三个<b>任务</b>；每天还可以免费转一次<b>大转盘</b>。五分钟就能领完。' },
-          en: { title: 'Something every day', body: 'Daily <b>sign-in</b> (7 days in a row = big prize; miss one and a repair card covers you), three daily <b>tasks</b>, and one free <b>wheel spin</b>. Five minutes does it.' },
+          zh: { title: '每日签到有奖', body: '每日<b>签到</b>，连续七天有大奖，漏了一天可以用补签卡补上；每天三个<b>任务</b>；每天还可以免费转一次<b>大转盘</b>。五分钟就能领完。' },
+          en: { title: 'Daily sign-in rewards', body: 'Daily <b>sign-in</b> (7 days in a row = big prize; miss one and a repair card covers you), three daily <b>tasks</b>, and one free <b>wheel spin</b>. Five minutes does it.' },
         },
         {
           icon: 'nbr',
-          zh: { title: '到街坊家串门', body: '右下角<b>邻居</b>列出今天在线的人。可以进去帮忙浇水，也可以在熟了的地里顺走一棵，<b>按半价留下菜钱</b>。叫上一个街坊，两个人各得 200 农场币。' },
-          en: { title: 'Visit the neighbours', body: '<b>Neighbours</b> (bottom right) lists who is farming today — all real members. Water their crops, or take one ripe crop and <b>leave half the price behind</b>. Invite a neighbour and you both get 200 coins.' },
+          zh: { title: '天天串门', body: '右下角<b>邻居</b>列出今天在线的人。可以进去帮忙浇水，也可以在熟了的地里顺走一棵，<b>按半价留下菜钱</b>。叫上一个街坊，两个人各得 200 农场币。' },
+          en: { title: 'Visit every day', body: '<b>Neighbours</b> (bottom right) lists who is farming today — all real members. Water their crops, or take one ripe crop and <b>leave half the price behind</b>. Invite a neighbour and you both get 200 coins.' },
         },
         {
           icon: 'star',
@@ -151,18 +151,18 @@
       items: [
         {
           icon: 'coin',
-          zh: { title: '两种钱', body: '<b>农场币</b>日常都在用：买种子、盖房子、买车、买装饰、开地。<b>东方积分</b>少得多，也珍贵得多，顶配的豪宅和豪华车要用它来买。' },
-          en: { title: 'Two currencies', body: '<b>Farm coins</b> are for everyday play — seeds, houses, cars, décor, new plots. <b>Eastern points</b> are far scarcer and worth far more; the top-tier estates and luxury cars cost them.' },
+          zh: { title: '农场币与东超积分', body: '<b>农场币</b>日常都在用：买种子、盖房子、买车、买装饰、开地。<b>超市积分</b>少得多，也珍贵得多，顶配的豪宅和豪华车要用它来买。' },
+          en: { title: 'Farm coins and store points', body: '<b>Farm coins</b> are for everyday play — seeds, houses, cars, décor, new plots. <b>Store points</b> are far scarcer and worth far more; the top-tier estates and luxury cars cost them.' },
         },
         {
           icon: 'card',
-          zh: { title: '积分是真的', body: '游戏里挣的<b>东方积分</b>，和你在店里消费攒的是同一本账，每天凌晨自动入账，到店买菜可以直接抵钱。<b>每天有上限</b>。' },
-          en: { title: 'The points are real', body: 'The <b>Eastern points</b> you earn here are the same points on your member card. They sync to your account overnight and come off your grocery bill in store. There is a <b>daily cap</b>, so they build up over time.' },
+          zh: { title: '玩游戏赚超市积分', body: '游戏里挣的<b>超市积分</b>，和你在店里消费攒的是同一本账，每天凌晨自动入账，到店买菜可以直接抵钱。<b>每天有上限</b>。' },
+          en: { title: 'Earn real store points', body: 'The <b>store points</b> you earn here are the same points on your member card. They sync to your account overnight and come off your grocery bill in store. There is a <b>daily cap</b>, so they build up over time.' },
         },
         {
           icon: 'lantern',
-          zh: { title: '过我们自己的节', body: '春节、清明、端午、中秋、重阳、冬至，每个节日都有各自的活动、种子和音乐。收菜、交货、做任务都会涨经验，<b>升级</b>可以解锁新的菜、新的地块和新玩法。' },
-          en: { title: 'Our own festivals', body: 'Spring Festival, Qingming, Dragon Boat, Mid-Autumn, Double Ninth, Winter Solstice — each brings its own event, seeds and music. Harvesting, delivering and tasks all give XP, and <b>leveling up</b> unlocks new crops, plots and features.' },
+          zh: { title: '节日活动', body: '春节、清明、端午、中秋、重阳、冬至，每个节日都有各自的活动、种子和音乐。收菜、交货、做任务都会涨经验，<b>升级</b>可以解锁新的菜、新的地块和新玩法。' },
+          en: { title: 'Festival events', body: 'Spring Festival, Qingming, Dragon Boat, Mid-Autumn, Double Ninth, Winter Solstice — each brings its own event, seeds and music. Harvesting, delivering and tasks all give XP, and <b>leveling up</b> unlocks new crops, plots and features.' },
         },
       ],
     },
@@ -201,7 +201,7 @@
           ${body}
           <div class="btn-row" style="margin-top:16px;">
             <button class="btn" id="guideStartBtn" style="flex:1;font-size:15px;padding:14px;">
-              🌱 ${EN ? "Let's farm!" : '开始种菜'}
+              🌱 ${EN ? 'Back to the farm' : '回到农场'}
             </button>
           </div>
         </div>

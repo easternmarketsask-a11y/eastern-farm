@@ -16,7 +16,7 @@
     { "id": "harvest_15", "type": "harvest", "target": 15, "title_zh": "收获 15 次", "title_en": "Harvest 15 times", "reward_coins": 120, "reward_points": 0, "min_level": 5 },
     { "id": "earn_2000", "type": "earn_coins", "target": 2000, "title_zh": "卖货或交订单赚 2000 金币", "title_en": "Earn 2000 coins from sales or orders", "reward_coins": 300, "reward_points": 0, "min_level": 6 },
     { "id": "earn_5000", "type": "earn_coins", "target": 5000, "title_zh": "卖货或交订单赚 5000 金币", "title_en": "Earn 5000 coins from sales or orders", "reward_coins": 800, "reward_points": 0, "min_level": 9 },
-    { "id": "cook_2", "type": "cook", "target": 2, "title_zh": "在东超厨房做 2 道菜", "title_en": "Cook 2 dishes in Eastern Market's Kitchen", "reward_coins": 150, "reward_points": 0, "min_level": 6 }
+    { "id": "cook_2", "type": "cook", "target": 2, "title_zh": "在农场厨房做 2 道菜", "title_en": "Cook 2 dishes in Eastern Market's Kitchen", "reward_coins": 150, "reward_points": 0, "min_level": 6 }
   ],
 
   "weekly": [

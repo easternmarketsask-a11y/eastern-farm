@@ -1,5 +1,5 @@
 {
-  "_comment": "东超厨房菜谱（kitchen.js 加载）。ingredients 消耗仓库作物；sell_price ≈ 原料散卖价 ×2~2.5（加工溢价，给长线作物需求端出口）；xp ≈ 原料 XP 合计 ×1.5。改这里即可调菜谱，无需动代码。unlock_level 控制解锁。",
+  "_comment": "农场厨房菜谱（kitchen.js 加载）。ingredients 消耗仓库作物；sell_price ≈ 原料散卖价 ×2~2.5（加工溢价，给长线作物需求端出口）；xp ≈ 原料 XP 合计 ×1.5。改这里即可调菜谱，无需动代码。unlock_level 控制解锁。",
   "_schema_version": 1,
 
   "recipes": [
