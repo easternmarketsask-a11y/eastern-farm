@@ -17,7 +17,7 @@ CARDS = [
     ('01-points', '_art-points.jpg',
      '积分每天进会员卡', 'Points land on your member card'),
     ('02-crops', '_art-crops.jpg',
-     '种的是店里在卖的菜', 'Grow what we sell in store'),
+     '店里的新鲜菜和水果，都能自己种', 'Grow the produce you actually buy'),
     ('03-house', '_art-house.jpg',
      '盖自己的家，一档一档换', 'Build and upgrade your house'),
     ('04-neighbors', '_art-neighbors.jpg',

@@ -314,9 +314,9 @@ const P = [
   <path class="ink" d="M512 206c12-14 26-16 38-8-10 10-24 14-38 8"/>`
 },
 {
- eye:'种什么', zh:'种的都是<br>店里在卖的菜',
- en:'43 real vegetables. All on our shelves.',
- sub:'青菜、韭菜、茄子、冬瓜、荔枝……孩子在游戏里认识，妈妈在店里买得到。',
+ eye:'种什么', zh:'店里的新鲜菜和水果，<br>都能自己种',
+ en:'Grow the produce you actually buy.',
+ sub:'43 种。青菜、韭菜、茄子、冬瓜、荔枝……孩子在游戏里种熟一棵，下次逛超市自己就认得出。',
  svg:`
   <path class="wash" d="M170 214c-8-40 2-68 26-78 24 10 34 38 26 78z"/>
   <path class="ink" d="M166 216c-9-42 2-72 28-82 26 10 37 40 28 82z"/>
@@ -332,9 +332,11 @@ const P = [
   <path class="ink" d="M399 116c-13 4-22 13-26 27 12 2 21-6 26-17"/>
   <path class="ink" d="M399 116c13 4 22 13 26 27-12 2-21-6-26-17"/>
   <path class="ink thin" d="M399 112v-21"/>
-  <path class="hot" d="M502 138c30 17 38 65 21 105-13-14-21-38-23-65-2-17 0-31 2-40z"/>
-  <path class="ink" d="M498 134C530 151 538 200 521 242 506 200 492 164 498 134Z"/>
-  <path class="ink" d="M498 134l-4-21q15-10 27 0"/>
+  <path class="hot" d="M504 152c30 0 46 24 46 52s-20 48-46 48-46-20-46-48 16-52 46-52z"/>
+  <circle class="ink" cx="500" cy="204" r="48"/>
+  <path class="ink" d="M500 156c-2-16 4-28 16-34 4 14-2 26-16 34"/>
+  <path class="ink thin" d="M498 156c-12-10-26-10-34-2 10 10 24 12 34 2"/>
+  <path class="ink thin" d="M476 186c4-10 12-17 22-19"/>
   <path class="wash" d="M130 258h404l-38 116H168z"/>
   <path class="ink" d="M116 254h432l-43 128H159z"/>
   <path class="ink" d="M116 254c108 22 324 22 432 0"/>
@@ -376,53 +378,61 @@ const P = [
   <path class="ink" d="M44 348l45-34 45 34"/>
   <path class="ink thin" d="M78 402v-28h22v28"/>
   <path class="ink thin" d="M110 322v-18h14v28"/>
-  <path class="wash" d="M186 402v-92h104v92z"/>
-  <path class="ink" d="M180 402v-96h114v96z"/>
-  <path class="ink" d="M164 308l73-56 73 56"/>
-  <path class="ink thin" d="M214 402v-46h36v46"/>
-  <path class="ink thin" d="M192 322h30v28h-30zM254 322h30v28h-30z"/>
-  <path class="ink thin" d="M274 262v-26h18v40"/>
-  <path class="wash" d="M368 402V232h222v170z"/>
-  <path class="ink" d="M360 402V228h236v174z"/>
-  <path class="ink" d="M340 232l138-96 138 96"/>
-  <path class="ink" d="M430 402v-74h56v74"/>
-  <path class="ink thin" d="M452 366h12"/>
-  <path class="ink thin" d="M382 262h48v40h-48zM508 262h48v40h-48z"/>
-  <path class="ink thin" d="M382 330h30v34h-30zM526 330h30v34h-30z"/>
-  <path class="ink thin" d="M556 158v-34h22v50"/>
-  <path class="ink thin" d="M404 178v-26h18v38"/>
-  <path class="ink thin" d="M478 136v-22"/>
-  <path class="hotline thin" d="M478 114l5 13 13 5-13 5-5 13-5-13-13-5 13-5z"/>`
+  <path class="wash" d="M186 402v-88h100v88z"/>
+  <path class="ink" d="M180 402v-92h112v92z"/>
+  <path class="ink" d="M164 312l72-54 72 54"/>
+  <path class="ink thin" d="M212 402v-42h34v42"/>
+  <path class="ink thin" d="M192 326h26v26h-26zM254 326h26v26h-26z"/>
+  <path class="ink thin" d="M270 268v-24h18v38"/>
+  <path class="wash" d="M368 402V254h216v148z"/>
+  <path class="ink" d="M360 402V250h232v152"/>
+  <path class="ink" d="M344 252l62-74h140l62 74z"/>
+  <path class="ink thin" d="M406 178h140"/>
+  <path class="ink" d="M394 252v-34l17-18 17 18v34"/>
+  <path class="ink thin" d="M402 250v-24h18v24"/>
+  <path class="ink" d="M524 252v-34l17-18 17 18v34"/>
+  <path class="ink thin" d="M532 250v-24h18v24"/>
+  <path class="ink thin" d="M368 190v-42h24v52M560 190v-42h24v52"/>
+  <path class="ink" d="M436 402v-84h80v84"/>
+  <path class="ink" d="M432 318l44-32 44 32"/>
+  <path class="ink" d="M452 402v-56h48v56"/>
+  <path class="ink thin" d="M476 346v56"/>
+  <path class="ink thin" d="M448 402v-84M504 402v-84"/>
+  <path class="ink thin" d="M424 402h104M418 412h116"/>
+  <path class="ink thin" d="M382 288h34v58h-34zM382 288v58M399 288v58"/>
+  <path class="ink thin" d="M536 288h34v58h-34zM553 288v58"/>
+  <path class="ink thin" d="M382 317h34M536 317h34"/>
+  <path class="hotline thin" d="M614 214l6 15 15 6-15 6-6 15-6-15-15-6 15-6z"/>`
 },
 {
  eye:'买车', zh:'贵多少，<br>就快多少',
  en:'16 cars. You are buying time.',
  sub:'走路 2.2 格／秒，最贵的车 9.0——快四倍。不加油、不会坏，猫狗还会自己跳上车斗。',
  svg:`
-  <ellipse class="wash" cx="360" cy="412" rx="248" ry="18"/>
-  <path class="ink thin" d="M92 408c150 10 340 10 494-2"/>
-  <path class="ink thin" d="M60 246h74M40 292h58M74 340h68"/>
-  <path class="wash" d="M206 288h146v66H206z"/>
-  <path class="ink" d="M198 356V284h158v72"/>
-  <path class="ink thin" d="M198 310h158"/>
-  <path class="wash" d="M356 252h108l30 50v54H356z"/>
-  <path class="ink" d="M356 356V248h96q14 0 22 12l28 44v52"/>
-  <path class="ink thin" d="M376 268h62v40h-62z"/>
-  <path class="ink thin" d="M452 268h20l22 38h-42z"/>
-  <path class="ink" d="M502 356v-26q0-10-10-10"/>
-  <path class="ink" d="M180 356h330"/>
-  <circle class="ink" cx="250" cy="368" r="34"/>
-  <circle class="ink thin" cx="250" cy="368" r="15"/>
-  <circle class="ink" cx="440" cy="368" r="34"/>
-  <circle class="ink thin" cx="440" cy="368" r="15"/>
-  <circle class="ink" cx="268" cy="250" r="28"/>
-  <path class="ink" d="M243 238c-13 2-19 16-14 30 11 2 18-10 18-24"/>
-  <path class="ink" d="M293 238c13 2 19 16 14 30-11 2-18-10-18-24"/>
-  <circle class="dot" cx="258" cy="246" r="4"/><circle class="dot" cx="278" cy="246" r="4"/>
-  <ellipse class="dot" cx="268" cy="262" rx="6" ry="4"/>
-  <path class="ink thin" d="M268 266v5M262 274q6 5 12 0"/>
-  <path class="hotline thin" d="M162 372c-14 6-22 18-20 30 14 4 26-6 30-20"/>
-  <path class="hotline thin" d="M124 388c-12 4-18 14-16 24 12 2 22-6 24-16"/>`
+  <ellipse class="wash" cx="336" cy="418" rx="266" ry="20"/>
+  <path class="ink thin" d="M44 414c170 12 350 12 574-2"/>
+  <path class="ink thin" d="M40 226h66M18 274h52M36 330h60"/>
+  <path class="wash" d="M116 372v-38q0-24 26-30l72-14q34-40 74-44h72q42 4 74 44l72 14q26 6 26 30v38z"/>
+  <path class="ink" d="M112 374v-42q0-26 28-32l74-14q34-42 78-46h72q44 4 78 46l74 14q28 6 28 32v42"/>
+  <path class="ink" d="M214 288c22-32 44-44 72-46h68c28 2 50 14 72 46z"/>
+  <path class="ink" d="M318 240v48"/>
+  <path class="ink" d="M232 286c18-26 38-38 62-40h20v40z"/>
+  <path class="ink" d="M334 246h18c24 2 42 14 58 40h-76z"/>
+  <path class="ink" d="M112 336h472"/>
+  <path class="ink thin" d="M318 336v38"/>
+  <path class="ink thin" d="M336 352h34"/>
+  <path class="ink" d="M584 336v-8q0-12-14-14"/>
+  <circle class="ink thin" cx="572" cy="352" r="12"/>
+  <path class="ink thin" d="M540 366h44M546 358h20"/>
+  <path class="ink" d="M138 374h420"/>
+  <circle class="ink" cx="204" cy="380" r="48"/>
+  <circle class="ink thin" cx="204" cy="380" r="21"/>
+  <circle class="ink" cx="470" cy="380" r="48"/>
+  <circle class="ink thin" cx="470" cy="380" r="21"/>
+  <path class="ink" d="M156 336c6-28 24-42 48-44M422 336c6-28 24-42 48-44"/>
+  <path class="ink thin" d="M124 322h84M420 316h150"/>
+  <path class="hotline thin" d="M98 386c-16 6-24 20-22 34 16 4 28-8 32-22"/>
+  <path class="hotline thin" d="M52 400c-13 4-19 15-17 26 13 2 23-7 25-18"/>`
 },
 {
  eye:'布置院子', zh:'院子摆成<br>自己的样子',
