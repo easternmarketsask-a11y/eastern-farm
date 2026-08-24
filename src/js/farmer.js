@@ -543,7 +543,8 @@
   /* 去某处 —— 该开车就开车，否则走路。点空地、派农活都走它。 */
   function travelTo(gx, gy, keepQueue) {
     const iso = Farm.isoView;
-    if (!iso || !iso._on || iso._build) return false;
+    if (!iso || !iso._on) return false;
+    if (iso._build && !keepQueue) return false;   // 建造不抢点击；农活内部续走/续开仍放行
     if (Farm.state && Farm.state._visitLock) return false;
     if (A.gx == null) spawnAt(iso);
     if (A.driving != null) return goTo(gx, gy, keepQueue);   // 已经在车上，直接开
@@ -557,7 +558,8 @@
 
   function board(mapIdx, keepQueue) {
     const iso = Farm.isoView;
-    if (!iso || !iso._on || iso._build) return false;
+    if (!iso || !iso._on) return false;
+    if (iso._build && !keepQueue) return false;
     if (Farm.state && Farm.state._visitLock) return false;
     const o = (Farm.state.data.map || [])[mapIdx];
     if (!o || o.type !== 'car') return false;
@@ -703,7 +705,7 @@
   function goTo(gx, gy, keepQueue) {
     const iso = Farm.isoView;
     if (!iso || !iso._on) return false;
-    if (iso._build) return false;                           // 建造模式不抢点击
+    if (iso._build && !keepQueue) return false;             // 建造模式不抢点击；派农活的续走仍放行
     if (Farm.state && Farm.state._visitLock) return false;  // 别人的农场不是你的地
     if (A.gx == null) spawnAt(iso);
     const size = carSize();
@@ -945,6 +947,14 @@
     return false;
   }
 
+  /* 已经派出去的农活：队列里有，或手上正在收/浇/种/走去上车。
+     玩家点空地的 goto、闲逛、擦车不算。 */
+  function doingFarmWork() {
+    if (A.queue && A.queue.length) return true;
+    const k = A.job && A.job.kind;
+    return k === 'harvest' || k === 'water' || k === 'plant' || k === 'boarding';
+  }
+
   function tick(iso) {
     if (!iso || !iso._on) return;
     const now = Date.now();
@@ -955,7 +965,16 @@
     if (A.away) backSheet(A.look);
     if (A.gx == null) spawnAt(iso);
 
-    if (iso._build || (Farm.state && Farm.state._visitLock && !A.visitHold)) {
+    if (Farm.state && Farm.state._visitLock && !A.visitHold) {
+      A.anim = A.anim === 'walk' ? 'idle' : (A.anim || 'idle');
+      A.frameT += dt;
+      return;
+    }
+    /* 建造模式：点空地/上车仍无效，但已经派出去的农活要做完
+       （Chris 2026-08-24：「建造时如果在做农活，农活不要停」）。
+       闲逛和玩家点的 goto 照旧站住。 */
+    if (iso._build && !doingFarmWork()) {
+      if (A.job && A.job.kind === 'idlewalk') { A.job = null; A.path = null; }
       A.anim = A.anim === 'walk' ? 'idle' : (A.anim || 'idle');
       A.frameT += dt;
       return;
@@ -989,6 +1008,9 @@
     // 车停着等指令，不自己乱逛 —— 闲逛逻辑是给人写的，驾驶中它会把整辆车挪走。
     if (A.driving != null && !A.job) { A.anim = 'idle'; return; }
 
+    if (A.job && A.job.kind === 'idlewalk' && A.queue.length) {
+      A.job = null; A.path = null;   // 手上有农活就别闲逛
+    }
     if (!A.job && A.queue.length) {
       while (A.queue.length && !startJob(iso, A.queue.shift())) { /* skip stale */ }
     }
@@ -1080,6 +1102,7 @@
       return;
     }
 
+    if (iso._build) { A.anim = 'idle'; return; }   // 建造里农活做完就站住，不闲逛
     if (A.pause > 0) {
       A.anim = 'idle';
       A.pause -= dt;

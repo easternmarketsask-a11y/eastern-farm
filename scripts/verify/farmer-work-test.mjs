@@ -40,4 +40,12 @@ assert.ok(!/Math\.min\(n - 1, Math\.floor\(A\.frameT \* FPS\)\)/.test(fi[0])
   || /1 \+ /.test(fi[0]) || /WORK_/.test(fi[0]),
   '收割种植不得从第 0 列站桩帧播起');
 
+assert.match(src, /function doingFarmWork\(/);
+assert.match(src, /iso\._build && !doingFarmWork\(\)/,
+  '建造模式只在没农活时站住，有收/浇/种不能把 tick 掐掉');
+assert.match(src, /iso\._build && !keepQueue/,
+  '建造仍不许点空地乱走；农活内部续走 keepQueue 要放行');
+assert.ok(!/if \(iso\._build \|\| \(Farm\.state && Farm\.state\._visitLock && !A\.visitHold\)\)/.test(src),
+  '不得再把建造和拜访捆成一条直接 return（那会停掉农活）');
+
 console.log('ok farmer-work');
