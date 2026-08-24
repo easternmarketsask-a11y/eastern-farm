@@ -3796,8 +3796,43 @@ body.modal-open .toast-stack {
   box-shadow: 0 1px 3px rgba(0,0,0,0.04);
 }
 .guide-card-icon {
-  font-size: 26px;
-  line-height: 1.1;
+  flex: 0 0 auto;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: rgba(58, 140, 80, 0.10);
+  color: var(--brand-green, #3a8c50);
+}
+.guide-card-icon .g-ico { width: 26px; height: 26px; display: block; }
+
+/* 章节标题：五章分组（改版前是 12 条平铺，找不到自己要的那条） */
+.guide-chapter { margin-top: 18px; }
+.guide-chapter:first-of-type { margin-top: 10px; }
+.guide-chapter-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--brand-green, #3a8c50);
+  letter-spacing: 0.02em;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1.5px solid rgba(58, 140, 80, 0.16);
+}
+.guide-chapter-no {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 19px;
+  height: 19px;
+  background: var(--brand-green, #3a8c50);
+  color: #fff;
+  font-size: 11px;
+  border-radius: 50%;
   flex: 0 0 auto;
 }
 .guide-card-text { flex: 1 1 auto; min-width: 0; }
