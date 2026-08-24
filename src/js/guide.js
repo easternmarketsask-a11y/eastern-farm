@@ -91,7 +91,7 @@
       items: [
         {
           icon: 'board',
-          zh: { title: '交给东超', body: '点<b>东超告示牌</b>。每天有基础补货，还会不定期冒出订单，给的价是平常的一倍半到两倍多，大单更高。牌子顶上<b>提前五天</b>就告诉你要什么，照着备货就行。' },
+          zh: { title: '按订单供货给东超', body: '点<b>东超告示牌</b>。每天有基础补货，还会不定期冒出订单，给的价是平常的一倍半到两倍多，大单更高。牌子顶上<b>提前五天</b>就告诉你要什么，照着备货就行。' },
           en: { title: 'Fill store orders', body: 'Tap the <b>Eastern Market board</b>. There are daily restocks plus orders that appear through the day, paying 1.5–2.2× the base price — big orders more. The board shows what is wanted <b>five days ahead</b>, so you can stock up.' },
         },
         {
