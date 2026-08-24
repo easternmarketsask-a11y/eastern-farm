@@ -4607,6 +4607,29 @@ body.modal-open .toast-stack {
   margin-left: 6px;
   vertical-align: 1.5px;
 }
+.seed-need-tag {
+  display: inline-block;
+  font-size: 9px;
+  font-weight: 700;
+  color: #7a3a1c;
+  background: #f6d9b0;
+  border: 1px solid rgba(176, 96, 42, 0.35);
+  border-radius: 6px;
+  padding: 1.5px 6px;
+  margin-left: 6px;
+  vertical-align: 1.5px;
+}
+.seed-card.wanted {
+  border-color: rgba(196, 122, 58, 0.55);
+  background: linear-gradient(180deg, #fffaf2, #f8eedc);
+}
+.seed-need {
+  margin-top: 5px;
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1.35;
+  color: #6d4c28;
+}
 
 /* 应季 +15% 徽章（仓库行 / 种植选择器）—— 2026-07-02 season 接线 */
 .season-tag {

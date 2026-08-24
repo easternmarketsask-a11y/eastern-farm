@@ -8,6 +8,7 @@ import { dirname, join } from 'node:path';
 const root = join(dirname(fileURLToPath(import.meta.url)), '../..');
 const strip = (src) => src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
 const o = strip(fs.readFileSync(join(root, 'src/js/orders.js'), 'utf8'));
+const shop = strip(fs.readFileSync(join(root, 'src/js/shop.js'), 'utf8'));
 const st = strip(fs.readFileSync(join(root, 'src/js/state.js'), 'utf8'));
 
 // ① 接单 / 放弃 / 上限
@@ -95,6 +96,15 @@ assert.match(o, /kind: 'wait'/, '都没有时要给「还要等」，不是假�
 // 去收/去种要走既有的真实通道，别在这儿再实现一套种地逻辑
 assert.match(o, /enqueueHarvestAll|Farm\.farmer\.enqueue\(/, '「去收」走既有的派活通道');
 assert.match(o, /Farm\.shop\.plantAllEmpty|Farm\.shop\._plantOne/, '「去种」走 shop 的种植通道');
+
+/* 点地选种要看见订单需求（Chris 2026-08-24） */
+assert.match(o, /needByCrop\(\)/, '要能按作物汇总东超还要几棵');
+assert.match(o, /needHint\(/, '选种卡上要有需求说明');
+assert.match(shop, /needByCrop\(\)/, '选种器要读 needByCrop');
+assert.match(shop, /seed-need/, '选种卡要渲染需求行');
+assert.match(shop, /东超现在要的|Eastern Market wants these now/, '需求品种要单独成组');
+assert.match(css, /\.seed-need\s*\{/, '需求行要有样式');
+assert.match(css, /\.seed-need-tag/, '「东超要」小标要有样式');
 
 console.log('ok orders-ui');
 

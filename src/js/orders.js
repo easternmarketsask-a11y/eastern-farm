@@ -222,6 +222,66 @@
         s.filled < s.need && Farm.state.warehouseCount(s.cropId) > 0).length;
     },
 
+    /* 点地选种时用：每样菜东超现在还要几棵。
+       补货剩余 + 板上订单（含未接，备货就是看着板来种）+ 预告（不含今天，避免跟板上重复）。
+       谷仓和地里的数只作对照，不从「还要」里扣 —— 种之前玩家要自己看见差口。 */
+    needByCrop() {
+      this.ensure();
+      const sd = this._demand() || {};
+      const map = {};
+      const bump = (id, field, n) => {
+        if (!id || !(n > 0)) return;
+        if (!map[id]) map[id] = { cropId: id, staple: 0, order: 0, forecast: 0, have: 0, growing: 0, ripe: 0 };
+        map[id][field] += n;
+      };
+      (sd.staples || []).forEach((s) => {
+        bump(s.cropId, 'staple', Math.max(0, (s.need || 0) - (s.filled || 0)));
+      });
+      (sd.board || []).forEach((o) => {
+        if (!o || o.kind === 'clearance' || !o.items) return;
+        o.items.forEach((it) => bump(it.cropId, 'order', it.qty || 0));
+      });
+      const today = Farm.state.getDateString();
+      (sd.forecast || []).forEach((f) => {
+        if (!f || f.date === today) return;
+        (f.cropIds || []).forEach((id) => bump(id, 'forecast', 1));
+      });
+      const plots = (Farm.state.data && Farm.state.data.plots) || [];
+      for (let i = 0; i < plots.length; i++) {
+        const p = plots[i];
+        if (!p || !p.unlocked || !p.crop) continue;
+        if (!map[p.crop]) continue;
+        if (Farm.crops && Farm.crops.isMature && Farm.crops.isMature(p)) map[p.crop].ripe++;
+        else map[p.crop].growing++;
+      }
+      Object.keys(map).forEach((id) => {
+        map[id].have = Farm.state.warehouseCount ? Farm.state.warehouseCount(id) : 0;
+      });
+      return map;
+    },
+
+    needHint(n, lang) {
+      if (!n) return '';
+      const en = lang === 'en';
+      const want = (n.staple || 0) + (n.order || 0);
+      if (want <= 0) {
+        return n.forecast > 0
+          ? (en ? 'Coming up on the order board in the next few days' : '接下来几天的订单会要')
+          : '';
+      }
+      const cover = (n.have || 0) + (n.ripe || 0);
+      let extra = '';
+      if (cover >= want) extra = en ? 'enough in the barn' : '谷仓已经够交';
+      else {
+        const bits = [];
+        if (n.have) bits.push(en ? n.have + ' in the barn' : '谷仓 ' + n.have);
+        if (n.growing) bits.push(en ? n.growing + ' growing' : '地里 ' + n.growing);
+        extra = bits.join(en ? ', ' : '，');
+      }
+      const head = en ? ('Eastern Market still needs ' + want) : ('东超还要 ' + want + ' 棵');
+      return extra ? head + (en ? ' (' + extra + ')' : '（' + extra + '）') : head;
+    },
+
     /* 缺的货旁边给个去处（Chris 2026-08-22：「缺的货旁给个链接『去种』或者『去收』」）。
        光告诉玩家「还差 3 棵」，他还得自己去农场里找哪块地有、哪块地空 ——
        这一步该由界面替他走完。

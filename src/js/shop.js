@@ -97,6 +97,7 @@
         });
       }
       const specialId = Farm.daily ? Farm.daily.getSpecialSeedId() : null;
+      const needMap = (Farm.orders && Farm.orders.needByCrop) ? Farm.orders.needByCrop() : {};
       const coin = '<span class="coin-icon"></span>';
       const seedPriceLabel = lang === 'en' ? 'Seed price' : '种子价格';
       const PREMIUM_BAG_COST = 500;
@@ -126,16 +127,21 @@
         const statusCell = locked
           ? `<span style="color:#999;">Lv ${c.unlock_level}</span>`
           : `<span class="seed-owned">× ${owned}</span>`;
+        const need = needMap[c.id];
+        const needLine = Farm.orders && Farm.orders.needHint ? Farm.orders.needHint(need, lang) : '';
+        const wanted = need && ((need.staple || 0) + (need.order || 0) > 0);
+        const needTag = wanted ? `<span class="seed-need-tag">${lang === 'en' ? 'Wanted' : '东超要'}</span>` : '';
         return `
-          <div class="seed-card ${locked ? 'locked' : ''} ${isSpecial ? 'special' : ''}" data-crop-id="${c.id}" data-action="buy">
+          <div class="seed-card ${locked ? 'locked' : ''} ${isSpecial ? 'special' : ''} ${wanted ? 'wanted' : ''}" data-crop-id="${c.id}" data-action="buy">
             ${specialBadge}
             <span class="seed-icon">${cropFace(c)}</span>
             <div>
-              <div class="seed-name">${c[nameKey]}</div>
+              <div class="seed-name">${c[nameKey]}${needTag}</div>
               <div class="seed-meta">
                 ${priceCell}
                 <span class="seed-chips"><span class="seed-time">⏱${formatMinutes(c.grow_minutes)}</span>${statusCell}</span>
               </div>
+              ${needLine ? '<div class="seed-need">' + needLine + '</div>' : ''}
             </div>
           </div>`;
       }).join('');
@@ -373,6 +379,11 @@
       // market purchase price (what Eastern Market will pay for the
       // harvested crop), reinforcing the brand connection too.
       const marketPriceLabel = lang === 'en' ? 'Market price' : '市场收购价';
+      const needMap = (Farm.orders && Farm.orders.needByCrop) ? Farm.orders.needByCrop() : {};
+      const wantNow = (id) => {
+        const n = needMap[id];
+        return !!(n && ((n.staple || 0) + (n.order || 0) > 0));
+      };
       const renderCard = (id, isLast) => {
         const c = Farm.crops.get(id);
         if (!c) return '';
@@ -386,18 +397,23 @@
           : `<span class="seed-value">${coin}${unit}</span>`;
         // 「上次」标：lastSeedId 对应的卡置顶时加小标（UX 第 2 批 #3）
         const lastTag = isLast ? `<span class="seed-last-tag">${lang === 'en' ? 'Last' : '上次'}</span>` : '';
+        const need = needMap[id];
+        const needLine = Farm.orders && Farm.orders.needHint ? Farm.orders.needHint(need, lang) : '';
+        const wanted = wantNow(id);
+        const needTag = wanted ? `<span class="seed-need-tag">${lang === 'en' ? 'Wanted' : '东超要'}</span>` : '';
         // 「种满所有空地」批量按钮（UX 第 2 批 #1）：种子不够会自动按现价买
         const fillBtn = locked ? '' :
           `<button type="button" class="seed-fill-btn" data-fill-crop="${id}">🌱 ${lang === 'en' ? 'Plant all empty' : '种满所有空地'}</button>`;
         return `
-          <div class="seed-card ${locked ? 'locked' : ''}" data-crop-id="${id}" data-action="plant">
+          <div class="seed-card ${locked ? 'locked' : ''} ${wanted ? 'wanted' : ''}" data-crop-id="${id}" data-action="plant">
             <span class="seed-icon">${cropFace(c)}</span>
             <div>
-              <div class="seed-name">${c[nameKey]}${lastTag}</div>
+              <div class="seed-name">${c[nameKey]}${lastTag}${needTag}</div>
               <div class="seed-meta">
                 <span class="seed-sell"><span class="seed-label">${marketPriceLabel}</span>${priceHtml}</span>
                 <span class="seed-chips"><span class="seed-time">⏱${formatMinutes(c.grow_minutes)}</span><span class="seed-owned">× ${owned}</span></span>
               </div>
+              ${needLine ? '<div class="seed-need">' + needLine + '</div>' : ''}
             </div>
             ${fillBtn}
           </div>
@@ -411,15 +427,26 @@
         { max: Infinity, zh: '🌙 睡一觉好（3 小时以上）', en: '🌙 Overnight (3 h+)' },
       ];
       // 上次种子置顶（UX 第 2 批 #3）：lastSeedId 有库存时单独放在最前（组外），
-      // 其余仍按生长时长分组。
+      // 其余：东超正在要的先成一组，再按生长时长分组。
       const lastId = Farm.state.data.lastSeedId;
       const hasLast = !!(lastId && (seeds[lastId] || 0) > 0 && Farm.crops.get(lastId));
-      const sorted = ownedCropIds
-        .filter(id => !(hasLast && id === lastId))
+      const restIds = ownedCropIds.filter(id => !(hasLast && id === lastId));
+      const wantedIds = restIds.filter(wantNow).sort((a, b) => {
+        const na = needMap[a], nb = needMap[b];
+        return ((nb.staple || 0) + (nb.order || 0)) - ((na.staple || 0) + (na.order || 0));
+      });
+      const wantedSet = {};
+      wantedIds.forEach((id) => { wantedSet[id] = 1; });
+      const sorted = restIds
+        .filter(id => !wantedSet[id])
         .map(id => Farm.crops.get(id)).filter(Boolean)
         .sort((a, b) => a.grow_minutes - b.grow_minutes);
       let lastGroup = -1;
-      const listHtml = (hasLast ? renderCard(lastId, true) : '') + sorted.map(c => {
+      const wantedBlock = wantedIds.length
+        ? ('<div class="seed-group-title">' + (lang === 'en' ? 'Eastern Market wants these now' : '东超现在要的') + '</div>'
+          + wantedIds.map((id) => renderCard(id, false)).join(''))
+        : '';
+      const listHtml = (hasLast ? renderCard(lastId, true) : '') + wantedBlock + sorted.map(c => {
         const gi = GROUPS.findIndex(g => c.grow_minutes <= g.max);
         let header = '';
         if (gi !== lastGroup) {
@@ -430,7 +457,7 @@
       }).join('');
       const html = `
         <h2 class="modal-title">${Farm.i18n.t('btn_plant')}</h2>
-        <p class="modal-subtitle">${lang === 'en' ? 'Choose a seed to plant' : '选择要种的种子'}</p>
+        <p class="modal-subtitle">${lang === 'en' ? 'Crops Eastern Market is asking for are marked on the list.' : '东超正在要的菜会标出来，方便按订单备货。'}</p>
         <div class="seed-list">
           ${listHtml}
         </div>
