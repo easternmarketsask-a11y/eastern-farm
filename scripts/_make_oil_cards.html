@@ -1,0 +1,119 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>油画版对照</title>
+<!-- 字体走 Google Fonts CDN；出图前肉眼确认标题是 ZCOOL XiaoWei 不是黑体。
+     油画原图放 promo/feature-cards/_art-*.jpg，渲染命令见 promo/README.md。 -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=ZCOOL+XiaoWei&family=Plus+Jakarta+Sans:wght@500;700&display=swap">
+<style>
+@font-face{
+  font-family:'EF XiaoWei Patch';
+  src: local('Microsoft YaHei'), local('PingFang SC'), local('Noto Sans SC');
+  unicode-range: U+56DE;
+}
+:root{
+  --paper:#FBF7EC; --band:#F1E7D1; --ink:#26301F; --green:#3A8C50;
+  --deep:#2A5C34; --spark:#E8522A;
+  --display:'EF XiaoWei Patch','ZCOOL XiaoWei','Noto Sans SC','Microsoft YaHei',sans-serif;
+  --en:'Plus Jakarta Sans','Segoe UI',sans-serif;
+  --sans:'Noto Sans SC','Microsoft YaHei',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:#888}
+.card{position:relative;width:1080px;height:1350px;background:var(--paper);
+  overflow:hidden;display:flex;flex-direction:column}
+
+/* 抬头（两种版式共用，与简笔画那套逐像素一致） */
+.mast{flex:0 0 auto;margin:52px 0 0;display:flex;align-items:center;
+  justify-content:center;gap:24px}
+.mast img{height:66px;width:auto;display:block}
+.mast .bar{width:2px;height:48px;background:var(--ink);opacity:.2}
+.mast .names{display:flex;align-items:center;gap:18px}
+.mast .nzh{font:400 45px/1 var(--display);color:var(--deep)}
+.mast .nen{font:700 21px/1 var(--en);letter-spacing:.2em;color:var(--green)}
+
+h1{font:400 78px/1.26 var(--display);color:var(--deep);letter-spacing:.02em;text-wrap:balance}
+.en{margin-top:26px;font:700 35px/1.3 var(--en);color:var(--ink);opacity:.9}
+.sub{margin-top:20px;font:400 29px/1.58 var(--sans);color:var(--ink);opacity:.74;max-width:23em}
+.sub b{color:var(--spark);font-weight:500;opacity:1}
+
+.band{flex:0 0 204px;background:var(--band);display:flex;align-items:center;
+  gap:38px;padding:0 76px;position:relative}
+.band::before{content:"";position:absolute;top:0;left:0;right:0;height:4px;
+  background:repeating-linear-gradient(90deg,var(--ink) 0 13px,transparent 13px 26px);opacity:.36}
+.band img{width:142px;height:142px;display:block;border-radius:6px}
+.bt1{font:400 39px/1.15 var(--display);color:var(--deep)}
+.bt2{margin-top:10px;font:700 31px/1.15 var(--en);color:var(--green)}
+.bt3{margin-top:10px;font:400 24px/1.2 var(--sans);color:var(--ink);opacity:.62}
+
+/* ── A 型：换图不换版。画嵌在原来简笔画那块地方 ── */
+.a .rule{flex:0 0 auto;margin:22px 86px 0;height:2px;background:var(--ink);opacity:.16}
+.a .art{flex:0 0 536px;margin:24px 62px 0;border-radius:10px;overflow:hidden;
+  border:2px solid rgba(38,48,31,.14)}
+.a .art img{width:100%;height:100%;object-fit:cover;display:block}
+.a .words{flex:1 1 auto;padding:0 86px 30px;display:flex;flex-direction:column;
+  justify-content:center}
+.a .frame{position:absolute;left:0;top:0;right:0;height:1146px;pointer-events:none;z-index:3}
+
+/* ── B 型：大图当头。画满幅铺到 62%，字压在下面的奶油块上 ── */
+.b .art{flex:0 0 596px;margin-top:22px;position:relative;overflow:hidden}
+.b .art img{width:100%;height:100%;object-fit:cover;display:block}
+.b .art::after{content:"";position:absolute;left:0;right:0;bottom:0;height:120px;
+  background:linear-gradient(transparent,var(--paper))}
+.b .words{flex:1 1 auto;padding:0 86px 28px;display:flex;flex-direction:column;
+  justify-content:center}
+</style>
+
+<body>
+<script>
+const P = {
+ '02-points': { art:'_art-points.jpg',
+   zh:'种菜挣的积分，<br>到店买菜能抵钱', en:'Earn points farming. Spend them on groceries.',
+   sub:'和你在店里消费攒的是同一本账，不是另一套游戏币。每天有上限。' },
+ '04-invite': { art:'_art-invite.jpg',
+   zh:'叫上一个街坊，<br>两个人各得 200', en:'Invite a neighbour — 200 coins each.',
+   sub:'你得 200 农场币，他也得 200，登录会员就能领。' },
+ '07-neighbours': { art:'_art-neighbors.jpg',
+   zh:'看看街坊家<br>的农场', en:'See what your neighbours are growing.',
+   sub:'串门帮人浇水，也能顺走一棵熟了的菜——按半价留下菜钱。' },
+ '09-crops': { art:'_art-crops.jpg',
+   zh:'店里的新鲜菜和水果，<br>都能自己种', en:'Grow the produce you actually buy.',
+   sub:'43 种。青菜、韭菜、茄子、冬瓜、荔枝……孩子在游戏里种熟一棵，下次逛超市自己就认得出。' },
+};
+
+const MAST = `<div class="mast">
+  <img src="_logo.png" alt="">
+  <span class="bar"></span>
+  <span class="names"><span class="nzh">东方农场</span><span class="nen">EASTERN FARM</span></span>
+</div>`;
+const BAND = `<div class="band">
+  <img src="_qr.png" alt="">
+  <div>
+    <div class="bt1">扫码就能玩</div>
+    <div class="bt2">farm.easternmarket.ca</div>
+    <div class="bt3">免费 · 不用下载 · 不用注册</div>
+  </div>
+</div>`;
+const FRAME = `<svg class="frame" viewBox="0 0 1080 1146" preserveAspectRatio="none">
+  <path d="M40 44C300 36 780 52 1040 42" fill="none" stroke="#26301F" stroke-width="5"
+        stroke-linecap="round" opacity=".55"/>
+  <path d="M42 48C34 360 50 800 44 1090" fill="none" stroke="#26301F" stroke-width="5"
+        stroke-linecap="round" opacity=".55"/>
+  <path d="M1038 46C1046 380 1030 760 1036 1092" fill="none" stroke="#26301F" stroke-width="5"
+        stroke-linecap="round" opacity=".55"/>
+</svg>`;
+
+function card(p, v){
+  const words = `<div class="words"><h1>${p.zh}</h1>
+    <div class="en">${p.en}</div><div class="sub">${p.sub}</div></div>`;
+  if (v === 'b') {
+    return `<div class="card b">${MAST}
+      <div class="art"><img src="../promo/feature-cards/${p.art}" alt=""></div>${words}${BAND}</div>`;
+  }
+  return `<div class="card a">${FRAME}${MAST}<div class="rule"></div>
+    <div class="art"><img src="../promo/feature-cards/${p.art}" alt=""></div>${words}${BAND}</div>`;
+}
+
+const q = new URLSearchParams(location.search);
+const id = q.get('i'), v = q.get('v') || 'a';
+document.body.innerHTML = card(P[id] || P['09-crops'], v);
+</script>
