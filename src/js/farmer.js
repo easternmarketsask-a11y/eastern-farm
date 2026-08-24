@@ -105,6 +105,78 @@
 
   let A = emptyActor(2);
   let _lastT = 0;
+  const PLAYER_OPTS = {
+    canDrive: true,
+    canPolish: true,
+    canIdleWander: true,
+    claimBoard: true,
+  };
+
+  function pendingList() {
+    if (Farm.hands && Array.isArray(Farm.hands.board)) {
+      if (A.queue && A.queue.length) {
+        for (let i = 0; i < A.queue.length; i++) Farm.hands.board.push(A.queue[i]);
+        A.queue.length = 0;
+      }
+      return Farm.hands.board;
+    }
+    return A.queue;
+  }
+  function actorCanWork(actor, opts) {
+    if (!opts || !opts.claimBoard) return false;
+    if (Farm.state && Farm.state._visitLock) return false;
+    return true;
+  }
+  function jobHeld(actor, job) {
+    return !!(actor && actor.job
+      && actor.job.plotIdx === job.plotIdx && actor.job.kind === job.kind);
+  }
+  function plotBusy(job) {
+    if (jobHeld(A, job)) return true;
+    const acts = (Farm.hands && Farm.hands.actors) || [];
+    for (let i = 0; i < acts.length; i++) if (jobHeld(acts[i], job)) return true;
+    return false;
+  }
+  function jobStartable(iso, job) {
+    if (!job) return false;
+    const plots = (Farm.state.data && Farm.state.data.plots) || [];
+    const plot = plots[job.plotIdx];
+    if (!plot) return false;
+    if (job.kind === 'plant') {
+      if (plot.crop || !job.cropId) return false;
+    } else if (!plot.crop) return false;
+    if (job.kind === 'harvest' && !(Farm.crops && Farm.crops.isMature && Farm.crops.isMature(plot))) return false;
+    if (job.kind === 'water' && Farm.tending && Farm.tending.canWater && !Farm.tending.canWater(plot)) return false;
+    return true;
+  }
+  function claim(iso, actor, opts) {
+    if (!actor || actor.job) return;
+    if (!actorCanWork(actor, opts)) return;
+    const board = pendingList();
+    for (let i = 0; i < board.length; i++) {
+      const job = board[i];
+      if (plotBusy(job)) continue;
+      if (!jobStartable(iso, job)) {
+        board.splice(i, 1);
+        i--;
+        continue;
+      }
+      board.splice(i, 1);
+      if (startJob(iso, actor, job, opts)) return;
+      board.splice(i, 0, job);
+    }
+  }
+  function filterBoard(keepFn) {
+    const q = pendingList();
+    for (let i = q.length - 1; i >= 0; i--) {
+      if (!keepFn(q[i])) q.splice(i, 1);
+    }
+  }
+  function clearPending() {
+    const q = pendingList();
+    q.length = 0;
+    if (q !== A.queue) A.queue.length = 0;
+  }
 
   function currentLook() {
     if (Farm.state && Farm.state.data) return clampLook(Farm.state.data.farmerLook);
@@ -136,16 +208,22 @@
     if (kind === 'harvest' && !(Farm.crops && Farm.crops.isMature && Farm.crops.isMature(plot))) return false;
     if (kind === 'water' && Farm.tending && Farm.tending.canWater && !Farm.tending.canWater(plot)) return false;
     const cap = plots.filter((p) => p && p.unlocked).length || 12;
-    if (A.queue.length >= cap) return false;
+    const q = pendingList();
+    if (q.length >= cap) return false;
     if (A.job && A.job.plotIdx === plotIdx && A.job.kind === kind) return false;
-    for (let i = 0; i < A.queue.length; i++) {
-      if (A.queue[i].plotIdx === plotIdx && A.queue[i].kind === kind) return false;
+    const acts = (Farm.hands && Farm.hands.actors) || [];
+    for (let i = 0; i < acts.length; i++) {
+      const j = acts[i] && acts[i].job;
+      if (j && j.plotIdx === plotIdx && j.kind === kind) return false;
     }
-    A.queue.push({ plotIdx: plotIdx, kind: kind, cropId: cropId || null });
+    for (let i = 0; i < q.length; i++) {
+      if (q[i].plotIdx === plotIdx && q[i].kind === kind) return false;
+    }
+    q.push({ plotIdx: plotIdx, kind: kind, cropId: cropId || null });
     A.pause = 0;
     // 这一批活刚开工（队列从空变非空、手上没别的事）→ 算一次开车去值不值。
     // 只判这一次：开车只负责去干活的第一段路，菜地连片挨着，逐块上下车太吵。
-    if (A.queue.length === 1 && !A.job) {
+    if (q.length === 1 && !A.job) {
       const wp = approachPos(iso, plotIdx);
       const carIdx = pickCarFor(iso, wp.gx, wp.gy);
       if (carIdx != null) {
@@ -352,19 +430,19 @@
     }
   }
 
-  function tickWalkDust(dt) {
-    A.walkDust = A.walkDust || [];
-    if (A.anim === 'walk' && A.driving == null) {
-      const phase = A.frameT * Math.PI * (FPS / 3);
+  function tickWalkDust(actor, dt) {
+    actor.walkDust = actor.walkDust || [];
+    if (actor.anim === 'walk' && actor.driving == null) {
+      const phase = actor.frameT * Math.PI * (FPS / 3);
       const plant = Math.abs(Math.sin(phase));
-      const prev = A.walkPlant || 0;
-      A.walkPlant = plant;
-      if (prev < 0.86 && plant >= 0.86 && A.walkDust.length < 14) {
-        const dx = A.driveDx || 0, dy = A.driveDy || 0;
-        const side = (A.walkDust.length % 2) ? 1 : -1;
-        A.walkDust.push({
-          gx: A.gx - dx * 0.06,
-          gy: A.gy - dy * 0.06,
+      const prev = actor.walkPlant || 0;
+      actor.walkPlant = plant;
+      if (prev < 0.86 && plant >= 0.86 && actor.walkDust.length < 14) {
+        const dx = actor.driveDx || 0, dy = actor.driveDy || 0;
+        const side = (actor.walkDust.length % 2) ? 1 : -1;
+        actor.walkDust.push({
+          gx: actor.gx - dx * 0.06,
+          gy: actor.gy - dy * 0.06,
           t: 0,
           life: 0.26 + Math.random() * 0.16,
           ox: side * 0.14 + (Math.random() - 0.5) * 0.06,
@@ -378,7 +456,7 @@
         if (Farm.audio && Farm.audio.play) Farm.audio.play('step');
       }
     }
-    const dust = A.walkDust;
+    const dust = actor.walkDust;
     for (let i = dust.length - 1; i >= 0; i--) {
       dust[i].t += dt;
       dust[i].ox += (dust[i].vx || 0) * dt;
@@ -433,8 +511,9 @@
       if (goTo(g.gx, g.gy, true)) { if (iso.render) iso.render(); return true; }
     }
     // 上车是为了去干活 → 直接开到第一块地
-    if (A.queue.length && iso) {
-      const wp = approachPos(iso, A.queue[0].plotIdx);
+    const pending = pendingList();
+    if (pending.length && iso) {
+      const wp = approachPos(iso, pending[0].plotIdx);
       if (goTo(wp.gx, wp.gy, true)) { if (iso.render) iso.render(); return true; }
     }
     /* 这句只在第一次上车时说一次。有了常驻的「下车」按钮之后，它的信息价值就低了，
@@ -470,8 +549,9 @@
      那时寻路的起点不可走，find() 直接返回 null，「走多久 / 开不开车」全成了
      无穷大，自动开车静默失效。你已经站在那儿了，从那儿出发当然是可以的。
      ⚠️ goTo / board / startJob 都依赖它，别再连着别的块一起删掉（2026-08-21 犯过）。 */
-  function freeFromHere(free) {
-    const hx = Math.round(A.gx), hy = Math.round(A.gy);
+  function freeFromHere(free, actor) {
+    actor = actor || A;
+    const hx = Math.round(actor.gx), hy = Math.round(actor.gy);
     return (x, y) => ((x === hx && y === hy) || free(x, y));
   }
 
@@ -566,7 +646,7 @@
     if (A.gx == null) spawnAt(iso);
     const spot = carSideSpot(iso, o);
     if (!spot) return false;          // 车四周站不了人，上不去
-    if (!keepQueue) A.queue = [];     // 手动点上车＝立刻去，手上的农活不留半截；
+    if (!keepQueue) clearPending();    // 手动点上车＝立刻去，手上的农活不留半截；
                                       // 自动开车去干活时要留着队列，那正是要去做的事
     A.job = null; A.path = null;
     if (Math.round(A.gx) === spot.gx && Math.round(A.gy) === spot.gy) return mountNow(mapIdx);
@@ -622,7 +702,7 @@
     if (A.gx == null) spawnAt(iso);
     const spot = carSideSpot(iso, o);
     if (!spot) return false;
-    A.queue = [];
+    clearPending();
     A.job = null; A.path = null;
     if (Math.round(A.gx) === spot.gx && Math.round(A.gy) === spot.gy) {
       A.job = { kind: 'polish', car: mapIdx };
@@ -692,7 +772,7 @@
        开一段就被踢下车、想接着开还得走回车边，很烦。
        唯一例外是「开车本来就是为了去干活」—— 不下车干不成活。 */
     A.job = null; A.path = null; A.anim = 'idle';
-    if (A.queue.length) unboard();
+    if (pendingList().length) unboard();
     if (Farm.state && Farm.state.save) Farm.state.save();
   }
 
@@ -712,7 +792,7 @@
     const free = walkableFor(iso, size.w, size.h, A.driving);
     const path = Farm.pathfind.find(A.gx, A.gy, gx, gy, freeFromHere(free));
     if (!path || path.length < 1) return false;
-    if (!keepQueue) A.queue = [];
+    if (!keepQueue) clearPending();
     A.job = { kind: 'goto', gx: gx, gy: gy };
     A.path = path;
     A.pathI = 1;                                            // path[0] 是起点，从下一格开始走
@@ -721,11 +801,12 @@
     return true;
   }
 
-  function spawnAt(iso) {
+  function spawnAt(iso, actor) {
+    actor = actor || A;
     const map = (Farm.state.data && Farm.state.data.map) || [];
     const home = map.find((m) => m && m.type === 'home');
     const tryPut = (gx, gy) => {
-      if (cellWalkable(iso, gx, gy)) { A.gx = gx; A.gy = gy; return true; }
+      if (cellWalkable(iso, gx, gy)) { actor.gx = gx; actor.gy = gy; return true; }
       return false;
     };
     if (home) {
@@ -742,13 +823,14 @@
     const ob = iso._ownedBounds ? iso._ownedBounds() : { x1: 3, y1: 10, x2: 10, y2: 16 };
     const cx = (ob.x1 + ob.x2) / 2, cy = (ob.y1 + ob.y2) / 2;
     if (tryPut(cx, cy + 2)) return;
-    A.gx = cx; A.gy = cy;
+    actor.gx = cx; actor.gy = cy;
   }
 
-  function pickIdleTarget(iso) {
+  function pickIdleTarget(iso, actor) {
+    actor = actor || A;
     const ob = iso._ownedBounds();
     const near = [];
-    const x0 = Math.round(A.gx), y0 = Math.round(A.gy);
+    const x0 = Math.round(actor.gx), y0 = Math.round(actor.gy);
     for (let gy = ob.y1; gy <= ob.y2; gy++) {
       for (let gx = ob.x1; gx <= ob.x2; gx++) {
         if (Math.abs(gx - x0) + Math.abs(gy - y0) < 2) continue;
@@ -850,11 +932,12 @@
     return n > 0;
   }
 
-  function finishJob(iso) {
-    const job = A.job;
-    A.job = null;
-    A.anim = 'idle';
-    A.frameT = 0;
+  function finishJob(iso, actor) {
+    actor = actor || A;
+    const job = actor.job;
+    actor.job = null;
+    actor.anim = 'idle';
+    actor.frameT = 0;
     if (!job) return;
     const plots = (Farm.state.data && Farm.state.data.plots) || [];
     const plot = plots[job.plotIdx];
@@ -864,14 +947,14 @@
         Farm.farm.harvestPlot(job.plotIdx, ev);
       }
       if (Farm.state && Farm.state.isWarehouseFull && Farm.state.isWarehouseFull()) {
-        A.queue = A.queue.filter((j) => j.kind !== 'harvest');
+        filterBoard((j) => j.kind !== 'harvest');
       }
     } else if (job.kind === 'water') {
       if (Farm.tending && Farm.tending.waterPlot) Farm.tending.waterPlot(job.plotIdx);
     } else if (job.kind === 'plant' && job.cropId && Farm.shop && Farm.shop._plantOne) {
       if ((Farm.state.data.seeds[job.cropId] || 0) <= 0) {
         if (!(Farm.shop._buyOneForPlanting && Farm.shop._buyOneForPlanting(job.cropId))) {
-          A.queue = A.queue.filter((j) => !(j.kind === 'plant' && j.cropId === job.cropId));
+          filterBoard((j) => !(j.kind === 'plant' && j.cropId === job.cropId));
           if (Farm.ui && Farm.ui.toast) Farm.ui.toast(Farm.i18n ? Farm.i18n.t('toast_not_enough_coins') : '农场币不足');
           return;
         }
@@ -886,7 +969,9 @@
     }
   }
 
-  function startJob(iso, job) {
+  function startJob(iso, actor, job, opts) {
+    actor = actor || A;
+    opts = opts || PLAYER_OPTS;
     const plots = (Farm.state.data && Farm.state.data.plots) || [];
     const plot = plots[job.plotIdx];
     if (!plot) return false;
@@ -901,58 +986,72 @@
        要去收南边居然不会开车，太笨」）。
        原来只有 enqueue 里「这批活刚开工」时算过一次开车，之后每块地都靠腿走 ——
        菜地连成一片时没毛病，可农场一旦分成两片，中间那段长路就只会走过去。
-       这里在**下一块地明显远**的时候再判一次：连片的近地照旧不上下车（逐块上下车太吵）。 */
-    if (A.driving == null && Math.max(Math.abs(ap.gx - A.gx), Math.abs(ap.gy - A.gy)) >= REDRIVE_DIST) {
+       这里在**下一块地明显远**的时候再判一次：连片的近地照旧不上下车（逐块上下车太吵）。
+       帮手 walk-only：!opts.canDrive 整段 REDRIVE / pickCarFor 跳过。 */
+    if (opts.canDrive && actor.driving == null
+        && Math.max(Math.abs(ap.gx - actor.gx), Math.abs(ap.gy - actor.gy)) >= REDRIVE_DIST) {
       const carIdx = pickCarFor(iso, ap.gx, ap.gy);
       if (carIdx != null) {
-        // 这件活先放回队列 —— mountNow 上车后会直接开去 queue[0]，正是它
-        A.queue.unshift(job);
+        const q = pendingList();
+        q.unshift(job);
         if (board(carIdx, true)) return true;
-        A.queue.shift();          // 上不了车（车边站不下人等）→ 照旧走过去
+        q.shift();
       }
     }
 
-    A.job = job;
-    A.anim = 'walk';
-    A.frameT = 0;
-    A.path = Farm.pathfind.find(A.gx, A.gy, ap.gx, ap.gy, freeFromHere(walkableFor(iso, 1, 1)));
-    A.pathI = 1;
+    actor.job = job;
+    actor.anim = 'walk';
+    actor.frameT = 0;
+    actor.path = Farm.pathfind.find(actor.gx, actor.gy, ap.gx, ap.gy, freeFromHere(walkableFor(iso, 1, 1), actor));
+    actor.pathI = 1;
     return true;
   }
 
-  function moveToward(dt, tx, ty, speed) {
-    const dx = tx - A.gx, dy = ty - A.gy;
+  function moveToward(actor, dt, tx, ty, speed) {
+    if (typeof actor === 'number') { speed = ty; ty = tx; tx = dt; dt = actor; actor = A; }
+    const dx = tx - actor.gx, dy = ty - actor.gy;
     const dist = Math.hypot(dx, dy);
-    if (dist < 0.08) { A.gx = tx; A.gy = ty; return true; }
+    if (dist < 0.08) { actor.gx = tx; actor.gy = ty; return true; }
     const h = heading(dx, dy);
-    const prevFace = A.face, prevAway = A.away;
-    A.face = h.face;
-    A.away = h.away;
-    A.driveDx = dx / dist;
-    A.driveDy = dy / dist;
-    if (A.driving != null && (A.face !== prevFace || A.away !== prevAway)) A.driveTurnT = 0;
-    if (A.driving != null && Farm.state && Farm.state.data && Farm.state.data.map) {
-      const car = Farm.state.data.map[A.driving];
-      if (car && car.type === 'car') { car.face = A.face; car.away = !!A.away; }
+    const prevFace = actor.face, prevAway = actor.away;
+    actor.face = h.face;
+    actor.away = h.away;
+    actor.driveDx = dx / dist;
+    actor.driveDy = dy / dist;
+    if (actor.driving != null && (actor.face !== prevFace || actor.away !== prevAway)) actor.driveTurnT = 0;
+    if (actor.driving != null && Farm.state && Farm.state.data && Farm.state.data.map) {
+      const car = Farm.state.data.map[actor.driving];
+      if (car && car.type === 'car') { car.face = actor.face; car.away = !!actor.away; }
     }
     let spd = speed || WALK_SPEED;
-    if (A.driving == null) {
-      A.walkAccel = Math.min(1, (A.walkAccel || 0) + dt / 0.22);
-      spd *= 0.70 + 0.30 * A.walkAccel;
+    if (actor.driving == null) {
+      actor.walkAccel = Math.min(1, (actor.walkAccel || 0) + dt / 0.22);
+      spd *= 0.70 + 0.30 * actor.walkAccel;
     }
     const step = spd * dt;
-    if (step >= dist) { A.gx = tx; A.gy = ty; return true; }
-    A.gx += dx / dist * step;
-    A.gy += dy / dist * step;
+    if (step >= dist) { actor.gx = tx; actor.gy = ty; return true; }
+    actor.gx += dx / dist * step;
+    actor.gy += dy / dist * step;
     return false;
   }
 
   /* 已经派出去的农活：队列里有，或手上正在收/浇/种/走去上车。
-     玩家点空地的 goto、闲逛、擦车不算。 */
-  function doingFarmWork() {
-    if (A.queue && A.queue.length) return true;
-    const k = A.job && A.job.kind;
-    return k === 'harvest' || k === 'water' || k === 'plant' || k === 'boarding';
+     玩家点空地的 goto、闲逛、擦车不算。
+     零参包装 () => doingFarmWork(A) 给建造闸门和旧测试用。 */
+  function doingFarmWork(actor, opts) {
+    if (arguments.length === 0) {
+      actor = A;
+      opts = PLAYER_OPTS;
+    }
+    actor = actor || A;
+    const k = actor.job && actor.job.kind;
+    if (k === 'harvest' || k === 'water' || k === 'plant' || k === 'boarding') return true;
+    if (actor.queue && actor.queue.length) return true;
+    if (opts && opts.claimBoard && actorCanWork(actor, opts)) {
+      const q = pendingList();
+      if (q && q.length) return true;
+    }
+    return false;
   }
 
   function tick(iso) {
@@ -960,169 +1059,180 @@
     const now = Date.now();
     const dt = _lastT ? Math.min(0.12, (now - _lastT) / 1000) : 0.033;
     _lastT = now;
-    if (!(Farm.state && Farm.state._visitLock)) A.look = currentLook();
-    sheet(A.look);
-    if (A.away) backSheet(A.look);
-    if (A.gx == null) spawnAt(iso);
+    tickActor(iso, A, PLAYER_OPTS, dt);
+    if (Farm.hands && Farm.hands.tick) Farm.hands.tick(iso, dt);
+  }
 
-    if (Farm.state && Farm.state._visitLock && !A.visitHold) {
-      A.anim = A.anim === 'walk' ? 'idle' : (A.anim || 'idle');
-      A.frameT += dt;
+  function tickActor(iso, actor, opts, dt) {
+    if (!iso || !actor) return;
+    opts = opts || PLAYER_OPTS;
+    if (typeof dt !== 'number' || !(dt >= 0)) dt = 0.033;
+    if (!opts.canDrive) actor.driving = null;
+    if (actor === A && !(Farm.state && Farm.state._visitLock)) actor.look = currentLook();
+    sheet(actor.look);
+    if (actor.away) backSheet(actor.look);
+    if (actor.gx == null) spawnAt(iso, actor);
+
+    if (actor === A && Farm.state && Farm.state._visitLock && !A.visitHold) {
+      actor.anim = actor.anim === 'walk' ? 'idle' : (actor.anim || 'idle');
+      actor.frameT += dt;
       return;
     }
     /* 建造模式：点空地/上车仍无效，但已经派出去的农活要做完
        （Chris 2026-08-24：「建造时如果在做农活，农活不要停」）。
-       闲逛和玩家点的 goto 照旧站住。 */
-    if (iso._build && !doingFarmWork()) {
-      if (A.job && A.job.kind === 'idlewalk') { A.job = null; A.path = null; }
-      A.anim = A.anim === 'walk' ? 'idle' : (A.anim || 'idle');
-      A.frameT += dt;
+       闲逛和玩家点的 goto 照旧站住。未付工钱的帮手 freeze idle-walk。 */
+    if (iso._build && !doingFarmWork(actor, opts)) {
+      if (actor.job && actor.job.kind === 'idlewalk') { actor.job = null; actor.path = null; }
+      actor.anim = actor.anim === 'walk' ? 'idle' : (actor.anim || 'idle');
+      actor.frameT += dt;
       return;
     }
-    if (Farm.state && Farm.state._visitLock) {
-      A.anim = 'idle';
-      A.frameT += dt;
-      if (A.pause > 0) A.pause -= dt;
+    if (actor === A && Farm.state && Farm.state._visitLock) {
+      actor.anim = 'idle';
+      actor.frameT += dt;
+      if (actor.pause > 0) actor.pause -= dt;
       else {
-        const t = pickIdleTarget(iso);
-        if (t) { A.job = { kind: 'idlewalk', gx: t.gx, gy: t.gy }; A.anim = 'walk'; }
-        A.pause = IDLE_PAUSE[0] + Math.random() * (IDLE_PAUSE[1] - IDLE_PAUSE[0]);
+        const t = pickIdleTarget(iso, actor);
+        if (t) { actor.job = { kind: 'idlewalk', gx: t.gx, gy: t.gy }; actor.anim = 'walk'; }
+        actor.pause = IDLE_PAUSE[0] + Math.random() * (IDLE_PAUSE[1] - IDLE_PAUSE[0]);
       }
-      if (A.job && A.job.kind === 'idlewalk') {
-        A.anim = 'walk';
-        if (moveToward(dt, A.job.gx, A.job.gy)) { A.job = null; A.anim = 'idle'; }
+      if (actor.job && actor.job.kind === 'idlewalk') {
+        actor.anim = 'walk';
+        if (moveToward(actor, dt, actor.job.gx, actor.job.gy)) { actor.job = null; actor.anim = 'idle'; }
       }
-      tickWalkDust(dt);
+      tickWalkDust(actor, dt);
       return;
     }
 
-    A.frameT += dt;
-    if (A.boardHop > 0) A.boardHop = Math.max(0, A.boardHop - dt);
-    if (A.alightHop > 0) A.alightHop = Math.max(0, A.alightHop - dt);
-    if (A.anim !== 'walk' || A.driving != null) {
-      A.walkAccel = Math.max(0, (A.walkAccel || 0) - dt / 0.16);
+    actor.frameT += dt;
+    if (actor.boardHop > 0) actor.boardHop = Math.max(0, actor.boardHop - dt);
+    if (actor.alightHop > 0) actor.alightHop = Math.max(0, actor.alightHop - dt);
+    if (actor.anim !== 'walk' || actor.driving != null) {
+      actor.walkAccel = Math.max(0, (actor.walkAccel || 0) - dt / 0.16);
     }
-    if (A.driving != null) tickDrive(dt);
-    else tickWalkDust(dt);
+    if (opts.canDrive && actor.driving != null) tickDrive(dt);
+    else tickWalkDust(actor, dt);
 
     // 车停着等指令，不自己乱逛 —— 闲逛逻辑是给人写的，驾驶中它会把整辆车挪走。
-    if (A.driving != null && !A.job) { A.anim = 'idle'; return; }
+    if (opts.canDrive && actor.driving != null && !actor.job) { actor.anim = 'idle'; return; }
 
-    if (A.job && A.job.kind === 'idlewalk' && A.queue.length) {
-      A.job = null; A.path = null;   // 手上有农活就别闲逛
+    if (actor.job && actor.job.kind === 'idlewalk' && pendingList().length && actorCanWork(actor, opts)) {
+      actor.job = null; actor.path = null;   // 手上有农活就别闲逛
     }
-    if (!A.job && A.queue.length) {
-      while (A.queue.length && !startJob(iso, A.queue.shift())) { /* skip stale */ }
-    }
+    claim(iso, actor, opts);
 
-    if (A.job && A.job.kind === 'boarding') {
-      A.anim = 'walk';
-      const path = A.path;
-      if (!path || A.pathI >= path.length) { mountNow(A.job.car); return; }
-      const step = path[A.pathI];
-      if (moveToward(dt, step.gx, step.gy, WALK_SPEED)) A.pathI++;   // 走去开车是走路，不是已经在开
+    if (opts.canDrive && actor.job && actor.job.kind === 'boarding') {
+      actor.anim = 'walk';
+      const path = actor.path;
+      if (!path || actor.pathI >= path.length) { mountNow(actor.job.car); return; }
+      const step = path[actor.pathI];
+      if (moveToward(actor, dt, step.gx, step.gy, WALK_SPEED)) actor.pathI++;
       return;
     }
 
-    if (A.job && A.job.kind === 'polish') {
-      const o = ((Farm.state.data && Farm.state.data.map) || [])[A.job.car];
-      if (!o || o.type !== 'car') { A.job = null; A.path = null; A.anim = 'idle'; return; }
-      if (A.anim === 'harvest') {
-        if (A.frameT >= WORK_HOLD) {
+    if (opts.canPolish && actor.job && actor.job.kind === 'polish') {
+      const o = ((Farm.state.data && Farm.state.data.map) || [])[actor.job.car];
+      if (!o || o.type !== 'car') { actor.job = null; actor.path = null; actor.anim = 'idle'; return; }
+      if (actor.anim === 'harvest') {
+        if (actor.frameT >= WORK_HOLD) {
           finishPolish(o);
-          A.job = null; A.path = null; A.anim = 'idle';
+          actor.job = null; actor.path = null; actor.anim = 'idle';
         }
         return;
       }
-      const path = A.path;
-      if (!path || A.pathI >= path.length) {
-        A.path = null;
-        A.anim = 'harvest';
-        A.frameT = 0;
-        A.away = false;
-        const h = heading(o.gx - A.gx, o.gy - A.gy);
-        A.face = h.face;
+      const path = actor.path;
+      if (!path || actor.pathI >= path.length) {
+        actor.path = null;
+        actor.anim = 'harvest';
+        actor.frameT = 0;
+        actor.away = false;
+        const h = heading(o.gx - actor.gx, o.gy - actor.gy);
+        actor.face = h.face;
         return;
       }
-      A.anim = 'walk';
-      const step = path[A.pathI];
-      if (moveToward(dt, step.gx, step.gy, WALK_SPEED)) A.pathI++;
+      actor.anim = 'walk';
+      const step = path[actor.pathI];
+      if (moveToward(actor, dt, step.gx, step.gy, WALK_SPEED)) actor.pathI++;
       return;
     }
 
-    if (A.job && A.job.kind === 'goto') {
-      A.anim = 'walk';
-      const path = A.path;
-      if (!path || A.pathI >= path.length) {
-        A.job = null; A.path = null; A.anim = 'idle';
-        A.pause = IDLE_PAUSE[0] + Math.random() * (IDLE_PAUSE[1] - IDLE_PAUSE[0]);
-        if (A.driving != null) arriveGoto();
+    if (actor.job && actor.job.kind === 'goto') {
+      if (!opts.canDrive && actor.driving != null) { actor.job = null; actor.path = null; actor.anim = 'idle'; return; }
+      actor.anim = 'walk';
+      const path = actor.path;
+      if (!path || actor.pathI >= path.length) {
+        actor.job = null; actor.path = null; actor.anim = 'idle';
+        actor.pause = IDLE_PAUSE[0] + Math.random() * (IDLE_PAUSE[1] - IDLE_PAUSE[0]);
+        if (opts.canDrive && actor.driving != null) arriveGoto();
         return;
       }
-      const step = path[A.pathI];
-      if (moveToward(dt, step.gx, step.gy, moveSpeed())) A.pathI++;
+      const step = path[actor.pathI];
+      if (moveToward(actor, dt, step.gx, step.gy, (opts.canDrive && actor.driving != null) ? moveSpeed() : WALK_SPEED)) actor.pathI++;
       return;
     }
 
-    if (A.job && (A.job.kind === 'harvest' || A.job.kind === 'water' || A.job.kind === 'plant')) {
-      const p = plotPos(iso, A.job.plotIdx, A.job.kind);
-      if (A.anim === 'walk') {
+    if (actor.job && (actor.job.kind === 'harvest' || actor.job.kind === 'water' || actor.job.kind === 'plant')) {
+      const p = plotPos(iso, actor.job.plotIdx, actor.job.kind);
+      if (actor.anim === 'walk') {
         // 先沿寻路的整格路线走，最后一小段再对齐到地头的精确落点。
         // 原来这里是直线插值：地块近时看不出来，开车把距离拉长后会明显穿墙穿水塘。
         let arrived = false;
-        if (A.path && A.pathI < A.path.length) {
-          const st = A.path[A.pathI];
-          if (moveToward(dt, st.gx, st.gy)) A.pathI++;
+        if (actor.path && actor.pathI < actor.path.length) {
+          const st = actor.path[actor.pathI];
+          if (moveToward(actor, dt, st.gx, st.gy)) actor.pathI++;
         } else {
-          arrived = moveToward(dt, p.gx, p.gy);
+          arrived = moveToward(actor, dt, p.gx, p.gy);
         }
         if (arrived) {
-          A.path = null;
-          const pgx = iso._plotGX(A.job.plotIdx);
-          const pgy = iso._plotGY ? iso._plotGY(A.job.plotIdx) : p.gy;
-          const fh = heading(pgx - A.gx, pgy - A.gy);
-          A.face = fh.face;
-          A.away = false;
-          A.anim = A.job.kind;
-          A.frameT = 0;
+          actor.path = null;
+          const pgx = iso._plotGX(actor.job.plotIdx);
+          const pgy = iso._plotGY ? iso._plotGY(actor.job.plotIdx) : p.gy;
+          const fh = heading(pgx - actor.gx, pgy - actor.gy);
+          actor.face = fh.face;
+          actor.away = false;
+          actor.anim = actor.job.kind;
+          actor.frameT = 0;
         }
-      } else if (A.anim === 'harvest' || A.anim === 'water' || A.anim === 'plant') {
-        if (A.frameT >= WORK_HOLD) finishJob(iso);
+      } else if (actor.anim === 'harvest' || actor.anim === 'water' || actor.anim === 'plant') {
+        if (actor.frameT >= WORK_HOLD) finishJob(iso, actor);
       }
       return;
     }
 
-    if (A.job && A.job.kind === 'idlewalk') {
-      A.anim = 'walk';
-      if (moveToward(dt, A.job.gx, A.job.gy)) {
-        A.job = null;
-        A.anim = 'idle';
-        A.pause = IDLE_PAUSE[0] + Math.random() * (IDLE_PAUSE[1] - IDLE_PAUSE[0]);
+    if (actor.job && actor.job.kind === 'idlewalk') {
+      actor.anim = 'walk';
+      if (moveToward(actor, dt, actor.job.gx, actor.job.gy)) {
+        actor.job = null;
+        actor.anim = 'idle';
+        actor.pause = IDLE_PAUSE[0] + Math.random() * (IDLE_PAUSE[1] - IDLE_PAUSE[0]);
       }
       return;
     }
 
-    if (iso._build) { A.anim = 'idle'; return; }   // 建造里农活做完就站住，不闲逛
-    if (A.pause > 0) {
-      A.anim = 'idle';
-      A.pause -= dt;
+    if (iso._build) { actor.anim = 'idle'; return; }   // 建造里农活做完就站住，不闲逛
+    if (!opts.canIdleWander) { actor.anim = 'idle'; return; }
+    if (actor.pause > 0) {
+      actor.anim = 'idle';
+      actor.pause -= dt;
       return;
     }
-    const t = pickIdleTarget(iso);
-    if (t) A.job = { kind: 'idlewalk', gx: t.gx, gy: t.gy };
-    else A.pause = 2;
+    const t = pickIdleTarget(iso, actor);
+    if (t) actor.job = { kind: 'idlewalk', gx: t.gx, gy: t.gy };
+    else actor.pause = 2;
   }
 
-  function frameIndex() {
+  function frameIndex(actor) {
+    actor = actor || A;
     const n = SHEET_COLS;
-    if (A.anim === 'harvest' || A.anim === 'water' || A.anim === 'plant') {
-      const t = Math.min(0.999, A.frameT / WORK_HOLD);
+    if (actor.anim === 'harvest' || actor.anim === 'water' || actor.anim === 'plant') {
+      const t = Math.min(0.999, actor.frameT / WORK_HOLD);
       return 1 + Math.min(3, Math.floor(t * 4));
     }
-    return Math.floor(A.frameT * FPS) % n;
+    return Math.floor(actor.frameT * FPS) % n;
   }
 
-  function blitSheet(ctx, iso, look, anim, fi, x, y, face, away) {
+  function blitSheet(ctx, iso, look, anim, fi, x, y, face, away, actor) {
+    actor = actor || A;
     const wantBack = !!away && (anim === 'walk' || anim === 'idle');
     const back = wantBack ? backSheet(look) : null;
     const im = (back && back.width) ? back : sheet(look);
@@ -1141,16 +1251,16 @@
       // 步伐：两步一循环，落地质心下沉、步间抬起，左右换重心。
       // 不许 rotate —— 等距贴图一转就侧着迈。
       const walking = anim === 'walk';
-      const phase = A.frameT * Math.PI * (FPS / 3);
+      const phase = actor.frameT * Math.PI * (FPS / 3);
       const plant = walking ? Math.pow(Math.abs(Math.sin(phase)), 1.35) : 0;
       const bob = walking
         ? (1 - plant) * th * 0.040
-        : (anim === 'idle' ? Math.sin(A.frameT * 2.15) * th * 0.010 : 0);
+        : (anim === 'idle' ? Math.sin(actor.frameT * 2.15) * th * 0.010 : 0);
       const sway = walking ? Math.sin(phase) * w * 0.030 : 0;
       const squash = walking ? 1 - plant * 0.048 : 1;
       let dip = 0;
       if (anim === 'harvest' || anim === 'plant') {
-        const t = Math.min(1, A.frameT / WORK_HOLD);
+        const t = Math.min(1, actor.frameT / WORK_HOLD);
         const squat = t < 0.22 ? t / 0.22 : (t > 0.82 ? 1 - (t - 0.82) / 0.18 * 0.45 : 1);
         dip = th * (anim === 'plant' ? 0.05 : 0.08) * squat;
       }
@@ -1173,21 +1283,24 @@
     return false;
   }
 
-  function hopLift(th) {
-    if (A.boardHop > 0) return Math.sin((1 - A.boardHop / 0.32) * Math.PI) * th * 0.72;
-    if (A.alightHop > 0) return Math.sin((1 - A.alightHop / 0.28) * Math.PI) * th * 0.55;
+  function hopLift(actor, th) {
+    actor = actor || A;
+    if (arguments.length === 1) { th = actor; actor = A; }
+    if (actor.boardHop > 0) return Math.sin((1 - actor.boardHop / 0.32) * Math.PI) * th * 0.72;
+    if (actor.alightHop > 0) return Math.sin((1 - actor.alightHop / 0.28) * Math.PI) * th * 0.55;
     return 0;
   }
 
-  function drawActor(iso, look, anim, fi, gx, gy, face, away) {
+  function drawActor(iso, look, anim, fi, gx, gy, face, away, actor) {
+    actor = actor || A;
     const c = iso._cell(gx, gy);
     const th = iso._th();
     const yOff = (anim === 'harvest' || anim === 'plant') ? 0.10 : 0.18;
-    const x = c.x, y = c.y + th * yOff - hopLift(th);
-    if (A.walkDust && A.walkDust.length && iso._drawCarDust) {
-      iso._drawCarDust(A.walkDust, iso._tw(), th);
+    const x = c.x, y = c.y + th * yOff - hopLift(actor, th);
+    if (actor.walkDust && actor.walkDust.length && iso._drawCarDust) {
+      iso._drawCarDust(actor.walkDust, iso._tw(), th);
     }
-    if (blitSheet(iso._ctx, iso, look, anim, fi, x, y, face, away)) return;
+    if (blitSheet(iso._ctx, iso, look, anim, fi, x, y, face, away, actor)) return;
     const spec = specOf(look);
     if (iso._drawVillager) {
       iso._drawVillager(x, y, th, {
@@ -1198,16 +1311,20 @@
     }
   }
 
-  function depthDraw(iso) {
-    if (A.gx == null) return null;
-    if (A.driving != null && !(A.boardHop > 0)) return null;   // 人在车里；上车那一跳还要画
-    const fi = frameIndex();
-    const gx = A.gx, gy = A.gy, look = A.look, anim = A.anim, face = A.face, away = !!A.away;
-    const hopD = (A.boardHop > 0 || A.alightHop > 0) ? 0.9 : 0;
+  function depthDrawActor(iso, actor) {
+    if (!actor || actor.gx == null) return null;
+    if (actor.driving != null && !(actor.boardHop > 0)) return null;
+    const fi = frameIndex(actor);
+    const gx = actor.gx, gy = actor.gy, look = actor.look, anim = actor.anim, face = actor.face, away = !!actor.away;
+    const hopD = (actor.boardHop > 0 || actor.alightHop > 0) ? 0.9 : 0;
     return {
       d: gx + gy + hopD + ((anim === 'harvest' || anim === 'plant' || anim === 'water') ? 0.62 : 0.35),
-      fn: () => drawActor(iso, look, anim, fi, gx, gy, face, away),
+      fn: () => drawActor(iso, look, anim, fi, gx, gy, face, away, actor),
     };
+  }
+
+  function depthDraw(iso) {
+    return depthDrawActor(iso, A);
   }
 
   function drawGuest(iso, customer, x, y) {
@@ -1275,6 +1392,12 @@
     enqueueHarvestAll: enqueueHarvestAll,
     enqueueWaterAll: enqueueWaterAll,
     enqueuePlantAll: enqueuePlantAll,
+    emptyActor: emptyActor,
+    tickActor: tickActor,
+    startJob: startJob,
+    spawnAt: spawnAt,
+    doingFarmWork: doingFarmWork,
+    depthDrawActor: depthDrawActor,
     tick: tick,
     depthDraw: depthDraw,
     drawGuest: drawGuest,

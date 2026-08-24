@@ -2238,6 +2238,13 @@ body.mapmode #warehouseBtn { display: none !important; }
   background-size: 600% 500%;
   background-position: 0 0;
 }
+.hands-slot {
+  margin: 12px 0 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #efe6d8;
+}
+.hands-slot:last-of-type { border-bottom: none; }
+
 .farmer-look-grid {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
@@ -3795,6 +3802,8 @@ body.modal-open .toast-stack {
   padding: 12px 14px;
   box-shadow: 0 1px 3px rgba(0,0,0,0.04);
 }
+/* 2026-08-24：图标从 emoji 换成简笔画 SVG（与 promo/sketch-cards 同一套线条）。
+   ⚠️ 尺寸别再往下调 —— 40px 已经是这套线条还读得出形状的下限。 */
 .guide-card-icon {
   flex: 0 0 auto;
   width: 40px;
@@ -3842,7 +3851,7 @@ body.modal-open .toast-stack {
   font-size: 14.5px;
   font-weight: 700;
   color: var(--warm-text, #4a3f2e);
-  margin-bottom: 3px;
+  margin-bottom: 4px;
 }
 .guide-card-step {
   display: inline-flex;

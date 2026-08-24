@@ -860,6 +860,10 @@
               + '<div class="farmer-look-name">' + (lang === 'en' ? lk.en : lk.zh) + '</div></button>';
           }).join('')}
         </div>
+        ${(Farm.hands && (Farm.hands.isUnlocked() || Farm.hands.liveCount() > 0)) ? (
+          '<button type="button" class="btn secondary" id="handsSettingsBtn" style="width:100%;margin-top:12px;">'
+          + (lang === 'en' ? 'Hired hand' : '帮手') + '</button>'
+        ) : ''}
       </div>
 
       <div class="settings-card">
@@ -960,6 +964,13 @@
         openSettings();
       };
     });
+    const handsBtn = document.getElementById('handsSettingsBtn');
+    if (handsBtn) {
+      handsBtn.onclick = () => {
+        if (Farm.audio) Farm.audio.play('tap');
+        if (Farm.hands && Farm.hands.openPanel) Farm.hands.openPanel();
+      };
+    }
     // Neighbor settings: save nickname on blur, visibility on change
     const nickEl = document.getElementById('nicknameInput');
     if (nickEl) {

@@ -315,7 +315,11 @@
   // ---- 第 6 组：开车自动干农活 ----
   const plots = Farm.state.data.plots || [];
   const A6 = Farm.farmer._actor();
-  const reset6 = () => { Farm.farmer.unboard(); A6.queue = []; A6.job = null; A6.path = null; };
+  const reset6 = () => {
+    Farm.farmer.unboard();
+    A6.queue = []; A6.job = null; A6.path = null;
+    if (Farm.hands) Farm.hands.board = [];
+  };
   const plotD = (i) => Math.abs(iso._plotGX(i) - A6.gx) + Math.abs(iso._plotGY(i) - A6.gy);
   let farPlot = -1, nearPlot = -1;
   for (let i = 0; i < plots.length; i++) {
@@ -345,10 +349,12 @@
       const nearCar = Farm.state.data.map.length - 1;
       Farm.farmer.enqueue(farPlot, 'plant', 'xiao_cong');
       dbg.f1 = { job: A6.job ? A6.job.kind : null, q: A6.queue.length,
+                 bq: (Farm.hands && Farm.hands.board) ? Farm.hands.board.length : 0,
                  man: { gx: A6.gx, gy: A6.gy }, car: side, plotD: plotD(farPlot) };
       dbg.f1cost = Farm.farmer._driveDebug(farPlot);
+      const pendingN = A6.queue.length + ((Farm.hands && Farm.hands.board) ? Farm.hands.board.length : 0);
       T('F1 车在手边就开车去干活',
-        !!A6.job && (A6.job.kind === 'boarding' || A6.job.kind === 'goto') && A6.queue.length === 1);
+        !!A6.job && (A6.job.kind === 'boarding' || A6.job.kind === 'goto') && pendingN === 1);
 
       await waitWhile(() => !!A6.job && (A6.job.kind === 'boarding' || A6.job.kind === 'goto'),
       (A6.path || []).length || 40);

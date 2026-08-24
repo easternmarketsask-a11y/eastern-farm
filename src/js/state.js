@@ -76,6 +76,8 @@
     mapBuildSeen: false,        // has the player opened build mode once? (gates the 建造-button hint pulse)
     farmStyle: 'iso',           // chosen farm view: 'iso' (Hay Day) | 'topdown' (pixel) | 'classic' (vertical)
     farmerLook: 2,              // 油画农户 1–9；缺省女农户。非法值按 2 收。
+    hands: [],                  // [{ look, hiredAt, paidThroughDate }] 帮手；永不弃档
+    handsUnlockSeen: '',        // '' = never; sticky '1' after the once-ever prompt
     extraPlots: 0,              // additional plots unlocked beyond the base 12 (max 4)
     homeUpkeepOn: '',           // Sask date last paid; empty = not yet
     homeNeglected: false,       // unpaid upkeep today → house charm halved
@@ -229,6 +231,27 @@
       if (Array.isArray(want)) { if (!Array.isArray(sd[k])) sd[k] = []; }
       else if (typeof sd[k] !== typeof want) sd[k] = want;
     }
+  }
+
+  function sanitizeHands(data) {
+    if (!data || typeof data !== 'object') return data;
+    if (!Array.isArray(data.hands)) data.hands = [];
+    data.hands = data.hands.map(function (h) {
+      if (!h || typeof h !== 'object') return null;
+      const look = Farm.farmer && Farm.farmer.clampLook
+        ? Farm.farmer.clampLook(h.look)
+        : ((h.look >= 1 && h.look <= 9) ? (h.look | 0) : 7);
+      return {
+        look: look,
+        hiredAt: (typeof h.hiredAt === 'number' && isFinite(h.hiredAt)) ? h.hiredAt : Date.now(),
+        paidThroughDate: (typeof h.paidThroughDate === 'string') ? h.paidThroughDate : '',
+      };
+    }).filter(Boolean);
+    // Extra rows beyond MAX_HANDS stay in the blob unpaid and unspawned.
+    // Do not delete. 永不弃档.
+    if (data.handsUnlockSeen) data.handsUnlockSeen = '1';
+    else data.handsUnlockSeen = '';
+    return data;
   }
 
   function getDateString(d) {
@@ -401,6 +424,7 @@
           // 按 STARTER 的类型校验：数字键 Number()+isFinite，坏值回落默认；
           // 字符串键非 string 回落默认。嵌套对象/数组由下面的既有守卫负责。
           for (const k of Object.keys(STARTER_STATE)) {
+            if (k === 'handsUnlockSeen') continue;
             const defVal = STARTER_STATE[k];
             const v = this.data[k];
             if (typeof defVal === 'number') {
@@ -432,6 +456,7 @@
           this.data.decorations = this.data.decorations || [];
           const fl = this.data.farmerLook | 0;
           this.data.farmerLook = (fl >= 1 && fl <= 9) ? fl : 2;
+          sanitizeHands(this.data);
           // Fresh top-level object so per-ai relationship writes never leak into STARTER_STATE.
           this.data.aiRelationships = Object.assign({}, STARTER_STATE.aiRelationships, this.data.aiRelationships || {});
           // Reset session stats daily
@@ -794,6 +819,10 @@
       if (cloudState.farmStyle == null && localStyle) merged.farmStyle = localStyle;
       if (cloudState.mapBuildSeen == null && localBuildSeen) merged.mapBuildSeen = true;
       this.data = merged;
+      sanitizeHands(this.data);
+      if (!(Farm.state && Farm.state._visitLock) && Farm.hands && Farm.hands.syncFromSave) {
+        Farm.hands.syncFromSave();
+      }
       // Daily/session rollover if the restored blob predates today.
       const today = getDateString();
       if (!this.data.sessionStats || this.data.sessionStats.date !== today) {

@@ -71,6 +71,10 @@ if ! node scripts/verify/farmer-work-test.mjs; then
   echo "—— 部署中止(收割/种植落点与动作契约)"
   exit 1
 fi
+if ! node scripts/verify/hands-test.mjs; then
+  echo "—— 部署中止(帮手契约)"
+  exit 1
+fi
 if ! node scripts/verify/audio-test.mjs; then
   echo "—— 部署中止(音效契约)"
   exit 1
@@ -484,6 +488,33 @@ else
     console.log("  ✓ 远地开车 / 近地不上车 / 活不丢 / 没车也不卡");
   ' "$CF_OUT"; then
     echo "—— 部署中止：人会走着穿过整个农场。"
+    exit 1
+  fi
+
+  # 闸门 N: 帮手(约 20 秒)
+  # 2026-08-24 加。两个人必须领不同的地、未付工钱的帮手不能收、
+  # 雇佣扣币和人要落在同一次存档里、刷新后人还在。
+  echo "▶ 闸门 N: 帮手回归测试(约 20 秒)…"
+  $PYCMD -m http.server 8160 --bind 127.0.0.1 >/dev/null 2>&1 &
+  HANDS_PID=$!
+  trap 'kill $HANDS_PID 2>/dev/null || true' EXIT
+  sleep 1
+  HANDS_OUT="$(mktemp)"
+  EF_CDP_TIMEOUT=180000 node scripts/verify/cdp.mjs "http://127.0.0.1:8160/src/" "scripts/verify/hands-e2e.js" 8000 >"$HANDS_OUT" 2>/dev/null || true
+  kill $HANDS_PID 2>/dev/null || true
+  trap - EXIT
+  if ! node -e '
+    const o = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
+    const r = o.evalResult;
+    if (!r || !r.failures) { console.error("✗ 帮手测试没跑出结果"); process.exit(1); }
+    if (r.failures.length) {
+      console.error("✗ 帮手是坏的:");
+      r.failures.forEach(f => console.error("  - " + f));
+      process.exit(1);
+    }
+    console.log("  ✓ 雇佣 / 两人分地 / 未付闲逛 / 拜访不丢档 / 刷新还在");
+  ' "$HANDS_OUT"; then
+    echo "—— 部署中止：帮手雇不上，或两个人抢同一块地。"
     exit 1
   fi
 fi

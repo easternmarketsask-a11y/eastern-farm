@@ -45,5 +45,6 @@
   await step('relang-en', () => { F.state.data.language = 'en'; F.i18n.setLanguage('en'); F.ui.refreshHUD(); F.isoView && F.isoView.relang && F.isoView.relang(); });
   await step('relang-zh', () => { F.state.data.language = 'zh'; F.i18n.setLanguage('zh'); F.ui.refreshHUD(); F.isoView && F.isoView.relang && F.isoView.relang(); });
   await step('tick', () => F.farm && F.farm.tick());
+  await step('hands', () => F.hands && F.hands.openPanel && F.hands.openPanel());
   return { failures, ran };
 })()

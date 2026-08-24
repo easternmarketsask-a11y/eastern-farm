@@ -505,6 +505,10 @@
       this._startLoop();
       this.render();
       this.collectHomeUpkeep();
+      if (Farm.hands) {
+        if (Farm.hands.maybeSyncFromSave) Farm.hands.maybeSyncFromSave();
+        if (Farm.hands.collectWage) Farm.hands.collectWage();
+      }
       if (Farm.fbAuth && Farm.fbAuth.isLoggedIn && Farm.fbAuth.isLoggedIn() && Farm.coach) {
         setTimeout(() => { if (Farm.coach) Farm.coach.fire('first_neighbor'); }, 3800);
       }
@@ -1197,6 +1201,14 @@
         else if (b.tap === 'shop' && Farm.shop && Farm.shop.open) Farm.shop.open();
         else if (Farm.ui && Farm.ui.toast) Farm.ui.toast(this._lang() === 'en' ? b.en : b.zh);
         return;
+      }
+      if (Farm.hands && Farm.hands.actorAtPoint) {
+        const hi = Farm.hands.actorAtPoint(this, p.x, p.y);
+        if (hi >= 0) {
+          this._stickyEnd();
+          if (Farm.hands.openPanel) Farm.hands.openPanel();
+          return;
+        }
       }
       this._tapCell(c.gx, c.gy);
     },
@@ -2480,6 +2492,7 @@
         Farm.state._visitLock = true;
         Farm.state.data = vd;
         if (Farm.farmer && Farm.farmer.onEnterVisit) Farm.farmer.onEnterVisit(info);
+        if (Farm.hands && Farm.hands.onEnterVisit) Farm.hands.onEnterVisit();
         this._pcs = null; this._pcsN = -1;       // 地块格缓存按 plots.length 判断, 必须手动失效
         this._bgKey = null;
         this._buildLayout();
@@ -2505,6 +2518,7 @@
       if (v && v.savedData) Farm.state.data = v.savedData;
       Farm.state._visitLock = false;
       if (Farm.farmer && Farm.farmer.onExitVisit) Farm.farmer.onExitVisit();
+      if (Farm.hands && Farm.hands.onExitVisit) Farm.hands.onExitVisit();
       this._pets = {};
       this._pcs = null; this._pcsN = -1;
       this._bgKey = null;
@@ -5423,6 +5437,10 @@
       if (Farm.farmer && Farm.farmer.depthDraw) {
         const fd = Farm.farmer.depthDraw(this);
         if (fd) draws.push(fd);
+      }
+      if (Farm.hands && Farm.hands.depthDraws) {
+        const hd = Farm.hands.depthDraws(this);
+        for (let i = 0; i < hd.length; i++) if (hd[i]) draws.push(hd[i]);
       }
       draws.sort((a, c) => a.d - c.d); draws.forEach(x => x.fn());
 

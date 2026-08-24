@@ -42,8 +42,8 @@ assert.ok(!/Math\.abs\(dx\)\s*>=\s*Math\.abs\(dy\)/.test(farmerSrc),
   'moveToward 不得再用世界轴 |dx| vs |dy| 判朝向');
 
 assert.match(farmerSrc, /const h = heading\(dx, dy\)/);
-assert.match(farmerSrc, /A\.face = h\.face/);
-assert.match(farmerSrc, /A\.away = h\.away/);
+assert.match(farmerSrc, /(?:A|actor)\.face = h\.face/);
+assert.match(farmerSrc, /(?:A|actor)\.away = h\.away/);
 assert.match(farmerSrc, /backSheet|p_farmer_.*_back/);
 assert.match(farmerSrc, /Farm\.farmer\.heading\s*=\s*heading|heading:\s*heading/);
 

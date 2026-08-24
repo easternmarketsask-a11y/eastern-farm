@@ -22,23 +22,25 @@
     if (plots[i] && plots[i].unlocked) { idx = i; break; }
   }
   T('有地可种', idx >= 0);
+  const pending = () => (A.queue ? A.queue.length : 0) + ((Farm.hands && Farm.hands.board) ? Farm.hands.board.length : 0);
   if (idx >= 0) {
     plots[idx].crop = null;
     Farm.state.data.seeds = Farm.state.data.seeds || {};
     Farm.state.data.seeds.shanghai_miao = 8;
     A.queue = []; A.job = null; A.path = null; A.driving = null; A.pause = 0;
+    if (Farm.hands) Farm.hands.board = [];
     const ok = Farm.farmer.enqueue(idx, 'plant', 'shanghai_miao');
-    T('派了种植', ok === true && (A.queue.length + (A.job ? 1 : 0)) >= 1);
+    T('派了种植', ok === true && (pending() + (A.job ? 1 : 0)) >= 1);
     iso._build = true;
-    const beforeQ = A.queue.length;
+    const beforeQ = pending();
     const beforeKind = A.job && A.job.kind;
     const gx0 = A.gx, gy0 = A.gy;
     for (let i = 0; i < 12; i++) Farm.farmer.tick(iso);
-    T('建造中农活还在', !!(A.job && (A.job.kind === 'plant' || A.job.kind === 'walk' || A.job.kind === 'boarding' || A.job.kind === 'goto')) || A.queue.length > 0 || (A.anim === 'plant'));
+    T('建造中农活还在', !!(A.job && (A.job.kind === 'plant' || A.job.kind === 'walk' || A.job.kind === 'boarding' || A.job.kind === 'goto')) || pending() > 0 || (A.anim === 'plant'));
     const moved = Math.hypot((A.gx - gx0) || 0, (A.gy - gy0) || 0) > 0.05;
     const progressed = A.anim === 'plant' || A.anim === 'walk' || moved || (A.job && A.job.kind === 'plant');
     T('建造中人还在干活或往地里走', progressed || beforeKind === 'plant' || beforeQ > 0);
     iso._build = false;
   }
-  return { failures, job: A.job && A.job.kind, anim: A.anim, q: A.queue.length };
+  return { failures, job: A.job && A.job.kind, anim: A.anim, q: pending() };
 })()

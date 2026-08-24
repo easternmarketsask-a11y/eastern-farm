@@ -29,6 +29,7 @@
     if (carAt) d.map.push({ type: 'car', gx: carAt[0], gy: carAt[1], lv: 1 });
     if (iso._buildLayout) iso._buildLayout();
     A.gx = 3; A.gy = 6; A.driving = null; A.job = null; A.queue = []; A.path = null; A.pause = 0;
+    if (Farm.hands) Farm.hands.board = [];
   };
 
   // ① 下一块地在南边（远）+ 场上有车 → 应该去开车
@@ -39,7 +40,8 @@
   dbg.far = { job: A.job && A.job.kind, driving: A.driving, queue: A.queue.length };
   T('D1 下一块地在另一片区域时，会去开车', wentDriving);
   // 活不能弄丢 —— 上车只是路上的一段，队列里那件事还得在
-  T('D2 去开车时那件活留在队列里没丢', A.queue.length === 1 || (A.job && A.job.kind === 'boarding'));
+  const pending = () => (A.queue ? A.queue.length : 0) + ((Farm.hands && Farm.hands.board) ? Farm.hands.board.length : 0);
+  T('D2 去开车时那件活留在队列里没丢', pending() >= 1 || (A.job && A.job.kind === 'boarding'));
 
   // ② 下一块地就在隔壁（近）→ 不该上下车（连片菜地逐块上车太吵）
   setup([7, 6]);

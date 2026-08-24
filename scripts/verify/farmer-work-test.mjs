@@ -27,25 +27,28 @@ offG.forEach((s) => {
   assert.ok(n > 0.15 && n < 0.62, '前缘偏移应在垄上 (0.15–0.62)，现在是 ' + n);
 });
 
-assert.match(src, /A\.path = Farm\.pathfind\.find\(A\.gx, A\.gy, (ap|approach)\.gx/);
-assert.match(src, /arrived = moveToward\(dt, p\.gx, p\.gy/);
+assert.match(src, /actor\.path = Farm\.pathfind\.find\(actor\.gx, actor\.gy, (ap|approach)\.gx/);
+assert.match(src, /arrived = moveToward\(actor, dt, p\.gx, p\.gy/);
 
 assert.match(src, /WORK_HOLD|workHold|workSecs/);
 assert.match(src, /anim === 'harvest'[\s\S]{0,400}dip|anim === 'plant'[\s\S]{0,400}dip/);
 
-const fi = src.match(/function frameIndex\(\) \{[\s\S]*?\n  \}/);
-assert.ok(fi, 'frameIndex');
+const fi = src.match(/function frameIndex\(actor\) \{[\s\S]*?\n  \}/);
+assert.ok(fi, 'frameIndex(actor)');
 assert.ok(/harvest/.test(fi[0]) && /plant/.test(fi[0]), '收割种植走自己的帧');
 assert.ok(!/Math\.min\(n - 1, Math\.floor\(A\.frameT \* FPS\)\)/.test(fi[0])
   || /1 \+ /.test(fi[0]) || /WORK_/.test(fi[0]),
   '收割种植不得从第 0 列站桩帧播起');
 
 assert.match(src, /function doingFarmWork\(/);
-assert.match(src, /iso\._build && !doingFarmWork\(\)/,
+assert.match(src, /iso\._build && !doingFarmWork\(/,
   '建造模式只在没农活时站住，有收/浇/种不能把 tick 掐掉');
 assert.match(src, /iso\._build && !keepQueue/,
   '建造仍不许点空地乱走；农活内部续走 keepQueue 要放行');
 assert.ok(!/if \(iso\._build \|\| \(Farm\.state && Farm\.state\._visitLock && !A\.visitHold\)\)/.test(src),
   '不得再把建造和拜访捆成一条直接 return（那会停掉农活）');
+assert.match(src, /function tickActor\(/);
+assert.match(src, /startJob\(iso, actor/);
+assert.match(src, /Farm\.hands && Farm\.hands\.tick/);
 
 console.log('ok farmer-work');
