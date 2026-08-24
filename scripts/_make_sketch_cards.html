@@ -7,7 +7,8 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=ZCOOL+XiaoWei&family=Plus+Jakarta+Sans:wght@500;700&display=swap">
 <style>
 /* 🔒 ZCOOL XiaoWei 的「回」是坏字形（字体自带豆腐块，不回退）。
-   照抄 src/css/style.css 的补丁：把 U+56DE 交给系统字体，且必须排在栈首。 */
+   照抄 src/css/style.css 的补丁：U+56DE 交给系统字体，且必须排在栈首。
+   第 2 张标题「积分回到会员卡」就有「回」。 */
 @font-face{
   font-family:'EF XiaoWei Patch';
   src: local('Microsoft YaHei'), local('PingFang SC'), local('Noto Sans SC'),
@@ -15,314 +16,344 @@
   unicode-range: U+56DE;
 }
 :root{
-  --paper:#FBF7EC;      /* 暖纸 */
-  --band:#F1E7D1;       /* 扫码通栏 */
-  --ink:#26301F;        /* 线 —— 偏绿的近黑，不是纯黑 */
-  --green:#3A8C50;      /* 品牌绿，唯一色块 */
-  --deep:#2A5C34;       /* 标题 */
-  --spark:#E8522A;      /* 品牌橙红，每张只点一处 */
+  --paper:#FBF7EC; --band:#F1E7D1; --ink:#26301F; --green:#3A8C50;
+  --deep:#2A5C34; --spark:#E8522A;
   --display:'EF XiaoWei Patch','ZCOOL XiaoWei','Noto Sans SC','Microsoft YaHei',sans-serif;
   --en:'Plus Jakarta Sans','Segoe UI',sans-serif;
   --sans:'Noto Sans SC','Microsoft YaHei',sans-serif;
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{background:#888}
-.card{
-  position:relative; width:1080px; height:1350px; background:var(--paper);
-  overflow:hidden; display:flex; flex-direction:column;
-}
-/* 手绘双线边框 */
-.frame{position:absolute; left:0; top:0; right:0; height:1124px; pointer-events:none; z-index:3}
-.eyebrow{
-  position:absolute; top:74px; left:0; width:100%; text-align:center;
-  font:500 27px/1 var(--sans); letter-spacing:.34em; color:var(--green);
-}
-.eyebrow b{font-weight:500}
-.art{flex:0 0 578px; margin-top:100px; display:flex; align-items:center; justify-content:center}
+.card{position:relative;width:1080px;height:1350px;background:var(--paper);
+  overflow:hidden;display:flex;flex-direction:column}
+.frame{position:absolute;left:0;top:0;right:0;height:1124px;pointer-events:none;z-index:3}
+.eyebrow{position:absolute;top:74px;left:0;width:100%;text-align:center;
+  font:500 27px/1 var(--sans);letter-spacing:.34em;color:var(--green)}
+.art{flex:0 0 578px;margin-top:100px;display:flex;align-items:center;justify-content:center}
 .art svg{width:800px;height:auto;display:block}
-.words{flex:1 1 auto; padding:0 86px 30px; display:flex; flex-direction:column; justify-content:center}
-h1{
-  font:400 82px/1.26 var(--display); color:var(--deep);
-  letter-spacing:.02em; text-wrap:balance;
-}
+.words{flex:1 1 auto;padding:0 86px 30px;display:flex;flex-direction:column;justify-content:center}
+h1{font:400 82px/1.26 var(--display);color:var(--deep);letter-spacing:.02em;text-wrap:balance}
 h1 .hot{color:var(--spark)}
-.en{
-  margin-top:26px; font:700 35px/1.3 var(--en); color:var(--ink);
-  letter-spacing:.005em; opacity:.9;
-}
-.sub{
-  margin-top:22px; font:400 30px/1.6 var(--sans); color:var(--ink); opacity:.74;
-  max-width:23em;
-}
-/* 扫码通栏 */
-.band{
-  flex:0 0 226px; background:var(--band); display:flex; align-items:center;
-  gap:38px; padding:0 76px; position:relative;
-}
-.band::before{
-  content:""; position:absolute; top:0; left:0; right:0; height:4px;
-  background:repeating-linear-gradient(90deg,var(--ink) 0 13px,transparent 13px 26px);
-  opacity:.36;
-}
+.en{margin-top:26px;font:700 35px/1.3 var(--en);color:var(--ink);opacity:.9}
+.sub{margin-top:22px;font:400 30px/1.6 var(--sans);color:var(--ink);opacity:.74;max-width:23em}
+.sub b{color:var(--spark);font-weight:500;opacity:1}
+.band{flex:0 0 226px;background:var(--band);display:flex;align-items:center;
+  gap:38px;padding:0 76px;position:relative}
+.band::before{content:"";position:absolute;top:0;left:0;right:0;height:4px;
+  background:repeating-linear-gradient(90deg,var(--ink) 0 13px,transparent 13px 26px);opacity:.36}
 .band img{width:158px;height:158px;display:block;border-radius:6px}
-.bt1{font:400 42px/1.15 var(--display); color:var(--deep)}
-.bt2{margin-top:11px; font:700 33px/1.15 var(--en); color:var(--green); letter-spacing:.01em}
-.bt3{margin-top:11px; font:400 25px/1.2 var(--sans); color:var(--ink); opacity:.62}
-/* 简笔画线条 */
+.bt1{font:400 42px/1.15 var(--display);color:var(--deep)}
+.bt2{margin-top:11px;font:700 33px/1.15 var(--en);color:var(--green)}
+.bt3{margin-top:11px;font:400 25px/1.2 var(--sans);color:var(--ink);opacity:.62}
 svg .ink{fill:none;stroke:var(--ink);stroke-width:7.5;stroke-linecap:round;stroke-linejoin:round}
 svg .thin{stroke-width:4.6}
-svg .fat{stroke-width:10}
+svg .hair{stroke-width:5.6}
 svg .wash{fill:var(--green);opacity:.2;stroke:none}
 svg .hot{fill:var(--spark);opacity:.26;stroke:none}
 svg .hotline{fill:none;stroke:var(--spark);stroke-width:6;stroke-linecap:round;stroke-linejoin:round}
-svg .paper{fill:var(--paper)}
-/* 预览页（不进截图） */
+svg .dot{fill:var(--ink);stroke:none}
+svg .dash{stroke-dasharray:11 10}
 body.grid{display:flex;flex-wrap:wrap;gap:26px;padding:26px;justify-content:center}
 body.grid .card{zoom:.34;box-shadow:0 6px 26px rgba(0,0,0,.4)}
 </style>
 
 <body>
 <script>
-/* 每张：eyebrow 是给 Chris 归档用的主题名（真实分类，不是编号——
-   这 10 张各自独立发，标 03/10 会让人以为漏看了几张）。 */
+/* 10 张各自独立发，所以不编号 —— 左上角是主题名，给归档用。
+   🔒 画一律画「能一眼认出的东西或场景」：不用箭头、不用打叉、不用示意图。
+      Chris 2026-08-23：「图画还是不要抽象。」 */
 const P = [
 {
- eye:'怎么开始', zh:'扫一扫，<span class="hot">就能种菜</span>',
- en:'Scan. Start farming.',
- sub:'不用下载、不用注册，手机扫码打开就能玩。免费。',
+ eye:'为什么值得玩', zh:'越玩越省，<br>不是越玩越花',
+ en:'Play to save, not to spend.',
+ sub:'别的农场游戏是让你往里充钱。这个从头到尾没有一处能花真钱——玩出来的，最后回到你的会员卡上。',
  svg:`
-  <ellipse class="wash" cx="336" cy="406" rx="132" ry="22"/>
-  <path class="ink thin" d="M126 122h-38q-9 0-9 9v38"/>
-  <path class="ink thin" d="M534 120h38q9 0 9 9v38"/>
-  <path class="ink thin" d="M126 404h-38q-9 0-9-9v-38"/>
-  <path class="ink thin" d="M534 406h38q9 0 9-9v-38"/>
-  <rect class="wash" x="284" y="176" width="106" height="188" rx="8"/>
-  <path class="ink" d="M268 166q0-22 22-22h94q22 0 22 22v218q0 22-22 22h-94q-22 0-22-22z"/>
-  <path class="ink thin" d="M314 388h44"/>
-  <path class="ink thin" d="M282 348c26-22 78-22 106 0"/>
-  <path class="wash" d="M330 236c-32-5-55-30-59-62 37 3 58 29 59 62z"/>
-  <path class="wash" d="M344 190c33-10 54-38 51-70-36 8-55 37-51 70z"/>
-  <path class="ink" d="M336 350c-7-56 4-146-2-256"/>
-  <path class="ink" d="M332 238c-33-5-57-30-61-63 38 3 60 30 61 63z"/>
-  <path class="ink" d="M341 192c33-10 54-38 51-71-36 8-55 38-51 71z"/>
-  <path class="hotline" d="M466 146l7 17 17 7-17 7-7 17-7-17-17-7 17-7z"/>
-  <path class="hotline thin" d="M198 240l5 12 12 5-12 5-5 12-5-12-12-5 12-5z"/>`
+  <path class="wash" d="M254 100h176v298l-176 6z"/>
+  <path class="ink" d="M244 90h180v300l-22 14-23-14-22 14-23-14-22 14-23-14-22 14-23-14z"/>
+  <path class="ink thin" d="M290 134c-14-2-24-11-26-25 16 1 25 11 26 25"/>
+  <path class="ink thin" d="M294 128c14-4 22-16 21-30-15 3-23 16-21 30"/>
+  <path class="ink" d="M318 134h74"/>
+  <path class="ink thin" d="M272 188h74M370 188h32"/>
+  <path class="ink thin" d="M272 222h60M370 222h32"/>
+  <path class="ink thin" d="M272 256h80M370 256h32"/>
+  <path class="ink thin dash" d="M270 292h136"/>
+  <path class="ink" d="M272 330h56M354 330h52"/>
+  <circle class="wash" cx="500" cy="326" r="42"/>
+  <circle class="ink" cx="496" cy="328" r="42"/>
+  <circle class="ink thin" cx="496" cy="328" r="26"/>
+  <circle class="wash" cx="566" cy="372" r="38"/>
+  <circle class="ink" cx="562" cy="374" r="38"/>
+  <circle class="ink thin" cx="562" cy="374" r="23"/>
+  <circle class="ink" cx="544" cy="258" r="34"/>
+  <circle class="ink thin" cx="544" cy="258" r="20"/>
+  <path class="hotline thin" d="M598 176l6 15 15 6-15 6-6 15-6-15-15-6 15-6z"/>`
 },
 {
- eye:'种什么', zh:'种的都是<br>店里在卖的菜',
- en:'43 real vegetables. All on our shelves.',
- sub:'青菜、韭菜、茄子、冬瓜、荔枝……孩子在游戏里认识，妈妈在店里买得到。',
- svg:`
-  <ellipse class="wash" cx="330" cy="420" rx="290" ry="20"/>
-  <path class="ink thin" d="M52 416c152-9 404 10 556-4"/>
-  <path class="wash" d="M104 398c-8-44 2-74 30-86 28 12 38 42 30 86z"/>
-  <path class="ink" d="M100 400c-9-46 2-78 32-90 30 12 41 44 32 90z"/>
-  <path class="ink" d="M132 314C86 300 62 262 66 210c46 8 70 44 66 104"/>
-  <path class="ink" d="M134 312c44-18 66-58 58-108-44 14-66 52-58 108"/>
-  <path class="ink thin" d="M132 312c-2-42 0-76 2-98"/>
-  <circle class="wash" cx="286" cy="336" r="60"/>
-  <circle class="ink" cx="282" cy="338" r="62"/>
-  <path class="ink" d="M282 280c-20-4-35-15-42-29 18-3 34 4 42 16 8-12 24-19 42-16-7 14-22 25-42 29z"/>
-  <path class="ink thin" d="M282 268v-26"/>
-  <path class="ink thin" d="M252 322c6-13 19-22 33-22"/>
-  <path class="wash" d="M436 266C422 284 412 316 410 348 408 382 420 404 438 404 456 404 468 382 466 348 464 316 452 284 438 266Z"/>
-  <path class="ink" d="M432 264C418 282 408 314 406 346 404 380 416 402 434 402 452 402 464 380 462 346 460 314 448 282 434 264Z"/>
-  <path class="ink" d="M433 266c-15 4-25 15-29 30 13 2 24-7 29-19"/>
-  <path class="ink" d="M433 266c15 4 25 15 29 30-13 2-24-7-29-19"/>
-  <path class="ink thin" d="M433 268c-5 13-5 24 0 33 5-9 5-20 0-33"/>
-  <path class="ink thin" d="M433 262v-24"/>
-  <path class="hot" d="M542 284c34 20 42 74 22 118-16-14-24-42-26-72-2-20 0-36 4-46z"/>
-  <path class="ink" d="M538 282C574 300 582 356 562 404 546 356 530 316 538 282Z"/>
-  <path class="ink" d="M538 282l-4-24q18-10 30 0"/>`
-},
-{
- eye:'积分', zh:'玩着玩着，<br>积分回到会员卡',
+ eye:'积分', zh:'积分回到会员卡，<br>下次买菜能抵',
  en:'Farm points land on your member card.',
- sub:'游戏里挣的东方积分，和在店里消费攒的是同一本账（每天有上限）。反过来，到店消费也能领农场币。',
+ sub:'游戏里挣的东方积分，和在店里消费攒的是同一本账，到店直接能用。（每天有上限）',
  svg:`
-  <path class="ink thin" d="M188 190C258 128 452 128 520 192" marker-end=""/>
-  <path class="ink thin" d="M520 192l-26-4M520 192l-6-26"/>
-  <path class="ink thin" d="M512 372C446 432 250 432 182 370"/>
-  <path class="ink thin" d="M182 370l26 4M182 370l6 26"/>
-  <path class="wash" d="M92 244h140v98H92z"/>
-  <path class="ink" d="M84 246h142v96H84z"/>
-  <path class="ink thin" d="M100 318c30-14 82-14 110 0M100 332c30-14 82-14 110 0"/>
-  <path class="ink" d="M156 316v-38"/>
-  <path class="ink thin" d="M156 292c-16-2-27-14-29-30 18 1 28 13 29 30"/>
-  <path class="ink thin" d="M158 280c16-5 26-19 25-34-18 4-27 18-25 34"/>
-  <path class="wash" d="M438 250h146v96H438z"/>
-  <path class="ink" d="M430 252q0-12 12-12h130q12 0 12 12v72q0 12-12 12H442q-12 0-12-12z"/>
-  <path class="ink thin" d="M430 274h154"/>
-  <path class="ink thin" d="M452 302h44M452 318h68"/>
-  <circle class="hot" cx="556" cy="310" r="17"/>
-  <circle class="ink thin" cx="556" cy="310" r="17"/>
-  <circle class="ink thin" cx="330" cy="152" r="25"/>
-  <path class="ink thin" d="M330 140v24M324 146h12M324 158h12"/>
-  <circle class="ink thin" cx="270" cy="404" r="19"/>
-  <path class="ink thin" d="M270 395v18"/>
-  <circle class="ink thin" cx="392" cy="406" r="19"/>
-  <path class="ink thin" d="M392 397v18"/>`
+  <circle class="wash" cx="286" cy="94" r="30"/>
+  <circle class="ink" cx="282" cy="96" r="30"/>
+  <circle class="ink thin" cx="282" cy="96" r="17"/>
+  <circle class="ink" cx="374" cy="132" r="26"/>
+  <circle class="ink thin" cx="374" cy="132" r="14"/>
+  <circle class="ink" cx="208" cy="146" r="22"/>
+  <circle class="ink thin" cx="208" cy="146" r="11"/>
+  <path class="wash" d="M180 222h326v190H180z"/>
+  <path class="ink" d="M168 232q0-20 20-20h300q20 0 20 20v168q0 20-20 20H188q-20 0-20-20z"/>
+  <path class="wash" d="M168 258h340v42H168z"/>
+  <path class="ink" d="M168 258h340M168 300h340"/>
+  <path class="ink thin" d="M206 326h54v42h-54z"/>
+  <path class="ink thin" d="M206 347h54M233 326v42"/>
+  <circle class="dot" cx="296" cy="390" r="6"/><circle class="dot" cx="316" cy="390" r="6"/>
+  <circle class="dot" cx="336" cy="390" r="6"/><circle class="dot" cx="356" cy="390" r="6"/>
+  <circle class="dot" cx="390" cy="390" r="6"/><circle class="dot" cx="410" cy="390" r="6"/>
+  <circle class="dot" cx="430" cy="390" r="6"/><circle class="dot" cx="450" cy="390" r="6"/>
+  <path class="ink thin" d="M464 246c-15-2-26-12-28-27 17 1 27 12 28 27"/>
+  <path class="ink thin" d="M468 240c15-4 24-17 22-32-16 3-25 17-22 32"/>
+  <ellipse class="wash" cx="342" cy="440" rx="150" ry="16"/>`
 },
 {
- eye:'没有压力', zh:'菜不会枯死',
- en:'Nothing dies. No timers.',
- sub:'几天不来也不损失什么。忙起来就放着，想起来再收——它是让人松一口气的，不是催你的。',
+ eye:'开局', zh:'现在进来，<br>先送 3000 农场币',
+ en:'3,000 farm coins to start.',
+ sub:'登录、留个邮箱就到账。<b>8 月 31 日截止。</b>',
  svg:`
-  <ellipse class="wash" cx="292" cy="392" rx="152" ry="30"/>
-  <path class="ink" d="M148 396c26-52 96-76 146-76s118 24 144 76"/>
-  <path class="ink thin" d="M120 400h348"/>
-  <path class="ink" d="M292 322V214"/>
-  <path class="wash" d="M290 254c-32-4-55-28-59-60 37 3 58 27 59 60z"/>
-  <path class="ink" d="M290 256c-33-4-56-29-60-61 37 3 59 28 60 61z"/>
-  <path class="ink" d="M296 232c31-10 51-36 48-67-34 8-51 35-48 67z"/>
-  <path class="ink thin" d="M262 300c-4 8-4 14 0 20M320 300c-4 8-4 14 0 20"/>
-  <path class="ink thin" d="M414 250h44l-44 46h46"/>
-  <path class="ink thin" d="M470 186h34l-34 36h36"/>
-  <path class="ink thin" d="M516 140h26l-26 28h28"/>
-  <circle class="hotline" cx="148" cy="222" r="52" style="fill:none"/>
-  <path class="ink thin" d="M148 194v30l20 12"/>
-  <path class="hotline" d="M110 184l76 76"/>`
+  <circle class="ink" cx="248" cy="140" r="28"/><circle class="ink thin" cx="248" cy="140" r="15"/>
+  <circle class="wash" cx="342" cy="86" r="32"/>
+  <circle class="ink" cx="338" cy="88" r="32"/><circle class="ink thin" cx="338" cy="88" r="18"/>
+  <circle class="ink" cx="432" cy="142" r="24"/><circle class="ink thin" cx="432" cy="142" r="12"/>
+  <circle class="ink" cx="180" cy="206" r="20"/><circle class="ink thin" cx="180" cy="206" r="10"/>
+  <circle class="ink" cx="498" cy="204" r="22"/><circle class="ink thin" cx="498" cy="204" r="11"/>
+  <path class="wash" d="M240 306h200v110H240z"/>
+  <path class="ink" d="M228 300h216v116H228z"/>
+  <path class="ink" d="M320 300v116"/>
+  <path class="ink thin" d="M228 344h216"/>
+  <g transform="rotate(-9 336 272)">
+    <path class="wash" d="M230 254h216v36H230z"/>
+    <path class="ink" d="M220 250h224v40H220z"/>
+    <path class="ink" d="M318 250v40"/>
+  </g>
+  <path class="ink" d="M330 244c-28-6-42-24-36-40 15-10 34 4 38 36"/>
+  <path class="ink" d="M336 244c28-8 40-28 32-44-16-8-34 8-34 42"/>
+  <path class="hotline thin" d="M560 288l7 16 16 7-16 7-7 16-7-16-16-7 16-7z"/>
+  <path class="hotline thin" d="M122 284l5 13 13 5-13 5-5 13-5-13-13-5 13-5z"/>
+  <path class="ink thin" d="M170 430h332"/>`
 },
 {
- eye:'每天有活干', zh:'东超每天<br>都有很多订单',
- en:'Fresh orders every day. Stock up for them.',
- sub:'按订单备货，交货比零卖多赚一倍。订单板提前 5 天告诉你要什么，不用碰运气。',
+ eye:'带一个人', zh:'叫上一个街坊，<br>两个人各得 200',
+ en:'Invite a neighbour — 200 coins each.',
+ sub:'你得 200 农场币，他也得 200，登录会员就能领。',
  svg:`
-  <path class="ink" d="M244 412V266M420 412V266"/>
-  <path class="wash" d="M188 186h288v128H188z"/>
-  <path class="ink" d="M180 190q0-10 10-10h284q10 0 10 10v118q0 10-10 10H190q-10 0-10-10z"/>
-  <path class="ink thin" d="M180 226h304M180 268h304"/>
-  <path class="paper ink thin" d="M214 156h84v76h-84z" transform="rotate(-4 256 194)"/>
-  <path class="ink thin" d="M228 178h56M228 196h44" transform="rotate(-4 256 194)"/>
-  <path class="paper ink thin" d="M352 160h86v78h-86z" transform="rotate(5 395 199)"/>
-  <path class="ink thin" d="M366 184h58M366 202h40" transform="rotate(5 395 199)"/>
-  <circle class="ink thin" cx="256" cy="152" r="7"/>
-  <circle class="ink thin" cx="396" cy="156" r="7"/>
-  <path class="ink" d="M476 186V96"/>
-  <path class="hot" d="M478 100l72 24-72 26z"/>
-  <path class="hotline" d="M478 100l72 24-72 26z"/>
-  <path class="ink thin" d="M150 414h360"/>
-`
+  <ellipse class="wash" cx="336" cy="418" rx="128" ry="18"/>
+  <g transform="rotate(-5 336 244)">
+    <path class="ink" d="M262 116q0-24 24-24h100q24 0 24 24v256q0 24-24 24H286q-24 0-24-24z"/>
+    <path class="wash" d="M282 138h108v186H282z"/>
+    <path class="ink thin" d="M282 136h108v188H282z"/>
+    <path class="ink thin" d="M296 150h28v28h-28zM348 150h28v28h-28zM296 210h28v28h-28z"/>
+    <rect class="dot" x="303" y="157" width="14" height="14"/>
+    <rect class="dot" x="355" y="157" width="14" height="14"/>
+    <rect class="dot" x="303" y="217" width="14" height="14"/>
+    <rect class="dot" x="340" y="192" width="14" height="14"/>
+    <rect class="dot" x="362" y="192" width="14" height="14"/>
+    <rect class="dot" x="340" y="214" width="14" height="14"/>
+    <rect class="dot" x="362" y="236" width="14" height="14"/>
+    <rect class="dot" x="296" y="262" width="14" height="14"/>
+    <rect class="dot" x="318" y="284" width="14" height="14"/>
+    <rect class="dot" x="340" y="262" width="14" height="14"/>
+    <rect class="dot" x="362" y="284" width="14" height="14"/>
+    <rect class="dot" x="296" y="292" width="14" height="14"/>
+    <path class="ink thin" d="M314 358h44"/>
+  </g>
+  <circle class="wash" cx="128" cy="222" r="48"/>
+  <circle class="ink" cx="124" cy="224" r="48"/><circle class="ink thin" cx="124" cy="224" r="29"/>
+  <circle class="wash" cx="568" cy="222" r="48"/>
+  <circle class="ink" cx="564" cy="224" r="48"/><circle class="ink thin" cx="564" cy="224" r="29"/>`
 },
 {
- eye:'长期目标', zh:'从茅屋，<br>盖到<span class="hot">庄园</span>',
- en:'30 houses. 16 cars. Build it up.',
- sub:'赚的农场币盖房子、买车、开地、布置院子。房子越大画得越大，改建只补差价。',
+ eye:'不占时间', zh:'一天五分钟，<br>菜也不会枯死',
+ en:'Five minutes a day. Nothing ever dies.',
+ sub:'没有倒计时。忙起来放着就行，几天不来也不亏。',
  svg:`
-  <ellipse class="wash" cx="152" cy="392" rx="86" ry="16"/>
-  <path class="ink" d="M104 388v-72h96v72z"/>
-  <path class="ink" d="M92 316l60-48 60 48"/>
-  <path class="ink thin" d="M138 388v-40h28v40"/>
-  <path class="ink thin" d="M266 320h64"/>
-  <path class="ink thin" d="M330 320l-16-14M330 320l-16 14"/>
-  <path class="wash" d="M392 388V236h172v152z"/>
-  <path class="ink" d="M384 388V240h180v148z"/>
-  <path class="ink" d="M366 244l108-84 108 84"/>
-  <path class="ink" d="M528 186v-52h34v72"/>
-  <path class="ink thin" d="M545 122c-12-12-4-24 6-30"/>
-  <path class="ink thin" d="M448 388v-64h52v64"/>
-  <path class="ink thin" d="M408 282h40v36h-40zM500 282h40v36h-40z"/>
-  <path class="ink thin" d="M330 392h280"/>
-  <path class="hotline thin" d="M596 196l6 15 15 6-15 6-6 15-6-15-15-6 15-6z"/>`
-},
-{
- eye:'街坊', zh:'邻居都是<br>真的街坊',
- en:'Real neighbours. Real people.',
- sub:'串门帮人浇水，也能顺走一棵熟了的菜——按半价留下菜钱。不造假人、不用假名字。',
- svg:`
-  <ellipse class="wash" cx="330" cy="404" rx="266" ry="20"/>
-  <path class="ink" d="M96 380v-86h108v86z"/>
-  <path class="ink" d="M84 294l66-52 66 52"/>
-  <path class="ink thin" d="M132 380v-44h30v44"/>
-  <path class="ink" d="M456 380v-86h108v86z"/>
-  <path class="ink" d="M444 294l66-52 66 52"/>
-  <path class="ink thin" d="M492 380v-44h30v44"/>
-  <path class="ink thin" d="M256 384v-72M330 384v-72M404 384v-72"/>
-  <path class="ink thin" d="M240 336h180M240 362h180"/>
-  <path class="ink" d="M290 236q0-10 10-10h56q10 0 10 10v46q0 10-10 10h-56q-10 0-10-10z" transform="rotate(24 330 260)"/>
-  <path class="ink thin" d="M366 244c22-6 34 2 40 18" transform="rotate(24 330 260)"/>
-  <path class="ink thin" d="M300 226v-16h30v16" transform="rotate(24 330 260)"/>
-  <path class="wash" d="M296 240h64v48h-64z" transform="rotate(24 330 260)"/>
-  <path class="ink thin" d="M392 288c2 12 0 20-6 28M414 296c2 12 0 20-6 28M370 300c2 12 0 20-6 28"/>
-  <path class="hotline thin" d="M210 214c-12-14-32-6-30 12 2 14 20 24 30 34 10-10 28-20 30-34 2-18-18-26-30-12z"/>`
-},
-{
- eye:'真实世界', zh:'外面下雨，<br>农场也下雨',
- en:'Live Saskatoon weather.',
- sub:'接萨斯卡通的实时天气。下雨那天全场的菜自动浇一遍——你不用管。',
- svg:`
-  <circle class="hot" cx="128" cy="150" r="46"/>
-  <circle class="hotline thin" cx="128" cy="150" r="46"/>
-  <path class="hotline thin" d="M128 82v-22M60 150H38M78 100L62 84M178 100l16-16"/>
-  <path class="wash" d="M244 200c-40 0-40 58 0 58h200c46 0 46-64 0-62-8-38-64-42-78-6-24-14-56 2-56 26-24-8-38 2-38 22z"/>
-  <path class="ink" d="M248 206c-42 0-42 60 0 60h198c48 0 48-66 0-64-8-40-66-44-80-6-24-14-58 2-58 26-24-8-40 2-40 22z"/>
-  <path class="ink thin" d="M264 296l-16 42M320 300l-16 42M376 296l-16 42M432 300l-16 42"/>
-  <path class="ink thin" d="M292 358l-12 30M348 362l-12 30M404 358l-12 30"/>
-  <path class="ink" d="M180 424c92-10 288-10 380 0"/>
-  <path class="ink thin" d="M244 424v-26M244 404c-13-2-22-11-24-24 15 1 24 11 24 24"/>
-  <path class="ink thin" d="M246 398c13-4 21-15 20-28-14 3-22 15-20 28"/>
-  <path class="ink thin" d="M400 424v-26M400 404c-13-2-22-11-24-24 15 1 24 11 24 24"/>
-  <path class="ink thin" d="M402 398c13-4 21-15 20-28-14 3-22 15-20 28"/>
-  <path class="ink thin" d="M556 424v-26M556 404c-13-2-22-11-24-24 15 1 24 11 24 24"/>`
-},
-{
- eye:'我们的节日', zh:'过我们<br>自己的节',
- en:'Our own festivals, all year.',
- sub:'春节、清明、端午、中秋、重阳、冬至——每个节都有自己的活动、种子和音乐。',
- svg:`
-  <path class="ink thin" d="M56 106c132 26 424 26 556 0"/>
-  <path class="ink thin" d="M150 106v30M336 106v24M520 106v30"/>
-  <path class="ink thin" d="M114 136h72v22h-72z"/>
-  <path class="hot" d="M152 162c40 0 58 26 58 60s-18 60-58 60-58-26-58-60 18-60 58-60z"/>
-  <path class="ink" d="M150 160c40 0 58 27 58 61s-18 61-58 61-58-27-58-61 18-61 58-61z"/>
-  <path class="ink thin" d="M150 160v122M120 168c-10 16-10 90 0 106M180 168c10 16 10 90 0 106"/>
-  <path class="ink thin" d="M114 282h72v22h-72z"/>
-  <path class="ink thin" d="M150 304v18M136 322h28M142 322v26M150 322v30M158 322v26"/>
-  <circle class="wash" cx="338" cy="240" r="70"/>
-  <circle class="ink" cx="336" cy="242" r="72"/>
-  <circle class="ink thin" cx="336" cy="242" r="52"/>
-  <path class="ink thin" d="M336 170v18M386 190l-12 14M408 242h-18M386 294l-12-14M336 314v-18M286 294l12-14M264 242h18M286 190l12 14"/>
-  <circle class="ink thin" cx="336" cy="242" r="12"/>
-  <circle class="ink thin" cx="336" cy="216" r="12"/>
-  <circle class="ink thin" cx="359" cy="229" r="12"/>
-  <circle class="ink thin" cx="359" cy="255" r="12"/>
-  <circle class="ink thin" cx="336" cy="268" r="12"/>
-  <circle class="ink thin" cx="313" cy="255" r="12"/>
-  <circle class="ink thin" cx="313" cy="229" r="12"/>
-  <path class="wash" d="M524 176l70 128H456z"/>
-  <path class="ink" d="M520 172l72 132H450z"/>
-  <path class="ink" d="M520 172l-26 132"/>
-  <path class="ink thin" d="M470 254c32 10 66 10 98-2"/>
-  <path class="ink thin" d="M568 250l18-8M568 254l16 12"/>
-  <path class="ink" d="M520 172c-10-16-8-30 4-40 8 12 8 26-4 40"/>
-  <path class="ink" d="M522 170c12-14 26-16 38-8-10 10-24 14-38 8"/>
-  <path class="ink thin" d="M420 336c60 8 200 8 260-2"/>`
+  <path class="ink thin" d="M196 232c-12-18 10-30-2-50M234 220c-12-18 10-30-2-50M272 232c-12-18 10-30-2-50"/>
+  <ellipse class="wash" cx="240" cy="412" rx="120" ry="20"/>
+  <path class="ink" d="M124 406c22 16 208 16 230 0"/>
+  <path class="wash" d="M158 292h166c0 66-32 100-83 100s-83-34-83-100z"/>
+  <path class="ink" d="M148 284h182c0 72-34 108-91 108s-91-36-91-108z"/>
+  <path class="ink thin" d="M166 302c30 12 132 12 150 0"/>
+  <path class="ink" d="M330 306c42-8 50 48 6 56"/>
+  <g transform="rotate(7 470 314)">
+    <path class="ink" d="M410 232q0-18 18-18h86q18 0 18 18v170q0 18-18 18h-86q-18 0-18-18z"/>
+    <path class="wash" d="M426 252h90v130h-90z"/>
+    <path class="ink thin" d="M426 250h90v134h-90z"/>
+    <path class="ink thin" d="M471 370v-60"/>
+    <path class="ink thin" d="M469 320c-17-2-29-15-31-32 19 1 30 14 31 32"/>
+    <path class="ink thin" d="M474 306c17-5 28-20 26-36-19 4-29 19-26 36"/>
+    <path class="ink thin" d="M438 370c20-9 46-9 66 0"/>
+  </g>`
 },
 {
  eye:'一起玩', zh:'妈妈和孩子<br>一起玩',
  en:'Chinese and English, one tap apart.',
- sub:'全站中英双语随时切换。孩子看英文名，妈妈看中文名，还能顺手学一句这道菜怎么做。',
+ sub:'全站中英双语随时切换：孩子看英文名，妈妈看中文名。',
  svg:`
-  <ellipse class="wash" cx="330" cy="428" rx="240" ry="20"/>
+  <ellipse class="wash" cx="330" cy="430" rx="240" ry="20"/>
   <circle class="ink" cx="224" cy="164" r="48"/>
+  <path class="ink hair" d="M176 158c0-34 22-56 48-56s48 22 48 56c-6-26-24-38-48-38s-42 12-48 38z"/>
+  <path class="ink hair" d="M178 164c-4 30-2 50 2 62M270 164c4 30 2 50-2 62"/>
+  <circle class="dot" cx="211" cy="166" r="5"/><circle class="dot" cx="239" cy="166" r="5"/>
+  <path class="ink thin" d="M215 188q10 9 20 0"/>
   <path class="wash" d="M176 338v-70q0-48 48-48t48 48v70z"/>
   <path class="ink" d="M170 338v-74q0-54 54-54t54 54v74z"/>
   <path class="ink" d="M196 338v70M252 338v70"/>
   <path class="ink" d="M172 268c-18 24-22 52-16 76"/>
   <path class="ink" d="M278 268c26 14 44 32 50 48"/>
   <circle class="ink" cx="440" cy="250" r="38"/>
+  <path class="ink hair" d="M402 246c0-28 18-44 38-44s38 16 38 44c-6-20-18-30-38-30s-32 10-38 30z"/>
+  <circle class="dot" cx="430" cy="252" r="4"/><circle class="dot" cx="452" cy="252" r="4"/>
+  <path class="ink thin" d="M433 270q8 7 16 0"/>
   <path class="wash" d="M402 380v-56q0-38 38-38t38 38v56z"/>
   <path class="ink" d="M398 380v-58q0-42 42-42t42 42v58z"/>
   <path class="ink" d="M418 380v46M462 380v46"/>
   <path class="ink" d="M482 326c14 18 20 36 20 52"/>
   <path class="ink" d="M398 322c-20 8-32 20-38 32"/>
   <path class="ink" d="M320 302q0-12 12-12h40q12 0 12 12v88q0 12-12 12h-40q-12 0-12-12z"/>
+  <path class="wash" d="M334 316h36v58h-36z"/>
   <path class="ink thin" d="M334 316h36v58h-36z"/>
-  <path class="ink thin" d="M344 388h16"/>
+  <path class="ink thin" d="M352 366v-30M351 344c-10-1-17-9-18-19 11 1 17 8 18 19"/>
+  <path class="ink thin" d="M354 338c10-3 16-12 15-21-11 2-17 11-15 21"/>
   <path class="ink thin" d="M78 172q0-12 12-12h72q12 0 12 12v46q0 12-12 12h-46l-24 22v-22h-2q-12 0-12-12z"/>
   <text x="126" y="212" text-anchor="middle" style="font:400 44px var(--display);fill:var(--ink)">中</text>
   <path class="hotline thin" d="M512 214q0-12 12-12h84q12 0 12 12v46q0 12-12 12h-58l-24 22v-22h-2q-12 0-12-12z"/>
   <text x="566" y="254" text-anchor="middle" style="font:700 34px var(--en);fill:var(--spark)">EN</text>`
+},
+{
+ eye:'街坊', zh:'看看街坊家<br>的农场',
+ en:'See what your neighbours are growing.',
+ sub:'邻居都是真的会员，不是假人。串门帮人浇水，也能顺走一棵熟了的菜——按半价留下菜钱。',
+ svg:`
+  <ellipse class="wash" cx="330" cy="424" rx="292" ry="20"/>
+  <path class="wash" d="M62 356v-84h108v84z"/>
+  <path class="ink" d="M56 356v-88h112v88z"/>
+  <path class="ink" d="M40 270l72-54 72 54"/>
+  <path class="ink thin" d="M92 356v-44h34v44"/>
+  <path class="ink thin" d="M144 232v-28h22v44"/>
+  <path class="wash" d="M496 356v-84h108v84z"/>
+  <path class="ink" d="M490 356v-88h112v88z"/>
+  <path class="ink" d="M474 270l72-54 72 54"/>
+  <path class="ink thin" d="M526 356v-44h34v44"/>
+  <path class="ink thin" d="M578 232v-28h22v44"/>
+  <path class="ink" d="M244 384v-88M330 384v-88M416 384v-88"/>
+  <path class="ink" d="M228 312h204M228 348h204"/>
+  <circle class="ink" cx="330" cy="228" r="42"/>
+  <path class="ink hair" d="M288 222c0-32 19-52 42-52s42 20 42 52c-6-24-21-34-42-34s-36 10-42 34z"/>
+  <circle class="dot" cx="316" cy="232" r="5"/><circle class="dot" cx="346" cy="232" r="5"/>
+  <path class="ink thin" d="M321 252q9 9 19 0"/>
+  <path class="wash" d="M290 312v-16q0-26 40-26t40 26v16z"/>
+  <path class="ink" d="M286 312v-18q0-30 44-30t44 30v18"/>
+  <path class="ink" d="M270 312q0-16 16-16t16 16"/>
+  <path class="ink" d="M358 312q0-16 16-16t16 16"/>
+  <path class="ink thin" d="M112 402v-28M112 382c-12-2-21-10-22-23 14 1 22 10 22 23"/>
+  <path class="ink thin" d="M114 378c12-4 20-15 19-27-14 3-21 15-19 27"/>
+  <path class="ink thin" d="M172 406v-28M172 386c-12-2-21-10-22-23 14 1 22 10 22 23"/>
+  <path class="ink thin" d="M174 382c12-4 20-15 19-27-14 3-21 15-19 27"/>
+  <path class="ink thin" d="M488 402v-28M488 382c-12-2-21-10-22-23 14 1 22 10 22 23"/>
+  <path class="ink thin" d="M490 378c12-4 20-15 19-27-14 3-21 15-19 27"/>
+  <path class="ink thin" d="M548 406v-28M548 386c-12-2-21-10-22-23 14 1 22 10 22 23"/>
+  <path class="ink thin" d="M550 382c12-4 20-15 19-27-14 3-21 15-19 27"/>
+  <g transform="rotate(-12 214 372)">
+    <path class="wash" d="M192 350h46v42h-46z"/>
+    <path class="ink" d="M188 352q0-8 8-8h36q8 0 8 8v34q0 8-8 8h-36q-8 0-8-8z"/>
+    <path class="ink thin" d="M202 344v-10h18v10"/>
+    <path class="ink" d="M240 356c18-4 28 4 30 16"/>
+  </g>`
+},
+{
+ eye:'我们的节日', zh:'过我们<br>自己的节',
+ en:'Our own festivals, all year.',
+ sub:'春节、清明、端午、中秋、重阳、冬至——每个节都有自己的活动、种子和音乐。',
+ svg:`
+  <path class="ink thin" d="M46 70c150 26 468 26 574 0"/>
+  <path class="ink thin" d="M124 74v26"/>
+  <path class="ink thin" d="M96 100h56v20H96z"/>
+  <path class="hot" d="M126 124c34 0 50 22 50 52s-16 52-50 52-50-22-50-52 16-52 50-52z"/>
+  <path class="ink" d="M124 122c34 0 50 23 50 53s-16 53-50 53-50-23-50-53 16-53 50-53z"/>
+  <path class="ink thin" d="M124 122v106M98 130c-9 14-9 76 0 90M150 130c9 14 9 76 0 90"/>
+  <path class="ink thin" d="M96 232h56v20H96z"/>
+  <path class="ink thin" d="M124 252v16M112 268h24M118 268v24M124 268v28M130 268v24"/>
+  <path class="ink" d="M212 384c118 10 306 10 402-2"/>
+  <path class="ink thin" d="M250 386v40M594 384v40"/>
+  <ellipse class="wash" cx="334" cy="356" rx="100" ry="24"/>
+  <ellipse class="ink thin" cx="330" cy="358" rx="100" ry="24"/>
+  <path class="wash" d="M268 258v46a66 52 0 0 0 132 0v-46z"/>
+  <path class="ink" d="M264 260v42a66 52 0 0 0 132 0v-42"/>
+  <ellipse class="ink" cx="330" cy="260" rx="66" ry="52"/>
+  <ellipse class="ink thin" cx="330" cy="260" rx="47" ry="37"/>
+  <ellipse class="ink thin" cx="330" cy="260" rx="11" ry="9"/>
+  <ellipse class="ink thin" cx="330" cy="238" rx="11" ry="9"/>
+  <ellipse class="ink thin" cx="330" cy="282" rx="11" ry="9"/>
+  <ellipse class="ink thin" cx="354" cy="248" rx="11" ry="9"/>
+  <ellipse class="ink thin" cx="354" cy="272" rx="11" ry="9"/>
+  <ellipse class="ink thin" cx="306" cy="248" rx="11" ry="9"/>
+  <ellipse class="ink thin" cx="306" cy="272" rx="11" ry="9"/>
+  <path class="wash" d="M514 212l66 122H448z"/>
+  <path class="ink" d="M510 208l68 126H442z"/>
+  <path class="ink" d="M510 208l-24 126"/>
+  <path class="ink thin" d="M464 284c30 10 62 10 92-2"/>
+  <path class="ink thin" d="M554 280l18-8M554 284l16 12"/>
+  <path class="ink" d="M510 208c-10-16-8-30 4-40 8 12 8 26-4 40"/>
+  <path class="ink" d="M512 206c12-14 26-16 38-8-10 10-24 14-38 8"/>`
+},
+{
+ eye:'种什么', zh:'种的都是<br>店里在卖的菜',
+ en:'43 real vegetables. All on our shelves.',
+ sub:'青菜、韭菜、茄子、冬瓜、荔枝……孩子在游戏里认识，妈妈在店里买得到。',
+ svg:`
+  <path class="wash" d="M170 214c-8-40 2-68 26-78 24 10 34 38 26 78z"/>
+  <path class="ink" d="M166 216c-9-42 2-72 28-82 26 10 37 40 28 82z"/>
+  <path class="ink" d="M194 136C156 124 137 94 141 54c38 6 57 36 53 82"/>
+  <path class="ink" d="M196 134c36-16 53-48 47-88-36 12-55 44-47 88"/>
+  <circle class="wash" cx="290" cy="182" r="54"/>
+  <circle class="ink" cx="286" cy="184" r="56"/>
+  <path class="ink" d="M286 132c-18-4-32-14-38-26 16-3 31 4 38 15 7-11 22-18 38-15-6 12-20 22-38 26z"/>
+  <path class="ink thin" d="M286 121v-23"/>
+  <path class="ink thin" d="M260 168c6-11 17-19 29-19"/>
+  <path class="wash" d="M402 116c-11 15-20 42-22 68-4 29 6 48 21 48s29-19 25-48c-2-26-11-53-24-68z"/>
+  <path class="ink" d="M398 114c-11 15-20 42-22 68-4 29 6 50 23 50s31-21 27-50c-2-26-11-53-28-68z"/>
+  <path class="ink" d="M399 116c-13 4-22 13-26 27 12 2 21-6 26-17"/>
+  <path class="ink" d="M399 116c13 4 22 13 26 27-12 2-21-6-26-17"/>
+  <path class="ink thin" d="M399 112v-21"/>
+  <path class="hot" d="M502 138c30 17 38 65 21 105-13-14-21-38-23-65-2-17 0-31 2-40z"/>
+  <path class="ink" d="M498 134C530 151 538 200 521 242 506 200 492 164 498 134Z"/>
+  <path class="ink" d="M498 134l-4-21q15-10 27 0"/>
+  <path class="wash" d="M130 258h404l-38 116H168z"/>
+  <path class="ink" d="M116 254h432l-43 128H159z"/>
+  <path class="ink" d="M116 254c108 22 324 22 432 0"/>
+  <path class="ink thin" d="M176 262l14 116M260 266l6 114M398 266l-6 114M484 262l-14 116"/>
+  <path class="ink thin" d="M148 308h368M160 348h344"/>
+  <path class="ink" d="M190 254c14-70 82-114 142-114s128 44 142 114"/>`
+},
+{
+ eye:'真实世界', zh:'外面下雨，<br>农场也下雨',
+ en:'Live Saskatoon weather.',
+ sub:'接萨斯卡通的实时天气。下雨那天全场的菜自动浇一遍——你不用管。',
+ svg:`
+  <path class="wash" d="M144 132c-38 0-38 56 0 56h186c44 0 44-62 0-60-8-36-62-40-76-6-22-14-54 2-54 24-22-8-36 2-36 22z"/>
+  <path class="ink" d="M148 138c-40 0-40 58 0 58h184c46 0 46-64 0-62-8-38-64-42-78-6-22-14-56 2-56 24-22-8-38 2-38 22z"/>
+  <path class="ink thin" d="M162 224l-14 38M218 230l-14 38M274 224l-14 38M326 230l-14 38"/>
+  <path class="ink thin" d="M188 286l-11 28M244 292l-11 28M300 286l-11 28"/>
+  <path class="wash" d="M482 168c-64 0-108 38-114 78h228c-6-40-50-78-114-78z"/>
+  <path class="ink" d="M478 164c-70 0-118 44-124 86h248c-6-42-54-86-124-86z"/>
+  <path class="ink thin" d="M414 250c14-42 30-68 62-86M540 250c-14-42-30-68-62-86"/>
+  <path class="ink" d="M476 164v-24"/>
+  <path class="ink" d="M476 250v118c0 24-32 26-34 2"/>
+  <path class="ink thin" d="M126 424c116 12 306 12 402-2"/>
+  <path class="ink" d="M192 424v-34M192 396c-17-2-29-15-31-32 19 1 30 14 31 32"/>
+  <path class="ink" d="M195 388c17-5 28-20 26-36-19 4-29 19-26 36"/>
+  <path class="ink" d="M288 428v-34M288 400c-17-2-29-15-31-32 19 1 30 14 31 32"/>
+  <path class="ink" d="M291 392c17-5 28-20 26-36-19 4-29 19-26 36"/>
+  <path class="ink" d="M384 424v-34M384 396c-17-2-29-15-31-32 19 1 30 14 31 32"/>
+  <path class="ink" d="M387 388c17-5 28-20 26-36-19 4-29 19-26 36"/>`
 }];
 
 const FRAME = `<svg class="frame" viewBox="0 0 1080 1124" preserveAspectRatio="none">
