@@ -21,7 +21,7 @@
           "id": "c1_deliver",
           "type": "deliveries",
           "target": 1,
-          "zh": "第一次把菜卖给东方超市",
+          "zh": "第一次交货给东超",
           "en": "First delivery to Eastern Market",
           "reward": 150
         }

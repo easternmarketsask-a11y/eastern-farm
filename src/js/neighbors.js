@@ -391,7 +391,7 @@
           weekly:     lang === 'en' ? 'This Week'   : '本周',
           level:      lang === 'en' ? 'Level'       : '等级',
           harvests:   lang === 'en' ? 'Harvests'    : '收获数',
-          deliveries: lang === 'en' ? 'Deliveries'  : '卖货次数',
+          deliveries: lang === 'en' ? 'Deliveries'  : '交货次数',
         };
         const metricTabs = `
           <div class="lb-metric-tabs">

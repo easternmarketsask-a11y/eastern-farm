@@ -178,8 +178,8 @@
       const html = `
         <h2 class="modal-title">${lang === 'en' ? 'Farm Kitchen' : '农场厨房'}</h2>
         <p class="modal-subtitle">${lang === 'en'
-          ? 'Turn barn crops into real Chinese dishes — Eastern Market pays extra for cooked food!'
-          : '用谷仓里的菜做真·中餐，卖给东方超市比散卖赚更多！'}</p>
+          ? 'Turn barn crops into real Chinese dishes. A finished dish is worth more than twice its ingredients.'
+          : '用谷仓里的菜做一道中餐，成品比原料值钱一倍以上。'}</p>
         <div style="display:flex;gap:8px;margin-bottom:12px;">${slotsHtml.join('')}</div>
         ${speedRow}
         ${this.recipes.length === 0

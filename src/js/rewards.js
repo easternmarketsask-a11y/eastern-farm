@@ -232,7 +232,7 @@
       const pts = '<span class="points-icon"></span>';
 
       const earn = EN ? [
-        { icon: '🏪', t: 'Sell harvested crops to Eastern Market (main source)' },
+        { icon: '🏪', t: 'Fill Eastern Market orders (main source)' },
         { icon: '🌅', t: "First delivery each day: +20% bonus" },
         { icon: '📅', t: 'Daily 7-day sign-in: 20–400 coins' },
         { icon: '📋', t: 'Finish daily tasks' },
@@ -242,8 +242,8 @@
         { icon: '🎰', t: 'Daily lottery wheel' },
         { icon: '📨', t: 'Invite a friend: +200 each' },
       ] : [
-        { icon: '🏪', t: '把收获卖给东方超市（最主要来源）' },
-        { icon: '🌅', t: '每天第一笔卖货 +20% 加成' },
+        { icon: '🏪', t: '按订单交货给东超（最主要来源）' },
+        { icon: '🌅', t: '每天第一次交货 +20% 加成' },
         { icon: '📅', t: '七日签到：每天 20–400 币' },
         { icon: '📋', t: '完成每日任务' },
         { icon: '🏘', t: '每天走访 3 户邻居 +40' },
@@ -262,7 +262,7 @@
             <div class="ep-overview-note">
               ${EN
                 ? "The farm's currency — earn by selling crops, spend on seeds, shop & expansion."
-                : '农场通用货币——卖菜赚取，用来买种子、逛商城、扩建农场。'}
+                : '农场里的通用货币，交货赚取，用来买种子、逛商城、扩建农场。'}
             </div>
           </div>
           <div class="ep-cap-row">

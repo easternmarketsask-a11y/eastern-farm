@@ -273,8 +273,8 @@
           // （warehouse.openFullDialog）保留在状态胶囊「去卖货」入口。
           const lang = Farm.state.data.language;
           Farm.ui.toast(lang === 'en'
-            ? '📦 Barn full — tap it to sell & free up space'
-            : '📦 谷仓满了，点谷仓卖货腾空间', 3000);
+            ? '📦 Barn full — tap it to deliver an order and free up space'
+            : '📦 谷仓满了，点谷仓交一单腾地方', 3000);
           if (Farm.harvestStatus) Farm.harvestStatus.render();   // 胶囊切到「去卖货」态
           if (Farm.warehouse && Farm.warehouse.refreshBadge) Farm.warehouse.refreshBadge();
         }

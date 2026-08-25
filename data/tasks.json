@@ -6,17 +6,17 @@
     { "id": "plant_3", "type": "plant", "target": 3, "title_zh": "种 3 棵任意作物", "title_en": "Plant 3 of any crop", "reward_coins": 20, "reward_points": 0 },
     { "id": "plant_5_shanghai", "type": "plant_specific", "target": 5, "cropId": "shanghai_miao", "title_zh": "种 5 棵上海苗", "title_en": "Plant 5 Shanghai bok choy", "reward_coins": 30, "reward_points": 1 },
     { "id": "harvest_5", "type": "harvest", "target": 5, "title_zh": "收获 5 次", "title_en": "Harvest 5 times", "reward_coins": 25, "reward_points": 1 },
-    { "id": "earn_150", "type": "earn_coins", "target": 150, "title_zh": "卖货或交订单赚 150 金币", "title_en": "Earn 150 coins from sales or orders", "reward_coins": 30, "reward_points": 1 },
-    { "id": "earn_400", "type": "earn_coins", "target": 400, "title_zh": "卖货或交订单赚 400 金币", "title_en": "Earn 400 coins from sales or orders", "reward_coins": 0, "reward_points": 2, "min_level": 3 },
+    { "id": "earn_150", "type": "earn_coins", "target": 150, "title_zh": "交货赚 150 农场币", "title_en": "Earn 150 coins from sales or orders", "reward_coins": 30, "reward_points": 1 },
+    { "id": "earn_400", "type": "earn_coins", "target": 400, "title_zh": "交货赚 400 农场币", "title_en": "Earn 400 coins from sales or orders", "reward_coins": 0, "reward_points": 2, "min_level": 3 },
     { "id": "buy_5_seeds", "type": "buy_seed", "target": 5, "title_zh": "买 5 包种子", "title_en": "Buy 5 seed packs", "reward_coins": 15, "reward_points": 0 },
     { "id": "harvest_3_tomato", "type": "harvest_specific", "target": 3, "cropId": "tomato", "title_zh": "收获 3 颗番茄", "title_en": "Harvest 3 tomatoes", "reward_coins": 30, "reward_points": 1, "min_level": 4 },
     { "id": "harvest_2_niujiao", "type": "harvest_specific", "target": 2, "cropId": "niu_jiao_jiao", "title_zh": "收获 2 个牛角椒", "title_en": "Harvest 2 horn peppers", "reward_coins": 40, "reward_points": 1, "min_level": 4 },
     { "id": "try_new", "type": "plant_new", "target": 1, "title_zh": "尝试一种没种过的作物", "title_en": "Try a crop you've never grown", "reward_coins": 0, "reward_points": 2, "min_level": 3 },
     { "id": "order_2", "type": "order", "target": 2, "title_zh": "给东超交 2 张订单", "title_en": "Fill 2 of Eastern Market's orders", "reward_coins": 40, "reward_points": 1, "min_level": 2 },
     { "id": "harvest_15", "type": "harvest", "target": 15, "title_zh": "收获 15 次", "title_en": "Harvest 15 times", "reward_coins": 120, "reward_points": 0, "min_level": 5 },
-    { "id": "earn_2000", "type": "earn_coins", "target": 2000, "title_zh": "卖货或交订单赚 2000 金币", "title_en": "Earn 2000 coins from sales or orders", "reward_coins": 300, "reward_points": 0, "min_level": 6 },
-    { "id": "earn_5000", "type": "earn_coins", "target": 5000, "title_zh": "卖货或交订单赚 5000 金币", "title_en": "Earn 5000 coins from sales or orders", "reward_coins": 800, "reward_points": 0, "min_level": 9 },
-    { "id": "cook_2", "type": "cook", "target": 2, "title_zh": "在农场厨房做 2 道菜", "title_en": "Cook 2 dishes in Eastern Market's Kitchen", "reward_coins": 150, "reward_points": 0, "min_level": 6 }
+    { "id": "earn_2000", "type": "earn_coins", "target": 2000, "title_zh": "交货赚 2000 农场币", "title_en": "Earn 2000 coins from sales or orders", "reward_coins": 300, "reward_points": 0, "min_level": 6 },
+    { "id": "earn_5000", "type": "earn_coins", "target": 5000, "title_zh": "交货赚 5000 农场币", "title_en": "Earn 5000 coins from sales or orders", "reward_coins": 800, "reward_points": 0, "min_level": 9 },
+    { "id": "cook_2", "type": "cook", "target": 2, "title_zh": "在农场厨房做 2 道菜", "title_en": "Cook 2 dishes in the Farm Kitchen", "reward_coins": 150, "reward_points": 0, "min_level": 6 }
   ],
 
   "weekly": [

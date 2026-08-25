@@ -50,8 +50,8 @@
         if (full) {
           // Silo full → tapping the pill opens the sell/expand dialog.
           textEl.textContent = (lang === 'en'
-            ? '📦 Barn full · ' + matureCount + ' waiting · sell'
-            : '📦 谷仓满了 · ' + matureCount + ' 棵 · 去卖货');
+            ? '📦 Barn full · ' + matureCount + ' waiting · deliver'
+            : '📦 谷仓满了 · ' + matureCount + ' 棵 · 去交货');
           setAction(() => {
             if (Farm.warehouse && Farm.warehouse.openFullDialog) Farm.warehouse.openFullDialog();
           }, 'warning');
@@ -162,8 +162,8 @@
         const langFull = Farm.state.data.language;
         setTimeout(() => {
           Farm.ui.toast(langFull === 'en'
-            ? '📦 Barn full — tap it to sell & free up space'
-            : '📦 谷仓满了，点谷仓卖货腾空间', 3000);
+            ? '📦 Barn full — tap it to deliver an order and free up space'
+            : '📦 谷仓满了，点谷仓交一单腾地方', 3000);
         }, picked >= 1 ? 600 : 0);
       }
       // Bumper-harvest celebration: summary float + golden coin rain + sound,

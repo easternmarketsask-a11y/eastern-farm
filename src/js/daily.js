@@ -116,7 +116,7 @@
           <div class="daily-card-title">📋 ${lang === 'en' ? 'Eastern Market Orders' : '东超订单'}</div>
           <div class="daily-card-body">
             ${fillable > 0
-              ? (lang === 'en' ? `<strong>${fillable}</strong> order(s) ready to deliver — pays more than bulk selling!` : `有 <strong>${fillable}</strong> 单现在就能交付——比直接卖更划算！`)
+              ? (lang === 'en' ? `<strong>${fillable}</strong> order(s) ready to deliver right now — orders pay the most.` : `有 <strong>${fillable}</strong> 单现在就能交，订单是最划算的一条路。`)
               : (lang === 'en' ? 'Grow crops to fill Eastern Market orders for bonus coins.' : '种菜交付东超订单，赚更多农场币。')}
           </div>
           <button class="daily-claim" id="dailyOpenOrders">${fillable > 0 ? '🚚 ' + (lang === 'en' ? 'Deliver' : '去交付') : '📋 ' + (lang === 'en' ? 'View orders' : '看订单')}</button>

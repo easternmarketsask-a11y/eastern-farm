@@ -19,7 +19,7 @@
     daily: [
       { id: 'plant_3', type: 'plant', target: 3, title_zh: '种 3 棵任意作物', title_en: 'Plant 3 of any crop', reward_coins: 20, reward_points: 0 },
       { id: 'harvest_5', type: 'harvest', target: 5, title_zh: '收获 5 次', title_en: 'Harvest 5 times', reward_coins: 25, reward_points: 1 },
-      { id: 'earn_150', type: 'earn_coins', target: 150, title_zh: '卖货或交订单赚 150 金币', title_en: 'Earn 150 coins from sales or orders', reward_coins: 30, reward_points: 1 },
+      { id: 'earn_150', type: 'earn_coins', target: 150, title_zh: '交货赚 150 农场币', title_en: 'Earn 150 coins from sales or orders', reward_coins: 30, reward_points: 1 },
       { id: 'buy_5_seeds', type: 'buy_seed', target: 5, title_zh: '买 5 包种子', title_en: 'Buy 5 seed packs', reward_coins: 15, reward_points: 0 },
       { id: 'try_new', type: 'plant_new', target: 1, title_zh: '尝试一种没种过的作物', title_en: 'Try a crop you\'ve never grown', reward_coins: 0, reward_points: 2, min_level: 3 },
     ],

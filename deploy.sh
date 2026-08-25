@@ -530,6 +530,17 @@ if ! node scripts/verify/guide-content-test.mjs; then
   exit 1
 fi
 
+# 闸门 P: 全站废玩法扫描(约 1 秒)
+# 2026-08-25 加。闸门 O 只盯 guide.js,而同一种烂法当时散在**九个文件**里:
+# toast、收获胶囊、厨房副标题、奖励页金币来源、菜摊说明、教练提示、
+# 新手引导第三步标题(每个新玩家第一眼看到)、人生故事第一章目标、每日任务、今日新闻。
+# 删掉任何玩法之后,往 dead-mechanic-scan.mjs 的 DEAD 里加一条,比翻九个文件可靠。
+echo "▶ 闸门 P: 全站废玩法扫描(约 1 秒)…"
+if ! node scripts/verify/dead-mechanic-scan.mjs; then
+  echo "—— 部署中止：玩家看得见的文案里还有已经删掉的玩法。"
+  exit 1
+fi
+
 # 3. 提交未保存的改动(如果有;SW 版本注入保证至少有它)
 if [ -n "$(git status --porcelain)" ]; then
   echo "▶ 提交未保存改动: $MSG"
