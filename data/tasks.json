@@ -23,6 +23,6 @@
     { "id": "w_harvest_40", "type": "harvest", "target": 40, "title_zh": "本周收获 40 次", "title_en": "Harvest 40 times this week", "reward_coins": 150, "reward_points": 5 },
     { "id": "w_variety_5", "type": "variety", "target": 5, "title_zh": "本周种 5 种不同的作物", "title_en": "Plant 5 different crops this week", "reward_coins": 120, "reward_points": 3 },
     { "id": "w_orders_8", "type": "order", "target": 8, "title_zh": "本周给东超交 8 张订单", "title_en": "Fill 8 orders this week", "reward_coins": 200, "reward_points": 5 },
-    { "id": "w_spend_600", "type": "spend_coins", "target": 600, "title_zh": "本周在种子店花 600 金币", "title_en": "Spend 600 coins on seeds this week", "reward_coins": 100, "reward_points": 3 }
+    { "id": "w_spend_600", "type": "spend_coins", "target": 600, "title_zh": "本周在种子店花 600 农场币", "title_en": "Spend 600 coins on seeds this week", "reward_coins": 100, "reward_points": 3 }
   ]
 }

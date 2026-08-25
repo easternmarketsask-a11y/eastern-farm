@@ -34,7 +34,7 @@
         <div style="font-size:46px;line-height:1;margin-bottom:6px;">⚠️</div>
         <h2 class="modal-title" style="margin-bottom:4px;">进度没能保存</h2>
         <p style="font-size:13.5px;line-height:1.7;color:var(--warm-text-soft);margin:6px 6px 0;text-align:left;">
-          这个浏览器没有在刷新之间保留存档，所以每次刷新金币 / 签到 / 作物都会退回。多半是下面之一：
+          这个浏览器没有在刷新之间保留存档，所以每次刷新农场币 / 签到 / 作物都会退回。多半是下面之一：
           <br>• 开了<b>「无痕浏览」</b> → 请关掉<br>• 设置 → Safari → <b>「阻止所有 Cookie」</b>开着 → 请关掉<br>• 或点分享 → <b>「添加到主屏幕」</b>，以后从那个图标打开
         </p>
         <div class="btn-row" style="margin-top:16px;"><button class="btn" id="stoOk" style="width:100%;">知道了</button></div>

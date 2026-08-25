@@ -62,7 +62,7 @@
             : `使用东方超市会员登录，进度云端保存。`}${extra}</p>
           <div class="btn-row ln-actions">
             <button class="btn" id="lnSignIn">📱 ${bonusActive
-              ? (en ? `Sign in · claim ${BONUS_COINS.toLocaleString()}` : `登录 · 领 ${BONUS_COINS.toLocaleString()} 币`)
+              ? (en ? `Sign in · claim ${BONUS_COINS.toLocaleString()} farm coins` : `登录 · 领 ${BONUS_COINS.toLocaleString()} 农场币`)
               : (en ? 'Sign in' : '会员登录')}</button>
             <button class="btn secondary" id="lnLater">${en ? 'Maybe later' : '以后再说'}</button>
           </div>

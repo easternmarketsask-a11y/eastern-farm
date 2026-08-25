@@ -39,7 +39,7 @@
       "kind": "stack_consumable",
       "stock_key": "fertilizerCharges",
       "amount": 5,
-      "desc_zh": "整袋更划算：5 次施肥比单买省 100 币。每天限 1 袋。",
+      "desc_zh": "整袋更划算：5 次施肥比单买省 100 农场币。每天限 1 袋。",
       "desc_en": "Five fertilizer charges, 100 coins cheaper. One sack per day."
     },
     {
@@ -62,7 +62,7 @@
       "cost_ep": 20,
       "category": "consumable",
       "kind": "instant_spin",
-      "desc_zh": "抽一次大转盘，赢取金币、积分或限定礼品。",
+      "desc_zh": "抽一次大转盘，赢取农场币、超市积分或限定礼品。",
       "desc_en": "One spin on the lottery wheel — win coins, EP, or rare items."
     },
     {

@@ -17,16 +17,16 @@ import { dirname, join } from 'node:path';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '../..');
 
-// 玩家看得见文案的地方。新增这类文件时记得加进来。
-const FILES = [
-  'src/js/farm.js', 'src/js/harvest-status.js', 'src/js/kitchen.js',
-  'src/js/neighbors.js', 'src/js/rewards.js', 'src/js/stall.js',
-  'src/js/coach.js', 'src/js/tasks.js', 'src/js/warehouse.js',
-  'src/js/orders.js', 'src/js/guide.js', 'src/js/shop.js',
-  'src/js/daily.js', 'src/js/tutorial.js', 'src/js/spotlight.js',
-  'data/i18n.json', 'data/tasks.json', 'data/chapters.json',
-  'data/news.json', 'data/recipes.json',
-];
+// ⚠️ **自动遍历，不要改回手工清单**（2026-08-25）。
+// 第一版是手写的 20 个文件名，当场就漏了 ep-shop.json / share.js / login-nudge.js
+// —— 手工清单会跟文案一样烂掉，正是这个测试要防的东西。
+const SKIP = new Set(['worldcup.js', 'wc2026.json', 'coupons.json']);  // 已退役内容
+function collect(dir, ext) {
+  return fs.readdirSync(join(root, dir))
+    .filter((f) => f.endsWith(ext) && !SKIP.has(f))
+    .map((f) => `${dir}/${f}`);
+}
+const FILES = [...collect('src/js', '.js'), ...collect('data', '.json')];
 
 // 已经删掉的玩法 → 说明为什么不许再出现。
 // 只匹配**渲染出去的字**：.js 先剥注释，.json 跳过 _comment。
@@ -57,6 +57,10 @@ const DEAD = [
   ['Bulk-sell',         'EN: 同上'],
   ['bulk sell',         'EN: 同上'],
   ["Eastern Market's Kitchen", 'EN: 2026-08-24 已改名 Farm Kitchen'],
+  // 2026-08-25 Chris：「一律农场币」。此前全仓 农场币 149 处 / 金币 31 处混着用，
+  // 最刺眼的是 farmer.js 隔壁两行：一行 toast「农场币不够」，一行走 i18n 键出来
+  // 是「金币不够」—— 同一个东西两个名字。
+  ['金币', '2026-08-25 Chris 定：一律农场币'],
 ];
 
 const stripJs = (s) =>

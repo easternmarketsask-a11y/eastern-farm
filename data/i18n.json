@@ -20,7 +20,7 @@
     "dock_barn": { "zh": "谷仓", "en": "Barn" },
     "dock_menu": { "zh": "菜单", "en": "Menu" },
 
-    "currency_coins": { "zh": "金币", "en": "Coins" },
+    "currency_coins": { "zh": "农场币", "en": "Farm coins" },
     "currency_east_points": { "zh": "超市积分", "en": "Store Points" },
     "label_level": { "zh": "等级", "en": "Level" },
     "label_xp": { "zh": "经验", "en": "XP" },
@@ -65,11 +65,11 @@
     "btn_view_in_store": { "zh": "店里看实物", "en": "See in Store" },
 
     "toast_planted": { "zh": "已种下 {crop}", "en": "Planted {crop}" },
-    "toast_harvested": { "zh": "+{coins} 金币", "en": "+{coins} coins" },
-    "toast_harvested_bonus": { "zh": "+{coins} 金币 +1 超市积分!", "en": "+{coins} coins +1 Store Point!" },
+    "toast_harvested": { "zh": "+{coins} 农场币", "en": "+{coins} farm coins" },
+    "toast_harvested_bonus": { "zh": "+{coins} 农场币 +1 超市积分!", "en": "+{coins} coins +1 Store Point!" },
     "toast_level_up": { "zh": "等级提升! 解锁新内容", "en": "Level up! New content unlocked" },
     "toast_task_complete": { "zh": "任务完成! +{coins} +{points}🎫", "en": "Task done! +{coins} +{points}🎫" },
-    "toast_not_enough_coins": { "zh": "金币不够", "en": "Not enough coins" },
+    "toast_not_enough_coins": { "zh": "农场币不够", "en": "Not enough farm coins" },
     "toast_not_enough_seeds": { "zh": "种子不够", "en": "Not enough seeds" },
     "toast_not_enough_points": { "zh": "超市积分不够", "en": "Not enough points" },
 

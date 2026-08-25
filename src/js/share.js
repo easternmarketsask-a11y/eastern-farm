@@ -209,7 +209,7 @@
       // ---- Stat chips (bigger) ----
       const chip2 = likes > 0
         ? { t: '❤️ 赞 Likes ' + likes, bg: '#fdeef0', fg: '#c0556a' }
-        : { t: '🪙 金币 Coins ' + coins.toLocaleString(), bg: '#fff6df', fg: '#a9791e' };
+        : { t: '🪙 农场币 Farm coins ' + coins.toLocaleString(), bg: '#fff6df', fg: '#a9791e' };
       const chips = [
         { t: '🌾 收获 Harvest ' + harvests, bg: '#f1f8e6', fg: '#5a7a2e' },
         chip2,
