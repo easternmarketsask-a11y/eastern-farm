@@ -40,6 +40,13 @@ assert.ok(/daily cap/i.test(s), '积分上限的英文也要有');
 /* ④ 车 2026-08-20 起能开，不是只能买来摆着。 */
 assert.ok(s.includes('点车上车'), '车能开，别只写「能买」');
 
+/* ④b 帮手 2026-08-24 起能请。不写进「怎么玩」= 新玩法没人找得到入口。 */
+assert.ok(s.includes('帮手') && /hired hand/i.test(s), '怎么玩必须写帮手 / hired hand');
+assert.ok(s.includes('当天付过工钱才会动手'), '帮手必须写明当天付过才干活');
+assert.ok(/only work on a day that is paid/i.test(s), '帮手的英文也要写明当天付过才干活');
+assert.ok(s.includes('关了游戏他们不会自己干'), '帮手必须写明关上游戏不干（不是看场）');
+assert.ok(/do not work while the game is closed/i.test(s), '帮手的英文也要写明关上游戏不干');
+
 /* ⑤ 分章结构：改版前 12 条平铺，找不到自己要的那条。 */
 // ⚠️ 别用跨行正则数章 —— 这个仓库是 CRLF，`,\n` 匹配不到 `,\r\n`（刚踩过）。
 const chapters = (s.match(/items: \[/g) || []).length;

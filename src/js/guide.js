@@ -23,6 +23,7 @@
  *   - 顺菜必须写「按半价留下菜钱」（2026-08-22 Chris 定），只写「顺一棵」是漏了。
  *   - 超市积分必须带「每天有上限」，不能说成无限。
  *   - 车能开（2026-08-20），别只写「能买」。
+ *   - 帮手（2026-08-24）：最多两位，只收/浇/种，当天付过工钱才干活，关上游戏不干。
  *
  * 文案按 promo/README「写卡片文案的四条判据」来：一眼看懂 / 主语是你 /
  * 具体但不用行话 / 一条一个念头。
@@ -63,6 +64,8 @@
     lantern:'<path d="M16 2v4"/><path d="M12 6h8"/><ellipse cx="16" cy="16" rx="11" ry="9.5"/>'
           + '<path d="M12 26h8"/><path d="M16 26v4"/>',
     star:   '<path d="M16 4l3.5 8.5L28 14l-6 6 1.5 9L16 24.5 8.5 29 10 20l-6-6 8.5-1.5z"/>',
+    hands:  '<circle cx="11" cy="9" r="3.2"/><path d="M5 26v-3.2c0-2.6 2.1-4.8 4.8-4.8h2.4c2.6 0 4.8 2.2 4.8 4.8V26"/>'
+          + '<circle cx="22" cy="10" r="3"/><path d="M16.5 26v-2.8c0-2.4 2-4.4 4.4-4.4h2.2c2.4 0 4.4 2 4.4 4.4V26"/>',
   };
 
   const svg = (d) => '<svg class="g-ico" viewBox="0 0 32 32" fill="none" stroke="currentColor"'
@@ -82,6 +85,11 @@
           icon: 'can',
           zh: { title: '让菜长得更快', body: '点正在生长的菜可以<b>浇水</b>，剩余时间减少两成；有化肥时可以<b>施肥</b>，收成加倍。建了<b>温室</b>或<b>水井</b>，全场作物一起加快。菜不会枯死，也没有倒计时，隔几天再来都可以。' },
           en: { title: 'Speed things up', body: 'Tap a growing crop to <b>water</b> it (20% off the time left) or <b>fertilize</b> (double the yield). A <b>greenhouse</b> or <b>well</b> speeds up the whole farm. Forget about it and nothing wilts — there are no timers here.' },
+        },
+        {
+          icon: 'hands',
+          zh: { title: '请帮手', body: '菜地到 12 块，可以请最多两位<b>帮手</b>。他们跟你一起收菜、浇水、播种。按天付农场币，<b>当天付过工钱才会动手</b>。关了游戏他们不会自己干。' },
+          en: { title: 'Hire a hand', body: 'At 12 plots you can hire up to two <b>hired hands</b>. They harvest, water, and plant with you. Pay in farm coins each day — <b>they only work on a day that is paid</b>. They do not work while the game is closed.' },
         },
       ],
     },
