@@ -2238,12 +2238,58 @@ body.mapmode #warehouseBtn { display: none !important; }
   background-size: 600% 500%;
   background-position: 0 0;
 }
-.hands-slot {
-  margin: 12px 0 16px;
-  padding-bottom: 12px;
+.hands-change-hint {
+  font-size: 13px;
+  color: var(--warm-text-soft);
+  text-align: center;
+  line-height: 1.45;
+  margin: -8px 0 12px;
+}
+.hands-person {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 0;
   border-bottom: 1px solid #efe6d8;
 }
-.hands-slot:last-of-type { border-bottom: none; }
+.hands-person:last-of-type { border-bottom: none; }
+.hands-person-face {
+  flex: 0 0 auto;
+  width: 52px;
+  height: 62px;
+  padding: 0;
+  border: 1.5px solid #e8e0d4;
+  border-radius: 12px;
+  background: #fffdf6;
+  overflow: hidden;
+  cursor: pointer;
+}
+.hands-person-face.is-on {
+  border-color: var(--leaf-dark, #3a8c50);
+  background: #f4faf4;
+}
+.hands-person-face.is-dim { opacity: 0.55; }
+.hands-person-face .farmer-look-face {
+  width: 52px;
+  height: 62px;
+  margin: 0;
+  border-radius: 0;
+}
+.hands-person-body { flex: 1; min-width: 0; }
+.hands-person-name {
+  font-family: var(--font-display);
+  font-size: 16px;
+  color: var(--ink, #3a2e22);
+  line-height: 1.25;
+  margin-bottom: 6px;
+}
+.hands-person-hint {
+  font-size: 13px;
+  color: var(--warm-text-soft);
+  line-height: 1.45;
+  margin: 0 0 8px;
+}
+.hands-person-look { margin-top: 10px; }
 
 .farmer-look-grid {
   display: grid;

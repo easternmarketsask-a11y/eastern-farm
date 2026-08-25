@@ -1259,10 +1259,10 @@
       const sway = walking ? Math.sin(phase) * w * 0.030 : 0;
       const squash = walking ? 1 - plant * 0.048 : 1;
       let dip = 0;
-      if (anim === 'harvest' || anim === 'plant') {
+      if (anim === 'harvest' || anim === 'plant' || anim === 'water') {
         const t = Math.min(1, actor.frameT / WORK_HOLD);
         const squat = t < 0.22 ? t / 0.22 : (t > 0.82 ? 1 - (t - 0.82) / 0.18 * 0.45 : 1);
-        dip = th * (anim === 'plant' ? 0.05 : 0.08) * squat;
+        dip = th * (anim === 'plant' ? 0.05 : anim === 'water' ? 0.06 : 0.08) * squat;
       }
       if (iso._shadow) {
         iso._shadow(
@@ -1293,22 +1293,27 @@
 
   function drawActor(iso, look, anim, fi, gx, gy, face, away, actor) {
     actor = actor || A;
+    const ctx = iso._ctx;
     const c = iso._cell(gx, gy);
     const th = iso._th();
     const yOff = (anim === 'harvest' || anim === 'plant') ? 0.10 : 0.18;
     const x = c.x, y = c.y + th * yOff - hopLift(actor, th);
+    ctx.save();
+    if (actor._handDim) ctx.globalAlpha *= 0.58;
     if (actor.walkDust && actor.walkDust.length && iso._drawCarDust) {
       iso._drawCarDust(actor.walkDust, iso._tw(), th);
     }
-    if (blitSheet(iso._ctx, iso, look, anim, fi, x, y, face, away, actor)) return;
-    const spec = specOf(look);
-    if (iso._drawVillager) {
-      iso._drawVillager(x, y, th, {
-        scale: spec.child ? 0.78 : 1.05,
-        shirt: spec.shirt,
-        pants: spec.pants,
-      });
+    if (!blitSheet(ctx, iso, look, anim, fi, x, y, face, away, actor)) {
+      const spec = specOf(look);
+      if (iso._drawVillager) {
+        iso._drawVillager(x, y, th, {
+          scale: spec.child ? 0.78 : 1.05,
+          shirt: spec.shirt,
+          pants: spec.pants,
+        });
+      }
     }
+    ctx.restore();
   }
 
   function depthDrawActor(iso, actor) {

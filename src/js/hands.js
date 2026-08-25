@@ -35,6 +35,7 @@
     actors: [],
     _visitHold: null,
     _lastWageDay: '',
+    _lookOpen: -1,
 
     unlockedPlotCount: function () {
       const plots = (Farm.state.data && Farm.state.data.plots) || [];
@@ -65,11 +66,37 @@
     _spawn: function (iso, actor, slot) {
       if (!iso || !actor) return;
       if (Farm.farmer && Farm.farmer.spawnAt) Farm.farmer.spawnAt(iso, actor);
-      if (actor.gx == null) {
-        const ap = Farm.farmer && Farm.farmer._approachPos ? Farm.farmer._approachPos(iso, 0) : null;
-        if (ap) { actor.gx = ap.gx; actor.gy = ap.gy; }
+      const player = Farm.farmer && Farm.farmer._actor ? Farm.farmer._actor() : null;
+      const free = (Farm.farmer && Farm.farmer.walkableFor)
+        ? Farm.farmer.walkableFor(iso, 1, 1) : function () { return true; };
+      const occupied = [];
+      if (player && player.gx != null) occupied.push(player);
+      for (let i = 0; i < this.actors.length; i++) {
+        if (this.actors[i] && this.actors[i] !== actor && this.actors[i].gx != null) occupied.push(this.actors[i]);
       }
-      actor.gx = (actor.gx || 0) + (slot || 0) * 0.7;
+      const taken = (gx, gy) => {
+        const rx = Math.round(gx), ry = Math.round(gy);
+        for (let i = 0; i < occupied.length; i++) {
+          if (Math.round(occupied[i].gx) === rx && Math.round(occupied[i].gy) === ry) return true;
+        }
+        return false;
+      };
+      const originX = (player && player.gx != null) ? player.gx : (actor.gx || 0);
+      const originY = (player && player.gy != null) ? player.gy : (actor.gy || 0);
+      const ring = [
+        [1.3 + slot * 0.8, 0.7], [0.7, 1.4 + slot * 0.6], [-1.1, 1.1],
+        [1.6, 1.5], [-0.4, 1.8], [2.0, 0.4], [0.2, -1.2],
+      ];
+      for (let i = 0; i < ring.length; i++) {
+        const gx = originX + ring[i][0], gy = originY + ring[i][1];
+        if (!free(Math.round(gx), Math.round(gy))) continue;
+        if (taken(gx, gy)) continue;
+        actor.gx = gx;
+        actor.gy = gy;
+        return;
+      }
+      actor.gx = (actor.gx || originX) + 1.1 + (slot || 0) * 0.8;
+      actor.gy = (actor.gy || originY) + 0.9;
     },
 
     maybeSyncFromSave: function () {
@@ -167,6 +194,7 @@
       if (!d || !Array.isArray(d.hands) || slot < 0 || slot >= d.hands.length) return false;
       d.hands.splice(slot, 1);
       if (slot < this.actors.length) this.actors.splice(slot, 1);
+      this._lookOpen = -1;
       if (Farm.state.save) Farm.state.save();
       this.maybeSyncFromSave();
       if (Farm.audio && Farm.audio.play) Farm.audio.play('tap');
@@ -268,9 +296,8 @@
         return;
       }
 
-      const lookGrid = (slot, selected, hireMode) => {
-        const idPrefix = hireMode ? 'handsHireLook' : ('handsLook' + slot);
-        return '<div class="farmer-look-grid" id="' + idPrefix + '">'
+      const lookGrid = (selected, hireMode, slot) => {
+        return '<div class="farmer-look-grid">'
           + looks.map((lk) => {
             const on = (Farm.farmer.clampLook(selected) === lk.id);
             const face = Farm.farmer.previewStyle ? Farm.farmer.previewStyle(lk.id) : '';
@@ -281,32 +308,55 @@
           }).join('')
           + '</div>';
       };
+      const lookName = (id) => {
+        const lk = looks[Farm.farmer.clampLook(id) - 1];
+        return lk ? (en ? lk.en : lk.zh) : '';
+      };
+
+      let anyPaid = false;
+      for (let i = 0; i < live; i++) {
+        if (rows[i].paidThroughDate === today()) anyPaid = true;
+      }
+      if (anyPaid) {
+        body += '<p class="modal-subtitle">' + t('hands_paid_status',
+          '帮手今天会跟你一起收菜、浇水、播种。点熟菜、点全收，或在打理里点浇水，大家一起去。',
+          'The hired hand will harvest, water, and plant with you today. Tap ripe crops, Harvest all, or Water in plot care, and you go together.')
+          + '</p>';
+      }
+      if (live > 0) {
+        body += '<p class="hands-change-hint">' + t('hands_change_look',
+          '点帮手的头像可以换样子。',
+          'Tap a hired hand\'s portrait to change how they look.') + '</p>';
+      }
 
       for (let i = 0; i < live; i++) {
         const paid = rows[i].paidThroughDate === today();
         const wage = this.wageOf(i);
-        body += '<div class="hands-slot">';
-        body += lookGrid(i, rows[i].look, false);
-        if (paid) {
-          body += '<p class="modal-subtitle">' + t('hands_paid_status',
-            '帮手今天会跟你一起收菜、浇水、播种。点熟菜、点全收，或在打理里点浇水，大家一起去。',
-            'The hired hand will harvest, water, and plant with you today. Tap ripe crops, Harvest all, or Water in plot care, and you go together.')
-            + '</p>';
-        } else {
-          body += '<p class="modal-subtitle">' + t('hands_unpaid',
+        const face = Farm.farmer.previewStyle ? Farm.farmer.previewStyle(rows[i].look) : '';
+        const open = this._lookOpen === i;
+        body += '<div class="hands-person">';
+        body += '<button type="button" class="hands-person-face' + (paid ? '' : ' is-dim') + (open ? ' is-on' : '')
+          + '" data-hands-face="' + i + '" aria-label="' + lookName(rows[i].look) + '">'
+          + '<div class="farmer-look-face" style="' + face + '"></div></button>';
+        body += '<div class="hands-person-body">';
+        body += '<div class="hands-person-name">' + lookName(rows[i].look) + '</div>';
+        if (!paid) {
+          body += '<p class="hands-person-hint">' + t('hands_unpaid',
             '今天的工钱还没付，这位帮手先歇着。',
             'Today\'s wage is unpaid, so this hired hand is sitting it out.') + '</p>';
           body += '<div class="btn-row"><button class="btn" data-hands-pay="' + i + '">'
             + t('hands_pay', '付今天工钱 · {n}', 'Pay today\'s wage · {n}').replace('{n}', String(wage))
             + '</button></div>';
         }
-        body += '<div class="btn-row" style="margin-top:8px;"><button class="btn secondary" data-hands-dismiss="' + i + '">'
+        body += '<div class="btn-row"' + (paid ? '' : ' style="margin-top:8px;"') + '>'
+          + '<button class="btn secondary" data-hands-dismiss="' + i + '">'
           + t('hands_dismiss', '帮手先回去', 'Send home') + '</button></div>';
-        body += '</div>';
+        if (open) body += '<div class="hands-person-look">' + lookGrid(rows[i].look, false, i) + '</div>';
+        body += '</div></div>';
       }
 
       if (live === 0) {
-        body += lookGrid(0, this._defaultLook(), true);
+        body += lookGrid(this._defaultLook(), true, 0);
         body += '<div class="btn-row"><button class="btn" id="handsHireBtn">'
           + t('hands_hire', '请帮手 · 180 农场币 / 天', 'Hire a hand · 180 farm coins a day')
           + '</button></div>';
@@ -314,7 +364,7 @@
         body += '<p class="modal-subtitle">' + t('hands_hire_second_hint',
           '还可以再请一位。',
           'You can hire one more.') + '</p>';
-        body += lookGrid(live, this._defaultLook(), true);
+        body += lookGrid(this._defaultLook(), true, live);
         body += '<div class="btn-row"><button class="btn" id="handsHireBtn">'
           + t('hands_hire_second', '再请一位 · 280 农场币 / 天', 'Hire a second hand · 280 farm coins a day')
           + '</button></div>';
@@ -341,8 +391,17 @@
           this.openPanel();
         };
       });
+      document.querySelectorAll('[data-hands-face]').forEach((btn) => {
+        btn.onclick = () => {
+          const slot = btn.getAttribute('data-hands-face') | 0;
+          this._lookOpen = (this._lookOpen === slot) ? -1 : slot;
+          if (Farm.audio) Farm.audio.play('tap');
+          this.openPanel();
+        };
+      });
       const hireBtn = document.getElementById('handsHireBtn');
       if (hireBtn) hireBtn.onclick = () => {
+        this._lookOpen = -1;
         if (this.hire(hireLook)) this.openPanel();
       };
       document.querySelectorAll('[data-hands-pay]').forEach((btn) => {
@@ -389,8 +448,11 @@
         const actor = this.actors[i];
         if (!actor) continue;
         if (actor.gx == null) this._spawn(iso, actor, i);
+        const paid = this.canWork(i);
+        const k = actor.job && actor.job.kind;
+        actor._handDim = !paid && k !== 'harvest' && k !== 'water' && k !== 'plant';
         if (Farm.farmer && Farm.farmer.tickActor) {
-          Farm.farmer.tickActor(iso, actor, handOpts(this.canWork(i)), dt);
+          Farm.farmer.tickActor(iso, actor, handOpts(paid), dt);
         }
       }
     },
