@@ -151,7 +151,7 @@
       items: [
         {
           icon: 'coin',
-          zh: { title: '农场币与东超积分', body: '<b>农场币</b>日常都在用：买种子、盖房子、买车、买装饰、开地。<b>超市积分</b>少得多，也珍贵得多，顶配的豪宅和豪华车要用它来买。' },
+          zh: { title: '农场币与超市积分', body: '<b>农场币</b>日常都在用：买种子、盖房子、买车、买装饰、开地。<b>超市积分</b>少得多，也珍贵得多，顶配的豪宅和豪华车要用它来买。' },
           en: { title: 'Farm coins and store points', body: '<b>Farm coins</b> are for everyday play — seeds, houses, cars, décor, new plots. <b>Store points</b> are far scarcer and worth far more; the top-tier estates and luxury cars cost them.' },
         },
         {
