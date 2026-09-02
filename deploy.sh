@@ -95,6 +95,10 @@ if ! node scripts/verify/build-construct-test.mjs; then
   echo "—— 部署中止(建造过程契约)"
   exit 1
 fi
+if ! node scripts/verify/feedback-reply-test.mjs; then
+  echo "—— 部署中止：反馈自动回信契约没过"
+  exit 1
+fi
 if ! node scripts/verify/modal-ux-test.mjs; then
   echo "—— 部署中止(弹窗操作手感契约)"
   exit 1

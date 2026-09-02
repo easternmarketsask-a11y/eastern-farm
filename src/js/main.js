@@ -272,6 +272,9 @@
       if (Farm.homeReport && Farm.homeReport.maybeShow) {
         setTimeout(() => Farm.homeReport.maybeShow(), 1100);
       }
+      if (Farm.feedback && Farm.feedback.maybeShowMail) {
+        setTimeout(() => Farm.feedback.maybeShowMail(), 2600);
+      }
       // 引导中断恢复（audit P1 spotlight.js:70 2026-07-07）：欢迎窗已确认但
       // spotlight 未完成（刷新/关页打断）→ 自动续接对应步骤。此前 maybeStart
       // 全仓唯一调用点在欢迎窗按钮里，中断一次引导就永远丢了。全新玩家仍走

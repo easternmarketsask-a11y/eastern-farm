@@ -124,6 +124,9 @@ const IDENT_KEY = 'eastern_farm_last_ident';
           if (Farm.homeReport && Farm.homeReport.settleRealOnLogin) {
             setTimeout(() => Farm.homeReport.settleRealOnLogin(), 2200);
           }
+          if (Farm.feedback && Farm.feedback.maybeShowMail) {
+            setTimeout(() => Farm.feedback.maybeShowMail(), 3200);
+          }
           // 邀请奖励：?ref= 进来的新邻居，登录后双向发奖（幂等，一次性）
           if (Farm.fbGameSync && Farm.fbGameSync.applyReferral) {
             setTimeout(() => Farm.fbGameSync.applyReferral(), 3000);

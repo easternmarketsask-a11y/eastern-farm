@@ -29,6 +29,7 @@
   await step('diary', () => F.lifeStory && F.lifeStory.open('diary'));
   await step('warehouse', () => F.warehouse && F.warehouse.open());
   await step('guide', () => F.guide && F.guide.open());
+  await step('feedback', () => F.feedback && F.feedback.open());
   await step('settings', () => F.openSettings && F.openSettings());
   await step('stall', () => F.stall && F.stall.open());
   await step('seed-picker', () => F.shop && F.shop.openSeedPickerForPlot(0));

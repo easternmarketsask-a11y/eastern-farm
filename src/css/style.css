@@ -2773,6 +2773,12 @@ body.modal-open #bottombar { display: none; }
   font-size: 11px;
   color: var(--warm-text-soft);
 }
+.fbk-mail-coins {
+  margin-top: 10px;
+  text-align: center;
+  font-weight: 700;
+  color: var(--deep-green, #2a5c34);
+}
 
 /* Seed picker grid */
 .seed-list, .crop-list {
