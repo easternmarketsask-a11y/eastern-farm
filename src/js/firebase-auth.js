@@ -1753,7 +1753,15 @@ const IDENT_KEY = 'eastern_farm_last_ident';
       this._currentPhoneE164 = e164;
       this._confirmation = null;
       this._smsPending = smsP;
-      localStorage.setItem(REMEMBER_KEY, phoneRaw);
+      /* 🔴 这里原来是 `localStorage.setItem(REMEMBER_KEY, phoneRaw)`，而 phoneRaw
+         这个变量**全仓不存在** —— 抛 ReferenceError 的位置正好在
+         signInWithPhoneNumber() 之后、切屏之前，后果一条比一条难看：
+           · 短信已经真发出去了（Firebase 服务端发的，也已经计费）
+           · 不切到 otp 屏 → 人手里握着验证码，屏幕上没有地方填
+           · 按钮的复位代码在下面 .catch 里 → 永久停在「发送中…」
+           · _showError 一次都没调 → 一个字不报错
+         号码本来就在上一屏（_go('phone') 那条路，见 :626）用同一个键存过了，
+         这一行是多余的，删掉即可。 */
       this._view = 'otp';
       this._renderLoginModal();
 
