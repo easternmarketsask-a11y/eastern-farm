@@ -278,6 +278,37 @@ else
     exit 1
   fi
 
+  # 闸门 E3: 「有没有登录」认真身份，不认「有没有 Firebase 账号」(约 4 秒)
+  # 2026-09-06 加：匿名 uid 曾被当成已登录 → 积分队列拿匿名身份去入账 → 404 →
+  # 整条队列丢弃，游客攒的分在「输个手机号」那一刻蒸发。同一条测试还钉住
+  # 「注册成功那一刻激活码要显示」和「待激活档不许把本地积分刷成 0」。
+  echo "▶ 闸门 E3: 身份判定回归测试(约 4 秒)…"
+  $PYCMD -m http.server 8152 --bind 127.0.0.1 >/dev/null 2>&1 &
+  IDENT_PID=$!
+  trap 'kill $IDENT_PID 2>/dev/null || true' EXIT
+  sleep 1
+  IDENT_OUT="$(mktemp)"
+  node scripts/verify/cdp.mjs "http://127.0.0.1:8152/src/" "scripts/verify/identity-test.js" 6000 >"$IDENT_OUT" 2>/dev/null || true
+  kill $IDENT_PID 2>/dev/null || true
+  trap - EXIT
+  if ! node -e '
+    const o = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
+    const r = o.evalResult;
+    if (!r || !r.ran || !r.ran.length) {
+      console.error("✗ 身份判定测试没跑起来(evalResult=" + JSON.stringify(r) + ")");
+      process.exit(1);
+    }
+    if (r.failures && r.failures.length) {
+      console.error("✗ 身份判定有问题:");
+      r.failures.forEach(f => console.error("  - " + f));
+      process.exit(1);
+    }
+    console.log("  ✓ 身份判定 " + r.ran.length + " 项全过");
+  ' "$IDENT_OUT"; then
+    echo "—— 部署中止：匿名设备又被当成会员了，游客积分会被丢。别跳过。"
+    exit 1
+  fi
+
   # 闸门 F: 新手引导指的那块地，手机上真的点得到(约 6 秒)
   # 2026-08-19 加：引导气泡曾压在它自己让你点的地块上(pointer-events:auto)，
   # 玩家照着点毫无反应 —— 7 天 423 次打开，走完引导 0 次。

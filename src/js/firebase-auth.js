@@ -219,7 +219,7 @@ const IDENT_KEY = 'eastern_farm_last_ident';
       const loginBtn = document.getElementById('splashLogin');
       if (!loginBtn) return;
       const lang = (Farm.state && Farm.state.data && Farm.state.data.language) || 'zh';
-      if (this.currentUser) {
+      if (this.isLoggedIn()) {
         const stats = (this.memberDoc && this.memberDoc.gameStats) || {};
         const realName = (this.memberDoc && (this.memberDoc.name || this.memberDoc.username)) || '';
         const nickname = (stats.nickname && String(stats.nickname).trim())
@@ -272,7 +272,26 @@ const IDENT_KEY = 'eastern_farm_last_ident';
       }
     },
 
-    isLoggedIn() { return !!this.currentUser; },
+    /* 「有没有登录」= 有没有一个**真身份**，不是「有没有 Firebase 账号」。
+       玩家在登录框打个手机号点「继续」，这台设备就先拿了个匿名账号 ——
+       哪怕他随后关掉弹窗。匿名 uid 只是**设备标识**，不是身份。
+
+       之前这里 `return !!this.currentUser`，于是一个匿名设备被当成已登录：
+         · 积分同步队列以为可以上传了，拿匿名身份去入账 → 服务端找不到会员档
+           回 404 → 队列把 404 当「永远不会成功」→ **整条队列丢弃**。游客期间
+           攒的每一笔超市积分就在「输个手机号」那一刻蒸发，正经登录也补不回来
+         · 顶栏把访客画成「会员」，菜单里只有「退出登录」没有「登录」，
+           开屏那个「登录领 3000 币」也被藏了 —— 人回不去登录
+
+       判据：真账号（有邮箱/密码/手机等凭据）→ 登录；匿名 → 只有当后端已把
+       这台设备认到某个会员档或待激活档上（memberDoc 非空）才算登录 ——
+       那正是「手机号直接进」和「邮箱注册待激活」两种合法的匿名身份。 */
+    isLoggedIn() {
+      const u = this.currentUser;
+      if (!u) return false;
+      if (!u.isAnonymous) return true;
+      return !!this.memberDoc;
+    },
     uid() { return this.currentUser ? this.currentUser.uid : null; },
     // Real member doc id (store-keyed; firebase_uid is a FIELD on it). ALL game
     // data (gameStats, push tokens, social) must be written here — NOT to
@@ -452,6 +471,11 @@ const IDENT_KEY = 'eastern_farm_last_ident';
 
     _syncLocalBalance() {
       if (!this.memberDoc || this.memberDoc.totalPoints == null) return;
+      /* 待激活档里 totalPoints 写死是 0（他还不是会员，会员积分确实是 0），
+         而这里的判据是「== null 才跳过」—— 0 不是 null，于是每次开局都拿 0
+         去覆盖本地，玩家看到「我攒的分不见了」。待激活玩家的「待领取」另有
+         口径（pendingPoints），不归这里管。 */
+      if (this.memberDoc._pending) return;
       if (!Farm.state || !Farm.state.data) return;
       const newBalance = this.memberDoc.totalPoints || 0;
       if (Farm.state.data.eastPoints !== newBalance) {
@@ -472,7 +496,7 @@ const IDENT_KEY = 'eastern_farm_last_ident';
         return;
       }
       slot.style.display = '';
-      if (this.currentUser) {
+      if (this.isLoggedIn()) {
         const name = (this.memberDoc && (this.memberDoc.name || this.memberDoc.username))
           || this.currentUser.displayName
           || (lang === 'en' ? 'Member' : '会员');
@@ -919,7 +943,31 @@ const IDENT_KEY = 'eastern_farm_last_ident';
         // reload 一次让 providerData 说实话（与 _setCredentials 同一个理由）。
         try { await user.reload(); } catch (_) {}
         if (Farm.track) Farm.track('signup_done');        // 漏斗第 4 段
-        try { localStorage.setItem(IDENT_KEY, (d && d.loginEmail) || ''); } catch (_) {}
+        // ⚠️ 只在后端真回了邮箱时才覆盖记住的标识 —— 缺了就把记住的手机号抹成空串
+        if (d && d.loginEmail) { try { localStorage.setItem(IDENT_KEY, d.loginEmail); } catch (_) {} }
+
+        /* 🔴 注册成功后必须把会员档拉回来（2026-09-06 修）。
+           uid 没变，onAuthStateChanged 不会再触发，所以 this.memberDoc 对一个
+           刚注册的人**保持 null** —— 后果是：激活码整块不渲染（顾客拿不到那
+           六位数就走不进店门）、屏上写「0 积分 · 已与会员账户同步」（对一个
+           还不是会员的人是假话）、toast 说「欢迎回来」（他第一次来）。
+           先用响应里刚回的激活码兜底，再拉一次 whoami 拿完整的待激活档。 */
+        if (d && d.activationCode) {
+          this.memberDoc = {
+            id: null, name: this._regName || '', totalPoints: 0,
+            pendingPoints: 0, pendingCap: 0,
+            activationCode: String(d.activationCode),
+            hasEmail: true, _pending: true, _fromWhoami: false, _verified: false,
+          };
+        }
+        const bootstrap = this.memberDoc;
+        try { await this._loadMemberDoc(user.uid); } catch (_) {}
+        // whoami 偶发查不到（网络抖、刚写入还没读到）会把 memberDoc 置空 ——
+        // 那就退回刚从响应里拿到的那份，激活码不能因为一次抖动就不见。
+        if (!this.memberDoc && bootstrap) this.memberDoc = bootstrap;
+        this._renderTopbar();
+        this.refreshEmailNudge();
+        this._notify();
       } catch (e) {
         this._showError(String((e && e.message) || '')
           || (en ? 'Could not save. Please try again.' : '保存失败，请重试。'));
@@ -989,6 +1037,11 @@ const IDENT_KEY = 'eastern_farm_last_ident';
       // 会员档现在能从后端查到了（linked_uids），刷新一次再决定下一步
       try { await this._loadMemberDoc(Farm.fb.auth.currentUser.uid); } catch (_) {}
       this._trackLoginOnce();
+      /* 到这一步这台设备才算有身份（isLoggedIn 对匿名 uid 要求 memberDoc 非空）。
+         uid 没变、onAuthStateChanged 不会再跑一遍，所以游客期间攒下的积分队列
+         得在这里主动推一次，否则要等到下次打开才上传。 */
+      this._renderTopbar();
+      if (Farm.fbQueue && Farm.fbQueue.flush) { try { Farm.fbQueue.flush(); } catch (_) {} }
 
       /* 🆕 没登记过邮箱 → 立即补一个（Chris 2026-08-20 定的完整流程）：
              关联手机号 → 验邮箱 → 设密码 → 之后邮箱或手机号都能登
