@@ -159,8 +159,9 @@
         };
       } catch (e) {
         _notePointsOutcome(e.code, false);
-        // 429 = daily cap, 422 = validation, 401/403/404 = auth/endpoint → don't queue (would just fail again)
-        if (e.code === 429 || e.code === 422 || e.code === 404 || e.code === 401 || e.code === 403) {
+        // 429 = daily cap, 422 = validation, 409 = already claimed today (one-shot source),
+        // 401/403/404 = auth/endpoint → don't queue (would just fail again)
+        if (e.code === 429 || e.code === 422 || e.code === 409 || e.code === 404 || e.code === 401 || e.code === 403) {
           console.warn('[fb-points] earn rejected:', e.code, e.detail);
           return { synced: false, eventId, rejected: true, code: e.code, reason: e.detail || String(e) };
         }
@@ -198,7 +199,9 @@
         return { synced: true, eventId, new_balance: resp.new_balance };
       } catch (e) {
         _notePointsOutcome(e.code, false);
-        if (e.code === 422 || e.code === 404 || e.code === 401 || e.code === 403) {
+        // 409 = 待激活账号花「待领取」积分（服务端 2026-09-06 起明确拒绝，不再是 404）。
+        // 和 422 一样是终局拒绝：不排队，调用方据此把本地扣掉的加回去。
+        if (e.code === 422 || e.code === 409 || e.code === 404 || e.code === 401 || e.code === 403) {
           console.warn('[fb-points] spend rejected:', e.code, e.detail);
           return { synced: false, eventId, rejected: true, code: e.code, reason: e.detail || String(e) };
         }

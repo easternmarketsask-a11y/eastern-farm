@@ -200,6 +200,11 @@
       if (Farm.state && Farm.state._visitLock) return { ok: false, reason: 'visiting' };
       if (!Farm.fb || !Farm.fb.available) return { ok: false, reason: 'offline' };
       if (!Farm.fbAuth || !Farm.fbAuth.isLoggedIn()) return { ok: false, reason: 'not_logged_in' };
+      /* 待激活账号（邮箱注册、还没到店激活）：members 里没有他，也不许进
+         farm_players（不进邻居世界）。存档单独放 farm_saves/{authUid}（规则：只有
+         本人读写），激活建档时后端搬进 members。没有这条，注册屏卖的「云存档」
+         对他们是空话 —— 换手机、清缓存，农场全没（登录审查 🟠 L，2026-09-06）。 */
+      if (Farm.fbAuth.memberDoc && Farm.fbAuth.memberDoc._pending) return this._pushPendingSave();
       // Anti-orphan guard: never write gameStats until the REAL member doc has
       // resolved. Without this, meId() falls back to the auth uid and we'd
       // create an orphan ("匿名") doc + a farm_players write that security
@@ -216,16 +221,7 @@
         // public farm_players/ mirror). This is the lossless copy of local
         // state that restoreFromCloud() pulls back on a new device / wiped
         // storage. harvests + clientAt let the restore decide local-vs-cloud.
-        const s = Farm.state.data;
-        let gameSave = null;
-        try {
-          gameSave = {
-            blob: JSON.stringify(s),
-            harvests: s.totalHarvests || 0,
-            clientAt: s.lastSavedAt || Date.now(),
-            version: SAVE_BLOB_VERSION,
-          };
-        } catch (e) { gameSave = null; }
+        const gameSave = this._buildGameSave();
         // Merge so we never overwrite likesReceived (counter only) or other
         // server-managed fields. members/ keeps the gameStats mirror so the
         // StockWise admin game-management view (and points context) stay current.
@@ -274,6 +270,58 @@
       }
     },
 
+    // 完整存档 blob（私有，只进 members/ 或 farm_saves/，绝不进公开的 farm_players/）。
+    _buildGameSave() {
+      const s = Farm.state.data;
+      try {
+        return {
+          blob: JSON.stringify(s),
+          harvests: s.totalHarvests || 0,
+          clientAt: s.lastSavedAt || Date.now(),
+          version: SAVE_BLOB_VERSION,
+        };
+      } catch (e) { return null; }
+    },
+
+    _authUid() {
+      if (!(window.Farm && Farm.fbAuth)) return null;
+      if (Farm.fbAuth.uid) return Farm.fbAuth.uid();
+      return (Farm.fbAuth.currentUser && Farm.fbAuth.currentUser.uid) || null;
+    },
+
+    // 待激活账号的云存档：farm_saves/{authUid}，只有 gameSave + updatedAt 两个字段
+    // （规则白名单钉死）。不写 members、不写 farm_players。
+    async _pushPendingSave() {
+      const uid = this._authUid();
+      if (!uid) return { ok: false, reason: 'no_uid' };
+      const gameSave = this._buildGameSave();
+      if (!gameSave) return { ok: false, reason: 'no_save' };
+      try {
+        await Farm.fb.db.collection('farm_saves').doc(uid).set(
+          { gameSave: gameSave, updatedAt: Date.now() }, { merge: true });
+        _lastSyncAt = Date.now();
+        _dirty = false;
+        return { ok: true, pending: true };
+      } catch (e) {
+        console.warn('[gameSync] pending save push failed', e);
+        _dirty = true;
+        return { ok: false, reason: e.message };
+      }
+    },
+
+    async _readPendingSave() {
+      const uid = this._authUid();
+      if (!uid || !Farm.fb || !Farm.fb.db) return null;
+      try {
+        const snap = await Farm.fb.db.collection('farm_saves').doc(uid).get();
+        const d = (snap && snap.exists) ? (snap.data() || {}) : {};
+        return (d.gameSave && d.gameSave.blob) ? d.gameSave : null;
+      } catch (e) {
+        console.warn('[gameSync] pending save read failed', e);
+        return null;
+      }
+    },
+
     // Cloud restore: pull the full save blob from members/{uid}.gameSave and,
     // if the cloud copy is more advanced than local, replace local state.
     // Called once on login BEFORE push() so we never overwrite a real account
@@ -286,14 +334,25 @@
     async restoreFromCloud() {
       if (!Farm.fbAuth || !Farm.fbAuth.isLoggedIn()) return { restored: false, reason: 'not_logged_in' };
       const md = Farm.fbAuth.memberDoc;
-      if (!md || !md.id) return { restored: false, reason: 'member_doc_unresolved' };
+      if (!md) return { restored: false, reason: 'member_doc_unresolved' };
       try {
-        // Read the blob from the ALREADY-FETCHED member doc, NOT a fresh get().
-        // Firestore rules only allow GET-by-id when auth.uid == docId, which is
-        // false for legacy ru_ members (doc id != auth uid). _loadMemberDoc
-        // fetched the full doc via the permitted list-where(firebase_uid) query,
-        // so md already carries gameSave for every member type.
-        const save = md.gameSave;
+        let save = null;
+        if (md._pending) {
+          // 待激活账号：存档在 farm_saves/{authUid}（见 _pushPendingSave）。
+          save = await this._readPendingSave();
+        } else {
+          if (!md.id) return { restored: false, reason: 'member_doc_unresolved' };
+          // Read the blob from the ALREADY-FETCHED member doc, NOT a fresh get().
+          // Firestore rules only allow GET-by-id when auth.uid == docId, which is
+          // false for legacy ru_ members (doc id != auth uid). _loadMemberDoc
+          // fetched the full doc via the permitted list-where(firebase_uid) query,
+          // so md already carries gameSave for every member type.
+          save = md.gameSave;
+          /* 刚激活的会员：后端把 farm_saves 搬进 members 是尽力而为，且「激活 →
+             首次 push」之间在新设备登录时 members 上还没有。兜底再读一次 farm_saves
+             （只有本人读得到，读不到就是没有）。 */
+          if (!(save && save.blob)) save = await this._readPendingSave();
+        }
         if (!save || !save.blob) return { restored: false, reason: 'no_cloud_save' };
         let cloudState;
         try { cloudState = JSON.parse(save.blob); } catch (e) { return { restored: false, reason: 'bad_blob' }; }

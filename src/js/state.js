@@ -984,12 +984,41 @@
     // Firestore decrement is fired async; failures get queued and retried.
     spendEastPoints(n, opts) {
       opts = opts || {};
+      /* 🔒 待激活账号（邮箱注册、还没到店激活）的分是「待领取」，不是余额 ——
+         到店激活入账之前没有可花的钱（spec 2026-08-20）。以前本地照扣、服务端
+         404 不认、下一笔挣分的响应又把数刷回来 = 花多少长回多少
+         （登录审查 🟠 J，2026-09-06）。 */
+      if (window.Farm && Farm.fbAuth && Farm.fbAuth.memberDoc && Farm.fbAuth.memberDoc._pending) {
+        if (Farm.ui && Farm.ui.toast) {
+          Farm.ui.toast(this.data.language === 'en'
+            ? 'These points are waiting for you. Activate your membership at the store to use them.'
+            : '这些是待领取积分，到店激活成会员后就能用。', 3600);
+        }
+        return false;
+      }
       if (this.data.eastPoints < n) return false;
       this.data.eastPoints -= n;
       this.save();
       // Mirror to member account if logged in (optimistic + queue on failure)
       if (window.Farm && Farm.fbAuth && Farm.fbAuth.isLoggedIn() && Farm.fbPoints) {
-        Farm.fbPoints.syncEpSpend(n, opts.source || 'unknown', opts.description || '');
+        const sync = Farm.fbPoints.syncEpSpend(n, opts.source || 'unknown', opts.description || '');
+        if (sync && sync.then) {
+          sync.then((r) => {
+            /* 服务端明确拒绝（409 待激活 / 422 余额不够）= 那边一分没扣。
+               本地不加回去，屏上就是一笔不存在的扣款，下次同步又跳回来。
+               网络/5xx 已进队列重试，不算拒绝。 */
+            if (r && r.rejected && (r.code === 409 || r.code === 422)) {
+              this.data.eastPoints += n;
+              this.save();
+              if (window.Farm && Farm.ui && Farm.ui.refreshHUD) Farm.ui.refreshHUD();
+              if (window.Farm && Farm.ui && Farm.ui.toast) {
+                Farm.ui.toast(this.data.language === 'en'
+                  ? 'That points spend did not go through. The points are back in your balance.'
+                  : '这笔积分没有扣成，已经退回。', 3600);
+              }
+            }
+          });
+        }
       }
       // Reflect new balance in topbar immediately (callers no longer need to)
       if (window.Farm && Farm.ui && Farm.ui.refreshHUD) Farm.ui.refreshHUD();
@@ -999,12 +1028,14 @@
     // Bidirectional 10:1 exchange.
     // exchangeCoinsToEp(coinAmt): 10 coins → 1 EP; respects daily cap (overflow queues)
     // exchangeEpToCoins(epAmt):    1 EP → 10 coins; no cap (player spending their own)
+    // 10 农场币 = 1 超市积分。唯一出处：兑换、退币（含 firebase-queue 的排队补发）都用它。
+    COINS_PER_EP: 10,
     exchangeCoinsToEp(coinAmt) {
-      coinAmt = Math.floor(coinAmt / 10) * 10;  // round to multiple of 10
+      coinAmt = Math.floor(coinAmt / this.COINS_PER_EP) * this.COINS_PER_EP;  // round to multiple of 10
       if (coinAmt <= 0) return { ok: false, reason: 'too_small' };
       if (this.data.coins < coinAmt) return { ok: false, reason: 'insufficient_coins' };
       this.data.coins -= coinAmt;
-      const epAmount = coinAmt / 10;
+      const epAmount = coinAmt / this.COINS_PER_EP;
       const result = this.addEastPoints(epAmount, {
         source: 'coin_exchange',
         description: 'Exchange ' + coinAmt + ' farm coins → ' + epAmount + ' points',
@@ -1018,7 +1049,7 @@
              不按实际记上的分退币的话，币扣了分没给 —— 就是偷东西
              （spec 不变量 5，2026-08-20）。 */
           if (res && res.synced && typeof res.credited === 'number' && res.credited < epAmount) {
-            const refund = (epAmount - res.credited) * 10;
+            const refund = (epAmount - res.credited) * this.COINS_PER_EP;
             if (refund > 0) {
               this.data.coins += refund;
               this.save();
@@ -1058,7 +1089,7 @@
       if (!this.spendEastPoints(epAmt, { source: 'coin_exchange', description: 'EP → coins exchange' })) {
         return { ok: false, reason: 'insufficient_ep' };
       }
-      const coinAmount = epAmt * 10;
+      const coinAmount = epAmt * this.COINS_PER_EP;
       this.data.coins += coinAmount;
       this.save();
       return { ok: true, epSpent: epAmt, coinsGained: coinAmount };

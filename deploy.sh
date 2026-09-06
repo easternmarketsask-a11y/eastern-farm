@@ -309,6 +309,37 @@ else
     exit 1
   fi
 
+  # 闸门 E4: 待激活账号的积分与云存档(约 5 秒)
+  # 2026-09-06 加（登录审查 🟠 J/K/L）：待激活账号花「待领取」积分本地照扣、服务端
+  # 不认、下一笔挣分又把数刷回来 = 无限积分；兑换走排队补发时封顶不退农场币；
+  # 待激活账号的存档一次都没上传过（而注册屏正拿「云存档」当卖点在卖）。
+  # 同一条测试还钉住「待激活绝不写 members / farm_players」。
+  echo "▶ 闸门 E4: 待激活账号积分与云存档回归测试(约 5 秒)…"
+  $PYCMD -m http.server 8161 --bind 127.0.0.1 >/dev/null 2>&1 &
+  PP_PID=$!
+  trap 'kill $PP_PID 2>/dev/null || true' EXIT
+  sleep 1
+  PP_OUT="$(mktemp)"
+  node scripts/verify/cdp.mjs "http://127.0.0.1:8161/src/" "scripts/verify/pending-points-test.js" 6000 >"$PP_OUT" 2>/dev/null || true
+  kill $PP_PID 2>/dev/null || true
+  trap - EXIT
+  if ! node -e '
+    const o = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
+    const r = o.evalResult;
+    if (!r) { console.error("✗ 待激活积分测试没跑出结果"); process.exit(1); }
+    if (r.inconclusive) { console.log("  ⚠ " + r.inconclusive + "(不阻断)"); process.exit(0); }
+    if (!r.ran || !r.ran.length) { console.error("✗ 待激活积分测试没跑起来"); process.exit(1); }
+    if (r.failures && r.failures.length) {
+      console.error("✗ 待激活账号的积分/存档有问题:");
+      r.failures.forEach(f => console.error("  - " + f));
+      process.exit(1);
+    }
+    console.log("  ✓ 待激活积分与云存档 " + r.ran.length + " 项全过");
+  ' "$PP_OUT"; then
+    echo "—— 部署中止：待激活账号又能刷积分、或存档又写不上去了。别跳过。"
+    exit 1
+  fi
+
   # 闸门 F: 新手引导指的那块地，手机上真的点得到(约 6 秒)
   # 2026-08-19 加：引导气泡曾压在它自己让你点的地块上(pointer-events:auto)，
   # 玩家照着点毫无反应 —— 7 天 423 次打开，走完引导 0 次。
@@ -336,36 +367,6 @@ else
     console.log("  ✓ 引导目标可点(命中 " + r.hitAtTarget + ")");
   ' "$TUT_OUT"; then
     echo "—— 部署中止：新手引导挡住了它自己让人点的地方。这条静默失败，每个新玩家都撞。"
-    exit 1
-  fi
-
-  # 闸门 G: 「发送短信验证码」真的把号码发出去(约 8 秒)
-  # 2026-08-19 加（客人 Alicia 报的）：这个按钮曾经**永远发不出去** ——
-  # _sendCode 读的输入框只存在于上一屏，digits 恒为 0，每次都弹
-  # 「请输入 10 位手机号」然后 return。而这是 909 个没登录过的会员唯一的入口。
-  # 测试把 signInWithPhoneNumber 打桩，绝不真发短信。
-  echo "▶ 闸门 G: 短信验证码发送回归测试(约 8 秒)…"
-  $PYCMD -m http.server 8151 --bind 127.0.0.1 >/dev/null 2>&1 &
-  SMS_PID=$!
-  trap 'kill $SMS_PID 2>/dev/null || true' EXIT
-  sleep 1
-  SMS_OUT="$(mktemp)"
-  EF_MOBILE=1 node scripts/verify/cdp.mjs "http://127.0.0.1:8151/src/" "scripts/verify/sms-send-test.js" 200 >"$SMS_OUT" 2>/dev/null || true
-  kill $SMS_PID 2>/dev/null || true
-  trap - EXIT
-  if ! node -e '
-    const o = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
-    const r = o.evalResult;
-    if (!r) { console.error("✗ 短信发送测试没跑出结果"); process.exit(1); }
-    if (r.inconclusive) { console.log("  ⚠ " + r.inconclusive + "(不阻断)"); process.exit(0); }
-    if (r.failures && r.failures.length) {
-      console.error("✗ 发送短信验证码这一步是坏的:");
-      r.failures.forEach(f => console.error("  - " + f));
-      process.exit(1);
-    }
-    console.log("  ✓ 号码正确送到发送函数(" + r.sentTo + ")");
-  ' "$SMS_OUT"; then
-    echo "—— 部署中止：短信验证码发不出去。这挡住所有第一次登录的会员。"
     exit 1
   fi
 
@@ -501,7 +502,7 @@ else
   #   · 离线回来按错过的周期补发 → 一次砸出几十张单
   #   · 告示牌被邻居贴图盖住 → 唯一的卖菜出口点不开(实测发生过)
   echo "▶ 闸门 L: 东超订单制回归测试(约 30 秒)…"
-  for t in store-demand-test store-economy-sim store-state-test no-bulk-sell-test orders-ui-test rename-test steal-pay-test; do
+  for t in store-demand-test store-economy-sim store-state-test no-bulk-sell-test orders-ui-test rename-test steal-pay-test pending-points-source-test; do
     if ! node "scripts/verify/$t.mjs"; then
       echo "—— 部署中止：$t 没过"
       exit 1

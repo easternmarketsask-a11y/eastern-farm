@@ -101,11 +101,19 @@
             ? await Farm.fbPoints.syncEpSpend(item.amount, item.source, item.description, item.eventId)
             : await Farm.fbPoints.syncEpEarn (item.amount, item.source, item.description, item.eventId);
           // Keep on transient failure (network/5xx) and while sync is paused; but DROP
-          // terminal rejections (422 bad data / 404 endpoint gone) — they can never
-          // succeed, so retaining them retries every 60s forever (console spam, since 422
-          // doesn't trip the circuit breaker).
-          const terminal = r && r.rejected && (r.code === 422 || r.code === 404);
+          // terminal rejections (422 bad data / 404 endpoint gone / 409 服务端明确说不) —
+          // they can never succeed, so retaining them retries every 60s forever (console
+          // spam, since 422 doesn't trip the circuit breaker).
+          const terminal = r && r.rejected && (r.code === 422 || r.code === 404 || r.code === 409);
           if (!r.synced && !terminal) remaining.push(item);
+          /* 🔒 排队补发的兑换也要按「实际记上的分」退币（登录审查 🟠 K，2026-09-06）。
+             即时那条路（state.exchangeCoinsToEp）早就这么做了；但兑换时如果没登录 /
+             断网 / 同步暂停，事件进了这条队列，之后补发时待激活账号的总额封顶
+             可能只记一部分甚至 0 —— 币早在兑换时扣掉了，分没给，就是白花钱。 */
+          if (r && r.synced && item.kind !== 'spend' && item.source === 'coin_exchange'
+              && typeof r.credited === 'number' && r.credited < item.amount) {
+            this._refundExchange(item.amount - r.credited, r.credited);
+          }
         } catch (e) {
           remaining.push(item);
         }
@@ -113,6 +121,21 @@
       this._write(remaining);
       if (remaining.length < q.length) {
         console.log(`[fb-queue] flushed ${q.length - remaining.length} events; ${remaining.length} remain`);
+      }
+    },
+
+    // 兑换补发只记上了一部分：把没换到分的那部分农场币还回去（口径同 state.exchangeCoinsToEp）。
+    _refundExchange(shortfallEp, credited) {
+      if (!(shortfallEp > 0) || !Farm.state || !Farm.state.data) return;
+      const refund = shortfallEp * (Farm.state.COINS_PER_EP || 10);
+      Farm.state.data.coins += refund;
+      Farm.state.save();
+      if (Farm.ui && Farm.ui.refreshHUD) Farm.ui.refreshHUD();
+      if (Farm.ui && Farm.ui.toast) {
+        const en = Farm.state.data.language === 'en';
+        Farm.ui.toast(credited === 0
+          ? (en ? 'Points are already full. Your farm coins are back.' : '待领取积分已攒满，农场币已退回。')
+          : (en ? ('Only ' + credited + ' points fit. The rest of your coins are back.') : ('只换进了 ' + credited + ' 分，其余农场币已退回。')), 3500);
       }
     },
 
