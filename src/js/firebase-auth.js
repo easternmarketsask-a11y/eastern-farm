@@ -677,6 +677,19 @@ const IDENT_KEY = 'eastern_farm_last_ident';
         if (btn) { btn.disabled = false; btn.textContent = en ? 'Continue' : '继续'; }
         return;
       }
+      /* 已经登记过邮箱**而且设过密码** → 该做的事是直接去登录，不是再收一封
+         设密码的信（那是重置链接，会让他以为原密码作废了）。
+         Chris 2026-09-05：「有邮箱的就提醒直接登录」。 */
+      if (data.status === 'can_login') {
+        const dom = data.domain || '';
+        this._go('login');
+        this._showError(en
+          ? 'This number already has an email' + (dom ? ' (****@' + dom + ')' : '')
+            + '. Sign in with it and your password below.'
+          : '这个号码已经登记过邮箱' + (dom ? '（****@' + dom + '）' : '')
+            + '，用它和密码在下面登录就行。', 'info');
+        return;
+      }
       if (data.status === 'email_sent') {
         this._sentDomain = data.domain || '';
         this._go('sent');
@@ -1451,10 +1464,13 @@ const IDENT_KEY = 'eastern_farm_last_ident';
       return '(' + d.slice(0, 3) + ') ' + d.slice(3, 6) + '-' + d.slice(6, 10);
     },
 
-    _showError(msg) {
+    _showError(msg, kind) {
       const el = document.getElementById('authError');
       if (el) {
         el.textContent = msg;
+        // 同一个位置也用来放不是错误的话（「你已经能登录了」）。
+        // 画成红色警告会让人以为出了问题。
+        el.classList.toggle('auth-error--info', kind === 'info');
         el.style.display = msg ? 'block' : 'none';
       }
     },

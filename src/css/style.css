@@ -1316,6 +1316,14 @@ body.mapmode #warehouseBtn { display: none !important; }
 }
 .auth-error:not(:empty) { display: block; }
 
+/* 同一个位置也用来放**不是错误**的话（比如「你已经能登录了，在下面登录就行」）。
+   那句话是好消息，画成红色警告会让人以为出了问题。 */
+.auth-error.auth-error--info {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+  color: #15803d;
+}
+
 .auth-resend-link {
   background: none;
   border: none;
