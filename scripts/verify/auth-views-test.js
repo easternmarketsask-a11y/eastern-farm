@@ -80,6 +80,34 @@
     failures.push('info-toggle: ' + ((e && e.message) || e));
   }
 
+  // 新客人从登录首屏直接能进注册（2026-09-06）：以前要先输号、被告知查不到才看得见。
+  try {
+    A._view = 'login'; A._authFrom = '';
+    A._renderLoginModal();
+    await sleep(60);
+    const entry = document.querySelector('[data-auth-go="regemail"][data-auth-from="login"]');
+    if (!entry) failures.push('login: 没有「还不是会员？用邮箱注册」入口');
+    else {
+      entry.click();
+      await sleep(80);
+      if (A._view !== 'regemail') failures.push('点注册入口没进 regemail：' + A._view);
+      const modalTxt = (document.getElementById('modal') || document.body).textContent || '';
+      if (!/先替你存着|held for you/.test(modalTxt)) failures.push('从登录首屏进注册没看到「积分先替你存着」那段说明');
+      const back = document.querySelector('[data-auth-go="login"]');
+      if (!back) failures.push('从登录首屏进的注册屏，返回键应回登录');
+    }
+    // 从 notmember 进来的仍然回 notmember，且不重复那段话
+    A._view = 'notmember'; A._authFrom = '';
+    A._renderLoginModal(); await sleep(60);
+    const go = document.querySelector('[data-auth-go="regemail"]');
+    if (go) { go.click(); await sleep(80); }
+    if (A._view !== 'regemail') failures.push('notmember → regemail 没跳过去：' + A._view);
+    if (!document.querySelector('[data-auth-go="notmember"]')) failures.push('从 notmember 进的注册屏，返回键应回 notmember');
+    ran.push('signup-entry');
+  } catch (e) {
+    failures.push('signup-entry: ' + ((e && e.message) || e));
+  }
+
   try { Farm.ui.hideModal(); } catch (_) {}
   return { failures, ran };
 })()

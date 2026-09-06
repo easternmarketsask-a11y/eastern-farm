@@ -817,7 +817,15 @@ const IDENT_KEY = 'eastern_farm_last_ident';
 
     _renderRegEmailView(lang) {
       const en = lang === 'en';
+      const fromLogin = this._authFrom === 'login';
+      const lead = fromLogin ? `
+        <div class="auth-notmember">
+          <p class="auth-notmember-sub">${en
+            ? 'You can play before you are a member. Points you earn are held for you and land on your member card when you give us your phone number in store.'
+            : '还不是会员也可以先玩。挣到的超市积分先替你存着，到店报一下手机号就到账。'}</p>
+        </div>` : '';
       return `
+        ${lead}
         <div class="auth-field">
           <label class="auth-label" for="regEmail">${en ? 'Email' : '邮箱'}</label>
           <input type="email" id="regEmail" class="auth-input" autocomplete="email"
@@ -834,7 +842,7 @@ const IDENT_KEY = 'eastern_farm_last_ident';
                  placeholder="${en ? 'e.g. Nicole' : '例如：小美'}"/>
         </div>
         <button class="btn auth-primary" id="authRegStartBtn">${en ? 'Send code' : '发送验证码'}</button>
-        <button class="auth-ghost" data-auth-go="notmember">${Farm.i18n.t('btn_back') || (en ? 'Back' : '返回')}</button>
+        <button class="auth-ghost" data-auth-go="${fromLogin ? 'login' : 'notmember'}">${Farm.i18n.t('btn_back') || (en ? 'Back' : '返回')}</button>
       `;
     },
 
@@ -1187,6 +1195,10 @@ const IDENT_KEY = 'eastern_farm_last_ident';
         <button class="btn auth-primary" id="authIdentBtn">${en ? 'Sign in' : '登录'}</button>
         <button class="auth-ghost auth-ghost--strong" data-auth-go="phone">${en
           ? 'First time? Activate with your phone' : '第一次登录？用手机号激活'}</button>
+        <!-- 2026-09-06：新客人不必先假装会员、输号、被告知查不到，才看得见注册。
+             从这里进 regemail 时多一段说明（notmember 那一屏的话），返回也回到这里。 -->
+        <button class="auth-ghost" data-auth-go="regemail" data-auth-from="login">${en
+          ? 'Not a member yet? Sign up with email' : '还不是会员？用邮箱注册'}</button>
         <button class="auth-ghost" data-auth-go="forgot">${en ? 'Forgot password' : '忘记密码'}</button>
         <button class="auth-ghost" onclick="Farm.ui.hideModal()">${Farm.i18n.t('btn_cancel')}</button>
       `;
@@ -1216,7 +1228,13 @@ const IDENT_KEY = 'eastern_farm_last_ident';
 
       // 视图跳转：任何带 data-auth-go 的按钮
       document.querySelectorAll('[data-auth-go]').forEach(btn => {
-        btn.onclick = () => this._go(btn.dataset.authGo);
+        btn.onclick = () => {
+          // 只有明确标了来源的按钮才改这个标记；其余跳转保持上一次的值不动
+          //（regemail → regcode → 「换个邮箱」回 regemail 时，返回键仍要回对地方）。
+          if (btn.dataset.authFrom !== undefined) this._authFrom = btn.dataset.authFrom;
+          else if (btn.dataset.authGo === 'notmember' || btn.dataset.authGo === 'phone') this._authFrom = '';
+          this._go(btn.dataset.authGo);
+        };
       });
 
       // ⓘ 折叠说明（默认收起）。放在视图分支之外 —— 哪一屏都可能有。
