@@ -1255,9 +1255,9 @@
       const plant = walking ? Math.pow(Math.abs(Math.sin(phase)), 1.35) : 0;
       const bob = walking
         ? (1 - plant) * th * 0.040
-        : (anim === 'idle' ? Math.sin(actor.frameT * 2.15) * th * 0.010 : 0);
+        : (anim === 'idle' ? Math.sin(actor.frameT * 2.05) * th * 0.018 : 0);
       const sway = walking ? Math.sin(phase) * w * 0.030 : 0;
-      const squash = walking ? 1 - plant * 0.048 : 1;
+      const squash = walking ? 1 - plant * 0.048 : (anim === 'idle' ? 1 - Math.sin(actor.frameT * 2.05) * 0.012 : 1);
       let dip = 0;
       if (anim === 'harvest' || anim === 'plant' || anim === 'water') {
         const t = Math.min(1, actor.frameT / WORK_HOLD);
@@ -1276,7 +1276,21 @@
       if (face === 'l') ctx.scale(-1, 1);
       ctx.translate(sway, 0);
       if (squash !== 1) ctx.scale(1, squash);
-      ctx.drawImage(im, fi * cw, row * ch, cw, ch, -w / 2, -h, w, h);
+      if (iso._drawLit) iso._drawLit(ctx, im, fi * cw, row * ch, cw, ch, -w / 2, -h, w, h, face !== 'l');
+      else ctx.drawImage(im, fi * cw, row * ch, cw, ch, -w / 2, -h, w, h);
+      if (anim === 'harvest' || anim === 'plant' || anim === 'water') {
+        const t = Math.min(1, actor.frameT / WORK_HOLD);
+        if (t > 0.18 && t < 0.88) {
+          const col = anim === 'water' ? 'rgba(140,190,220,0.45)' : (anim === 'plant' ? 'rgba(118,82,42,0.40)' : 'rgba(90,140,55,0.42)');
+          ctx.fillStyle = col;
+          for (let k = 0; k < 4; k++) {
+            const u = (t * 2.4 + k * 0.27) % 1;
+            ctx.beginPath();
+            ctx.arc((k - 1.5) * w * 0.11, -h * 0.12 - u * h * 0.28, Math.max(1.1, h * 0.016), 0, 6.283);
+            ctx.fill();
+          }
+        }
+      }
       ctx.restore();
       return true;
     }

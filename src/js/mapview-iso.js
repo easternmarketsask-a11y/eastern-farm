@@ -3786,9 +3786,9 @@
       if (flipX) {
         ctx.translate(cx, by);
         ctx.scale(-1, 1);
-        ctx.drawImage(im, -w / 2, -h, w, h);
+        this._drawLit(ctx, im, 0, 0, im.width, im.height, -w / 2, -h, w, h, false);
       } else {
-        ctx.drawImage(im, cx - w / 2, by - h, w, h);
+        this._drawLit(ctx, im, 0, 0, im.width, im.height, cx - w / 2, by - h, w, h, true);
       }
       ctx.restore();
       return true;
@@ -3806,7 +3806,7 @@
       if (flipX) ctx.scale(-1, 1);
       if (lean) ctx.rotate(lean);
       ctx.scale(sx, sy);
-      ctx.drawImage(im, -w / 2, -h, w, h);
+      this._drawLit(ctx, im, 0, 0, im.width, im.height, -w / 2, -h, w, h, !flipX);
       ctx.restore();
       return true;
     },
@@ -4049,6 +4049,57 @@
       // 光从左上（与宣传图一致）→ 影子往右下拉长一点
       ctx.ellipse(cx + w * 0.16, cy + w * 0.05, w * 0.52, w * 0.20, 0.55, 0, Math.PI * 2);
       ctx.fillStyle = 'rgba(42,48,22,' + (alpha || 0.18) + ')'; ctx.fill(); ctx.restore();
+    },
+    /* 油画贴图吃黄昏侧光：离屏 source-atop，不污染草地。
+       左上暖金、右下冷荫，和天空太阳同一侧。 */
+    _drawLit(ctx, im, sx, sy, sw, sh, dx, dy, dw, dh, sunFromLeft) {
+      if (!(im instanceof Image) || !im.width || dw < 6 || dh < 6) {
+        if (im) ctx.drawImage(im, sx, sy, sw, sh, dx, dy, dw, dh);
+        return;
+      }
+      if (!this._litBuf) this._litBuf = document.createElement('canvas');
+      const buf = this._litBuf;
+      const bw = Math.max(2, Math.ceil(Math.abs(dw)));
+      const bh = Math.max(2, Math.ceil(Math.abs(dh)));
+      if (buf.width !== bw) buf.width = bw;
+      if (buf.height !== bh) buf.height = bh;
+      const b = buf.getContext('2d');
+      b.clearRect(0, 0, bw, bh);
+      b.drawImage(im, sx, sy, sw, sh, 0, 0, dw, dh);
+      b.globalCompositeOperation = 'source-atop';
+      const x0 = (sunFromLeft !== false) ? 0 : bw;
+      const x1 = (sunFromLeft !== false) ? bw : 0;
+      const g = b.createLinearGradient(x0, 0, x1, bh);
+      g.addColorStop(0, 'rgba(255, 226, 150, 0.40)');
+      g.addColorStop(0.36, 'rgba(255, 255, 255, 0)');
+      g.addColorStop(1, 'rgba(28, 38, 68, 0.22)');
+      b.fillStyle = g;
+      b.fillRect(0, 0, bw, bh);
+      b.globalCompositeOperation = 'source-over';
+      ctx.drawImage(buf, dx, dy);
+    },
+    _drawSunRays(W, H) {
+      if (W < 180) return;
+      const ctx = this._ctx;
+      const sx = W * 0.16, sy = H * 0.07;
+      const t = Date.now() / 1000;
+      const len = Math.hypot(W, H) * 0.95;
+      ctx.save();
+      ctx.globalCompositeOperation = 'screen';
+      ctx.translate(sx, sy);
+      for (let i = 0; i < 10; i++) {
+        const ang = 0.26 + i * 0.198 + Math.sin(t * 0.10 + i * 1.25) * 0.026;
+        const sp = 0.015 + (i % 3) * 0.007;
+        const a = 0.048 + 0.028 * (0.5 + 0.5 * Math.sin(t * 0.38 + i));
+        ctx.fillStyle = 'rgba(255, 214, 140,' + a + ')';
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(Math.cos(ang - sp) * len, Math.sin(ang - sp) * len);
+        ctx.lineTo(Math.cos(ang + sp) * len, Math.sin(ang + sp) * len);
+        ctx.closePath();
+        ctx.fill();
+      }
+      ctx.restore();
     },
     // ---- world-anchored landscape backdrop (cx,cy are camera-adjusted, so it pans) ----
     _drawHills(cx, cy, span) {
@@ -5173,12 +5224,12 @@
       ctx.fillRect(0, 0, W, H);
       const t = Date.now() / 1000, th = this._th();
       ctx.save();
-      for (let i = 0; i < 7; i++) {
-        const px = ((0.12 + i * 0.11) * W + Math.sin(t * 0.22 + i) * 10);
-        const py = H * (0.18 + (i % 4) * 0.12) + Math.cos(t * 0.18 + i * 0.7) * 8;
-        ctx.globalAlpha = 0.10 + 0.08 * (0.5 + 0.5 * Math.sin(t + i));
+      for (let i = 0; i < 14; i++) {
+        const px = ((0.08 + (i % 7) * 0.12) * W + Math.sin(t * 0.20 + i) * 14);
+        const py = H * (0.16 + (i % 5) * 0.13) + Math.cos(t * 0.16 + i * 0.7) * 10;
+        ctx.globalAlpha = 0.08 + 0.10 * (0.5 + 0.5 * Math.sin(t * 0.9 + i));
         ctx.fillStyle = '#ffe6b0';
-        ctx.beginPath(); ctx.arc(px, py, Math.max(1.2, th * 0.05), 0, 6.283); ctx.fill();
+        ctx.beginPath(); ctx.arc(px, py, Math.max(1.1, th * (0.04 + (i % 3) * 0.015)), 0, 6.283); ctx.fill();
       }
       ctx.restore();
     },
@@ -5206,6 +5257,10 @@
         ctx.ellipse(x, y, s * 1.65, s * 0.50, -0.08, 0, 6.283);
         ctx.ellipse(x - s * 0.72, y + s * 0.06, s * 0.88, s * 0.38, 0.1, 0, 6.283);
         ctx.ellipse(x + s * 0.78, y + s * 0.04, s * 1.02, s * 0.40, -0.12, 0, 6.283);
+        ctx.fill();
+        ctx.fillStyle = 'rgba(255,244,220,0.28)';
+        ctx.beginPath();
+        ctx.ellipse(x - s * 0.18, y - s * 0.10, s * 0.72, s * 0.22, -0.1, 0, 6.283);
         ctx.fill();
       }
       ctx.restore();
@@ -5491,6 +5546,7 @@
 
       this._drawLockedLand();
       this._drawGoldenHour(W, H);
+      this._drawSunRays(W, H);
       this._drawParticles(tw); this._drawFestival();
       this._drawBuildBoards();
       this._drawBuildFalls();
@@ -5615,10 +5671,14 @@
       ctx.beginPath();
       ctx.rect(c.x - tw * 1.25, c.y - th * 5.2, tw * 2.5, th * 5.2 + th * 0.14);
       ctx.clip();
+      const wind = Math.sin(Date.now() / 1000 * 1.08 + c.x * 0.03 + c.y * 0.025) * 0.042;
+      ctx.translate(c.x, soilY);
+      ctx.rotate(wind);
       if (synth && grow < 0.85) {
         ctx.filter = 'saturate(1.15) brightness(1.04)';
       }
-      ctx.drawImage(im, c.x - w / 2, topY, w, h);
+      this._drawLit(ctx, im, 0, 0, im.width, im.height, -w / 2, topY - soilY, w, h, true);
+      ctx.filter = 'none';
       ctx.restore();
       return topY;
     },
@@ -5632,11 +5692,15 @@
       const w = im.width * s, h = im.height * s;
       const bury = h * 0.30;
       const topY = (c.y + th * 0.20 - (ripe || 0)) - h + bury;
+      const soilY = c.y + th * 0.20 - (ripe || 0);
       ctx.save();
       ctx.beginPath();
       ctx.rect(c.x - tw * 1.15, c.y - th * 4.2, tw * 2.3, th * 4.2 + th * 0.20);
       ctx.clip();
-      ctx.drawImage(im, c.x - w / 2, topY, w, h);
+      const wind = Math.sin(Date.now() / 1000 * 1.08 + c.x * 0.03 + c.y * 0.025) * 0.038;
+      ctx.translate(c.x, soilY);
+      ctx.rotate(wind);
+      this._drawLit(ctx, im, 0, 0, im.width, im.height, -w / 2, topY - soilY, w, h, true);
       ctx.restore();
     },
     _drawPlot(plot, gx, gy, idx) {
@@ -5675,7 +5739,7 @@
       if (mature) {
         const pulse = 0.5 + 0.5 * Math.sin(tNow * 2.2 + gx + gy);
         const gl = ctx.createRadialGradient(c.x, c.y + th * 0.30, th * 0.04, c.x, c.y + th * 0.30, tw * 0.38);
-        gl.addColorStop(0, 'rgba(255,214,110,' + (0.10 + pulse * 0.08) + ')');
+        gl.addColorStop(0, 'rgba(255,214,110,' + (0.16 + pulse * 0.12) + ')');
         gl.addColorStop(1, 'rgba(255,214,110,0)');
         ctx.fillStyle = gl;
         ctx.beginPath(); ctx.ellipse(c.x, c.y + th * 0.30, tw * 0.38, th * 0.28, 0, 0, 6.283); ctx.fill();
