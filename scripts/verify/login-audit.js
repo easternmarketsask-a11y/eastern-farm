@@ -33,11 +33,9 @@
     ['phone',     ['authNextBtn', 'authPhone']],
     ['confirm',   ['authConfirmYes']],
     ['sent',      []],
-    ['otp',       ['authSendBtn']],
-    ['setpw',     ['authSetPwBtn', 'setPw', 'setUser']],
     ['forgot',    ['authForgotBtn', 'forgotIdent']],
-    ['email',     ['authEmailStartBtn', 'addEmail']],
-    ['emailcode', ['authEmailConfirmBtn', 'emailCode']],
+    // 2026-09-05：短信取消，otp / setpw / email / emailcode 四屏合并成这一屏
+    ['claimemail', ['authClaimBtn', 'claimPhone', 'claimEmail', 'claimCode']],
   ];
 
   const failures = [], ran = [], warn = [];

@@ -48,10 +48,10 @@ const IDENT_KEY = 'eastern_farm_last_ident';
     currentUser: null,
     memberDoc: null,
     listeners: [],
-    _confirmation: null,     // Firebase ConfirmationResult during OTP flow
-    _recaptcha: null,        // RecaptchaVerifier instance
-    // 登录弹窗当前视图。2026-08-12 起改为「一律邮箱登录」，手机号只做一次性激活：
-    // login(邮箱+密码) / phone(输手机号) / sent(信已发出) / otp(短信验证) / bind(绑邮箱设密码)
+    // 登录弹窗当前视图（2026-09-05 起短信验证已取消，那两个字段一并删了）：
+    //   login(邮箱/用户名+密码) / phone(输手机号) / confirm(是你吗) /
+    //   claimemail(登记邮箱+会员码) / sent(信已发出) / forgot(忘记密码) /
+    //   notmember + regemail + regcode(非会员注册三屏)
     _view: 'login',
     _sentDomain: '',         // sent 视图上只显示域名，绝不回显打码邮箱地址
 
@@ -500,7 +500,6 @@ const IDENT_KEY = 'eastern_farm_last_ident';
         return;
       }
       this._view = 'login';
-      this._confirmation = null;
       this._renderLoginModal();
     },
 
@@ -549,15 +548,12 @@ const IDENT_KEY = 'eastern_farm_last_ident';
                 en ? 'The number you gave us in store' : '您在店里登记的手机号'],
         confirm: ['', ''],          // 这一屏自己画标题（姓名要大字居中）
         sent:  [en ? 'Check your email' : '请查收邮件', ''],
-        otp:   [en ? 'Verify your phone' : '验证手机号',
-                en ? `We'll text ${this._formatPhone((this._currentPhoneE164 || '').replace('+1', ''))}`
-                   : `将发送到 ${this._formatPhone((this._currentPhoneE164 || '').replace('+1', ''))}`],
-        /* 「一辈子一次」要说出来 —— 这一屏是整个方案的收益点：设完以后再不发短信。 */
-        setpw: [en ? 'Set your password' : '设置密码',
-                en ? 'Just once — after this you sign in straight away' : '只需这一次，以后直接登录'],
         forgot: [en ? 'Forgot password' : '忘记密码', ''],
-        email:  [en ? 'Add your email' : '添加邮箱', ''],
-        emailcode: [en ? 'Enter the code' : '输入验证码', ''],
+        /* 2026-09-05：短信那两屏（otp / setpw）和验码补邮箱那两屏
+           （email / emailcode）合并成这一屏。手机验证有成本，取消了；
+           设密码改成「登记邮箱 → 收信在邮件里设」。 */
+        claimemail: [en ? 'Add your email' : '留个邮箱',
+                     en ? "You'll use it to sign in" : '以后用它登录'],
         /* 非会员注册（2026-08-20）。标题说的是「这一步在问什么」，
            不写「第 2 步 / 共 3 步」—— 进度条会让人觉得还早着呢，
            而这条路本来就短。 */
@@ -572,11 +568,8 @@ const IDENT_KEY = 'eastern_farm_last_ident';
         phone: () => this._renderPhoneView(lang, remembered),
         confirm: () => this._renderConfirmView(lang),
         sent:  () => this._renderSentView(lang),
-        otp:   () => this._renderOtpView(lang),
-        setpw: () => this._renderSetPwView(lang),
         forgot: () => this._renderForgotView(lang, rememberedIdent),
-        email:  () => this._renderEmailAddView(lang),
-        emailcode: () => this._renderEmailCodeView(lang),
+        claimemail: () => this._renderClaimEmailView(lang),
         notmember: () => this._renderNotMemberView(lang),
         regemail: () => this._renderRegEmailView(lang),
         regcode: () => this._renderRegCodeView(lang),
@@ -689,7 +682,10 @@ const IDENT_KEY = 'eastern_farm_last_ident';
         this._go('sent');
         return;
       }
-      this._go('otp');
+      /* 这个人在店里登记过，但会员档里还没有能收信的邮箱 —— 让他当场登记一个。
+         后端这个状态名还叫 need_phone_verify（含义一直是「没有可用邮箱」），
+         名字留着不改：主站也在分流它，两边一起改才安全。 */
+      this._go('claimemail');
     },
 
     /* ═══ 手机号直接进（2026-08-19）═════════════════════════════════════
@@ -992,7 +988,7 @@ const IDENT_KEY = 'eastern_farm_last_ident';
             的即时回报。上线后看 email_set 埋点 —— 如果新账号还是不动，
             那就是墙，要再谈。 */
       if (!this.hasRealEmail()) {
-        this._go('email');
+        this._go('claimemail');
         return;
       }
       this._onLoginSuccess(lang);
@@ -1030,21 +1026,65 @@ const IDENT_KEY = 'eastern_farm_last_ident';
           ? 'No email after a minute? Check your spam folder.'
           : '一分钟还没收到？请看一下垃圾邮件。'}</p>
         <button class="btn auth-primary" data-auth-go="login">${en ? 'Go to sign in' : '去登录'}</button>
-        <!-- 🔒 这个入口必须显眼，不能藏进小字：它接住「店里录错邮箱」和「邮箱废弃了」
-             两种真实情况，藏起来的结果是顾客直接打电话到店里问。 -->
-        <button class="auth-ghost auth-ghost--strong" data-auth-go="otp">${en
-          ? "Didn't get it? Use a different email" : '收不到？改用其他邮箱'}</button>
+        <!-- 「店里录错邮箱」「邮箱废弃了」这两种情况必须有出路，否则顾客只能打电话到店里问。
+             🔒 但档里已经有邮箱的人**不能自助改绑** —— 那等于拿到卡就能接管账号
+             （后端对这种情况回 409）。所以这里指向到店，不指向再填一次。 -->
+        <p class="auth-hint">${en
+          ? "Wrong email, or nothing arrives? Ask us in store and we'll fix it on the spot."
+          : '邮箱填错了、或者收不到？到店找店员改一下，当场就能用。'}</p>
       `;
     },
 
-    /** 没登记邮箱 → 🔒 短信必须由这一屏的点击直接触发（iOS 手势，见 _renderLoginModal 注释）。 */
-    _renderOtpView(lang) {
+    /* ═══ 登记邮箱（2026-09-05，取代短信验证）═══════════════════════════
+       Chris：「手机验证有成本，取消验证，登录前要先登记邮箱」，且邮箱由顾客自己填。
+
+       🔒 **必须同时给会员卡上的会员码。**
+       只凭手机号就让人绑邮箱，等于把短信那道闸换成一扇没锁的门 —— 手机号印在
+       小票上，谁捡到一张就能绑自己的邮箱、设密码，把那个会员的积分、储值、
+       消费记录一起拿走。会员码在卡上，卡在顾客手里；会员卡二维码扫出来就是
+       /m/<会员码>。线上实测 994 位会员里 993 位有会员码，这道闸挡不住顾客。
+
+       🔒 手机号这一格**也要**：从提醒条进来的老会员这边没有号码在手，而它是
+       两个因素里的另一个。已经知道号码时预填好，不让人白打一遍。 */
+    _renderClaimEmailView(lang) {
       const en = lang === 'en';
-      if (this._confirmation || this._smsPending) return this._renderPhoneStep2(lang);
+      const known = this._confirmDigits
+        || this._phoneDigits((this._currentPhoneE164 || '').replace('+1', ''))
+        || '';
       return `
-        <div class="auth-recaptcha-wrap"><div id="authRecaptcha"></div></div>
-        <button class="btn auth-primary" id="authSendBtn">${en ? 'Text me a code' : '发送短信验证码'}</button>
-        <button class="auth-ghost" data-auth-go="phone">${en ? 'Change number' : '换个号码'}</button>
+        <div class="auth-field">
+          <label class="auth-label" for="claimPhone">${en ? 'Phone number' : '手机号'}</label>
+          <div class="auth-phone-input">
+            <span class="auth-phone-prefix">+1</span>
+            <input type="tel" id="claimPhone" class="auth-input auth-input-phone"
+                   inputmode="numeric" autocomplete="tel-national" maxlength="14"
+                   value="${known ? this._formatPhone(known) : ''}" placeholder="(306) 123-4567"/>
+          </div>
+        </div>
+        <div class="auth-field">
+          <label class="auth-label" for="claimEmail">
+            ${en ? 'Email' : '邮箱'}
+            ${this._info('claimEmailInfo', en
+              ? 'Used to sign in, to reset your password, and for order updates.'
+              : '用来登录、自己重设密码，也用来收订单通知。')}
+          </label>
+          <input type="email" id="claimEmail" class="auth-input" autocomplete="email"
+                 placeholder="you@example.com"/>
+        </div>
+        <div class="auth-field">
+          <label class="auth-label" for="claimCode">${en ? 'Member code' : '会员码'}</label>
+          <input type="text" id="claimCode" class="auth-input auth-input-code"
+                 autocomplete="off" autocapitalize="characters" spellcheck="false"
+                 maxlength="16" placeholder="ABCD1234"/>
+          <p class="auth-hint">${en
+            ? "It's printed on your member card. You can also scan the QR code on the card — the code is the last part of the link."
+            : '在您的会员卡上。也可以用手机相机扫卡上的二维码，码就在网址最后一段。'}</p>
+        </div>
+        <button class="btn auth-primary" id="authClaimBtn">${en ? 'Send me the link' : '发送设置密码的邮件'}</button>
+        <button class="auth-ghost" onclick="Farm.ui.hideModal()">${Farm.i18n.t('btn_cancel')}</button>
+        <p class="auth-hint">${en
+          ? "Can't find your card? Come by and we'll add your email for you."
+          : '找不到会员卡？到店让店员帮您登记邮箱，一样可以。'}</p>
       `;
     },
 
@@ -1086,29 +1126,6 @@ const IDENT_KEY = 'eastern_farm_last_ident';
       `;
     },
 
-    /** 短信验证通过 → 设密码（+ 选填用户名）。一辈子一次，之后永不再发短信。 */
-    _renderSetPwView(lang) {
-      const en = lang === 'en';
-      return `
-        <div class="auth-field">
-          <label class="auth-label" for="setPw">${en ? 'Password' : '设置密码'}</label>
-          <input type="password" id="setPw" class="auth-input" autocomplete="new-password"
-                 placeholder="${en ? 'At least 6 characters' : '至少 6 位'}"/>
-        </div>
-        <div class="auth-field">
-          <label class="auth-label" for="setUser">
-            ${en ? 'Username (optional)' : '用户名（选填）'}
-            ${this._info('userInfo', en
-              ? 'Sign in with this instead of your phone number, if you prefer.'
-              : '设了以后可以用它代替手机号登录。')}
-          </label>
-          <input type="text" id="setUser" class="auth-input" autocomplete="username"
-                 placeholder="${en ? 'Leave blank if you like' : '不填也可以'}"/>
-        </div>
-        <button class="btn auth-primary" id="authSetPwBtn">${en ? 'Done' : '完成'}</button>
-      `;
-    },
-
     /** 忘记密码：留过邮箱的自助；没留的到店改。 */
     _renderForgotView(lang, remembered) {
       const en = lang === 'en';
@@ -1125,68 +1142,6 @@ const IDENT_KEY = 'eastern_farm_last_ident';
           ? 'No email on file? Our staff can reset it for you in store.'
           : '没留过邮箱？到店里请店员帮您重设。'}</p>
         <button class="auth-ghost" data-auth-go="login">${en ? 'Back' : '返回'}</button>
-      `;
-    },
-
-    /** 后补邮箱 第 1 步：输邮箱 → 发验证码。 */
-    _renderEmailAddView(lang) {
-      const en = lang === 'en';
-      return `
-        <div class="auth-field">
-          <label class="auth-label" for="addEmail">
-            ${en ? 'Email' : '邮箱'}
-            ${this._info('emailInfo', en
-              ? 'Used for order updates and for resetting your password yourself.'
-              : '用来收订单通知，以及自己重设密码。')}
-          </label>
-          <input type="email" id="addEmail" class="auth-input" autocomplete="email"
-                 placeholder="you@example.com"/>
-        </div>
-        <button class="btn auth-primary" id="authEmailStartBtn">${en ? 'Send code' : '发送验证码'}</button>
-        <button class="auth-ghost" onclick="Farm.ui.hideModal()">${Farm.i18n.t('btn_cancel')}</button>
-      `;
-    },
-
-    /** 后补邮箱 第 2 步：输验证码（单输入框，理由见下面 _renderPhoneStep2 的注释）。 */
-    _renderEmailCodeView(lang) {
-      const en = lang === 'en';
-      const to = this._emailSentTo ? `<p class="auth-sent-line">${en ? 'Sent to' : '已发送到'} <b>${this._emailSentTo}</b></p>` : '';
-      return `
-        ${to}
-        <div class="auth-field">
-          <input type="tel" id="emailCode" class="auth-code-input"
-                 inputmode="numeric" autocomplete="one-time-code" maxlength="6"
-                 placeholder="------" aria-label="${en ? 'Verification code' : '验证码'}"/>
-        </div>
-        <button class="btn auth-primary" id="authEmailConfirmBtn">${en ? 'Confirm' : '确认'}</button>
-        <button class="auth-ghost" data-auth-go="email">${en ? 'Use a different email' : '换个邮箱'}</button>
-      `;
-    },
-
-    /* 🔒 验证码用**一个**输入框，不要再改回 6 个格子（2026-08-12，Chris「这个输入框太长了」）
-       -------------------------------------------------------------------------------
-       6 格子看着现代，代价却全落在最不该出问题的地方：
-       · 390px 屏上 6 格 + 5 道间隙挤在 310px 里，格子被压窄、数字被裁；
-         而第一格为了吃 iOS 自动填充设了 maxlength=6，整串码塞进去就是「一个很长的框」。
-       · iOS 的 one-time-code 自动填充本来就是**按单字段**设计的，塞进 6 格要靠
-         「把多位数分发到各格」的补丁，历史上已经因此丢过 5 位数字（见旧 _wireOtpBoxes 注释）。
-       · 还要自己实现聚焦跳转、退格回跳、方向键、粘贴分发 —— 全是可以不存在的 bug 面。
-       单字段 + letter-spacing 是 Apple / Stripe 在手机上的做法：自动填充零补丁、
-       永不溢出、代码少一大截，对长辈也更直白（只有一个地方可以打字）。
-       字号必须 ≥16px，否则 iOS Safari 一聚焦就整页放大。 */
-    _renderPhoneStep2(lang) {
-      return `
-        <div class="auth-field">
-          <input type="tel" id="authCode" class="auth-code-input"
-                 inputmode="numeric" autocomplete="one-time-code" maxlength="6"
-                 placeholder="------" aria-label="${lang === 'en' ? 'Verification code' : '验证码'}"/>
-          <div class="auth-hint auth-code-hint">
-            <span id="authSmsStatus" class="auth-sms-status"></span>
-            <span id="authResendArea"></span>
-          </div>
-        </div>
-        <button class="btn auth-primary" id="authVerifyBtn" disabled>${lang === 'en' ? 'Sign in' : '登录'}</button>
-        <button class="auth-ghost" id="authBackBtn">${lang === 'en' ? 'Use a different number' : '换个号码'}</button>
       `;
     },
 
@@ -1247,38 +1202,29 @@ const IDENT_KEY = 'eastern_farm_last_ident';
         const yes = document.getElementById('authConfirmYes');
         if (yes) yes.onclick = () => this._confirmClaim();
 
-      } else if (view === 'setpw') {
-        const el = document.getElementById('setPw');
-        if (el) setTimeout(() => el.focus(), 100);
-        const btn = document.getElementById('authSetPwBtn');
-        if (btn) btn.onclick = () => this._setCredentials();
-        ['setPw', 'setUser'].forEach(id => {
-          const x = document.getElementById(id);
-          if (x) x.onkeydown = (e) => { if (e.key === 'Enter') this._setCredentials(); };
-        });
-
       } else if (view === 'forgot') {
         const btn = document.getElementById('authForgotBtn');
         if (btn) btn.onclick = () => this._forgotPassword();
         const el = document.getElementById('forgotIdent');
         if (el) el.onkeydown = (e) => { if (e.key === 'Enter') this._forgotPassword(); };
 
-      } else if (view === 'email') {
-        const el = document.getElementById('addEmail');
-        if (el) setTimeout(() => el.focus(), 100);
-        const btn = document.getElementById('authEmailStartBtn');
-        if (btn) btn.onclick = () => this._emailVerifyStart();
-        if (el) el.onkeydown = (e) => { if (e.key === 'Enter') this._emailVerifyStart(); };
-
-      } else if (view === 'emailcode') {
-        const el = document.getElementById('emailCode');
-        if (el) {
-          setTimeout(() => el.focus(), 100);
-          el.oninput = (e) => { e.target.value = (e.target.value || '').replace(/\D/g, '').slice(0, 6); };
-          el.onkeydown = (e) => { if (e.key === 'Enter') this._emailVerifyConfirm(); };
-        }
-        const btn = document.getElementById('authEmailConfirmBtn');
-        if (btn) btn.onclick = () => this._emailVerifyConfirm();
+      } else if (view === 'claimemail') {
+        const phoneEl = document.getElementById('claimPhone');
+        if (phoneEl) phoneEl.oninput = (e) => { e.target.value = this._formatPhone(e.target.value); };
+        const codeEl = document.getElementById('claimCode');
+        if (codeEl) codeEl.oninput = (e) => {
+          e.target.value = (e.target.value || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+        };
+        // 号码已经填好时光标落到邮箱，少一步
+        const first = (phoneEl && phoneEl.value)
+          ? document.getElementById('claimEmail') : phoneEl;
+        if (first) setTimeout(() => first.focus(), 100);
+        const btn = document.getElementById('authClaimBtn');
+        if (btn) btn.onclick = () => this._claimEmail();
+        ['claimPhone', 'claimEmail', 'claimCode'].forEach(id => {
+          const el = document.getElementById(id);
+          if (el) el.onkeydown = (e) => { if (e.key === 'Enter') this._claimEmail(); };
+        });
 
       } else if (view === 'phone') {
         const phoneEl = document.getElementById('authPhone');
@@ -1289,29 +1235,6 @@ const IDENT_KEY = 'eastern_farm_last_ident';
         }
         const next = document.getElementById('authNextBtn');
         if (next) next.onclick = () => this._startFlow();
-
-      } else if (view === 'otp') {
-        if (this._confirmation || this._smsPending) {
-          // 已经发过短信 → 这是验证码输入屏
-          this._wireCodeInput();
-          const back = document.getElementById('authBackBtn');
-          if (back) back.onclick = () => { this._confirmation = null; this._smsPending = null; this._go('phone'); };
-          document.getElementById('authVerifyBtn').onclick = () => this._verifyOtp();
-          this._renderSmsStatus();
-          this._startResendCountdown(60);
-        } else {
-          // 还没发 → 先把 reCAPTCHA 画出来（必须 'normal' 可见款，invisible 在 iOS 上会挂）
-          try {
-            if (this._recaptcha) { try { this._recaptcha.clear(); } catch (e) {} }
-            this._recaptcha = new firebase.auth.RecaptchaVerifier('authRecaptcha', { size: 'normal' });
-            this._recaptcha.render().catch(e => console.warn('reCAPTCHA render failed', e));
-          } catch (e) {
-            console.warn('reCAPTCHA init failed', e);
-          }
-          const sendBtn = document.getElementById('authSendBtn');
-          // 🔒 这一次点击直接调 signInWithPhoneNumber，中间不许有 await（iOS 手势）
-          if (sendBtn) sendBtn.onclick = () => this._sendCode();
-        }
 
       }
     },
@@ -1411,62 +1334,6 @@ const IDENT_KEY = 'eastern_farm_last_ident';
       this._onLoginSuccess(lang);
     },
 
-    /* 首次激活（短信验证通过后）：设密码 + 选填用户名。一辈子一次。
-       🔴 由后端 admin SDK 写到**当前这个 uid** 上，不新建账号 —— 新建 = 一人两 uid，
-       而农场存档按 farm_players/{uid} 存，换 uid 等于农场当场清零且不可逆。 */
-    async _setCredentials() {
-      const lang = Farm.state.data.language;
-      const en = lang === 'en';
-      this._showError('');
-      const pw = (document.getElementById('setPw') || {}).value || '';
-      const username = ((document.getElementById('setUser') || {}).value || '').trim();
-      if (pw.length < 6) {
-        this._showError(en ? 'Password must be at least 6 characters.' : '密码至少 6 位。');
-        return;
-      }
-      const btn = document.getElementById('authSetPwBtn');
-      const reset = () => { if (btn) { btn.disabled = false; btn.textContent = en ? 'Done' : '完成'; } };
-      if (btn) { btn.disabled = true; btn.textContent = en ? 'Saving…' : '保存中…'; }
-
-      const user = Farm.fb.auth.currentUser;
-      if (!user) {
-        this._showError(en ? 'Session expired. Please start again.' : '会话已过期，请重新开始。');
-        this._go('phone');
-        return;
-      }
-      try {
-        const token = await user.getIdToken();
-        const r = await fetch(STOCKWISE_BASE + '/api/public/member-auth/set-credentials', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
-          body: JSON.stringify({ password: pw, username: username || null }),
-        });
-        const d = await r.json().catch(() => null);
-        if (!r.ok) throw new Error((d && d.detail) || 'HTTP ' + r.status);
-      } catch (e) {
-        // 后端把「用户名被占」「密码太短」这类都写在 detail 里，直接用它 ——
-        // 换成笼统的「保存失败」顾客就不知道该改什么了
-        this._showError(String((e && e.message) || '')
-          || (en ? 'Could not save. Please try again.' : '保存失败，请重试。'));
-        reset();
-        return;
-      }
-      /* 密码是后端用 admin SDK 写到这个 uid 上的，客户端手上的 user 对象
-         **还是旧的** —— providerData 里没有 'password'，`_hasLoginCredential()`
-         会继续说「这人还没设过密码」，于是可能把刚设完的人再推回设密码屏。
-         reload() 一次让它说实话。失败不拦路：密码在服务端已经写成了。
-         （农场不用重新登录 —— 身份就是这个 uid，没变。网站那边不一样，
-           它靠 auth 状态判「登没登」，所以那边设完要真登一次。）*/
-      try { await user.reload(); } catch (_) {}
-
-      // 下次登录默认填这个（本机）。设了用户名就填用户名，否则填手机号。
-      try {
-        localStorage.setItem(IDENT_KEY,
-          username || this._formatPhone((this._currentPhoneE164 || '').replace('+1', '')));
-      } catch (_) {}
-      this._onLoginSuccess(lang);
-    },
-
     /** 忘记密码：留过邮箱的自助收信；没留的到店改。对外那句话三种情况完全一样。 */
     async _forgotPassword() {
       const en = Farm.state.data.language === 'en';
@@ -1496,100 +1363,67 @@ const IDENT_KEY = 'eastern_farm_last_ident';
       }
     },
 
-    /** 后补邮箱 第 1 步：查占用 + 发验证码。 */
-    async _emailVerifyStart() {
+    /* 登记邮箱：手机号 + 会员卡上的会员码 + 想用的邮箱 → 后端发设密码的信。
+       后端 POST /api/public/member-auth/claim-email（不需要登录态，公开接口）。 */
+    async _claimEmail() {
       const en = Farm.state.data.language === 'en';
       this._showError('');
-      const email = ((document.getElementById('addEmail') || {}).value || '').trim();
+      const digits = this._phoneDigits((document.getElementById('claimPhone') || {}).value);
+      const email = ((document.getElementById('claimEmail') || {}).value || '').trim();
+      const code = ((document.getElementById('claimCode') || {}).value || '').trim().toUpperCase();
+      if (digits.length !== 10) {
+        this._showError(en ? 'Please enter your 10-digit phone number.' : '请输入 10 位手机号。');
+        return;
+      }
       if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
         this._showError(en ? 'Please enter a valid email.' : '请输入正确的邮箱地址。');
         return;
       }
-      const btn = document.getElementById('authEmailStartBtn');
-      const reset = () => { if (btn) { btn.disabled = false; btn.textContent = en ? 'Send code' : '发送验证码'; } };
-      if (btn) { btn.disabled = true; btn.textContent = en ? 'Sending…' : '发送中…'; }
-      const user = Farm.fb.auth.currentUser;
-      if (!user) { this._showError(en ? 'Please sign in first.' : '请先登录。'); reset(); return; }
-      try {
-        const token = await user.getIdToken();
-        const r = await fetch(STOCKWISE_BASE + '/api/public/member-auth/email-verify/start', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
-          body: JSON.stringify({ email }),
-        });
-        const d = await r.json().catch(() => null);
-        if (!r.ok) throw new Error((d && d.detail) || 'HTTP ' + r.status);
-        this._emailSentTo = (d && d.sentTo) || '';
-        this._pendingEmail = email;
-        this._go('emailcode');
-      } catch (e) {
-        this._showError(String((e && e.message) || '')
-          || (en ? 'Could not send. Please try again.' : '发送失败，请重试。'));
-        reset();
-      }
-    },
-
-    /** 后补邮箱 第 2 步：验码通过才写进会员档。 */
-    async _emailVerifyConfirm() {
-      const en = Farm.state.data.language === 'en';
-      this._showError('');
-      const code = ((document.getElementById('emailCode') || {}).value || '').trim();
-      if (code.length !== 6) {
-        this._showError(en ? 'Enter the 6-digit code.' : '请输入 6 位验证码。');
+      if (!/^[A-Z0-9]{4,16}$/.test(code)) {
+        this._showError(en ? 'Please enter the member code on your card.' : '请输入会员卡上的会员码。');
         return;
       }
-      const btn = document.getElementById('authEmailConfirmBtn');
-      const reset = () => { if (btn) { btn.disabled = false; btn.textContent = en ? 'Confirm' : '确认'; } };
-      if (btn) { btn.disabled = true; btn.textContent = en ? 'Checking…' : '验证中…'; }
-      const user = Farm.fb.auth.currentUser;
-      if (!user) { this._showError(en ? 'Please sign in first.' : '请先登录。'); reset(); return; }
+      const btn = document.getElementById('authClaimBtn');
+      const reset = () => {
+        if (btn) { btn.disabled = false; btn.textContent = en ? 'Send me the link' : '发送设置密码的邮件'; }
+      };
+      if (btn) { btn.disabled = true; btn.textContent = en ? 'Sending…' : '提交中…'; }
+      let d = null;
       try {
-        const token = await user.getIdToken();
-        const r = await fetch(STOCKWISE_BASE + '/api/public/member-auth/email-verify/confirm', {
+        const r = await fetch(STOCKWISE_BASE + '/api/public/member-auth/claim-email', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
-          body: JSON.stringify({ code }),
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone: digits, member_code: code, email }),
         });
-        const d = await r.json().catch(() => null);
-        if (!r.ok) throw new Error((d && d.detail) || 'HTTP ' + r.status);
-      } catch (e) {
-        this._showError(String((e && e.message) || '')
-          || (en ? 'Could not verify. Please try again.' : '验证失败，请重试。'));
-        reset();
-        return;
-      }
-      // 漏斗「补上邮箱」。3000 农场币要「登录 + 留邮箱」才发，而没邮箱的会员靠常驻
-      // 提醒条慢慢补 —— 补没补上只有这个数看得见（login 与它的差就是登录了却仍
-      // 拿不到礼包的人）。
-      if (Farm.track) Farm.track('email_set');
-      // 本地会员档里的邮箱也跟上，提醒条才会立刻消失（不用等下次拉取）。
-      // ⚠️ hasEmail 也要一起翻 —— hasRealEmail() 现在优先看它（whoami 只回布尔），
-      //    只改 email 的话提醒条会赖着不走。
-      if (this.memberDoc) {
-        this.memberDoc.email = this._pendingEmail || this.memberDoc.email;
-        this.memberDoc.hasEmail = true;
-      }
-      this.refreshEmailNudge();
-      // 邮箱是发 3000 农场币的条件，补上后立刻再试一次（事务幂等，重复调安全）
-      try {
-        if (Farm.fbPoints && Farm.fbPoints.firstLoginGameSignupBonus) {
-          Farm.fbPoints.firstLoginGameSignupBonus(user);
+        d = await r.json().catch(() => null);
+        if (!r.ok) {
+          /* 🔒 服务器答了话就照实转述（这条是 2026-08-19 修过的老毛病：
+             429/503 统统显示成「连不上服务器」，客人一 retry 就撞限流）。
+             503 尤其要如实说 —— 后端那句是「邮箱已登记，但信没发出去」，
+             显示成成功就等于让人去等一封永远不到的信。 */
+          const detail = (d && typeof d.detail === 'string') ? d.detail.trim() : '';
+          this._showError(detail || (en
+            ? 'Something went wrong on our side. Please try again shortly.'
+            : '我们这边出了点问题，请稍后再试。'));
+          reset();
+          return;
         }
-      } catch (_) {}
-
-      /* 🆕 验完邮箱接着设密码（Chris 2026-08-20 定的完整流程的最后一段）。
-         没有这一段，他在**网站**那边仍然登不进去 —— 邮箱只是记在会员档上，
-         Auth 账号还没有密码这套凭据。设完之后邮箱和手机号两条路都能登，
-         农场和网站是同一个账号（已实测 uid 不变，存档不会分家）。
-         🔒 只有还没设过密码的人才走这一步；已经有凭据的（老会员补邮箱）
-            直接进游戏，别平白多问一次。 */
-      if (!this._hasLoginCredential()) {
-        Farm.ui.toast(en ? 'Email verified 🎉' : '邮箱已验证 🎉', 2200);
-        this._go('setpw');
+      } catch (e) {
+        // 只有 fetch 本身失败才说连不上。🔒 请求失败绝不能显示成「你不是会员」
+        this._showError(en ? 'Could not reach the server. Please try again.' : '连接不上服务器，请重试。');
+        reset();
         return;
       }
-      Farm.ui.hideModal();
-      Farm.ui.toast(en ? 'Email saved 🎉' : '邮箱已保存 🎉', 3000);
+      if (d && d.status === 'not_member') {
+        this._showError(en
+          ? 'This phone is not registered at our store.\nPlease visit 133-412 Willowgrove Square to sign up (free).'
+          : '此手机号未在店内登记。\n请光临本店免费办理：\n📍 133-412 Willowgrove Square');
+        reset();
+        return;
+      }
+      if (Farm.track) Farm.track('email_set');
+      this._sentDomain = (d && d.domain) || '';
+      this._go('sent');
     },
 
     /** 这个账号有没有「邮箱/用户名 + 密码」那套登录凭据。
@@ -1600,74 +1434,6 @@ const IDENT_KEY = 'eastern_farm_last_ident';
       // 匿名账号的 providerData 是空的；设过密码之后会出现 'password'
       const ps = (u.providerData || []).map((x) => x && x.providerId);
       return ps.indexOf('password') !== -1;
-    },
-
-    // 单个验证码输入框：只留数字、满 6 位自动提交。自动填充/粘贴不用任何补丁。
-    _wireCodeInput() {
-      const el = document.getElementById('authCode');
-      if (!el) return;
-      el.oninput = () => {
-        const v = (el.value || '').replace(/\D/g, '').slice(0, 6);
-        if (el.value !== v) el.value = v;
-        this._updateOtpVerifyBtn();
-        if (v.length === 6) {
-          el.blur();                       // 收起键盘，让人看得见按钮状态
-          setTimeout(() => this._verifyOtp(), 80);
-        }
-      };
-      el.onkeydown = (e) => { if (e.key === 'Enter') this._verifyOtp(); };
-      setTimeout(() => el.focus(), 120);
-    },
-
-    // 短信在路上时给一句实话，而不是让人对着一个不动的框猜（Chris：等了很久才出现）
-    _renderSmsStatus() {
-      const el = document.getElementById('authSmsStatus');
-      if (!el) return;
-      const lang = Farm.state.data.language;
-      if (this._confirmation) { el.textContent = ''; return; }
-      el.innerHTML = `<span class="auth-dot"></span>${lang === 'en'
-        ? 'Sending… you can start typing the code now'
-        : '正在连接…收到短信可以直接输入'}`;
-      const p = this._smsPending;
-      if (!p) return;
-      p.then(() => {
-        const now = document.getElementById('authSmsStatus');
-        if (now) now.textContent = '';
-      }).catch(() => {});
-    },
-
-    _collectOtp() {
-      const el = document.getElementById('authCode');
-      return (el && el.value ? el.value : '').replace(/\D/g, '');
-    },
-
-    _updateOtpVerifyBtn() {
-      const btn = document.getElementById('authVerifyBtn');
-      if (btn) btn.disabled = this._collectOtp().length !== 6;
-    },
-
-    _startResendCountdown(secs) {
-      const area = document.getElementById('authResendArea');
-      if (!area) return;
-      const lang = Farm.state.data.language;
-      let remaining = secs;
-      const tick = () => {
-        if (remaining <= 0) {
-          area.innerHTML = `<button class="auth-resend-link" id="authResendBtn">${lang === 'en' ? 'Resend code' : '重新发送验证码'}</button>`;
-          const btn = document.getElementById('authResendBtn');
-          if (btn) btn.onclick = () => {
-            // 回到「发送短信验证码」那一屏：清掉旧回执，重新走一次可见 reCAPTCHA
-            this._confirmation = null;
-            this._smsPending = null;
-            this._go('otp');
-          };
-          return;
-        }
-        area.textContent = lang === 'en' ? `Resend in ${remaining}s` : `${remaining} 秒后可重新发送`;
-        remaining--;
-        setTimeout(tick, 1000);
-      };
-      tick();
     },
 
     // 从输入里抽出加拿大 10 位：全角数字、粘贴的 +1 / 1-xxx、空格横杠都能认。
@@ -1693,212 +1459,6 @@ const IDENT_KEY = 'eastern_farm_last_ident';
       }
     },
 
-    // ============ Phone login: Step 1 — send SMS ============
-    _sendCode() {
-      // CRITICAL: this function must NOT contain `await` before
-      // signInWithPhoneNumber is called. iOS Safari consumes the user
-      // gesture if we await first, then Firebase's reCAPTCHA iframe
-      // hangs silently forever. We run the membership check IN PARALLEL.
-      const lang = Farm.state.data.language;
-      this._showError('');
-      /* 🔴 号码取自 this._currentPhoneE164，**不许再读 #authPhone**（2026-08-19 修）
-         --------------------------------------------------------------------
-         原来这里读 `#authPhone` 输入框，而那个框只存在于**上一屏**（输手机号）。
-         2026-08-12 把流程拆成两屏之后（拆的理由见 _renderLoginModal 顶部：iOS
-         手势不能被 await 吃掉），验证码这一屏就没有它了 → `digits.length` 恒为 0
-         → 永远走进下面那句错误提示并 return。
-
-         **后果：短信验证码从来发不出去。** 屏幕上一边写着「将发送到 (639)
-         476-8553」，一边红字说「请输入 10 位手机号」—— 号码明明已经在手上。
-         客人 Alicia 2026-08-19 报的就是这个，她只能关掉窗口以游客身份进游戏。
-         而这条路是 909 个从没登录过的会员**唯一**的入口。
-
-         ⚠️ 这里是同步取值，不能改成 await —— 下面 signInWithPhoneNumber 之前
-         有任何 await 都会吃掉 iOS 的用户手势，reCAPTCHA 会静默挂死。 */
-      const raw = this._phoneDigits(this._currentPhoneE164 || '');
-      // _currentPhoneE164 形如 +13064768553 → 去掉国家码 1，只留 10 位
-      const digits = (raw.length === 11 && raw[0] === '1') ? raw.slice(1) : raw;
-      if (digits.length !== 10) {
-        // 走到这里说明上一屏的号码丢了（正常流程不会）。不要叫人往一个
-        // **这屏上根本不存在**的输入框里打字 —— 把他送回能输入的那一屏。
-        this._showError(lang === 'en'
-          ? 'Please enter your phone number again.'
-          : '请重新输入手机号。');
-        this._go('phone');
-        return;
-      }
-      if (!this._recaptcha) {
-        this._showError(lang === 'en' ? 'reCAPTCHA not ready — refresh.' : '验证未就绪，刷新页面重试。');
-        return;
-      }
-      const e164 = '+1' + digits;
-      const sendBtn = document.getElementById('authSendBtn');
-      if (sendBtn) {
-        sendBtn.disabled = true;
-        sendBtn.textContent = lang === 'en' ? 'Sending…' : '发送中…';
-      }
-
-      // SMS 发送 + 会员查询，同步启动（signInWithPhoneNumber 之前绝不能有 await，
-      // 否则 iOS 的用户手势被吃掉、reCAPTCHA iframe 会静默挂死）
-      const smsP = Farm.fb.auth.signInWithPhoneNumber(e164, this._recaptcha);
-      /* 会员身份已经在上一屏由 /api/public/member-auth/start 确认过了，
-         这里不再查一次 —— 少一个 Firestore 往返，也少一处「查询失败被当成
-         『你不是会员』」的机会（那正是旧实现的毛病）。 */
-
-      /* 🔒 立刻切到输入验证码那一屏，不要等 smsP（2026-08-12，Chris「等了很久才出现输入框」）
-         短信是 Firebase **服务器端**发的，客户端这个 promise 只是「回执」。
-         弱网下回执可能十几秒才回来，而短信早就到手机上了 —— 于是人手里握着验证码，
-         屏幕上却没有地方填。回执改为后台等：先给框，拿到了再填 _confirmation；
-         用户提前输完也没关系，_verifyOtp 会等它。 */
-      this._currentPhoneE164 = e164;
-      this._confirmation = null;
-      this._smsPending = smsP;
-      /* 🔴 这里原来是 `localStorage.setItem(REMEMBER_KEY, phoneRaw)`，而 phoneRaw
-         这个变量**全仓不存在** —— 抛 ReferenceError 的位置正好在
-         signInWithPhoneNumber() 之后、切屏之前，后果一条比一条难看：
-           · 短信已经真发出去了（Firebase 服务端发的，也已经计费）
-           · 不切到 otp 屏 → 人手里握着验证码，屏幕上没有地方填
-           · 按钮的复位代码在下面 .catch 里 → 永久停在「发送中…」
-           · _showError 一次都没调 → 一个字不报错
-         号码本来就在上一屏（_go('phone') 那条路，见 :626）用同一个键存过了，
-         这一行是多余的，删掉即可。 */
-      this._view = 'otp';
-      this._renderLoginModal();
-
-      smsP.then(result => {
-        this._confirmation = result;
-        const s = document.getElementById('authSmsStatus');
-        if (s) s.textContent = '';
-      }).catch(e => {
-        if (this._view !== 'otp') return;
-        this._smsPending = null;
-        this._renderLoginModal();      // 回到「发送短信验证码」那一屏
-        this._handleSmsError(e, lang, document.getElementById('authSendBtn'));
-      });
-
-      // 兜底：真的一直没回执，给一句可行动的话，而不是让人干等
-      setTimeout(() => {
-        if (this._confirmation || this._view !== 'otp') return;
-        const s = document.getElementById('authSmsStatus');
-        if (s) {
-          s.innerHTML = '';
-          s.textContent = lang === 'en'
-            ? 'Still connecting — if you got the code, enter it; it will go through.'
-            : '网络较慢，仍在连接。收到验证码就先填，能提交。';
-        }
-      }, 20000);
-
-    },
-
-    _handleSmsError(e, lang, sendBtn) {
-      console.warn('SMS send error', e);
-      let msg;
-      if (e && e.message === 'RECAPTCHA_TIMEOUT') {
-        msg = lang === 'en' ? 'Verification timed out. Tick "I\'m not a robot" first.' : '验证超时，请先勾选"我不是机器人"再点发送';
-        try { this._recaptcha.clear(); } catch (_) {}
-        this._recaptcha = null;
-        try {
-          this._recaptcha = new firebase.auth.RecaptchaVerifier('authRecaptcha', { size: 'normal' });
-          this._recaptcha.render().catch(() => {});
-        } catch (_) {}
-      } else if (e && e.code === 'auth/too-many-requests') {
-        msg = lang === 'en' ? 'Too many attempts. Try again later.' : '尝试次数过多，请稍后再试。';
-      } else if (e && (e.code === 'auth/captcha-check-failed' || e.code === 'auth/invalid-app-credential')) {
-        msg = lang === 'en' ? 'Bot check failed. Refresh and try again.' : '机器人验证失败，请刷新页面后重试。';
-      } else if (e && /SMS_REGION|region.*not.*allow/i.test(String(e.message || '') + String(e.code || ''))) {
-        /* 2026-08-12 起项目开了短信区域白名单，只放行加拿大号码（防「短信泵」诈骗：
-           攻击者拿登录页向境外高费率号码狂发验证码，跟当地运营商分成，钱由我们付）。
-           Firebase 甩回来的是 SMS_REGION_NOT_ALLOWED 这种内部串，顾客看不懂 ——
-           必须翻译成人话，并给出一条能走的路，否则就是「点了没反应」的另一种形态。 */
-        msg = lang === 'en'
-          ? 'We can only text Canadian numbers. If your number changed, please update it in store: 133-412 Willowgrove Square.'
-          : '目前只能向加拿大号码发送验证码。\n如果您换了号码，请到店更新：133-412 Willowgrove Square。';
-      } else {
-        msg = lang === 'en' ? 'Failed to send code. Please try again.' : '发送失败，请稍后再试。';
-      }
-      this._showError(msg);
-      if (sendBtn) {
-        sendBtn.disabled = false;
-        sendBtn.textContent = lang === 'en' ? 'Send Code' : '发送验证码';
-      }
-    },
-
-    // ============ Phone login: Step 2 — verify OTP ============
-    async _verifyOtp() {
-      const lang = Farm.state.data.language;
-      this._showError('');
-      const code = this._collectOtp();
-      if (code.length !== 6) {
-        this._showError(lang === 'en' ? 'Please enter the 6-digit code.' : '请输入 6 位验证码。');
-        return;
-      }
-      const btn = document.getElementById('authVerifyBtn');
-      if (btn) { btn.disabled = true; btn.textContent = lang === 'en' ? 'Signing in…' : '登录中…'; }
-      /* 用户可能比回执快（弱网下常见）——等一下那份回执再验，
-         而不是甩一句「会话已过期」把人赶回去重发。 */
-      if (!this._confirmation && this._smsPending) {
-        try { this._confirmation = await this._smsPending; } catch (e) { /* 下面统一处理 */ }
-      }
-      if (!this._confirmation) {
-        // 报错时把「正在连接…」收掉，否则一红一绿两句话自相矛盾
-        const st = document.getElementById('authSmsStatus');
-        if (st) st.textContent = '';
-        this._showError(lang === 'en' ? 'Could not reach the server. Tap “Use a different number” and try again.' : '连接不上服务器，请点「换个号码」重新发送。');
-        if (btn) { btn.disabled = false; btn.textContent = lang === 'en' ? 'Sign in' : '登录'; }
-        return;
-      }
-      try {
-        const credential = await this._confirmation.confirm(code);
-        const user = credential.user;
-
-        /* 🔒 把 Auth 账号关联到会员档 —— **必须走后端**，别改回客户端直写。
-
-           2026-08-17 查出来的事故：这里原来是客户端自己
-               db.collection('members').where('phone','==',e164).update({firebase_uid})
-           而 977 个会员里 959 个的文档**根本没有 firebase_uid 这个键**（RewardUp
-           迁移过来时就没有）。firestore 的自链接规则第一条写的是
-               resource.data.firebase_uid == null
-           「键不存在」与「键存在且为 null」在规则引擎里不是一回事 —— 那条 update
-           被拒，而下面那个 catch 把失败**静默吞掉**了。
-
-           后果：50 个真会员短信登录成功、手机号与会员档一一对应，却从来没关联上，
-           在游戏里看不到自己的积分（最高 5,429 分），下次登录还得再花一条短信。
-           登录成功、没有报错、玩得下去 —— 所以两年没人发现。
-
-           后端 /link-phone 用 admin SDK 写，绕过规则，行为确定。 */
-        try {
-          await this._linkPhoneViaBackend();
-        } catch (e) {
-          // 关联失败不该把人挡在门外（Auth 账号已经能用了），但**要留痕** ——
-          // 上一版的空 catch 正是这个 bug 藏两年的原因。下次启动
-          // _loadMemberDoc 会再试一次（幂等），所以能自愈。
-          console.warn('[auth] link-phone 失败，下次登录会自愈:', e);
-        }
-
-        /* 漏斗：短信验证成功就算「登录」。
-           原来只在下面 bind-email 走完时才发 track('login')，于是短信验过就走的人
-           在后台完全不存在 —— 8/15 促销明明有 2 个人登录成功，漏斗显示 0，
-           Chris 因此以为「客人都登录不上」。 */
-        this._trackLoginOnce();
-
-        /* 短信只是**激活**的第一半：接着设密码，否则下次又得再发一条短信 ——
-           而这套改造的全部意义就是不再每次发短信。
-           🔒 这一屏**不要邮箱**（2026-08-17 改）。原来这里要邮箱+密码，实测 77 个
-           账号里 67 个就是在这儿走掉的，于是每次登录都掏一条短信钱。邮箱改成登录
-           之后靠常驻提醒条慢慢补 —— Chris：「人家不要这个方便的时候难道我们就
-           不要这个客人吗」。 */
-        this._go('setpw');
-        return;
-      } catch (e) {
-        console.warn('OTP verify failed', e);
-        this._showError(lang === 'en' ? 'Incorrect verification code.' : '验证码不正确。');
-        if (btn) { btn.disabled = false; btn.textContent = lang === 'en' ? 'Sign in' : '登录'; }
-        // 码错了就把框清空并重新聚焦，别让人自己去删 6 个数字
-        const codeEl = document.getElementById('authCode');
-        if (codeEl) { codeEl.value = ''; codeEl.focus(); }
-      }
-    },
-
     /* 旧的 _emailLogin(邮箱+密码专用) 已于 2026-08-17 删除 —— 它读的 #authEmail
        随着登录屏改成「手机号/用户名」一起没了，留着就是个会抛 TypeError 的死函数。
        邮箱登录并没有取消：_identLogin 见到含 @ 的输入就直接当邮箱走，老会员照常。 */
@@ -1907,7 +1467,7 @@ const IDENT_KEY = 'eastern_farm_last_ident';
        内部用 _go('email')，但别的模块不该依赖内部方法名。 */
     openEmailSetup() {
       if (!this.currentUser) { this.openLoginModal(); return; }
-      this._go('email');
+      this._go('claimemail');
     },
 
     /* ============ 没留邮箱的常驻提醒条（Chris 8/17 选的方案）============

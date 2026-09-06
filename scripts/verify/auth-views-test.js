@@ -27,11 +27,11 @@
     ['login',     ['authIdentBtn', 'authIdent', 'authPassword']],
     ['phone',     ['authNextBtn', 'authPhone']],
     ['sent',      []],
-    ['otp',       ['authSendBtn']],
-    ['setpw',     ['authSetPwBtn', 'setPw', 'setUser']],
     ['forgot',    ['authForgotBtn', 'forgotIdent']],
-    ['email',     ['authEmailStartBtn', 'addEmail']],
-    ['emailcode', ['authEmailConfirmBtn', 'emailCode']],
+    // 2026-09-05：短信那两屏（otp / setpw）和验码补邮箱那两屏（email /
+    // emailcode）合并成 claimemail —— 手机验证有成本，取消了。
+    // 🔒 会员码那一格是这条路唯一的闸（手机号印在小票上），必须一直在。
+    ['claimemail', ['authClaimBtn', 'claimPhone', 'claimEmail', 'claimCode']],
     // 非会员注册三屏（2026-08-20）。notmember 那屏没有主按钮 id，
     // 它的两个按钮都是 data-auth-go 跳转（由下面的通用绑定接管），
     // 所以只检查文案容器在不在。

@@ -247,6 +247,37 @@ else
     exit 1
   fi
 
+  # 闸门 E2: 登记邮箱那一屏必须真的提交，且会员码那道闸不能被绕过(约 4 秒)
+  # 2026-09-05 加：短信验证取消后，这一屏是「设置密码」唯一的入口。
+  # 🔒 会员码是这条路唯一的闸 —— 手机号印在小票上，只凭它就能绑邮箱的话，
+  #    谁捡到一张小票就能把那个会员的积分、储值、消费记录一起拿走。
+  echo "▶ 闸门 E2: 登记邮箱提交回归测试(约 4 秒)…"
+  $PYCMD -m http.server 8151 --bind 127.0.0.1 >/dev/null 2>&1 &
+  CLAIM_PID=$!
+  trap 'kill $CLAIM_PID 2>/dev/null || true' EXIT
+  sleep 1
+  CLAIM_OUT="$(mktemp)"
+  node scripts/verify/cdp.mjs "http://127.0.0.1:8151/src/" "scripts/verify/claim-email-test.js" 4000 >"$CLAIM_OUT" 2>/dev/null || true
+  kill $CLAIM_PID 2>/dev/null || true
+  trap - EXIT
+  if ! node -e '
+    const o = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
+    const r = o.evalResult;
+    if (!r || !r.ran || !r.ran.length) {
+      console.error("✗ 登记邮箱测试没跑起来(evalResult=" + JSON.stringify(r) + ")");
+      process.exit(1);
+    }
+    if (r.failures && r.failures.length) {
+      console.error("✗ 登记邮箱这一屏有问题:");
+      r.failures.forEach(f => console.error("  - " + f));
+      process.exit(1);
+    }
+    console.log("  ✓ 登记邮箱 " + r.ran.length + " 项全过");
+  ' "$CLAIM_OUT"; then
+    echo "—— 部署中止：登记邮箱这一屏坏了，或者会员码那道闸被绕过了。别跳过。"
+    exit 1
+  fi
+
   # 闸门 F: 新手引导指的那块地，手机上真的点得到(约 6 秒)
   # 2026-08-19 加：引导气泡曾压在它自己让你点的地块上(pointer-events:auto)，
   # 玩家照着点毫无反应 —— 7 天 423 次打开，走完引导 0 次。
