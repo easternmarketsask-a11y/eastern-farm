@@ -35,7 +35,7 @@
       calls.push(body);
       return {
         ok: reply.ok, status: reply.status,
-        json: async () => reply.body,
+        text: async () => '', json: async () => reply.body,
       };
     }
     return realFetch(url, opts);

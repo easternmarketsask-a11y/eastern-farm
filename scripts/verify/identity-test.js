@@ -53,7 +53,7 @@
     let hitEarn = false;
     window.fetch = async (url, opts) => {
       if (/\/earn|\/spend/.test(String(url))) { hitEarn = true; }
-      return { ok: false, status: 404, json: async () => ({ detail: 'x' }) };
+      return { ok: false, status: 404, text: async () => '', json: async () => ({ detail: 'x' }) };
     };
     if (Farm.fbQueue && Farm.fbQueue.enqueue) {
       try { Farm.fbQueue.enqueue({ kind: 'earn', amount: 1, source: 'test', description: 't', eventId: 'ident-test-' + Date.now() }); } catch (_) {}
@@ -98,13 +98,13 @@
     window.fetch = async (url) => {
       const u = String(url);
       if (u.indexOf('/register/confirm') >= 0) {
-        return { ok: true, status: 200, json: async () => ({ ok: true, displayName: '小测', loginEmail: 'x@y.z', activationCode: '246810', codeExpiresAt: 9e12 }) };
+        return { ok: true, status: 200, text: async () => '', json: async () => ({ ok: true, displayName: '小测', loginEmail: 'x@y.z', activationCode: '246810', codeExpiresAt: 9e12 }) };
       }
       if (u.indexOf('/whoami') >= 0) {
         whoamiCalls++;
-        return { ok: true, status: 200, json: async () => ({ linked: false, pending: false }) };
+        return { ok: true, status: 200, text: async () => '', json: async () => ({ linked: false, pending: false }) };
       }
-      return { ok: false, status: 404, json: async () => ({}) };
+      return { ok: false, status: 404, text: async () => '', json: async () => ({}) };
     };
     // Firestore 的三条查找也要落空（走到 whoami）
     const realDb = Farm.fb && Farm.fb.db;
@@ -130,9 +130,9 @@
     A._view = 'confirm'; A._confirmName = 'Nicole'; A._renderLoginModal(); await sleep(60);
     window.fetch = async (url) => {
       const u = String(url);
-      if (u.indexOf('/claim-phone') >= 0) return { ok: true, status: 200, json: async () => ({ ok: true, memberId: 'ru_x', name: 'Nicole' }) };
-      if (u.indexOf('/whoami') >= 0) return { ok: true, status: 200, json: async () => ({ linked: true, memberId: 'ru_x', name: 'Nicole', points: 3, verified: false, hasEmail: true }) };
-      return { ok: false, status: 404, json: async () => ({}) };
+      if (u.indexOf('/claim-phone') >= 0) return { ok: true, status: 200, text: async () => '', json: async () => ({ ok: true, memberId: 'ru_x', name: 'Nicole' }) };
+      if (u.indexOf('/whoami') >= 0) return { ok: true, status: 200, text: async () => '', json: async () => ({ linked: true, memberId: 'ru_x', name: 'Nicole', points: 3, verified: false, hasEmail: true }) };
+      return { ok: false, status: 404, text: async () => '', json: async () => ({}) };
     };
     if (Farm.fb) Farm.fb.db = { collection: () => ({
       where: () => ({ limit: () => ({ get: async () => ({ empty: true, docs: [] }) }) }),
