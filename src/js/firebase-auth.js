@@ -523,6 +523,7 @@ const IDENT_KEY = 'eastern_farm_last_ident';
         Farm.ui.toast(Farm.state.data.language === 'en' ? 'Login unavailable — offline' : '当前无法登录 — 离线');
         return;
       }
+      this._authFrom = '';
       this._view = 'login';
       this._renderLoginModal();
     },
@@ -604,9 +605,9 @@ const IDENT_KEY = 'eastern_farm_last_ident';
         ${T[1] ? `<p class="auth-sub">${T[1]}</p>` : ''}
         <div id="authError" class="auth-error"></div>
         ${body}
-        <p class="auth-footnote">${en
+        ${(view === 'notmember' || view === 'regemail' || view === 'regcode') ? '' : `<p class="auth-footnote">${en
           ? 'Not a member yet? Sign up free at 133-412 Willowgrove Square.'
-          : '还不是会员？到店免费办理 · 133-412 Willowgrove Square'}</p>
+          : '还不是会员？到店免费办理 · 133-412 Willowgrove Square'}</p>`}
       `;
       // 误点空白不能关：短信发出去之后一关就要重发，长辈很容易点到旁边。
       Farm.ui.showModal(html, { closeOnBackdrop: false, closeOnEsc: false });
@@ -620,6 +621,10 @@ const IDENT_KEY = 'eastern_farm_last_ident';
       if (view === 'regemail' && this._view === 'notmember' && Farm.track) {
         Farm.track('signup_open');
       }
+      /* 来源标记只服务「登录首屏 → 注册 → 验证码 → 换个邮箱」这一段。
+         一旦离开这两屏就清掉。否则人回到登录、或手机号查无此人进了
+         notmember 之后再进注册，返回键仍回登录。 */
+      if (view !== 'regemail' && view !== 'regcode') this._authFrom = '';
       this._view = view;
       this._renderLoginModal();
     },
@@ -823,6 +828,9 @@ const IDENT_KEY = 'eastern_farm_last_ident';
           <p class="auth-notmember-sub">${en
             ? 'You can play before you are a member. Points you earn are held for you and land on your member card when you give us your phone number in store.'
             : '还不是会员也可以先玩。挣到的超市积分先替你存着，到店报一下手机号就到账。'}</p>
+          <p class="auth-notmember-store">${en
+            ? 'Prefer in person? Sign up free at 133-412 Willowgrove Square · Mon–Sat 10am–6:30pm'
+            : '也可以到店免费办理 · 133-412 Willowgrove Square · 周一至周六 10am–6:30pm'}</p>
         </div>` : '';
       return `
         ${lead}
@@ -982,6 +990,28 @@ const IDENT_KEY = 'eastern_farm_last_ident';
         reset();
         return;
       }
+      /* uid 没变，onAuthStateChanged 不会再跑。游客期间的积分回填、队列、
+         云存档都挂在那一次回调上。不在这里补的话，注册完立刻关掉页面，
+         云端还是空的，积分也要等下次打开才记上。
+         先恢复再上传：空的本地档不能盖掉另一台设备上已经有的进度。 */
+      try {
+        if (Farm.fbGameSync && Farm.fbGameSync.restoreFromCloud) {
+          await Farm.fbGameSync.restoreFromCloud();
+        }
+      } catch (_) {}
+      if (Farm.fbGameSync && Farm.fbGameSync.push) {
+        try {
+          const pushed = Farm.fbGameSync.push();
+          if (pushed && pushed.catch) pushed.catch(() => {});
+        } catch (_) {}
+      }
+      if (Farm.fbQueue && Farm.fbQueue.flush) {
+        try { Farm.fbQueue.flush(); } catch (_) {}
+      }
+      if (Farm.fbPoints && Farm.fbPoints.firstLoginBackfill) {
+        try { Farm.fbPoints.firstLoginBackfill(user); } catch (_) {}
+      }
+      this._renderSplash();
       this._onLoginSuccess(lang);
     },
 
@@ -1553,7 +1583,10 @@ const IDENT_KEY = 'eastern_farm_last_ident';
     /* 让别处（「还差一步·留邮箱领 3000 币」弹窗、常驻提醒条）能直接打开补邮箱屏。
        内部用 _go('email')，但别的模块不该依赖内部方法名。 */
     openEmailSetup() {
-      if (!this.currentUser) { this.openLoginModal(); return; }
+      /* 匿名 uid 只是设备标识。输过一次手机号就有 currentUser，
+         不能据此把人送进「会员码登记邮箱」——那一屏是给店里已经有档的人的。 */
+      if (!this.isLoggedIn()) { this.openLoginModal(); return; }
+      if (this.memberDoc && this.memberDoc._pending) return;
       this._go('claimemail');
     },
 
@@ -1581,7 +1614,11 @@ const IDENT_KEY = 'eastern_farm_last_ident';
     refreshEmailNudge() {
       const host = document.getElementById('emailNudge');
       if (!host) return;
-      const show = !!this.currentUser && !this.hasRealEmail();
+      /* 判据与 isLoggedIn 同一套。以前看 currentUser：玩家刚在登录框打过
+         手机号（设备上有个匿名账号），顶栏已经正确地显示「未登录」，
+         这条提醒却冒出来，点进去要会员码。 */
+      const pending = !!(this.memberDoc && this.memberDoc._pending);
+      const show = this.isLoggedIn() && !pending && !this.hasRealEmail();
       if (!show) { host.hidden = true; host.innerHTML = ''; return; }
       const en = Farm.state.data.language === 'en';
       host.hidden = false;

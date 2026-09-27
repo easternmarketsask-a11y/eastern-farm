@@ -262,10 +262,16 @@
         if (Farm.fbAuth && Farm.fbAuth._syncLocalBalance) Farm.fbAuth._syncLocalBalance();
         if (Farm.ui && Farm.ui.refreshHUD) Farm.ui.refreshHUD();
         const lang = data.language;
+        const held = !!(Farm.fbAuth && Farm.fbAuth.memberDoc && Farm.fbAuth.memberDoc._pending);
         setTimeout(() => {
+          /* 待激活账号的分是「待领取」，还没进会员账户。说成已经回填到会员账户是假话。 */
           Farm.ui.toast(lang === 'en'
-            ? '🎁 ' + amount + ' points backfilled to your member account'
-            : '🎁 ' + amount + ' 超市积分已回填到您的会员账户', 4000);
+            ? (held
+              ? '🎁 ' + amount + ' points are held for you. Give us your phone in store and they land on your member card.'
+              : '🎁 ' + amount + ' points backfilled to your member account')
+            : (held
+              ? '🎁 ' + amount + ' 超市积分先替你存着，到店报一下手机号就到账。'
+              : '🎁 ' + amount + ' 超市积分已回填到您的会员账户'), 4000);
         }, 800);
       }
       // If failed, backfillDone stays false; retried on next login or queue flush.

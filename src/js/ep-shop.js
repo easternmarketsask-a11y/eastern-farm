@@ -102,7 +102,11 @@
             source: 'ep_shop:' + item.id,
             description: '农场商城兑换 / Farm shop: ' + (item.name_zh || item.id) + (item.name_en ? ' / ' + item.name_en : ''),
           });
-      if (!spent) return { ok: false, reason: price.currency === 'coins' ? 'insufficient_coins' : 'insufficient_ep' };
+      if (!spent) {
+        const pending = price.currency !== 'coins'
+          && Farm.fbAuth && Farm.fbAuth.memberDoc && Farm.fbAuth.memberDoc._pending;
+        return { ok: false, reason: pending ? 'pending' : (price.currency === 'coins' ? 'insufficient_coins' : 'insufficient_ep') };
+      }
       const effect = this._apply(item, opts);
       // 记一笔今日购买（仅限带 daily_buy_cap 的品）。
       if (item.daily_buy_cap != null) {
@@ -338,6 +342,7 @@
           e.stopPropagation();
           const r = this.buy(btn.dataset.buy);
           if (!r.ok) {
+            if (r.reason === 'pending') return;
             Farm.ui.toast(r.reason === 'insufficient_coins' || r.reason === 'insufficient_ep'
               ? (EN ? 'Not enough coins or points' : '余额不足')
               : r.reason === 'daily_cap'

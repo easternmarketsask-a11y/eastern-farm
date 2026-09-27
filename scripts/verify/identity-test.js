@@ -27,6 +27,7 @@
   const realQueueFlush = Farm.fbQueue && Farm.fbQueue.flush;
   let realAuthObj = null;
   let flushCalls = 0;
+  let realBackfill = null, realRestore = null, realPush = null;
   try {
     // ── ① isLoggedIn 三态 ───────────────────────────────────────────────
     ran.push('isLoggedIn');
@@ -113,6 +114,16 @@
       doc: () => ({ get: async () => ({ exists: false }) }),
     }) };
     if (Farm.fbQueue) Farm.fbQueue.flush = async () => { flushCalls++; };
+    const postCalls = [];
+    realBackfill = Farm.fbPoints && Farm.fbPoints.firstLoginBackfill;
+    realRestore = Farm.fbGameSync && Farm.fbGameSync.restoreFromCloud;
+    realPush = Farm.fbGameSync && Farm.fbGameSync.push;
+    if (Farm.fbPoints) Farm.fbPoints.firstLoginBackfill = async () => { postCalls.push('backfill'); };
+    if (Farm.fbGameSync) {
+      Farm.fbGameSync.restoreFromCloud = async () => { postCalls.push('restore'); return { restored: false }; };
+      Farm.fbGameSync.push = () => { postCalls.push('push'); return { ok: true }; };
+    }
+    flushCalls = 0;
     try { await A._registerConfirm(); } catch (e) { failures.push('注册提交抛异常：' + (e && e.message)); }
     if (Farm.fb) Farm.fb.db = realDb;
     const md = A.memberDoc || {};
@@ -120,6 +131,30 @@
     if (!md._pending) failures.push('注册后的档应标 _pending（否则显示成「已同步的会员」和「欢迎回来」）');
     if (whoamiCalls < 1) failures.push('注册后没重拉 whoami 兜底');
     if (!A.isLoggedIn()) failures.push('注册完成后应算登录');
+    if (postCalls[0] !== 'restore' || postCalls[1] !== 'push') {
+      failures.push('注册完成后应先恢复云存档再上传，实际顺序：' + postCalls.join(','));
+    }
+    if (!postCalls.includes('backfill')) failures.push('注册完成后没有回填游客期间的积分');
+    if (flushCalls < 1) failures.push('注册完成后没有推队列（游客攒的积分要等下次打开才上传）');
+    if (Farm.fbPoints && realBackfill) Farm.fbPoints.firstLoginBackfill = realBackfill;
+    if (Farm.fbGameSync) {
+      if (realRestore) Farm.fbGameSync.restoreFromCloud = realRestore;
+      if (realPush) Farm.fbGameSync.push = realPush;
+    }
+
+    ran.push('匿名设备不弹留邮箱');
+    A.currentUser = { uid: 'anonNudge', isAnonymous: true };
+    A.memberDoc = null;
+    A.refreshEmailNudge();
+    const nudge = document.getElementById('emailNudge');
+    if (nudge && !nudge.hidden) failures.push('🔴 匿名设备（刚输过手机号）被当成要留邮箱的会员');
+    A._view = 'phone';
+    A.openEmailSetup();
+    if (A._view === 'claimemail') failures.push('匿名设备点留邮箱进了会员码那一屏');
+    A.currentUser = { uid: 'anonMember', isAnonymous: true };
+    A.memberDoc = { id: 'ru_x', name: 'Nicole' };
+    A.refreshEmailNudge();
+    if (!nudge || nudge.hidden) failures.push('手机号直接进、还没邮箱的会员应看到留邮箱提醒');
 
     // ── claim-phone 成功后要把队列推一次 ───────────────────────────────
     ran.push('认领后推队列');
@@ -145,12 +180,16 @@
   } catch (e) {
     failures.push('抛异常：' + (e && e.message));
   } finally {
+    if (Farm.fbPoints && realBackfill) Farm.fbPoints.firstLoginBackfill = realBackfill;
+    if (Farm.fbGameSync && realRestore) Farm.fbGameSync.restoreFromCloud = realRestore;
+    if (Farm.fbGameSync && realPush) Farm.fbGameSync.push = realPush;
     window.fetch = realFetch;
     if (Farm.fb && typeof realAuthObj !== 'undefined' && realAuthObj) Farm.fb.auth = realAuthObj;
     if (Farm.fbQueue && realQueueFlush) Farm.fbQueue.flush = realQueueFlush;
     A.currentUser = savedUser; A.memberDoc = savedDoc;
     Farm.state.data.eastPoints = savedEp;
     try { Farm.ui.hideModal(); } catch (_) {}
+    try { A.refreshEmailNudge(); } catch (_) {}
     try { A._renderTopbar(); } catch (_) {}
   }
   return { ran, failures };
