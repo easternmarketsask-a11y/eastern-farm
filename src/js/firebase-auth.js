@@ -292,6 +292,14 @@ const IDENT_KEY = 'eastern_farm_last_ident';
       if (!u.isAnonymous) return true;
       return !!this.memberDoc;
     },
+    /* 待激活账号顶栏看的是本地 eastPoints，账户菜单和积分页以前看 pendingPoints。
+       注册刚完成、回填还没回来时，一边是攒下的分，一边是 0。两边取较大的那个，
+       标签仍是「待领取」，不把本地乐观数说成已经进了会员账户。 */
+    heldPointsShown() {
+      const local = (Farm.state && Farm.state.data && Number(Farm.state.data.eastPoints)) || 0;
+      const server = Number((this.memberDoc && this.memberDoc.pendingPoints) || 0);
+      return Math.max(0, local, server);
+    },
     uid() { return this.currentUser ? this.currentUser.uid : null; },
     // Real member doc id (store-keyed; firebase_uid is a FIELD on it). ALL game
     // data (gameStats, push tokens, social) must be written here — NOT to
@@ -823,15 +831,17 @@ const IDENT_KEY = 'eastern_farm_last_ident';
     _renderRegEmailView(lang) {
       const en = lang === 'en';
       const fromLogin = this._authFrom === 'login';
+      /* 说明放在表单上面，店址放在按钮下面。挤在输入框前面时，手机上要滑很久才看见邮箱。 */
       const lead = fromLogin ? `
         <div class="auth-notmember">
-          <p class="auth-notmember-sub">${en
+          <p class="auth-notmember-sub" style="margin-top:0">${en
             ? 'You can play before you are a member. Points you earn are held for you and land on your member card when you give us your phone number in store.'
             : '还不是会员也可以先玩。挣到的超市积分先替你存着，到店报一下手机号就到账。'}</p>
-          <p class="auth-notmember-store">${en
-            ? 'Prefer in person? Sign up free at 133-412 Willowgrove Square · Mon–Sat 10am–6:30pm'
-            : '也可以到店免费办理 · 133-412 Willowgrove Square · 周一至周六 10am–6:30pm'}</p>
         </div>` : '';
+      const store = fromLogin ? `
+        <p class="auth-notmember-store">${en
+          ? 'Prefer in person? Sign up free at 133-412 Willowgrove Square · Mon–Sat 10am–6:30pm'
+          : '也可以到店免费办理 · 133-412 Willowgrove Square · 周一至周六 10am–6:30pm'}</p>` : '';
       return `
         ${lead}
         <div class="auth-field">
@@ -841,7 +851,7 @@ const IDENT_KEY = 'eastern_farm_last_ident';
         </div>
         <div class="auth-field">
           <label class="auth-label" for="regName">
-            ${en ? 'What should we call you?' : '怎么称呼你'}
+            ${en ? 'What should we call you? (optional)' : '怎么称呼你（选填）'}
             ${this._info('regNameInfo', en
               ? 'This is the name on your farmhouse that neighbours see. Not your legal name.'
               : '这个名字挂在你的小屋上给邻居看，不是身份证上的名字。')}
@@ -851,6 +861,7 @@ const IDENT_KEY = 'eastern_farm_last_ident';
         </div>
         <button class="btn auth-primary" id="authRegStartBtn">${en ? 'Send code' : '发送验证码'}</button>
         <button class="auth-ghost" data-auth-go="${fromLogin ? 'login' : 'notmember'}">${Farm.i18n.t('btn_back') || (en ? 'Back' : '返回')}</button>
+        ${store}
       `;
     },
 
@@ -1226,8 +1237,9 @@ const IDENT_KEY = 'eastern_farm_last_ident';
         <button class="auth-ghost auth-ghost--strong" data-auth-go="phone">${en
           ? 'First time? Activate with your phone' : '第一次登录？用手机号激活'}</button>
         <!-- 2026-09-06：新客人不必先假装会员、输号、被告知查不到，才看得见注册。
-             从这里进 regemail 时多一段说明（notmember 那一屏的话），返回也回到这里。 -->
-        <button class="auth-ghost" data-auth-go="regemail" data-auth-from="login">${en
+             从这里进 regemail 时多一段说明（notmember 那一屏的话），返回也回到这里。
+             这条和「用手机号激活」一样是出路，不能跟「取消」一样淡。 -->
+        <button class="auth-ghost auth-ghost--strong" data-auth-go="regemail" data-auth-from="login">${en
           ? 'Not a member yet? Sign up with email' : '还不是会员？用邮箱注册'}</button>
         <button class="auth-ghost" data-auth-go="forgot">${en ? 'Forgot password' : '忘记密码'}</button>
         <button class="auth-ghost" onclick="Farm.ui.hideModal()">${Farm.i18n.t('btn_cancel')}</button>
@@ -1292,6 +1304,10 @@ const IDENT_KEY = 'eastern_farm_last_ident';
       if (view === 'regcode') {
         const b = document.getElementById('authRegConfirmBtn');
         if (b) b.onclick = () => this._registerConfirm();
+        const codeEl = document.getElementById('regCode');
+        if (codeEl) codeEl.oninput = (e) => {
+          e.target.value = String(e.target.value || '').replace(/\D/g, '').slice(0, 6);
+        };
         ['regCode', 'regPw'].forEach(id => {
           const el = document.getElementById(id);
           if (el) el.onkeydown = (e) => { if (e.key === 'Enter') this._registerConfirm(); };
@@ -1698,7 +1714,7 @@ const IDENT_KEY = 'eastern_farm_last_ident';
           ${pending ? `
           <!-- 🔒 待激活账号：口径是「待领取」，不是「你的积分」。
                他还不是会员，说「已与会员账户同步」就是假话。 -->
-          <div style="font-size:24px;font-weight:700;color:var(--purple-points);margin-top:6px;"><span class="points-icon"></span> ${(m.pendingPoints || 0).toLocaleString()}</div>
+          <div style="font-size:24px;font-weight:700;color:var(--purple-points);margin-top:6px;"><span class="points-icon"></span> ${this.heldPointsShown().toLocaleString()}</div>
           <div style="font-size:11px;color:var(--warm-text-soft);">
             ${lang === 'en' ? 'Held for you' : '待领取'}
           </div>

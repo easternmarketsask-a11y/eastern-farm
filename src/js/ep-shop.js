@@ -69,6 +69,12 @@
         return { ok: false, reason: 'max_owned' };
       }
       const price = this.priceOf(item);
+      /* 待激活的分还不能花。先拦在这里，卡片上写「到店可用」，点一下说明原因，
+         不要画成灰色的价格、让人以为是余额不够。 */
+      if (price.currency !== 'coins'
+          && Farm.fbAuth && Farm.fbAuth.memberDoc && Farm.fbAuth.memberDoc._pending) {
+        return { ok: false, reason: 'pending', price: price };
+      }
       const balance = price.currency === 'coins' ? data.coins : data.eastPoints;
       if (balance < price.amount) {
         // 带回价格：钱不够面板要算「还差多少」
@@ -254,15 +260,18 @@
       const tagBadge = tag ? `<div class="ep-shop-tag" style="background:${tag.color};">${tag.text}</div>` : '';
       const price = this.priceOf(it);
       const curIcon = price.currency === 'coins' ? 'coin-icon' : 'points-icon';
+      const held = can.reason === 'pending';
       const affordable = can.ok;
-      const btnCls = affordable ? 'ep-shop-buy' : 'ep-shop-buy ep-shop-buy--off';
-      const buttonLabel = affordable
-        ? `${price.amount} <span class="${curIcon}"></span>`
-        : (can.reason === 'max_owned' ? (lang === 'en' ? '✓ MAX' : '✓ 已满')
-          : can.reason === 'daily_cap' ? (lang === 'en' ? 'Daily max' : '今日已满')
-          : can.reason === 'level_locked' ? (lang === 'en' ? `Lv ${it.min_level}` : `Lv ${it.min_level} 解锁`)
-                                       : `${price.amount} <span class="${curIcon}"></span>`);
-      const dis = affordable ? '' : 'disabled';
+      const btnCls = (affordable || held) ? 'ep-shop-buy' : 'ep-shop-buy ep-shop-buy--off';
+      const buttonLabel = held
+        ? (lang === 'en' ? 'In store' : '到店可用')
+        : (affordable
+          ? `${price.amount} <span class="${curIcon}"></span>`
+          : (can.reason === 'max_owned' ? (lang === 'en' ? '✓ MAX' : '✓ 已满')
+            : can.reason === 'daily_cap' ? (lang === 'en' ? 'Daily max' : '今日已满')
+            : can.reason === 'level_locked' ? (lang === 'en' ? `Lv ${it.min_level}` : `Lv ${it.min_level} 解锁`)
+                                         : `${price.amount} <span class="${curIcon}"></span>`));
+      const dis = (affordable || held) ? '' : 'disabled';
       const cat = it.category || 'consumable';
       // 每日限购品：显示今日剩余次数，让玩家一眼知道额度（而非买到才发现被拦）。
       const capNote = (it.daily_buy_cap != null)
@@ -271,7 +280,7 @@
             : ('今日剩 ' + this.dailyCapLeft(it) + '/' + it.daily_buy_cap)}</div>`
         : '';
       return `
-        <div class="ep-shop-card cat-${cat} ${affordable ? '' : 'disabled'}" data-id="${it.id}">
+        <div class="ep-shop-card cat-${cat} ${(affordable || held) ? '' : 'disabled'}" data-id="${it.id}">
           ${tagBadge}${ownedBadge}
           <div class="ep-shop-icon cat-${cat}">${this._iconHtml(it)}</div>
           <div class="ep-shop-name">${it[nameKey]}</div>
@@ -342,7 +351,13 @@
           e.stopPropagation();
           const r = this.buy(btn.dataset.buy);
           if (!r.ok) {
-            if (r.reason === 'pending') return;
+            if (r.reason === 'pending') {
+              /* 待激活门在扣分之前就返回，金额用不上，只为把那句说明说出来。 */
+              if (Farm.state && Farm.state.spendEastPoints) {
+                Farm.state.spendEastPoints(1, { source: 'ep_shop:pending', description: 'held' });
+              }
+              return;
+            }
             Farm.ui.toast(r.reason === 'insufficient_coins' || r.reason === 'insufficient_ep'
               ? (EN ? 'Not enough coins or points' : '余额不足')
               : r.reason === 'daily_cap'

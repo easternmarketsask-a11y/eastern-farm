@@ -253,7 +253,12 @@
           if (!ep) return;
           const r = ep.buy(btn.dataset.buy);
           if (!r.ok) {
-            if (r.reason === 'pending') return;
+            if (r.reason === 'pending') {
+              if (Farm.state && Farm.state.spendEastPoints) {
+                Farm.state.spendEastPoints(1, { source: 'ep_shop:pending', description: 'held' });
+              }
+              return;
+            }
             const lack = r.reason === 'insufficient_coins' || r.reason === 'insufficient_ep';
             if (lack && Farm.shortfall && Farm.shortfall.show(
                 r.reason === 'insufficient_coins' ? 'coins' : 'points',

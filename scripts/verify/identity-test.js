@@ -77,6 +77,13 @@
     A._syncLocalBalance();
     if (Farm.state.data.eastPoints !== 12) failures.push('真会员档应照常同步余额（现在是 ' + Farm.state.data.eastPoints + '）');
 
+    ran.push('待领取两边同一个数');
+    Farm.state.data.eastPoints = 77;
+    A.memberDoc = { id: null, _pending: true, totalPoints: 0, pendingPoints: 0 };
+    if (A.heldPointsShown() !== 77) failures.push('顶栏 77、账户菜单 0：待领取应显示 ' + A.heldPointsShown());
+    A.memberDoc.pendingPoints = 90;
+    if (A.heldPointsShown() !== 90) failures.push('服务端已经记了更多时，应显示服务端的数，现在是 ' + A.heldPointsShown());
+
     // ── ② 注册成功那一刻激活码要在 ─────────────────────────────────────
     ran.push('注册后激活码');
     const fakeReg = { uid: 'anonReg', isAnonymous: true, getIdToken: async () => 't', reload: async () => {} };

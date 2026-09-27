@@ -39,7 +39,9 @@
          封顶数由后端下发（pendingCap），不在前端写死。 */
       const pm = (Farm.fbAuth && Farm.fbAuth.memberDoc) || {};
       const pending = !!pm._pending;
-      const pendPts = Number(pm.pendingPoints || 0);
+      const pendPts = (pending && Farm.fbAuth.heldPointsShown)
+        ? Farm.fbAuth.heldPointsShown()
+        : Number(pm.pendingPoints || 0);
       const pendCap = Number(pm.pendingCap || 0);
       const pendFull = pendCap > 0 && pendPts >= pendCap;
 
@@ -210,7 +212,9 @@
         }
         Farm.ui.refreshHUD();
         if (Farm.audio) Farm.audio.play('coin');
-        let msg = `🔄 +${r.epGained} <span class="points-icon"></span>`;
+        const held = !!(Farm.fbAuth && Farm.fbAuth.memberDoc && Farm.fbAuth.memberDoc._pending);
+        let msg = `🔄 +${r.epGained} <span class="points-icon"></span>`
+          + (held ? (lang === 'en' ? ' held for you' : '，先替你存着') : '');
         if (r.queued > 0) {
           msg += lang === 'en'
             ? ` (${r.queued} queued for tomorrow)`
