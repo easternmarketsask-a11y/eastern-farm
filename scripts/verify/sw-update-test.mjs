@@ -22,7 +22,21 @@ import { mkdtempSync, cpSync, readFileSync, writeFileSync, rmSync, existsSync, s
 import { tmpdir } from 'node:os';
 import { join, extname, normalize } from 'node:path';
 
-const CHROME = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
+// Chrome executable: honor EF_CHROME, else first existing path across
+// Windows / Linux / macOS (Windows first keeps Chris's local deploy.sh intact).
+const CHROME = [
+  process.env.EF_CHROME,
+  'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+  'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
+  '/usr/bin/google-chrome',
+  '/usr/bin/google-chrome-stable',
+  '/usr/local/bin/google-chrome',
+  '/usr/bin/chromium',
+  '/usr/bin/chromium-browser',
+  '/snap/bin/chromium',
+  '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+].find((p) => { try { return p && existsSync(p); } catch { return false; } })
+  || 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
 const PORT = 8199 + (process.pid % 300);
 const KEEP = process.argv.includes('--keep');
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
