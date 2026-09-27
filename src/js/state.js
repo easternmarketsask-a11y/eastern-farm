@@ -1087,7 +1087,9 @@
       // Route through spendEastPoints so the spend syncs to the member
       // account when logged in (Firestore decrement + audit row).
       if (!this.spendEastPoints(epAmt, { source: 'coin_exchange', description: 'EP → coins exchange' })) {
-        return { ok: false, reason: 'insufficient_ep' };
+        const pending = !!(window.Farm && Farm.fbAuth && Farm.fbAuth.memberDoc && Farm.fbAuth.memberDoc._pending);
+        /* pending：spendEastPoints 已经说明是待领取。再报「积分不够」是另一句假话。 */
+        return { ok: false, reason: pending ? 'pending' : 'insufficient_ep' };
       }
       const coinAmount = epAmt * this.COINS_PER_EP;
       this.data.coins += coinAmount;

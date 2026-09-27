@@ -299,8 +299,11 @@
             source: 'lottery_wheel_spend',
             description: 'Paid lottery wheel spin',
           })) {
-            Farm.ui.toast(Farm.i18n.t('toast_not_enough_points'));
-            if (Farm.audio) Farm.audio.play('error');
+            const pending = Farm.fbAuth && Farm.fbAuth.memberDoc && Farm.fbAuth.memberDoc._pending;
+            if (!pending) {
+              Farm.ui.toast(Farm.i18n.t('toast_not_enough_points'));
+              if (Farm.audio) Farm.audio.play('error');
+            }
             return;
           }
         } else {

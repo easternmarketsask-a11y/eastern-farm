@@ -1268,8 +1268,8 @@ body.mapmode #warehouseBtn { display: none !important; }
   border: 0;
   border-radius: 999px;
   padding: 7px 16px;
-  /* 触摸目标 ≥44px 高（含 padding），手机上点得中 */
-  min-height: 36px;
+  /* 全局 border-box，min-height 已经含 padding。36px 点不中。 */
+  min-height: 44px;
   background: var(--leaf-green);
   color: #fff;
   font-size: 14px;
@@ -1353,7 +1353,8 @@ body.mapmode #warehouseBtn { display: none !important; }
   margin: 10px 0 0;
   font-size: 13.5px;
   line-height: 1.65;
-  color: var(--warm-text-soft);
+  /* 这句是「积分先替你存着」，不是装饰。太淡的话中老年顾客读不出。 */
+  color: var(--warm-text, #4a3728);
 }
 .auth-notmember-store {
   text-align: center;
