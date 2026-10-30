@@ -246,8 +246,8 @@
     }
     if (stars === 3) {
       return {
-        zh: '全对。' + coupon.zh + '下次结账减 $1，你也进了本周六的菜篮抽奖。',
-        en: 'All correct. $1 off ' + coupon.en + ' next time, and you’re in Saturday’s basket draw.',
+        zh: '全对。' + coupon.zh + '下次结账减 $1。本周六的菜篮，要等这张券记上会员才算数。',
+        en: 'All correct. $1 off ' + coupon.en + ' next time. Saturday’s basket counts once the coupon is on your member card.',
       };
     }
     if (stars === 2) {
