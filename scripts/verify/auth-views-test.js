@@ -103,6 +103,27 @@
     if (go) { go.click(); await sleep(80); }
     if (A._view !== 'regemail') failures.push('notmember → regemail 没跳过去：' + A._view);
     if (!document.querySelector('[data-auth-go="notmember"]')) failures.push('从 notmember 进的注册屏，返回键应回 notmember');
+
+    // 来源标记不能粘住：先从登录首屏进去再返回，随后手机号查无此人进注册，返回仍回 notmember
+    A._view = 'login'; A._authFrom = '';
+    A._renderLoginModal(); await sleep(40);
+    const entry2 = document.querySelector('[data-auth-go="regemail"][data-auth-from="login"]');
+    if (entry2) { entry2.click(); await sleep(40); }
+    const backL = document.querySelector('[data-auth-go="login"]');
+    if (backL) { backL.click(); await sleep(40); }
+    if (A._authFrom) failures.push('从注册返回登录后，来源标记还在：' + A._authFrom);
+    A._view = 'phone';
+    A._go('notmember');
+    await sleep(40);
+    const go2 = document.querySelector('[data-auth-go="regemail"]');
+    if (go2) { go2.click(); await sleep(50); }
+    if (A._view !== 'regemail') failures.push('查无此人之后没进 regemail：' + A._view);
+    if (!document.querySelector('[data-auth-go="notmember"]')) {
+      failures.push('查无此人之后进注册，返回键应回 notmember（来源标记粘在登录上）');
+    }
+    if (document.querySelector('[data-auth-go="login"]')) {
+      failures.push('这条注册的返回键不应回登录');
+    }
     ran.push('signup-entry');
   } catch (e) {
     failures.push('signup-entry: ' + ((e && e.message) || e));

@@ -39,7 +39,9 @@
          封顶数由后端下发（pendingCap），不在前端写死。 */
       const pm = (Farm.fbAuth && Farm.fbAuth.memberDoc) || {};
       const pending = !!pm._pending;
-      const pendPts = Number(pm.pendingPoints || 0);
+      const pendPts = (pending && Farm.fbAuth.heldPointsShown)
+        ? Farm.fbAuth.heldPointsShown()
+        : Number(pm.pendingPoints || 0);
       const pendCap = Number(pm.pendingCap || 0);
       const pendFull = pendCap > 0 && pendPts >= pendCap;
 
@@ -86,6 +88,27 @@
         </div>
       `;
 
+      const pointsToCoinsHTML = pending ? `
+          <div class="exchange-side">
+            <label><span class="points-icon"></span> ${lang === 'en' ? 'Points → Coins' : '超市积分 → 农场币'}</label>
+            <div class="exchange-balance" style="line-height:1.65;">
+              ${lang === 'en'
+                ? 'These points are held for you. After your membership is activated at the store, you can exchange them for farm coins.'
+                : '这些是待领取积分，到店激活成会员后就能换成农场币。'}
+            </div>
+          </div>
+      ` : `
+          <div class="exchange-side">
+            <label><span class="points-icon"></span> ${lang === 'en' ? 'Points → Coins' : '超市积分 → 农场币'}</label>
+            <div class="exchange-input-group">
+              <input type="number" id="exEpAmt" min="1" step="1" value="10" />
+              <span class="exchange-arrow">→ <span id="exEpPreview">100</span> <span class="coin-icon"></span></span>
+            </div>
+            <div class="exchange-balance">${lang === 'en' ? 'Have' : '有'} <span class="points-icon"></span> ${ep.toLocaleString()}</div>
+            <button class="btn exchange-btn" id="exEpBtn">${lang === 'en' ? 'Exchange' : '兑换'}</button>
+          </div>
+      `;
+
       const exchangeHTML = `
         <h3 class="rewards-section">${lang === 'en' ? '🔄 Exchange (10 : 1)' : '🔄 兑换 (10 : 1)'}</h3>
         <div class="exchange-row">
@@ -98,15 +121,7 @@
             <div class="exchange-balance">${lang === 'en' ? 'Have' : '有'} <span class="coin-icon"></span> ${coins.toLocaleString()}</div>
             <button class="btn exchange-btn" id="exCoinBtn">${lang === 'en' ? 'Exchange' : '兑换'}</button>
           </div>
-          <div class="exchange-side">
-            <label><span class="points-icon"></span> ${lang === 'en' ? 'Points → Coins' : '超市积分 → 农场币'}</label>
-            <div class="exchange-input-group">
-              <input type="number" id="exEpAmt" min="1" step="1" value="10" />
-              <span class="exchange-arrow">→ <span id="exEpPreview">100</span> <span class="coin-icon"></span></span>
-            </div>
-            <div class="exchange-balance">${lang === 'en' ? 'Have' : '有'} <span class="points-icon"></span> ${ep.toLocaleString()}</div>
-            <button class="btn exchange-btn" id="exEpBtn">${lang === 'en' ? 'Exchange' : '兑换'}</button>
-          </div>
+          ${pointsToCoinsHTML}
         </div>
       `;
 
@@ -178,10 +193,12 @@
         const n = Math.max(0, parseInt(exCoinAmt.value, 10) || 0);
         exCoinPreview.textContent = Math.floor(n / 10);
       };
-      exEpAmt.oninput = () => {
-        const n = Math.max(0, parseInt(exEpAmt.value, 10) || 0);
-        exEpPreview.textContent = n * 10;
-      };
+      if (exEpAmt && exEpPreview) {
+        exEpAmt.oninput = () => {
+          const n = Math.max(0, parseInt(exEpAmt.value, 10) || 0);
+          exEpPreview.textContent = n * 10;
+        };
+      }
 
       document.getElementById('exCoinBtn').onclick = () => {
         const n = Math.max(0, parseInt(exCoinAmt.value, 10) || 0);
@@ -195,7 +212,9 @@
         }
         Farm.ui.refreshHUD();
         if (Farm.audio) Farm.audio.play('coin');
-        let msg = `🔄 +${r.epGained} <span class="points-icon"></span>`;
+        const held = !!(Farm.fbAuth && Farm.fbAuth.memberDoc && Farm.fbAuth.memberDoc._pending);
+        let msg = `🔄 +${r.epGained} <span class="points-icon"></span>`
+          + (held ? (lang === 'en' ? ' held for you' : '，先替你存着') : '');
         if (r.queued > 0) {
           msg += lang === 'en'
             ? ` (${r.queued} queued for tomorrow)`
@@ -204,12 +223,16 @@
         Farm.ui.toast(msg, 2800);
         setTimeout(() => this.open(), 600);
       };
-      document.getElementById('exEpBtn').onclick = () => {
+      const exEpBtn = document.getElementById('exEpBtn');
+      if (exEpBtn) exEpBtn.onclick = () => {
         const n = Math.max(0, parseInt(exEpAmt.value, 10) || 0);
         const r = Farm.state.exchangeEpToCoins(n);
         if (!r.ok) {
-          Farm.ui.toast(lang === 'en' ? 'Not enough EP' : '积分不够');
-          if (Farm.audio) Farm.audio.play('error');
+          /* pending 时 spendEastPoints 已经说明原因，再说「积分不够」是假话。 */
+          if (r.reason !== 'pending') {
+            Farm.ui.toast(lang === 'en' ? 'Not enough EP' : '积分不够');
+            if (Farm.audio) Farm.audio.play('error');
+          }
           return;
         }
         Farm.ui.refreshHUD();

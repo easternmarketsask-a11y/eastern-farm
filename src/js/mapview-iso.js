@@ -1903,6 +1903,12 @@
           if (Farm.ui.toast) Farm.ui.toast(en ? 'Mansions use store points. Sign in first.' : '豪宅要用超市积分，请先登录。');
           return false;
         }
+        if (Farm.fbAuth && Farm.fbAuth.memberDoc && Farm.fbAuth.memberDoc._pending) {
+          if (Farm.state && Farm.state.spendEastPoints) {
+            Farm.state.spendEastPoints(needPts, { source: 'ep_shop:home_mansion', description: 'held points' });
+          }
+          return false;
+        }
         if ((Farm.state.data.eastPoints || 0) < needPts) {
           if (Farm.ui.toast) Farm.ui.toast(en ? 'Not enough store points' : '超市积分不足');
           return false;
@@ -1923,6 +1929,12 @@
           if (Farm.ui.toast) Farm.ui.toast(en ? 'Mansions use store points. Sign in first.' : '豪宅要用超市积分，请先登录。');
           return false;
         }
+        if (Farm.fbAuth && Farm.fbAuth.memberDoc && Farm.fbAuth.memberDoc._pending) {
+          if (Farm.state && Farm.state.spendEastPoints) {
+            Farm.state.spendEastPoints(needPts, { source: 'ep_shop:home_mansion', description: desc || 'held points' });
+          }
+          return false;
+        }
         if ((Farm.state.data.eastPoints || 0) < needPts) {
           if (Farm.ui.toast) Farm.ui.toast(en ? 'Not enough store points' : '超市积分不足');
           return false;
@@ -1937,7 +1949,8 @@
         description: desc,
       })) {
         if (pay.coins > 0) Farm.state.addCoins(pay.coins);
-        if (Farm.ui.toast) Farm.ui.toast(en ? 'Not enough store points' : '超市积分不足');
+        const pending = Farm.fbAuth && Farm.fbAuth.memberDoc && Farm.fbAuth.memberDoc._pending;
+        if (!pending && Farm.ui.toast) Farm.ui.toast(en ? 'Not enough store points' : '超市积分不足');
         return false;
       }
       return true;
@@ -2963,6 +2976,12 @@
         const loggedIn = !!(Farm.fbAuth && Farm.fbAuth.isLoggedIn && Farm.fbAuth.isLoggedIn());
         if (!loggedIn) {
           if (Farm.ui && Farm.ui.toast) Farm.ui.toast(en ? 'Store points need sign-in first.' : '超市积分请先登录。');
+          return;
+        }
+        if (Farm.fbAuth && Farm.fbAuth.memberDoc && Farm.fbAuth.memberDoc._pending) {
+          if (Farm.state && Farm.state.spendEastPoints) {
+            Farm.state.spendEastPoints(pts, { source: 'iso_build_skip', description: 'held points' });
+          }
           return;
         }
         if ((Farm.state.data.eastPoints || 0) < pts) {
@@ -5512,6 +5531,12 @@
          这个字段（那是 members 文档上的服务端缓存名），读它恒为 0 →
          L3(3000币+30点) / L4(6000币+50点) 永远提示「积分不够」，扩地后期整个是坏的。 */
       const en = this._lang() === 'en', haveC = Farm.state.data.coins, haveP = (Farm.state.data.eastPoints || 0);
+      if (next.points && Farm.fbAuth && Farm.fbAuth.memberDoc && Farm.fbAuth.memberDoc._pending) {
+        if (Farm.state && Farm.state.spendEastPoints) {
+          Farm.state.spendEastPoints(next.points, { source: 'ep_shop:land_expand', description: 'held points' });
+        }
+        return;
+      }
       if (haveC < next.coins || (next.points && haveP < next.points)) {
         if (Farm.ui && Farm.ui.toast) Farm.ui.toast(en ? 'Not enough coins or points to expand' : '农场币或积分不足，暂无法扩地');
         return;

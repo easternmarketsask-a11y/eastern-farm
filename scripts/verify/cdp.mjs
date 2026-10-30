@@ -5,11 +5,34 @@
 // evalFile.js (optional) is an expression/IIFE evaluated in the page AFTER load;
 // it may be async (awaitPromise is on). Return a JSON-serializable value.
 import { spawn } from 'node:child_process';
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-const CHROME = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
+// Chrome executable: honor EF_CHROME first, then fall back to the first path
+// that exists across Windows / Linux / macOS. Windows stays the default so
+// Chris's `deploy.sh` on his PC is unaffected; Linux/macOS + cloud agents work
+// without any local edits.
+function resolveChrome() {
+  const candidates = [
+    process.env.EF_CHROME,
+    'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+    'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
+    '/usr/bin/google-chrome',
+    '/usr/bin/google-chrome-stable',
+    '/usr/local/bin/google-chrome',
+    '/usr/bin/chromium',
+    '/usr/bin/chromium-browser',
+    '/snap/bin/chromium',
+    '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+  ].filter(Boolean);
+  for (const c of candidates) {
+    try { if (existsSync(c)) return c; } catch { /* ignore */ }
+  }
+  // Nothing found: keep the Windows default so the error message is familiar.
+  return candidates[0] || 'chrome';
+}
+const CHROME = resolveChrome();
 // Per-process port avoids attaching to a stale Chrome from a prior run (flake).
 const PORT = 9222 + (process.pid % 600);
 const url = process.argv[2] || 'http://127.0.0.1:8000/src/';

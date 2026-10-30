@@ -1,0 +1,18 @@
+{
+  "name": "Eastern Farm",
+  "install": "pip install --user Pillow",
+  "terminals": [
+    {
+      "name": "farm-server",
+      "command": "python3 -m http.server 8000 --bind 127.0.0.1",
+      "description": "Serves the game from the repo root. Open http://localhost:8000/src/ to play. Data files load via fetch('../data/...'), so the server MUST run from the repo root, not from src/."
+    }
+  ],
+  "ports": [
+    {
+      "name": "web server",
+      "port": 8000
+    }
+  ],
+  "chromeExecutablePath": "/usr/bin/google-chrome"
+}
