@@ -18,6 +18,19 @@ const MENU_URL = 'https://farm.easternmarket.ca/data/dinner-menu.json';
 const EPOCH = '2026-01-01';
 const GOLDEN = ['scallion', 'egg', 'cilantro', 'potato', 'cucumber', 'sesame_oil', 'tomato', 'tofu'];
 
+function addDays(ymd: string, n: number): string {
+  const [y, m, d] = ymd.split('-').map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d) + n * 86400000);
+  return dt.toISOString().slice(0, 10);
+}
+
+function reginaWeekday(now: number): number {
+  const name = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Regina',
+    weekday: 'short',
+  }).format(new Date(now));
+  return ({ Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 } as Record<string, number>)[name];
+}
 function daysBetween(a: string, b: string): number {
   const ua = Date.parse(a + 'T00:00:00Z');
   const ub = Date.parse(b + 'T00:00:00Z');
@@ -115,7 +128,10 @@ export const dinnerClaim = onCall({ region: REGION }, async (req) => {
   const seed = Number(data.seed);
   const picks = Array.isArray(data.picks) ? data.picks : [];
   const today = reginaDate(Date.now());
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || date > today || daysBetween(date, today) > 1) {
+  const tomorrow = addDays(today, 1);
+  const yesterday = addDays(today, -1);
+  const sundayPreview = reginaWeekday(Date.now()) === 0 && date === tomorrow;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || (date !== today && date !== yesterday && !sundayPreview)) {
     throw new HttpsError('invalid-argument', 'date');
   }
   if (!Number.isFinite(seed)) throw new HttpsError('invalid-argument', 'seed');

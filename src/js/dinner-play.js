@@ -480,7 +480,7 @@
     const r = save && save.official;
     const body = preset || {
       data: {
-        date: pick.today,
+        date: pick.playDate,
         dishId: r.dishId,
         seed: r.seed,
         picks: r.picks,
