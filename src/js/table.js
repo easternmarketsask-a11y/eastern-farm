@@ -59,6 +59,7 @@
     img.alt = dish.zh;
     img.draggable = false;
     img.src = dish.image;
+    if (dish.focus) img.style.objectPosition = dish.focus;
     disc.appendChild(img);
     el.appendChild(disc);
     var cap = document.createElement('div');

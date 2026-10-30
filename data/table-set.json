@@ -1,46 +1,52 @@
 {
   "dishes": [
     {
-      "id": "tomato-egg",
-      "zh": "番茄炒蛋",
-      "en": "Stir-Fried Tomato and Egg",
-      "image": "https://recipe.easternmarket.ca/assets/images/tomato-egg-ai-202609.jpg",
-      "recipe": "https://recipe.easternmarket.ca/r/tomato-egg.html"
+      "id": "steamed-crab",
+      "zh": "清蒸红蟹",
+      "en": "Steamed Crab with Ginger Vinegar",
+      "image": "https://recipe.easternmarket.ca/assets/images/steamed-crab.jpg",
+      "recipe": "https://recipe.easternmarket.ca/r/steamed-crab.html",
+      "focus": "center 42%"
     },
     {
-      "id": "mapo-tofu",
-      "zh": "麻婆豆腐",
-      "en": "Mapo Tofu",
-      "image": "https://recipe.easternmarket.ca/assets/images/mapo-tofu-ai-202609.jpg",
-      "recipe": "https://recipe.easternmarket.ca/r/mapo-tofu.html"
+      "id": "garlic-shrimp",
+      "zh": "蒜蓉粉丝蒸虾",
+      "en": "Garlic Shrimp over Vermicelli",
+      "image": "https://recipe.easternmarket.ca/assets/images/garlic-vermicelli-shrimp-ai-202609.jpg",
+      "recipe": "https://recipe.easternmarket.ca/r/garlic-vermicelli-shrimp.html",
+      "focus": "center"
     },
     {
-      "id": "choy-sum",
-      "zh": "白灼菜心",
-      "en": "Blanched Choy Sum with Soy Sauce",
-      "image": "https://recipe.easternmarket.ca/assets/images/blanched-choy-sum-ai-202609.jpg",
-      "recipe": "https://recipe.easternmarket.ca/r/blanched-choy-sum.html"
-    },
-    {
-      "id": "pork-pepper",
-      "zh": "青椒肉末",
-      "en": "Minced Pork with Green Peppers",
-      "image": "https://recipe.easternmarket.ca/assets/images/pork-green-pepper-ai-202609.jpg",
-      "recipe": "https://recipe.easternmarket.ca/r/pork-green-pepper.html"
+      "id": "white-cut-chicken",
+      "zh": "白切鸡",
+      "en": "White-Cut Chicken",
+      "image": "https://recipe.easternmarket.ca/assets/images/white-cut-chicken-ai-202609.jpg",
+      "recipe": "https://recipe.easternmarket.ca/r/white-cut-chicken.html",
+      "focus": "32% 62%"
     },
     {
       "id": "gai-lan",
       "zh": "蚝油芥兰",
-      "en": "Gai Lan with Oyster Sauce",
-      "image": "https://recipe.easternmarket.ca/assets/images/gai-lan-oyster-sauce-ai-202609.jpg",
-      "recipe": "https://recipe.easternmarket.ca/r/gai-lan-oyster-sauce.html"
+      "en": "Gai Lan in Oyster Sauce",
+      "image": "https://recipe.easternmarket.ca/assets/images/cant-haoyou-jielan.jpg",
+      "recipe": "https://recipe.easternmarket.ca/r/cant-haoyou-jielan.html",
+      "focus": "center 58%"
     },
     {
-      "id": "wintermelon",
-      "zh": "冬瓜虾仁汤",
-      "en": "Winter Melon and Shrimp Soup",
-      "image": "https://recipe.easternmarket.ca/assets/images/wintermelon-shrimp-soup-ai-202609.jpg",
-      "recipe": "https://recipe.easternmarket.ca/r/wintermelon-shrimp-soup.html"
+      "id": "shiitake-soup",
+      "zh": "香菇鸡汤",
+      "en": "Chicken and Shiitake Soup",
+      "image": "https://recipe.easternmarket.ca/assets/images/shiitake-chicken-soup-ai-202609.jpg",
+      "recipe": "https://recipe.easternmarket.ca/r/shiitake-chicken-soup.html",
+      "focus": "center 58%"
+    },
+    {
+      "id": "osmanthus-lotus",
+      "zh": "桂花糯米藕",
+      "en": "Sweet Osmanthus Lotus Root",
+      "image": "https://recipe.easternmarket.ca/assets/images/osmanthus-lotus-root-ai-202609.jpg",
+      "recipe": "https://recipe.easternmarket.ca/r/osmanthus-lotus-root.html",
+      "focus": "center 55%"
     }
   ]
 }
