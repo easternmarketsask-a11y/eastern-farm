@@ -4,153 +4,218 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>游戏 · 东方超市</title>
-<meta name="description" content="东方超市的两个游戏。东方农场种菜，积分进会员卡。东家一桌把今晚的三道菜放到桌上。">
-<meta name="theme-color" content="#f7fbf8">
+<meta name="description" content="选择东方农场，或打开今晚餐桌。东方超市游戏。">
+<meta name="theme-color" content="#f6f8ef">
 <link rel="canonical" href="https://farm.easternmarket.ca/">
 <style>
   :root {
-    --paper: #f7fbf8;
-    --ink: #24382c;
-    --green: #3a8c50;
-    --green-d: #2a5c34;
-    --mist: #6d917c;
-    --line: #d5e6db;
-    --song: "Songti SC", "STSong", "Noto Serif CJK SC", "Source Han Serif SC", "PMingLiU", "SimSun", serif;
+    --sunlit: #f6f8ef;
+    --young-leaf: #dcebcf;
+
+    --deep-leaf: #23452e;
+    --tomato: #d96b43;
+    --rice: #fff9ed;
+    --ink: #26382b;
+    --display: "Songti SC", "STSong", "Noto Serif CJK SC", "Source Han Serif SC", "PMingLiU", "SimSun", serif;
     --ui: "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "Microsoft YaHei", sans-serif;
     color-scheme: light;
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  html, body { margin: 0; }
+  html, body { min-height: 100%; margin: 0; }
   body {
-    min-height: 100dvh;
+    min-height: 100svh;
     color: var(--ink);
     font-family: var(--ui);
-    font-weight: 400;
     background:
-      radial-gradient(ellipse 90% 42% at 50% -8%, #ffffff 0%, rgba(255, 255, 255, 0) 70%),
-      linear-gradient(180deg, #ffffff 0%, var(--paper) 34%, #e7f2eb 100%);
+      radial-gradient(ellipse 82% 54% at 50% -14%, #fff 0%, rgba(255,255,255,0) 72%),
+      linear-gradient(145deg, #fbfcf5 0%, var(--sunlit) 52%, #e7f0df 100%);
   }
   main {
-    min-height: 100dvh;
-    max-width: 440px;
+    width: min(100%, 1560px);
+    min-height: 100svh;
     margin: 0 auto;
-    padding: max(28px, env(safe-area-inset-top)) 28px max(32px, env(safe-area-inset-bottom));
+    padding: max(24px, env(safe-area-inset-top)) clamp(18px, 5.2vw, 76px) max(28px, env(safe-area-inset-bottom));
     display: flex;
     flex-direction: column;
   }
+  .masthead {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    margin-bottom: clamp(18px, 3vh, 32px);
+  }
   .mark {
-    width: min(168px, 46vw);
+    display: block;
+    width: clamp(132px, 13vw, 168px);
     height: auto;
-    margin: 8px 0 36px;
     mix-blend-mode: multiply;
   }
   h1 {
     margin: 0;
-    font-family: var(--song);
+    color: var(--deep-leaf);
+    font-family: var(--display);
+    font-size: clamp(23px, 2.4vw, 32px);
     font-weight: 500;
-    font-size: 34px;
-    letter-spacing: 0.06em;
+    letter-spacing: .06em;
     line-height: 1.25;
   }
-  .lede {
-    margin: 12px 0 0;
-    max-width: 28em;
-    font-size: 16px;
-    line-height: 1.65;
-  }
-  .lede.en {
-    margin-top: 4px;
-    color: var(--mist);
-    font-size: 14px;
-  }
-  nav {
-    margin-top: 28px;
-    border-bottom: 1px solid var(--line);
-  }
-  .door {
+  nav.games {
+    flex: 1;
     display: grid;
-    grid-template-columns: 104px 1fr;
-    gap: 18px;
-    align-items: center;
-    padding: 18px 0;
-    border-top: 1px solid var(--line);
-    color: inherit;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: clamp(16px, 2.2vw, 30px);
+    min-height: min(67vh, 690px);
+  }
+  .game-card {
+    position: relative;
+    isolation: isolate;
+    display: block;
+    min-width: 0;
+    min-height: 440px;
+    overflow: hidden;
+    border: 1px solid rgba(35, 69, 46, .09);
+    border-radius: clamp(22px, 2.4vw, 34px);
+    background: var(--young-leaf);
+    color: white;
     text-decoration: none;
+    box-shadow: 0 18px 44px rgba(40, 75, 48, .13);
   }
-  .door:focus-visible {
-    outline: 2px solid var(--green);
-    outline-offset: 4px;
+  .game-card::after {
+    content: "";
+    position: absolute;
+    z-index: 0;
+    inset: 28% 0 0;
+    background: linear-gradient(180deg, rgba(16, 32, 19, 0) 0%, rgba(16, 32, 19, .18) 28%, rgba(16, 32, 19, .82) 100%);
+    pointer-events: none;
   }
-  .plate {
-    width: 104px;
-    height: 104px;
-    padding: 7px;
-    border-radius: 50%;
-    background: #fff;
-    border: 1px solid var(--line);
-    box-shadow: 0 10px 22px rgba(42, 92, 52, 0.08);
-  }
-  .plate img {
+  .cover {
+    position: absolute;
+    z-index: -1;
+    inset: 0;
     width: 100%;
     height: 100%;
-    border-radius: 50%;
     object-fit: cover;
-    display: block;
+    transition: transform .45s ease;
   }
-  .plate.farm img { object-position: 50% 62%; }
-  .plate.table img { object-position: center 42%; }
-  .zh {
-    display: block;
-    font-family: var(--song);
-    font-size: 22px;
-    font-weight: 500;
-    letter-spacing: 0.08em;
-    color: var(--green-d);
+  .farm .cover { object-position: 50% 55%; }
+  .table .cover { object-position: 50% 50%; }
+  .card-copy {
+    position: absolute;
+    z-index: 1;
+    right: clamp(22px, 3vw, 42px);
+    bottom: clamp(24px, 3.4vw, 46px);
+    left: clamp(22px, 3vw, 42px);
   }
-  .line {
+  .game-name {
     display: block;
-    margin-top: 6px;
+    font-family: var(--display);
+    font-size: clamp(30px, 3.4vw, 48px);
+    font-weight: 600;
+    letter-spacing: .07em;
+    line-height: 1.2;
+    text-shadow: 0 2px 18px rgba(0, 0, 0, .22);
+  }
+  .game-name-en {
+    display: block;
+    margin-top: 7px;
+    font-family: "Plus Jakarta Sans", "Avenir Next", "Segoe UI", sans-serif;
+    font-size: clamp(15px, 1.35vw, 19px);
+    font-weight: 600;
+    letter-spacing: .015em;
+  }
+  .description {
+    max-width: 32ch;
+    margin: 14px 0 0;
+    color: rgba(255, 255, 255, .92);
+    font-size: clamp(14px, 1.15vw, 16px);
+    line-height: 1.6;
+    text-shadow: 0 1px 8px rgba(0, 0, 0, .25);
+  }
+  .action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 46px;
+    margin-top: 20px;
+    padding: 0 20px;
+    border: 1px solid rgba(255, 255, 255, .82);
+    border-radius: 999px;
+    background: var(--rice);
+    color: var(--deep-leaf);
     font-size: 15px;
-    line-height: 1.5;
+    font-weight: 700;
+    box-shadow: 0 5px 18px rgba(15, 34, 18, .18);
+    transition: transform .2s ease, background-color .2s ease;
   }
-  .en {
-    display: block;
-    margin-top: 2px;
-    color: var(--mist);
-    font-size: 13px;
+  .table .action { color: #8c4229; }
+  .game-card:hover .cover { transform: scale(1.025); }
+  .game-card:hover .action { transform: translateY(-2px); background: #fff; }
+  .game-card:focus-visible {
+    outline: 3px solid var(--tomato);
+    outline-offset: 5px;
   }
-  .where {
-    margin-top: 48px;
-    color: var(--mist);
-    font-size: 12px;
+  @media (max-width: 680px) {
+    main {
+      padding-right: 16px;
+      padding-left: 16px;
+    }
+    .masthead { margin-bottom: 18px; }
+    .mark { width: clamp(116px, 37vw, 148px); }
+    h1 { font-size: clamp(20px, 5.2vw, 25px); }
+    nav.games {
+      flex: none;
+      grid-template-columns: 1fr;
+      gap: 14px;
+      min-height: 0;
+    }
+    .game-card {
+      min-height: clamp(250px, 36svh, 360px);
+      border-radius: 22px;
+    }
+    .card-copy { right: 22px; bottom: 22px; left: 22px; }
+    .game-name { font-size: clamp(29px, 8vw, 38px); }
+    .game-name-en { margin-top: 5px; font-size: 15px; }
+    .description { margin-top: 10px; font-size: 14px; }
+    .action { min-height: 42px; margin-top: 14px; font-size: 14px; }
+  }
+  @media (max-width: 360px) {
+    main { padding-right: 12px; padding-left: 12px; }
+    .game-card { min-height: 246px; }
+    .card-copy { right: 18px; left: 18px; }
+    .description { max-width: 28ch; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; }
   }
 </style>
 </head>
 <body>
 <main>
-  <img class="mark" src="/src/assets/images/logo-horizontal-560.webp" alt="东方超市 · Eastern Market">
-  <h1>想玩哪一个</h1>
-  <p class="lede">农场种菜，积分进会员卡。一桌是把今晚的菜摆好。</p>
-  <p class="lede en">Grow on the farm, or set the table tonight.</p>
-  <nav aria-label="游戏">
-    <a class="door" href="/src/index.html">
-      <span class="plate farm"><img src="/src/assets/images/splash-keyart.jpg" alt=""></span>
-      <span>
-        <span class="zh">东方农场</span>
-        <span class="line">进去种菜。</span>
-        <span class="en">Eastern Farm</span>
+  <header class="masthead">
+    <h1>选择游戏</h1>
+    <img class="mark" src="src/assets/images/logo-horizontal-560.webp" alt="东方超市 · Eastern Market">
+  </header>
+  <nav class="games" aria-label="选择游戏">
+    <a class="game-card farm" href="/src/index.html" aria-label="进入东方农场 Eastern Farm">
+      <img class="cover" src="src/assets/images/splash-keyart.jpg" alt="" fetchpriority="high">
+      <span class="card-copy">
+        <span class="game-name">东方农场</span>
+        <span class="game-name-en">Eastern Farm</span>
+        <span class="description">种菜、收获，经营自己的农场。</span>
+        <span class="action">进入农场</span>
       </span>
     </a>
-    <a class="door" href="/src/dinner.html">
-      <span class="plate table"><img src="https://recipe.easternmarket.ca/assets/images/steamed-crab.jpg" alt=""></span>
-      <span>
-        <span class="zh">东家一桌</span>
-        <span class="line">摆上三道菜。</span>
-        <span class="en">Set the table</span>
+    <a class="game-card table" href="/src/dinner.html" aria-label="打开今晚餐桌 Tonight’s Table">
+      <img class="cover" src="https://recipe.easternmarket.ca/assets/images/steamed-crab.jpg" alt="">
+      <span class="card-copy">
+        <span class="game-name">今晚餐桌</span>
+        <span class="game-name-en">Tonight’s Table</span>
+        <span class="description">选好今晚的三道菜，摆上餐桌。</span>
+        <span class="action">选今晚的菜</span>
       </span>
     </a>
   </nav>
-  <p class="where">Saskatoon · 133-412 Willowgrove Square</p>
 </main>
 </body>
 </html>
