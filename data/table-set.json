@@ -1,0 +1,46 @@
+{
+  "dishes": [
+    {
+      "id": "tomato-egg",
+      "zh": "番茄炒蛋",
+      "en": "Stir-Fried Tomato and Egg",
+      "image": "https://recipe.easternmarket.ca/assets/images/tomato-egg-ai-202609.jpg",
+      "recipe": "https://recipe.easternmarket.ca/r/tomato-egg.html"
+    },
+    {
+      "id": "mapo-tofu",
+      "zh": "麻婆豆腐",
+      "en": "Mapo Tofu",
+      "image": "https://recipe.easternmarket.ca/assets/images/mapo-tofu-ai-202609.jpg",
+      "recipe": "https://recipe.easternmarket.ca/r/mapo-tofu.html"
+    },
+    {
+      "id": "choy-sum",
+      "zh": "白灼菜心",
+      "en": "Blanched Choy Sum with Soy Sauce",
+      "image": "https://recipe.easternmarket.ca/assets/images/blanched-choy-sum-ai-202609.jpg",
+      "recipe": "https://recipe.easternmarket.ca/r/blanched-choy-sum.html"
+    },
+    {
+      "id": "pork-pepper",
+      "zh": "青椒肉末",
+      "en": "Minced Pork with Green Peppers",
+      "image": "https://recipe.easternmarket.ca/assets/images/pork-green-pepper-ai-202609.jpg",
+      "recipe": "https://recipe.easternmarket.ca/r/pork-green-pepper.html"
+    },
+    {
+      "id": "gai-lan",
+      "zh": "蚝油芥兰",
+      "en": "Gai Lan with Oyster Sauce",
+      "image": "https://recipe.easternmarket.ca/assets/images/gai-lan-oyster-sauce-ai-202609.jpg",
+      "recipe": "https://recipe.easternmarket.ca/r/gai-lan-oyster-sauce.html"
+    },
+    {
+      "id": "wintermelon",
+      "zh": "冬瓜虾仁汤",
+      "en": "Winter Melon and Shrimp Soup",
+      "image": "https://recipe.easternmarket.ca/assets/images/wintermelon-shrimp-soup-ai-202609.jpg",
+      "recipe": "https://recipe.easternmarket.ca/r/wintermelon-shrimp-soup.html"
+    }
+  ]
+}

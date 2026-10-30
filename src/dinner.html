@@ -3,25 +3,33 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#16110e">
-<meta name="description" content="今晚吃什么。六十秒把对的食材下锅，做对了，下次到东方超市买那样可以减 $1。">
-<title>今晚吃什么 · Eastern Market</title>
-<meta property="og:title" content="今晚吃什么 · 东方超市">
-<meta property="og:description" content="点对的下锅。做对了，下次买这味减 $1。">
+<meta name="theme-color" content="#f7fbf8">
+<meta name="description" content="东家一桌。把今晚的三道菜放到桌上。东方超市。">
+<title>东家一桌 · 东方超市</title>
+<meta property="og:title" content="东家一桌 · 东方超市">
+<meta property="og:description" content="把今晚的三道菜放到桌上。">
 <meta property="og:locale" content="zh_CN">
 <link rel="icon" href="assets/images/logo-horizontal-560.webp">
-<link rel="stylesheet" href="css/dinner.css">
+<link rel="stylesheet" href="css/dinner.css?v=5">
 </head>
 <body>
-  <div class="kitchen">
-    <header class="mast">
-      <img src="assets/images/logo-horizontal-560.webp" alt="东方超市 Eastern Market" width="560" height="200">
-    </header>
-    <main id="stage"></main>
-    <p class="hours" id="hours"></p>
-  </div>
-  <script src="js/dinner-art.js"></script>
-  <script src="js/dinner-rules.js"></script>
-  <script src="js/dinner-play.js"></script>
+  <main class="world" id="world">
+    <img class="mark" src="assets/images/logo-horizontal-560.webp" alt="东方超市 Eastern Market">
+    <div class="table" id="table">
+      <div class="surface" id="surface">
+        <div class="seat" data-seat="0"></div>
+        <div class="seat" data-seat="1"></div>
+        <div class="seat" data-seat="2"></div>
+      </div>
+    </div>
+    <div class="pass" id="pass"></div>
+    <p class="note" id="note" hidden></p>
+    <p class="settle" id="settle" hidden>这桌好了</p>
+    <p class="settle-en" id="settleEn" hidden>The table is ready.</p>
+    <ul class="menu" id="menu" hidden></ul>
+    <p class="hours" id="hours" hidden>周一至周六 10:00–18:30 · 133-412 Willowgrove Square</p>
+    <button type="button" class="send" id="send" hidden>给家里人看</button>
+  </main>
+  <script src="js/table.js"></script>
 </body>
 </html>
