@@ -70,7 +70,7 @@ self.addEventListener('notificationclick', (event) => {
 
 // CACHE_VERSION 由 deploy.sh 在每次部署时自动注入时间戳（ef-YYMMDDHHMM），
 // 不再手动 +1 —— 忘 bump 会让全体 PWA 用户静默停在旧版（iOS 要删 App 才能救）。
-const CACHE_VERSION = 'ef-2610301603';
+const CACHE_VERSION = 'ef-2610301709';
 const CACHE = 'eastern-farm-' + CACHE_VERSION;
 // Precache the FULL app shell — HTML + CSS + every JS module + data JSON — so a SW
 // update (which clears the old cache) followed by a flaky mobile network can never leave
@@ -78,7 +78,7 @@ const CACHE = 'eastern-farm-' + CACHE_VERSION;
 // stuck-can't-enter). Images stay network-first/on-demand (the game degrades gracefully
 // without them). Cached individually below so one missing file can't block the rest.
 const PRECACHE = [
-  '/',                       // root redirect page — cached so a navigation fallback to "/" keeps correct relative paths
+  '/',                       // 游戏入口主页。导航失败时优先回 /src/index.html，这里是第二选择
   '/fix.html',               // 🔒 急救页必须预缓存：它是"别的都打不开时"的出路，自己绝不能依赖网络
   '/src/index.html',
   '/src/css/style.css',

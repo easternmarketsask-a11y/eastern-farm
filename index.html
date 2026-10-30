@@ -2,12 +2,155 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="refresh" content="0; url=src/index.html">
-<title>东方农场 · Eastern Farm</title>
-<link rel="canonical" href="src/index.html">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>游戏 · 东方超市</title>
+<meta name="description" content="东方超市的两个游戏。东方农场种菜，积分进会员卡。东家一桌把今晚的三道菜放到桌上。">
+<meta name="theme-color" content="#f7fbf8">
+<link rel="canonical" href="https://farm.easternmarket.ca/">
+<style>
+  :root {
+    --paper: #f7fbf8;
+    --ink: #24382c;
+    --green: #3a8c50;
+    --green-d: #2a5c34;
+    --mist: #6d917c;
+    --line: #d5e6db;
+    --song: "Songti SC", "STSong", "Noto Serif CJK SC", "Source Han Serif SC", "PMingLiU", "SimSun", serif;
+    --ui: "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "Microsoft YaHei", sans-serif;
+    color-scheme: light;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; }
+  body {
+    min-height: 100dvh;
+    color: var(--ink);
+    font-family: var(--ui);
+    font-weight: 400;
+    background:
+      radial-gradient(ellipse 90% 42% at 50% -8%, #ffffff 0%, rgba(255, 255, 255, 0) 70%),
+      linear-gradient(180deg, #ffffff 0%, var(--paper) 34%, #e7f2eb 100%);
+  }
+  main {
+    min-height: 100dvh;
+    max-width: 440px;
+    margin: 0 auto;
+    padding: max(28px, env(safe-area-inset-top)) 28px max(32px, env(safe-area-inset-bottom));
+    display: flex;
+    flex-direction: column;
+  }
+  .mark {
+    width: min(168px, 46vw);
+    height: auto;
+    margin: 8px 0 36px;
+    mix-blend-mode: multiply;
+  }
+  h1 {
+    margin: 0;
+    font-family: var(--song);
+    font-weight: 500;
+    font-size: 34px;
+    letter-spacing: 0.06em;
+    line-height: 1.25;
+  }
+  .lede {
+    margin: 12px 0 0;
+    max-width: 28em;
+    font-size: 16px;
+    line-height: 1.65;
+  }
+  .lede.en {
+    margin-top: 4px;
+    color: var(--mist);
+    font-size: 14px;
+  }
+  nav {
+    margin-top: 28px;
+    border-bottom: 1px solid var(--line);
+  }
+  .door {
+    display: grid;
+    grid-template-columns: 104px 1fr;
+    gap: 18px;
+    align-items: center;
+    padding: 18px 0;
+    border-top: 1px solid var(--line);
+    color: inherit;
+    text-decoration: none;
+  }
+  .door:focus-visible {
+    outline: 2px solid var(--green);
+    outline-offset: 4px;
+  }
+  .plate {
+    width: 104px;
+    height: 104px;
+    padding: 7px;
+    border-radius: 50%;
+    background: #fff;
+    border: 1px solid var(--line);
+    box-shadow: 0 10px 22px rgba(42, 92, 52, 0.08);
+  }
+  .plate img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+    display: block;
+  }
+  .plate.farm img { object-position: 50% 62%; }
+  .plate.table img { object-position: center 42%; }
+  .zh {
+    display: block;
+    font-family: var(--song);
+    font-size: 22px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    color: var(--green-d);
+  }
+  .line {
+    display: block;
+    margin-top: 6px;
+    font-size: 15px;
+    line-height: 1.5;
+  }
+  .en {
+    display: block;
+    margin-top: 2px;
+    color: var(--mist);
+    font-size: 13px;
+  }
+  .where {
+    margin-top: 48px;
+    color: var(--mist);
+    font-size: 12px;
+  }
+</style>
 </head>
 <body>
-<p>Redirecting to <a href="src/index.html">Eastern Farm</a>&hellip;</p>
-<script>location.replace('src/index.html');</script>
+<main>
+  <img class="mark" src="/src/assets/images/logo-horizontal-560.webp" alt="东方超市 · Eastern Market">
+  <h1>想玩哪一个</h1>
+  <p class="lede">农场种菜，积分进会员卡。一桌是把今晚的菜摆好。</p>
+  <p class="lede en">Grow on the farm, or set the table tonight.</p>
+  <nav aria-label="游戏">
+    <a class="door" href="/src/index.html">
+      <span class="plate farm"><img src="/src/assets/images/splash-keyart.jpg" alt=""></span>
+      <span>
+        <span class="zh">东方农场</span>
+        <span class="line">进去种菜。</span>
+        <span class="en">Eastern Farm</span>
+      </span>
+    </a>
+    <a class="door" href="/src/dinner.html">
+      <span class="plate table"><img src="https://recipe.easternmarket.ca/assets/images/steamed-crab.jpg" alt=""></span>
+      <span>
+        <span class="zh">东家一桌</span>
+        <span class="line">摆上三道菜。</span>
+        <span class="en">Set the table</span>
+      </span>
+    </a>
+  </nav>
+  <p class="where">Saskatoon · 133-412 Willowgrove Square</p>
+</main>
 </body>
 </html>
