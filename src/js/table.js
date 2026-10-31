@@ -491,17 +491,38 @@
     }
   });
 
-  fetch('../data/table-set.json')
-    .then(function (r) { return r.json(); })
-    .then(function (data) {
-      var dishes = data.dishes.slice();
-      state.current = dishes.shift();
-      state.queue = dishes;
-      dishes.concat(state.current ? [state.current] : []).forEach(function (d) {
-        var img = new Image();
-        img.src = d.image;
-      });
-      renderPass();
+  function acceptSet(data) {
+    var dishes = (data && data.dishes) ? data.dishes.slice() : [];
+    var soups = 0;
+    var mains = 0;
+    dishes.forEach(function (d) {
+      if (d && d.role === 'soup') soups += 1;
+      else mains += 1;
+    });
+    if (soups < 1 || mains < 4) throw new Error('short');
+    state.current = dishes.shift();
+    state.queue = dishes;
+    dishes.concat(state.current ? [state.current] : []).forEach(function (d) {
+      var img = new Image();
+      img.src = d.image;
+    });
+    renderPass();
+  }
+
+  var liveOpts = { credentials: 'omit', cache: 'no-store' };
+  if (typeof AbortSignal !== 'undefined' && AbortSignal.timeout) {
+    liveOpts.signal = AbortSignal.timeout(4000);
+  }
+  fetch('https://stockwise-app-873982544406.us-central1.run.app/api/public/tonight-table', liveOpts)
+    .then(function (r) {
+      if (!r.ok) throw new Error('live');
+      return r.json();
+    })
+    .then(function (data) { return acceptSet(data); })
+    .catch(function () {
+      return fetch('../data/table-set.json')
+        .then(function (r) { return r.json(); })
+        .then(function (data) { return acceptSet(data); });
     })
     .catch(function () {
       pass.textContent = '这桌还没摆好。请再打开一次。';
