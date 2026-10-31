@@ -11,7 +11,7 @@
   var menu = document.getElementById('menu');
   var seatEls = Array.prototype.slice.call(document.querySelectorAll('.seat'));
   var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  var state = { queue: [], current: null, seats: [null, null, null], done: false };
+  var state = { queue: [], current: null, seats: [], done: false };
   var drag = null;
   var audioCtx = null;
   var noteTimer = 0;
@@ -101,19 +101,34 @@
     });
   }
 
-  function nearestSeat(x, y) {
+  state.seats = seatEls.map(function () { return null; });
+
+  function dishAt(origin) {
+    return origin === 'pass' ? state.current : state.seats[origin];
+  }
+
+  function accepts(index, dish) {
+    if (!dish) return false;
+    return seatEls[index].classList.contains('soup') === (dish.role === 'soup');
+  }
+
+  function nearestSeat(x, y, dish) {
     var best = null;
     var bestD = Infinity;
+    var wrong = null;
+    var wrongD = Infinity;
     seatEls.forEach(function (el, i) {
       if (state.seats[i] && !(drag && drag.origin === i)) return;
       var r = el.getBoundingClientRect();
       var d = Math.hypot(x - (r.left + r.width / 2), y - (r.top + r.height / 2));
-      if (d < r.width * 0.72 && d < bestD) {
-        best = i;
-        bestD = d;
+      if (d >= r.width * 0.85) return;
+      if (!accepts(i, dish)) {
+        if (d < wrongD) { wrong = i; wrongD = d; }
+        return;
       }
+      if (d < bestD) { best = i; bestD = d; }
     });
-    return best;
+    return { seat: best, wrong: best === null ? wrong : null };
   }
 
   function showNote(text) {
@@ -200,7 +215,7 @@
     if (Math.hypot(e.clientX - drag.x0, e.clientY - drag.y0) > 8) drag.far = true;
     drag.plate.style.left = (e.clientX - drag.dx) + 'px';
     drag.plate.style.top = (e.clientY - drag.dy) + 'px';
-    highlight(nearestSeat(e.clientX, e.clientY));
+    highlight(nearestSeat(e.clientX, e.clientY, dishAt(drag.origin)).seat);
   }
 
   function onUp(e) {
@@ -208,7 +223,7 @@
     var plate = drag.plate;
     var origin = drag.origin;
     var far = drag.far;
-    var seat = nearestSeat(e.clientX, e.clientY);
+    var hit = nearestSeat(e.clientX, e.clientY, dishAt(origin));
     var below = e.clientY > table.getBoundingClientRect().bottom + 6;
     highlight(-1);
     drag = null;
@@ -218,8 +233,14 @@
       else land(plate, seatEls[origin], false);
       return;
     }
-    if (seat !== null) {
-      place(origin, seat, plate);
+    if (hit.seat !== null) {
+      place(origin, hit.seat, plate);
+      return;
+    }
+    if (hit.wrong !== null) {
+      if (origin === 'pass') land(plate, pass, false);
+      else land(plate, seatEls[origin], false);
+      showNote(dishAt(origin) && dishAt(origin).role === 'soup' ? '汤放在中间的碗里。' : '这只碗是用来放汤的。');
       return;
     }
     if (origin === 'pass' && below) {
@@ -324,10 +345,10 @@
 
   send.addEventListener('click', function () {
     var lines = state.seats.map(function (d) { return d.zh + '  ' + d.en; }).join('\n');
-    var text = '这桌好了\n' + lines + '\n东方超市 Eastern Market';
+    var text = '今晚餐桌\n' + lines + '\n东方超市 Eastern Market';
     var url = location.href;
     if (navigator.share) {
-      navigator.share({ title: '东家一桌', text: text, url: url }).catch(function () {});
+      navigator.share({ title: '今晚餐桌', text: text, url: url }).catch(function () {});
       return;
     }
     if (navigator.clipboard && navigator.clipboard.writeText) {
