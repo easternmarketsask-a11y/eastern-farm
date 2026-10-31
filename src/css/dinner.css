@@ -77,9 +77,10 @@ body {
   -webkit-user-select: none;
 }
 .surface.is-manual-turn,
-.surface.is-auto-turn { transition: none; }
+.surface.is-spinning { transition: none; }
 .surface.is-manual-turn { cursor: grabbing; }
-.surface.is-stepping-turn { transition-duration: .65s; }
+.surface.is-key-turn { transition-duration: .32s; }
+.surface.is-ready:focus-visible { outline: 3px solid #E8522A; outline-offset: 4px; }
 
 .seat {
   position: absolute;
@@ -124,57 +125,9 @@ body {
 }
 .world.is-ready .pass { display: none; }
 
-.turn-controls {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  margin-top: 16px;
-}
-.turn-controls[hidden],
 .turn-hint[hidden],
 .ready-copy[hidden],
 .ready-copy-en[hidden] { display: none; }
-.turn-step,
-.turn-auto {
-  height: 48px;
-  font-family: var(--ui);
-  border: 1px solid rgba(42, 92, 52, .22);
-  background: rgba(255, 255, 255, .88);
-  color: var(--green-d);
-  box-shadow: 0 5px 14px rgba(42, 92, 52, .08);
-  cursor: pointer;
-  transition: background-color .2s ease, transform .2s ease, box-shadow .2s ease;
-}
-.turn-step {
-  width: 48px;
-  padding: 0;
-  border-radius: 50%;
-  font-family: var(--ui);
-  font-size: 27px;
-  line-height: 1;
-}
-.turn-auto {
-  min-width: 156px;
-  padding: 4px 18px 5px;
-  border-radius: 24px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-}
-.turn-label { font-size: 14px; font-weight: 600; }
-.turn-label-en { margin-top: 1px; font-size: 10px; letter-spacing: .02em; }
-.turn-auto[aria-pressed="true"] {
-  background: var(--green-d);
-  border-color: var(--green-d);
-  color: #fff;
-  box-shadow: 0 6px 18px rgba(42, 92, 52, .2);
-}
-.turn-step:hover,
-.turn-auto:hover { transform: translateY(-1px); box-shadow: 0 7px 18px rgba(42, 92, 52, .14); }
-.turn-step:focus-visible,
-.turn-auto:focus-visible { outline: 3px solid #E8522A; outline-offset: 3px; }
 .turn-hint {
   margin: 7px 0 0;
   color: var(--mist);
@@ -202,10 +155,10 @@ body {
   transform: rotate(calc(0deg - var(--table-angle, 0deg)));
 }
 .surface.is-manual-turn .plate.is-set,
-.surface.is-auto-turn .plate.is-set {
+.surface.is-spinning .plate.is-set {
   transition: none;
 }
-.surface.is-stepping-turn .plate.is-set { transition-duration: .65s; }
+.surface.is-key-turn .plate.is-set { transition-duration: .32s; }
 
 .disc {
   width: 136px;

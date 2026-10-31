@@ -9,20 +9,27 @@
   var send = document.getElementById('send');
   var note = document.getElementById('note');
   var menu = document.getElementById('menu');
-  var turnControls = document.getElementById('turnControls');
   var turnHint = document.getElementById('turnHint');
-  var turnAuto = document.getElementById('turnAuto');
-  var turnLabel = document.getElementById('turnLabel');
-  var turnLabelEn = document.getElementById('turnLabelEn');
-  var turnLeft = document.getElementById('turnLeft');
-  var turnRight = document.getElementById('turnRight');
   var readyCopy = document.getElementById('readyCopy');
   var readyCopyEn = document.getElementById('readyCopyEn');
   var seatEls = Array.prototype.slice.call(document.querySelectorAll('.seat'));
   var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   var state = { queue: [], current: null, seats: [], done: false };
   var drag = null;
-  var rotation = { angle: 0, auto: false, raf: 0, lastTime: 0, drag: null, stepTimer: 0 };
+  var rotation = {
+    angle: 0,
+    raf: 0,
+    lastTime: 0,
+    drag: null,
+    velocity: 0,
+    keyTimer: 0,
+    suppressClickPlate: null,
+    suppressClickTimer: 0
+  };
+  var ROTATION_DEGREES_PER_PIXEL = 1.05;
+  var SPIN_FRICTION_MS = 420;
+  var MAX_SPIN_SPEED = 1.4;
+  var MIN_SPIN_SPEED = 0.025;
   var audioCtx = null;
   var noteTimer = 0;
 
@@ -153,67 +160,55 @@
     surface.style.setProperty('--table-angle', rotation.angle + 'deg');
   }
 
-  function updateAutoButton() {
-    var active = rotation.auto;
-    turnAuto.setAttribute('aria-pressed', active ? 'true' : 'false');
-    turnLabel.textContent = active ? '暂停转动' : '自动转动';
-    turnLabelEn.textContent = active ? 'Pause rotation' : 'Auto rotate';
-  }
-
-  function stopAutoTurn() {
-    if (!rotation.auto) return;
-    rotation.auto = false;
+  function stopSpin() {
     if (rotation.raf) cancelAnimationFrame(rotation.raf);
     rotation.raf = 0;
     rotation.lastTime = 0;
-    surface.classList.remove('is-auto-turn');
-    updateAutoButton();
+    rotation.velocity = 0;
+    surface.classList.remove('is-spinning', 'is-key-turn');
+    clearTimeout(rotation.keyTimer);
+    rotation.keyTimer = 0;
   }
 
-  function autoTurnFrame(now) {
-    if (!rotation.auto) return;
-    if (rotation.lastTime) setTableAngle(rotation.angle + Math.min(now - rotation.lastTime, 50) * 0.006);
+  function spinFrame(now) {
+    if (rotation.lastTime) {
+      var elapsed = Math.min(now - rotation.lastTime, 50);
+      if (elapsed > 0) {
+        setTableAngle(rotation.angle + rotation.velocity * elapsed);
+        rotation.velocity *= Math.exp(-elapsed / SPIN_FRICTION_MS);
+      }
+    }
     rotation.lastTime = now;
-    rotation.raf = requestAnimationFrame(autoTurnFrame);
-  }
-
-  function toggleAutoTurn() {
-    if (!state.done) return;
-    if (rotation.auto) {
-      stopAutoTurn();
+    if (Math.abs(rotation.velocity) < MIN_SPIN_SPEED) {
+      stopSpin();
       return;
     }
-    rotation.auto = true;
-    rotation.lastTime = 0;
-    surface.classList.add('is-auto-turn');
-    updateAutoButton();
-    rotation.raf = requestAnimationFrame(autoTurnFrame);
+    rotation.raf = requestAnimationFrame(spinFrame);
   }
 
-  function stepTurn(direction) {
-    if (!state.done) return;
-    stopAutoTurn();
-    clearTimeout(rotation.stepTimer);
-    surface.classList.add('is-stepping-turn');
-    setTableAngle(rotation.angle + direction * 45);
-    rotation.stepTimer = setTimeout(function () {
-      surface.classList.remove('is-stepping-turn');
-      rotation.stepTimer = 0;
-    }, 700);
+  function startSpin(velocity) {
+    if (reduce || Math.abs(velocity) < MIN_SPIN_SPEED) return;
+    rotation.velocity = Math.max(-MAX_SPIN_SPEED, Math.min(MAX_SPIN_SPEED, velocity));
+    rotation.lastTime = 0;
+    surface.classList.add('is-spinning');
+    rotation.raf = requestAnimationFrame(spinFrame);
   }
 
   function beginManualTurn(e) {
-    if (!state.done || turnControls.hidden || e.target !== surface || (e.button != null && e.button !== 0)) return;
-    stopAutoTurn();
-    clearTimeout(rotation.stepTimer);
-    rotation.stepTimer = 0;
-    surface.classList.remove('is-stepping-turn');
-    var rect = surface.getBoundingClientRect();
+    if (!state.done || !surface.classList.contains('is-ready') || rotation.drag || (e.button != null && e.button !== 0)) return;
+    var wasSpinning = surface.classList.contains('is-spinning');
+    var plate = e.target.closest ? e.target.closest('.plate') : null;
+    stopSpin();
     rotation.drag = {
       pointerId: e.pointerId,
-      centerX: rect.left + rect.width / 2,
-      centerY: rect.top + rect.height / 2,
-      pointerAngle: Math.atan2(e.clientY - (rect.top + rect.height / 2), e.clientX - (rect.left + rect.width / 2))
+      startX: e.clientX,
+      startY: e.clientY,
+      lastX: e.clientX,
+      lastTime: performance.now(),
+      velocity: 0,
+      moved: false,
+      plate: plate,
+      wasSpinning: wasSpinning
     };
     surface.classList.add('is-manual-turn');
     try { surface.setPointerCapture(e.pointerId); } catch (err) {}
@@ -222,20 +217,56 @@
 
   function moveManualTurn(e) {
     if (!rotation.drag || e.pointerId !== rotation.drag.pointerId) return false;
-    var current = Math.atan2(e.clientY - rotation.drag.centerY, e.clientX - rotation.drag.centerX);
-    var delta = current - rotation.drag.pointerAngle;
-    if (delta > Math.PI) delta -= Math.PI * 2;
-    if (delta < -Math.PI) delta += Math.PI * 2;
-    setTableAngle(rotation.angle + delta * 180 / Math.PI);
-    rotation.drag.pointerAngle = current;
+    if (Math.hypot(e.clientX - rotation.drag.startX, e.clientY - rotation.drag.startY) > 8) {
+      rotation.drag.moved = true;
+    }
+    var deltaX = e.clientX - rotation.drag.lastX;
+    var now = performance.now();
+    var elapsed = Math.max(1, now - rotation.drag.lastTime);
+    var deltaAngle = deltaX * ROTATION_DEGREES_PER_PIXEL;
+    if (deltaX) {
+      setTableAngle(rotation.angle + deltaAngle);
+      var instantVelocity = deltaAngle / elapsed;
+      var smoothing = Math.min(1, elapsed / 55);
+      rotation.drag.velocity += (instantVelocity - rotation.drag.velocity) * smoothing;
+    }
+    rotation.drag.lastX = e.clientX;
+    rotation.drag.lastTime = now;
     return true;
   }
 
   function endManualTurn(e) {
     if (!rotation.drag || (e.pointerId != null && e.pointerId !== rotation.drag.pointerId)) return false;
+    var endedDrag = rotation.drag;
+    var idleTime = performance.now() - endedDrag.lastTime;
+    var velocity = e.type === 'pointercancel' || idleTime > 120
+      ? 0
+      : endedDrag.velocity * Math.exp(-idleTime / 140);
+    if (endedDrag.plate && (endedDrag.moved || endedDrag.wasSpinning)) {
+      rotation.suppressClickPlate = endedDrag.plate;
+      clearTimeout(rotation.suppressClickTimer);
+      rotation.suppressClickTimer = setTimeout(function () {
+        rotation.suppressClickPlate = null;
+        rotation.suppressClickTimer = 0;
+      }, 400);
+    }
     rotation.drag = null;
     surface.classList.remove('is-manual-turn');
+    startSpin(velocity);
     return true;
+  }
+
+  function turnWithKeyboard(e) {
+    if (!state.done || (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight')) return;
+    e.preventDefault();
+    stopSpin();
+    if (!reduce) surface.classList.add('is-key-turn');
+    setTableAngle(rotation.angle + (e.key === 'ArrowRight' ? 20 : -20));
+    if (reduce) return;
+    rotation.keyTimer = setTimeout(function () {
+      surface.classList.remove('is-key-turn');
+      rotation.keyTimer = 0;
+    }, 320);
   }
 
   function land(plate, parent, sound, done) {
@@ -409,27 +440,28 @@
     state.done = true;
     world.classList.add('is-ready');
     surface.classList.add('is-complete');
-    var controlsRevealed = false;
-    function revealTurnControls() {
-      if (controlsRevealed) return;
-      controlsRevealed = true;
+    var hintRevealed = false;
+    function revealTurnHint() {
+      if (hintRevealed) return;
+      hintRevealed = true;
       surface.classList.add('is-ready');
-      turnControls.hidden = false;
+      surface.tabIndex = 0;
+      if (reduce) turnHint.textContent = '左右拖动桌面可转动。 · Drag left or right to turn.';
       turnHint.hidden = false;
     }
     if (reduce) {
       setTableAngle(0);
-      revealTurnControls();
+      revealTurnHint();
     } else {
       var onInitialTurnEnd = function (e) {
         if (e.target !== surface || e.propertyName !== 'transform') return;
         surface.removeEventListener('transitionend', onInitialTurnEnd);
-        revealTurnControls();
+        revealTurnHint();
       };
       surface.addEventListener('transitionend', onInitialTurnEnd);
       setTimeout(function () {
         surface.removeEventListener('transitionend', onInitialTurnEnd);
-        revealTurnControls();
+        revealTurnHint();
       }, 1950);
       setTableAngle(12);
     }
@@ -472,9 +504,16 @@
   document.addEventListener('pointerup', onUp);
   document.addEventListener('pointercancel', onUp);
   surface.addEventListener('pointerdown', beginManualTurn);
-  turnLeft.addEventListener('click', function () { stepTurn(-1); });
-  turnRight.addEventListener('click', function () { stepTurn(1); });
-  turnAuto.addEventListener('click', toggleAutoTurn);
+  surface.addEventListener('keydown', turnWithKeyboard);
+  surface.addEventListener('click', function (e) {
+    var plate = e.target.closest ? e.target.closest('.plate') : null;
+    if (!plate || plate !== rotation.suppressClickPlate) return;
+    rotation.suppressClickPlate = null;
+    clearTimeout(rotation.suppressClickTimer);
+    rotation.suppressClickTimer = 0;
+    e.preventDefault();
+    e.stopPropagation();
+  }, true);
 
   send.addEventListener('click', function () {
     var lines = state.seats.map(function (d) { return d.zh + '  ' + d.en; }).join('\n');

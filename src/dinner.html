@@ -10,13 +10,13 @@
 <meta property="og:description" content="四道菜，一碗汤。">
 <meta property="og:locale" content="zh_CN">
 <link rel="icon" href="assets/images/logo-horizontal-560.webp">
-<link rel="stylesheet" href="css/dinner.css?v=7">
+<link rel="stylesheet" href="css/dinner.css?v=8">
 </head>
 <body>
   <main class="world" id="world">
     <img class="mark" src="assets/images/logo-horizontal-560.webp" alt="东方超市 Eastern Market">
     <div class="table" id="table">
-      <div class="surface" id="surface">
+      <div class="surface" id="surface" role="group" aria-label="餐桌完成后可拖动旋转，也可用左右方向键旋转。 Drag to rotate the finished table, or use the arrow keys.">
         <div class="seat" data-seat="0"></div>
         <div class="seat" data-seat="1"></div>
         <div class="seat" data-seat="2"></div>
@@ -28,21 +28,13 @@
     <p class="settle-en" id="settleEn" hidden>Tonight’s Table</p>
     <p class="ready-copy" id="readyCopy" hidden>四道菜和一碗汤，今晚已经备好。</p>
     <p class="ready-copy-en" id="readyCopyEn" hidden>Four dishes and soup are ready for tonight.</p>
-    <div class="turn-controls" id="turnControls" role="group" aria-label="餐桌旋转控制" hidden>
-      <button class="turn-step" id="turnLeft" type="button" aria-label="餐桌向左转四十五度">↶</button>
-      <button class="turn-auto" id="turnAuto" type="button" aria-pressed="false">
-        <span class="turn-label" id="turnLabel">自动转动</span>
-        <span class="turn-label-en" id="turnLabelEn">Auto rotate</span>
-      </button>
-      <button class="turn-step" id="turnRight" type="button" aria-label="餐桌向右转四十五度">↷</button>
-    </div>
-    <p class="turn-hint" id="turnHint" hidden>拖动桌面也可以转动。 · Drag the table to turn.</p>
+    <p class="turn-hint" id="turnHint" hidden>左右拖动桌面可转动，甩动后会继续旋转。 · Drag left or right; flick to keep it spinning.</p>
     <div class="pass" id="pass"></div>
     <p class="note" id="note" hidden></p>
     <ul class="menu" id="menu" hidden></ul>
     <p class="hours" id="hours" hidden>周一至周六 10:00–18:30 · 133-412 Willowgrove Square</p>
     <button type="button" class="send" id="send" hidden>给家里人看</button>
   </main>
-  <script src="js/table.js?v=5"></script>
+  <script src="js/table.js?v=6"></script>
 </body>
 </html>
