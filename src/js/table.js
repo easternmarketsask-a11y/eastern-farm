@@ -9,10 +9,20 @@
   var send = document.getElementById('send');
   var note = document.getElementById('note');
   var menu = document.getElementById('menu');
+  var turnControls = document.getElementById('turnControls');
+  var turnHint = document.getElementById('turnHint');
+  var turnAuto = document.getElementById('turnAuto');
+  var turnLabel = document.getElementById('turnLabel');
+  var turnLabelEn = document.getElementById('turnLabelEn');
+  var turnLeft = document.getElementById('turnLeft');
+  var turnRight = document.getElementById('turnRight');
+  var readyCopy = document.getElementById('readyCopy');
+  var readyCopyEn = document.getElementById('readyCopyEn');
   var seatEls = Array.prototype.slice.call(document.querySelectorAll('.seat'));
   var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   var state = { queue: [], current: null, seats: [], done: false };
   var drag = null;
+  var rotation = { angle: 0, auto: false, raf: 0, lastTime: 0, drag: null, stepTimer: 0 };
   var audioCtx = null;
   var noteTimer = 0;
 
@@ -138,6 +148,96 @@
     noteTimer = setTimeout(function () { note.hidden = true; }, 2600);
   }
 
+  function setTableAngle(angle) {
+    rotation.angle = ((angle % 360) + 360) % 360;
+    surface.style.setProperty('--table-angle', rotation.angle + 'deg');
+  }
+
+  function updateAutoButton() {
+    var active = rotation.auto;
+    turnAuto.setAttribute('aria-pressed', active ? 'true' : 'false');
+    turnLabel.textContent = active ? '暂停转动' : '自动转动';
+    turnLabelEn.textContent = active ? 'Pause rotation' : 'Auto rotate';
+  }
+
+  function stopAutoTurn() {
+    if (!rotation.auto) return;
+    rotation.auto = false;
+    if (rotation.raf) cancelAnimationFrame(rotation.raf);
+    rotation.raf = 0;
+    rotation.lastTime = 0;
+    surface.classList.remove('is-auto-turn');
+    updateAutoButton();
+  }
+
+  function autoTurnFrame(now) {
+    if (!rotation.auto) return;
+    if (rotation.lastTime) setTableAngle(rotation.angle + Math.min(now - rotation.lastTime, 50) * 0.006);
+    rotation.lastTime = now;
+    rotation.raf = requestAnimationFrame(autoTurnFrame);
+  }
+
+  function toggleAutoTurn() {
+    if (!state.done) return;
+    if (rotation.auto) {
+      stopAutoTurn();
+      return;
+    }
+    rotation.auto = true;
+    rotation.lastTime = 0;
+    surface.classList.add('is-auto-turn');
+    updateAutoButton();
+    rotation.raf = requestAnimationFrame(autoTurnFrame);
+  }
+
+  function stepTurn(direction) {
+    if (!state.done) return;
+    stopAutoTurn();
+    clearTimeout(rotation.stepTimer);
+    surface.classList.add('is-stepping-turn');
+    setTableAngle(rotation.angle + direction * 45);
+    rotation.stepTimer = setTimeout(function () {
+      surface.classList.remove('is-stepping-turn');
+      rotation.stepTimer = 0;
+    }, 700);
+  }
+
+  function beginManualTurn(e) {
+    if (!state.done || turnControls.hidden || e.target !== surface || (e.button != null && e.button !== 0)) return;
+    stopAutoTurn();
+    clearTimeout(rotation.stepTimer);
+    rotation.stepTimer = 0;
+    surface.classList.remove('is-stepping-turn');
+    var rect = surface.getBoundingClientRect();
+    rotation.drag = {
+      pointerId: e.pointerId,
+      centerX: rect.left + rect.width / 2,
+      centerY: rect.top + rect.height / 2,
+      pointerAngle: Math.atan2(e.clientY - (rect.top + rect.height / 2), e.clientX - (rect.left + rect.width / 2))
+    };
+    surface.classList.add('is-manual-turn');
+    try { surface.setPointerCapture(e.pointerId); } catch (err) {}
+    e.preventDefault();
+  }
+
+  function moveManualTurn(e) {
+    if (!rotation.drag || e.pointerId !== rotation.drag.pointerId) return false;
+    var current = Math.atan2(e.clientY - rotation.drag.centerY, e.clientX - rotation.drag.centerX);
+    var delta = current - rotation.drag.pointerAngle;
+    if (delta > Math.PI) delta -= Math.PI * 2;
+    if (delta < -Math.PI) delta += Math.PI * 2;
+    setTableAngle(rotation.angle + delta * 180 / Math.PI);
+    rotation.drag.pointerAngle = current;
+    return true;
+  }
+
+  function endManualTurn(e) {
+    if (!rotation.drag || (e.pointerId != null && e.pointerId !== rotation.drag.pointerId)) return false;
+    rotation.drag = null;
+    surface.classList.remove('is-manual-turn');
+    return true;
+  }
+
   function land(plate, parent, sound, done) {
     var disc = plate.querySelector('.disc');
     var first = disc.getBoundingClientRect();
@@ -211,6 +311,7 @@
   }
 
   function onMove(e) {
+    if (moveManualTurn(e)) return;
     if (!drag || e.pointerId !== drag.pid) return;
     if (Math.hypot(e.clientX - drag.x0, e.clientY - drag.y0) > 8) drag.far = true;
     drag.plate.style.left = (e.clientX - drag.dx) + 'px';
@@ -219,6 +320,7 @@
   }
 
   function onUp(e) {
+    if (endManualTurn(e)) return;
     if (!drag || e.pointerId !== drag.pid) return;
     var plate = drag.plate;
     var origin = drag.origin;
@@ -306,9 +408,35 @@
     if (state.done) return;
     state.done = true;
     world.classList.add('is-ready');
-    surface.classList.add('is-set');
+    surface.classList.add('is-complete');
+    var controlsRevealed = false;
+    function revealTurnControls() {
+      if (controlsRevealed) return;
+      controlsRevealed = true;
+      surface.classList.add('is-ready');
+      turnControls.hidden = false;
+      turnHint.hidden = false;
+    }
+    if (reduce) {
+      setTableAngle(0);
+      revealTurnControls();
+    } else {
+      var onInitialTurnEnd = function (e) {
+        if (e.target !== surface || e.propertyName !== 'transform') return;
+        surface.removeEventListener('transitionend', onInitialTurnEnd);
+        revealTurnControls();
+      };
+      surface.addEventListener('transitionend', onInitialTurnEnd);
+      setTimeout(function () {
+        surface.removeEventListener('transitionend', onInitialTurnEnd);
+        revealTurnControls();
+      }, 1950);
+      setTableAngle(12);
+    }
     settle.hidden = false;
     settleEn.hidden = false;
+    readyCopy.hidden = false;
+    readyCopyEn.hidden = false;
     hours.hidden = false;
     send.hidden = false;
     note.hidden = true;
@@ -316,6 +444,7 @@
     menu.innerHTML = '';
     state.seats.forEach(function (dish, i) {
       var li = document.createElement('li');
+      li.style.animationDelay = Math.min(i * 90, 360) + 'ms';
       var a = document.createElement('a');
       a.href = dish.recipe;
       a.target = '_blank';
@@ -342,6 +471,10 @@
   document.addEventListener('pointermove', onMove);
   document.addEventListener('pointerup', onUp);
   document.addEventListener('pointercancel', onUp);
+  surface.addEventListener('pointerdown', beginManualTurn);
+  turnLeft.addEventListener('click', function () { stepTurn(-1); });
+  turnRight.addEventListener('click', function () { stepTurn(1); });
+  turnAuto.addEventListener('click', toggleAutoTurn);
 
   send.addEventListener('click', function () {
     var lines = state.seats.map(function (d) { return d.zh + '  ' + d.en; }).join('\n');
