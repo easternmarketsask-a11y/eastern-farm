@@ -1,0 +1,24 @@
+/* Shared presentation; state and layout remain owned by each game. */
+:root {
+  --game-ink: #233e2e;
+  --game-green: #285c3b;
+  --game-green-hover: #1d4930;
+  --game-paper: #faf7ef;
+  --game-surface: #fffdf7;
+  --game-line: #d8d9c8;
+  --game-gold: #a77a39;
+  --game-muted: #5c6a58;
+  --game-focus: #9d441e;
+  --game-ease: cubic-bezier(.16, 1, .3, 1);
+  --game-font: 'Plus Jakarta Sans', 'Segoe UI', 'PingFang SC', 'Noto Sans SC', 'Microsoft YaHei', sans-serif;
+  --game-display: 'Noto Serif SC', 'Songti SC', 'STSong', 'SimSun', serif;
+}
+.game-home-link { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-width: 44px; min-height: 44px; padding: 8px 12px; border: 1px solid var(--game-line); border-radius: 14px; color: var(--game-green); background: var(--game-surface); font: 600 13px/1.3 var(--game-font); text-decoration: none; touch-action: manipulation; transition: background-color 160ms ease, transform 160ms ease; }
+.game-home-link svg { flex: 0 0 18px; width: 18px; height: 18px; }
+.game-home-link:hover { background: #edf1e5; }
+.game-home-link:active { transform: translateY(1px); }
+.game-home-link:focus-visible { outline: 3px solid var(--game-focus); outline-offset: 4px; }
+[hidden] { display: none !important; }
+::selection { background: #d6e4bd; color: #1e3c28; }
+html { scrollbar-color: #a5b094 #f5f3e8; }
+@media (prefers-reduced-motion: reduce) { .game-home-link { transition: none; } }

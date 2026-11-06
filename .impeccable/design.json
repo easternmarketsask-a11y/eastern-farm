@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-06T00:00:00-06:00",
+  "title": "Design System: Eastern Market Games",
+  "extensions": {
+    "shadows": [
+      { "name": "scene-lift", "value": "0 18px 42px -24px #263e2d99", "purpose": "Farm scene contact shadow." },
+      { "name": "ceramic-contact", "value": "0 9px 15px -7px #42513c99", "purpose": "Dishes resting on the tabletop." }
+    ],
+    "motion": [
+      { "name": "scene-ease", "value": "cubic-bezier(.16, 1, .3, 1)", "purpose": "Subtle scene interaction easing, disabled for reduced motion." }
+    ],
+    "breakpoints": [
+      { "name": "centre-stack", "value": "600px" },
+      { "name": "centre-compact", "value": "850px" }
+    ]
+  },
+  "components": [],
+  "narrative": {
+    "northStar": "Sunlit farm and family table",
+    "overview": "Existing painterly scenes with tactile cream and ceramic controls; readable bilingual type and clear next actions.",
+    "rules": ["Minimum 44px touch targets", "Preserve player progress and reward rules", "Respect reduced motion", "World Cup excluded"]
+  }
+}

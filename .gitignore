@@ -40,3 +40,6 @@ scripts/_shot_meadow.js
 scripts/_shot_keyart.js
 scripts/_shot_splash.js
 scripts/_shot_once.mjs
+
+# Local visual review evidence, not shipping assets
+.impeccable/review/
