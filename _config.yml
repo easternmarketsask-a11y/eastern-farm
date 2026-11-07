@@ -1,0 +1,4 @@
+# Keep the source frames in Git for editing. Pages serves the finished clips.
+exclude:
+  - promo/clip/frames-harvest
+  - promo/clip/frames-endcard
