@@ -59,6 +59,12 @@ if ! node scripts/verify/precache-check.mjs; then
   echo "—— 部署中止(把缺的模块补进 service-worker.js 的 PRECACHE)"
   exit 1
 fi
+for gate in game-shell-test farm-premium-pointer-test farm-premium-action-test farm-premium-coach-test; do
+  if ! node "scripts/verify/${gate}.mjs"; then
+    echo "—— 部署中止(游戏中心品质与交互回归: ${gate})"
+    exit 1
+  fi
+done
 if ! node scripts/verify/iso-heading-test.mjs; then
   echo "—— 部署中止(人/车等距朝向契约)"
   exit 1
@@ -136,6 +142,11 @@ if [ "${SKIP_SMOKE:-}" = "1" ]; then
 elif [ ! -f "$CHROME_EXE" ] || [ -z "$PYCMD" ]; then
   echo "⚠ 闸门 B: 缺 Chrome 或 python,跳过冒烟测试(仅语法检查兜底)"
 else
+  echo "▶ 今晚餐桌: 浏览器交互回归测试…"
+  if ! node scripts/verify/table-premium-test.mjs; then
+    echo "—— 部署中止(今晚餐桌浏览器交互回归)"
+    exit 1
+  fi
   echo "▶ 闸门 B: 无头 Chrome 冒烟测试(约 10 秒)…"
   $PYCMD -m http.server 8137 --bind 127.0.0.1 >/dev/null 2>&1 &
   SRV_PID=$!
@@ -606,6 +617,12 @@ echo "▶ 闸门 P: 全站废玩法扫描(约 1 秒)…"
 if ! node scripts/verify/dead-mechanic-scan.mjs; then
   echo "—— 部署中止：玩家看得见的文案里还有已经删掉的玩法。"
   exit 1
+fi
+
+# 仅检查：运行同一套发布闸门及自动版本注入，不提交或推送。
+if [ "${EF_VERIFY_ONLY:-}" = "1" ]; then
+  echo "✓ 全部发布检查通过；EF_VERIFY_ONLY=1，未提交或推送。"
+  exit 0
 fi
 
 # 3. 提交未保存的改动(如果有;SW 版本注入保证至少有它)

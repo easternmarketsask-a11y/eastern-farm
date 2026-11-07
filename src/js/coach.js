@@ -57,11 +57,15 @@
       if (bubble && Farm.ui && Farm.ui.setStorekeeperLine) {
         Farm.ui.setStorekeeperLine(text);
         const wrap = document.getElementById('storekeeper');
-        if (wrap) {
+        const visible = bubble.getClientRects().length > 0;
+        if (visible && wrap) {
           wrap.classList.remove('coach-nudge');
           void wrap.offsetWidth;
           wrap.classList.add('coach-nudge');
         }
+        // The current map chrome deliberately hides the speech bubble. A
+        // hidden node must not consume a once-only explanation without showing it.
+        if (!visible && Farm.ui.toast) Farm.ui.toast(text, 4200);
       } else if (Farm.ui && Farm.ui.toast) {
         Farm.ui.toast(text, 4200);
       }
@@ -74,7 +78,10 @@
       // 新手聚光灯进行时别抢话——它正手把手教同样的几步。不标记 seen，
       // 等之后第二次种/收/卖时 coach 再补讲（first_plant 是一次性除外）。
       if (Farm.spotlight && Farm.spotlight._active) return;
-      setTimeout(() => this.tip(id), delayMs == null ? 700 : delayMs);
+      setTimeout(() => {
+        if (Farm.ui && Farm.ui.isBusy && Farm.ui.isBusy()) return;
+        this.tip(id);
+      }, delayMs == null ? 700 : delayMs);
     },
 
     _mark(id) {

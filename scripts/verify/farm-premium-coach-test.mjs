@@ -1,0 +1,21 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import vm from 'node:vm';
+let shown = [], bubbleText = '', saved = 0, pending;
+const bubble = { getClientRects: () => [] };
+const context = { console, Date, setTimeout(fn) { pending = fn; }, window: {}, document: { getElementById: id => id === 'storekeeperBubble' ? bubble : null },
+  Farm: { state: { data: { language: 'en' }, save() { saved++; } }, ui: { setStorekeeperLine(t) { bubbleText = t; }, toast(t) { shown.push(t); }, isBusy: () => false } } };
+context.window = context;
+vm.createContext(context);
+vm.runInContext(readFileSync(new URL('../../src/js/coach.js', import.meta.url), 'utf8'), context);
+const coach = context.Farm.coach;
+assert.equal(coach.tip('first_water'), true);
+assert.match(bubbleText, /water/i, 'keep the existing storekeeper content');
+assert.equal(shown.length, 1, 'hidden storekeeper bubble must fall back to a visible toast');
+assert.equal(coach.tip('first_water'), false, 'one-time tips stay one-time');
+assert.equal(saved, 1);
+coach.fire('first_sell');
+context.Farm.ui.isBusy = () => true;
+pending();
+assert.equal(coach.seen('first_sell'), false, 'a delayed tip must not interrupt a newly opened panel or mark unseen advice as read');
+console.log('ok farm-premium coach (visible feedback, once-only, delayed busy guard)');

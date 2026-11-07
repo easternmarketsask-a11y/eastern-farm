@@ -440,6 +440,13 @@
     init() {
       if (!this.active() || this._on) return;
       this._on = true;
+      if (window.matchMedia) {
+        const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
+        this._reducedMotion = motion.matches;
+        const syncMotion = () => { this._reducedMotion = motion.matches; this.render(); };
+        if (motion.addEventListener) motion.addEventListener('change', syncMotion);
+        else if (motion.addListener) motion.addListener(syncMotion);
+      }
       // 背景音乐跟着农场开：开屏/登录页不响，进了农场才有
       if (Farm.music && Farm.music.autoStart) Farm.music.autoStart();
       document.body.classList.add('mapmode');
@@ -494,7 +501,9 @@
       cv.addEventListener('pointerdown', (e) => this._down(e));
       cv.addEventListener('pointermove', (e) => this._move(e));
       cv.addEventListener('pointerup', (e) => this._up(e));
-      cv.addEventListener('pointercancel', (e) => this._up(e));
+      cv.addEventListener('pointercancel', (e) => this._cancel(e));
+      window.addEventListener('blur', () => this._cancel());
+      document.addEventListener('visibilitychange', () => { if (document.hidden) this._cancel(); });
       cv.addEventListener('wheel', (e) => this._wheel(e), { passive: false });
 
       this._buildUI();
@@ -985,7 +994,7 @@
       this._glideStop();   // 手指按下即接住惯性滑行（Hay Day 手感）
       const p = this._local(e); this._pointers[e.pointerId] = p;
       const ids = Object.keys(this._pointers);
-      if (ids.length === 2) { const [a, b] = ids.map(k => this._pointers[k]); this._pinch = { dist: Math.hypot(a.x - b.x, a.y - b.y) || 1, zoom: this._zoom }; this._drag = null; this._moving = null; this._painting = false; this._pressCell = null; this._pressBuilding = -1; return; }
+      if (ids.length === 2) { const [a, b] = ids.map(k => this._pointers[k]); this._pinch = { dist: Math.hypot(a.x - b.x, a.y - b.y) || 1, zoom: this._zoom }; this._drag = null; this._moving = null; this._painting = false; this._placeDown = false; this._pressCell = null; this._pressBuilding = -1; return; }
       if (this._placing) { this._placeDown = true; this._updatePlace(p); return; }
       if (this._build && this._editMode === 'terrain') { const c = this._screenToCell(p.x, p.y); this._painting = true; this._paintCell(c.gx, c.gy); return; }
       if (this._buildHits && this._buildHits.length) {
@@ -1075,6 +1084,7 @@
     _glideStop() { if (this._glideRaf) { cancelAnimationFrame(this._glideRaf); this._glideRaf = null; } },
     _glideStart(drag) {
       if (!drag || !drag.moved) return;
+      if (Farm.ui && Farm.ui._prefersReducedMotion && Farm.ui._prefersReducedMotion()) return;
       if (performance.now() - drag.lastT > 90) return;   // 松手前手指已停住 → 不滑
       let vx = -drag.vx, vy = -drag.vy;                  // cam 与手指位移反向
       const sp = Math.hypot(vx, vy);
@@ -1098,7 +1108,24 @@
       };
       this._glideRaf = requestAnimationFrame(step);
     },
+    // A browser-cancelled gesture is never a release: do not harvest, buy,
+    // move an object, or launch inertia. Terrain strokes are already applied
+    // on pointerdown/move, so flush those existing edits before clearing.
+    _cancel() {
+      Object.keys(this._pointers).forEach((id) => {
+        try { this._cv.releasePointerCapture(Number(id)); } catch (err) {}
+      });
+      this._pointers = {};
+      this._glideStop();
+      if (this._painting) Farm.state.save();
+      this._painting = false;
+      this._placeDown = false;
+      this._moving = this._drag = this._pinch = this._pressCell = null;
+      this._pressBuilding = -1;
+      this.render();
+    },
     _up(e) {
+      if (!(e.pointerId in this._pointers)) return;
       const p = this._pointers[e.pointerId]; delete this._pointers[e.pointerId];
       if (this._pressCell || this._pressBuilding >= 0) { this._pressCell = null; this._pressBuilding = -1; this.render(); }   // 按压高亮松手即清
       const remIds = Object.keys(this._pointers);
@@ -3510,7 +3537,7 @@
       btn.style.cssText = 'position:fixed;right:14px;z-index:20;border:none;border-radius:24px;padding:11px 16px;min-height:44px;box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;font:600 15px/1 "Noto Sans SC",system-ui,sans-serif;color:#fff;background:#4CAF50;box-shadow:0 3px 10px rgba(0,0,0,.22);cursor:pointer;';
       btn.onclick = () => this.toggleBuild();
       document.body.appendChild(btn); this._buildBtn = btn;
-      if (!(Farm.state.data && Farm.state.data.mapBuildSeen) && btn.animate) this._buildPulse = btn.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.09)' }, { transform: 'scale(1)' }], { duration: 1300, iterations: Infinity, easing: 'ease-in-out' });
+      if (!(Farm.state.data && Farm.state.data.mapBuildSeen) && btn.animate && !(Farm.ui && Farm.ui._prefersReducedMotion())) this._buildPulse = btn.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.04)' }, { transform: 'scale(1)' }], { duration: 1300, iterations: 3, easing: 'ease-in-out' });
       const nbBtn = document.createElement('button');
       nbBtn.id = 'isoCommunityBtn';
       nbBtn.style.cssText = 'position:fixed;left:14px;z-index:20;border:none;border-radius:24px;padding:11px 16px;min-height:44px;box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;font:600 15px/1 "Noto Sans SC",system-ui,sans-serif;color:#fff;background:#3a8c50;box-shadow:0 3px 10px rgba(0,0,0,.22);cursor:pointer;';
@@ -3563,7 +3590,7 @@
       const zwrap = document.createElement('div'); zwrap.id = 'isoZoom';
       zwrap.style.cssText = 'position:fixed;z-index:20;display:flex;flex-direction:column;gap:10px;';
       // 44×44 触控热区（was 32，低于可用性底线；2026-07-05 UX 第 1 批 #8）
-      const mkZ = (label, f) => { const z = document.createElement('button'); z.textContent = label; z.setAttribute('aria-label', label === '＋' ? 'zoom in' : 'zoom out'); z.style.cssText = 'width:36px;height:36px;border:1px solid rgba(255,255,255,0.42);border-radius:50%;background:rgba(255,248,230,0.34);color:rgba(48,72,36,0.72);font:600 17px/1 system-ui,sans-serif;box-shadow:0 1px 4px rgba(40,32,16,.10);cursor:pointer;touch-action:manipulation;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);'; z.onclick = (e) => { e.preventDefault(); this._zoomBy(f); }; return z; };
+      const mkZ = (label, f) => { const z = document.createElement('button'); z.textContent = label; z.setAttribute('aria-label', label === '＋' ? (en ? 'Zoom in' : '放大农场') : (en ? 'Zoom out' : '缩小农场')); z.style.cssText = 'width:44px;height:44px;border:1px solid rgba(255,255,255,0.42);border-radius:50%;background:rgba(255,248,230,0.34);color:rgba(48,72,36,0.72);font:600 17px/1 system-ui,sans-serif;box-shadow:0 1px 4px rgba(40,32,16,.10);cursor:pointer;touch-action:manipulation;'; z.onclick = (e) => { e.preventDefault(); this._zoomBy(f); }; return z; };
       zwrap.appendChild(mkZ('＋', 1.3)); zwrap.appendChild(mkZ('－', 0.77));
 
       /* 🎵 背景音乐开关（Chris 2026-08-21：「做一个悬浮音符，直接点击可开可关」）。
@@ -3646,7 +3673,7 @@
         // visible even in fullscreen build mode) so it never overlaps the coins.
         const tb = document.getElementById('topbar');
         const tbBottom = tb ? tb.getBoundingClientRect().bottom : 0;
-        this._zoomUI.style.left = (r.left + r.width - 46) + 'px';   // 36px 玻璃钮 + 10px 右边距
+        this._zoomUI.style.left = (r.left + r.width - 54) + 'px';
         this._zoomUI.style.top = Math.max(r.top + 10, tbBottom + 8) + 'px';
         if (this._leftUI) {
           // 左上角与右上角同高，左右对称；同样压在顶栏之下
@@ -3693,6 +3720,7 @@
       b.style.backgroundImage = on ? 'none'
         : 'linear-gradient(45deg, transparent 43%, rgba(160,80,66,0.85) 43%, rgba(160,80,66,0.85) 57%, transparent 57%)';
       b.setAttribute('aria-label', en ? (on ? 'Music on' : 'Music off') : (on ? '背景音乐开' : '背景音乐关'));
+      b.setAttribute('aria-pressed', String(on));
       b.title = b.getAttribute('aria-label');
     },
 
@@ -5481,8 +5509,12 @@
       // cy 偏移 th*0.12 与空地命中测试的视觉床中心一致。
       if (this._pressCell) {
         const pc = this._cell(this._pressCell.gx, this._pressCell.gy);
+        ctx.save();
         this._diamond(pc.x, pc.y + th * 0.12, tw, th);
-        ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.fill();
+        ctx.fillStyle = 'rgba(255,238,180,0.18)'; ctx.fill();
+        ctx.strokeStyle = '#3e6339'; ctx.lineWidth = 3; ctx.stroke();
+        ctx.strokeStyle = '#fff0b8'; ctx.lineWidth = 1.2; ctx.stroke();
+        ctx.restore();
       }
 
       // 开垦模式：贴边未占地发金光，点它砍树成田
@@ -5686,19 +5718,35 @@
         this._drawBuildChip(plot, c, c.y + th * 0.1, { sc: 1.4 }, idx, 'plot');
         return;
       }
+      // A stable edge identifies the plot the farmer is working on, including
+      // an empty plot being planted. It follows world coordinates at any zoom.
+      const actor = Farm.farmer && Farm.farmer._actor && Farm.farmer._actor();
+      const job = actor && actor.job;
+      if (job && job.plotIdx === idx && (job.kind === 'plant' || job.kind === 'harvest' || job.kind === 'water')) {
+        ctx.save();
+        this._diamond(c.x, c.y + th * 0.12, tw * 0.92, th * 0.92);
+        ctx.fillStyle = 'rgba(255,239,185,0.12)'; ctx.fill();
+        ctx.strokeStyle = '#355d39'; ctx.lineWidth = Math.max(2, th * 0.065); ctx.stroke();
+        ctx.strokeStyle = '#f7e4a5'; ctx.lineWidth = 1; ctx.stroke();
+        ctx.restore();
+      }
       if (!plot.crop) return;
       const p = Farm.crops.getProgress ? Farm.crops.getProgress(plot) : 1, mature = Farm.crops.isMature(plot);
       const tNow = Date.now() / 1000;
       /* 成熟的菜自己会「跃跃欲收」: 本体轻弹跳(旧版只有气泡动, 菜是死的)。
          相位按 gx+gy 错开, 整片田是波浪不是齐步走。 */
-      const ripe = mature ? Math.abs(Math.sin(tNow * 2.2 + (gx * 1.7 + gy) * 0.9)) * th * 0.10 : 0;
+      const ripe = mature && !this._reducedMotion ? Math.abs(Math.sin(tNow * 2.2 + (gx * 1.7 + gy) * 0.9)) * th * 0.10 : 0;
       const by = c.y + th * 0.2 - ripe;   // sprite stands on the diamond
       ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
       const fr = p >= 1 ? 3 : p >= 0.6 ? 2 : p >= 0.25 ? 1 : 0;
       // soft contact shadow so the plant sits IN the bed (not floating)
       this._shadow(c.x, c.y + th * 0.42, tw * (0.4 + fr * 0.12));
       if (mature) {
-        const pulse = 0.5 + 0.5 * Math.sin(tNow * 2.2 + gx + gy);
+        const pulse = this._reducedMotion ? 0.5 : 0.5 + 0.5 * Math.sin(tNow * 2.2 + gx + gy);
+        ctx.save();
+        this._diamond(c.x, c.y + th * 0.12, tw * 0.86, th * 0.86);
+        ctx.strokeStyle = '#eed58b'; ctx.lineWidth = Math.max(1.5, th * 0.05); ctx.stroke();
+        ctx.restore();
         const gl = ctx.createRadialGradient(c.x, c.y + th * 0.30, th * 0.04, c.x, c.y + th * 0.30, tw * 0.38);
         gl.addColorStop(0, 'rgba(255,214,110,' + (0.10 + pulse * 0.08) + ')');
         gl.addColorStop(1, 'rgba(255,214,110,0)');
@@ -5720,7 +5768,7 @@
            更多 → 不画气泡 —— 12 个白圈叠成墙是全场最丑的画面(截图实证),
            改由本体弹跳+金色光晕承担指认, 顶部「N 棵已熟可收」负责总量。 */
         if ((this._matureCount || 0) <= 3) {
-          const bob = Math.sin(tNow * 2.5 + gx + gy) * th * 0.12;
+          const bob = this._reducedMotion ? 0 : Math.sin(tNow * 2.5 + gx + gy) * th * 0.12;
           const r = th * 0.42, bx = c.x, byy = plantTopY - th * 0.42 + bob;
           ctx.beginPath(); ctx.arc(bx, byy, r, 0, Math.PI * 2);
           ctx.fillStyle = 'rgba(255,252,240,0.94)'; ctx.fill();
@@ -5735,7 +5783,7 @@
         } else {
           // 偶发闪光: 每块地按自己的相位隔几秒闪一下, 全田任意时刻只有零星几颗
           const ph = (tNow * 0.4 + (gx * 7 + gy * 13) * 0.37) % 1;
-          if (ph < 0.12) {
+          if (ph < 0.12 && !this._reducedMotion) {
             ctx.globalAlpha = Math.sin(ph / 0.12 * Math.PI);
             const sx = c.x + tw * 0.22, sy = plantTopY + th * 0.2, r = th * 0.16;
             ctx.fillStyle = 'rgba(255,214,110,0.95)';

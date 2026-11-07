@@ -42,10 +42,10 @@
 
 **Interfaces:** Consume Task 1 shell files and `.game-home-link`. Preserve all `Farm` module interfaces, DOM IDs and `data-action` hooks. Camera and pointers remain owned by `Farm.isoView`.
 
-- [ ] Inspect running farm and existing HUD/touch code; reproduce small-target and cancelled-gesture defects before fixing behaviour.
-- [ ] Add cohesive premium styling and rearrange HUD/tool positions without removing reachable functionality. Fit 360px, respect safe areas, target 44px.
-- [ ] Ensure current-action guidance, press/selected/pending feedback and accessible tool labels. Resolve confirmed gesture cancellation bugs without rewriting world/economy.
-- [ ] Run existing farm syntax, modal, coach, hit/heading and save-related checks; browser-test plant, harvest, orders, menus, drag/zoom, reload and reduced motion.
+- [x] Inspect the running farm and reproduce small-target and cancelled-gesture defects.
+- [x] Restyle the HUD and scene tools with 44px targets. Verify the install reminder clears gameplay controls in portrait and landscape.
+- [x] Add current-action guidance, selection and pending feedback, and accessible tool labels. Verify cancelled gestures do not commit actions.
+- [x] Run farm syntax, modal, coach, hit/heading and save checks. Browser-test planting, harvesting, orders, menus, drag/zoom, reload and reduced motion.
 
 ### Task 3: Tonight's Table full experience (table ownership)
 
@@ -53,10 +53,10 @@
 
 **Interfaces:** Consume shell tokens/navigation. Preserve four-main/one-soup slot rules, current API and fallback, existing gestures, and rotation. Restart uses in-memory accepted menu, not a new fetch.
 
-- [ ] Add meaningful regressions for tap/keyboard placement, full meal completion, restart, pointer cancellation and missing image/share failure before behavioural implementation.
-- [ ] Build clear title, next-action instruction, progress, tabletop materials and responsive first viewport; all visible actions bilingual and accessible.
-- [ ] Implement click/keyboard placement equivalent to dragging, feedback, guarded animation completion and cancellation, restart, retry and readable fallback sharing.
-- [ ] Verify full round with drag and separately keyboard; image failure, API fallback, reduced motion, share rejection and narrow layout.
+- [x] Add meaningful regressions for tap/keyboard placement, full meal completion, restart, pointer cancellation and missing image/share failure before behavioural implementation.
+- [x] Build clear title, next-action instruction, progress, tabletop materials and responsive first viewport; all visible actions bilingual and accessible.
+- [x] Implement click/keyboard placement equivalent to dragging, feedback, guarded animation completion and cancellation, restart, retry and readable fallback sharing.
+- [x] Verify full rounds with native touch, mouse drag and keyboard; image failure, API timeout/fallback/retry, reduced motion, share rejection/cancellation/unsupported clipboard and 360/390/768/1440 layout. Added held-font startup RED→GREEN regression after independent review.
 
 ### Task 4: World Cup archive and mobile experience — CANCELLED by Chris
 
@@ -74,10 +74,10 @@ Chris: “世界杯那个不要管了”. Do not implement this task or add Worl
 
 **Files:** `service-worker.js`, `deploy.sh` only if verification integration is needed, shared tests, design documentation and review receipt.
 
-- [ ] Integrate all page references. Include essential shell/CSS resources in precache; retain cache reload/no-store/version guard behaviour. Generate version with existing deployment mechanism.
-- [ ] Run JavaScript syntax plus existing deployment gates and new behaviour checks. Record real failures and fix their owning cause.
-- [ ] Batch capture desktop and mobile states across all games; inspect 360/768 widths, keyboard, reduced motion, offline/fallback and saves. Fix material gaps.
-- [ ] Run Impeccable detector once on changed UI; obtain independent finish/code review, resolve material findings, and record remaining device limits.
+- [x] Integrate page references and precache resources. Use the existing release script to generate the cache version.
+- [x] Run JavaScript syntax, the full existing deployment gates and new browser behaviour checks.
+- [x] Inspect desktop, mobile, tablet and short landscape captures, plus keyboard, reduced motion, fallback and save paths.
+- [x] Run the Impeccable detector and independent code review. Resolve the font and input findings. Complete the final visual pass locally and record remaining device limits.
 - [ ] Check staged diff for secrets, unrelated edits and generated output; commit only scoped files. Fetch/compare production branch before push and any merge. Use Thermos for merges, existing git/Pages deployment, and verify GitHub status plus live version.
 
 ## Execution
@@ -92,3 +92,9 @@ Chris explicitly approved the complete design and requested direct implementatio
 - All game JS syntax passed; 16 focused shell/farm/current deployment contract checks passed. Git Bash syntax passes outside sandbox (sandbox blocks MSYS named object creation).
 - First `EF_VERIFY_ONLY=1` release run passed syntax/precache/shell/farm cancellation/current-action checks and initial table interaction cases, then correctly blocked on table primary action falling below 360×740 viewport. Table owner is fixing actual layout before rerun.
 - World Cup worker made no changes. Deployment script's automatic build-stamp change to `src/worldcup.html` will be excluded from final changes, preserving Chris's scope correction.
+- Second full release check passed table suite, 26 farm entry flows, real Service Worker v1→v2 update under max-age=600, 10 auth views, claim-email 7, identity 7, pending-points/cloud-save 9; gate F correctly blocked on a full-viewport currency pseudo-element intercepting the tutorial tap. CSS containment/removal fixes the actual hit layer; exact native F repro now hits `canvas#isoCanvas` and passes. No camera change was required.
+- Independent reviewer confirmed one additional P2: table's synchronous external font CSS could block first paint and boot. Held-font browser regression reproduced old failure; async media=print/onload plus noscript now allows menu load and placement while the font request remains stalled.
+- Combined Impeccable detector ran once. Fixed introduced undersized functional text, table seat contrast, explicit button insets, and farm reward/status contrast. Cream palette and existing font family warnings reflect the approved incumbent identity; generic table-surface padding warnings do not describe actual positioned plate insets. Review screenshots follow these fixes.
+- Full release verification exited 0 through gate P with 57 script syntax checks, 26 farm entry flows, the Service Worker update regression, and the table browser suite. The existing optional-browser branch also passed after moving the table test under its Chrome guard.
+- The final isolated 390×844 farm cycle passed 35 checks with zero JavaScript exceptions. The install reminder clears the dock and scene tools. A 740×360 browser check reproduced a landscape overlap with the current-action prompt. The landscape inset correction removed the overlap and left the page within the viewport.
+- Visual finish: `ship`. Captures show the centre in desktop/mobile, playable farm at 360/390/768/1440, and table start, placement, completion and fallback at 360/390/768/1440. Independent review closed the confirmed font issue. The independent visual reviewer became unavailable, so the parent completed the final screenshot pass. A physical iPhone and its native share sheet remain outside the verified matrix.

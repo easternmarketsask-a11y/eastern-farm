@@ -10,6 +10,9 @@ colors:
   gold: "#a77a39"
   muted: "#5c6a58"
   focus: "#9d441e"
+  centre-ground: "#f5f2e7"
+  table-ground: "#e4eadb"
+  farm-ground: "#315537"
 typography:
   display:
     fontFamily: "Noto Serif SC, Songti SC, STSong, SimSun, serif"
@@ -22,9 +25,15 @@ typography:
     fontSize: "14px"
     fontWeight: 400
     lineHeight: 1.65
+  farm-display:
+    fontFamily: "EF XiaoWei Patch, ZCOOL XiaoWei, Noto Serif SC, serif"
+    fontSize: "21px"
+    fontWeight: 400
+    lineHeight: 1.1
 rounded:
   control: "14px"
   scene: "26px"
+  mobile-scene: "22px"
 spacing:
   tight: "8px"
   group: "16px"
@@ -35,7 +44,7 @@ components:
     textColor: "{colors.leaf}"
     rounded: "{rounded.control}"
     padding: "8px 12px"
-    height: "44px minimum"
+    height: "44px"
 ---
 
 # Design System: Eastern Market Games

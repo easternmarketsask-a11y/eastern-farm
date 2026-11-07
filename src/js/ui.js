@@ -91,6 +91,14 @@
       const progress = Math.max(0, s.xp - curT);
       const pct = Math.min(100, progress / span * 100);
       document.getElementById('xpFill').style.width = pct + '%';
+      const hudXp = document.getElementById('hudXp');
+      const hudXpFill = document.getElementById('hudXpFill');
+      if (hudXpFill) hudXpFill.style.width = pct + '%';
+      if (hudXp) {
+        hudXp.setAttribute('aria-valuenow', String(Math.round(pct)));
+        hudXp.setAttribute('aria-valuetext', (lang === 'en' ? 'Level ' : '等级 ') + s.level + ', ' + progress + ' / ' + span);
+        hudXp.title = (lang === 'en' ? 'Experience ' : '经验 ') + progress + ' / ' + span;
+      }
       const xpTextEl = document.getElementById('xpText');
       if (xpTextEl) {
         xpTextEl.textContent = progress.toLocaleString() + ' / ' + span.toLocaleString();
@@ -140,6 +148,10 @@
       // 单一挂钩点：所有 modal 都走这里，不必在每个面板入口各写一次。
       // 注意：必须在 queue 分支之后——入队不算「打开」，真显示时才触发。
       if (window.Farm && Farm.shop && Farm.shop.stickyEnd) Farm.shop.stickyEnd();
+      // Replacing a menu with another panel keeps the original opener. Each
+      // panel owns one key handler, so nested navigation cannot leak listeners.
+      if (modal.classList.contains('hidden') || modal.classList.contains('closing')) this._modalOpener = document.activeElement;
+      if (this._escHandler) document.removeEventListener('keydown', this._escHandler);
       // Defensive: rebuild #modalContent (and the backdrop) if it ever went missing,
       // so a popup can never crash with "Cannot set innerHTML of null".
       let content = document.getElementById('modalContent');
@@ -150,6 +162,31 @@
       // ✕ 钉在不滚动的外壳上；正文进 .modal-body。以前 ✕ 是 absolute 子元素，
       // 商店/设置一往下滑叉就跟着走掉，只能靠点空白关 —— 长辈够不着。
       content.innerHTML = '<button class="modal-close-x" aria-label="关闭 Close">✕</button><div class="modal-body">' + html + '</div>';
+      // Seed cards have a separate bulk-plant button. Give their existing
+      // single-item click path its own native button, without nesting buttons
+      // or introducing a second purchase/plant implementation.
+      content.querySelectorAll('.seed-card[data-action="plant"], .seed-card[data-action="buy"]').forEach(card => {
+        if (card.classList.contains('locked')) return;
+        const select = document.createElement('button');
+        select.type = 'button';
+        select.className = 'seed-card-select';
+        const crop = Farm.crops && Farm.crops.get && Farm.crops.get(card.dataset.cropId);
+        const en = Farm.state.data.language === 'en';
+        const name = crop ? (en ? crop.name_en : crop.name_zh) : card.dataset.cropId;
+        select.setAttribute('aria-label', (card.dataset.action === 'plant' ? (en ? 'Plant ' : '种植 ') : (en ? 'Buy seeds: ' : '购买种子：')) + name);
+        card.insertBefore(select, card.firstChild);
+      });
+      content.setAttribute('role', 'dialog');
+      content.setAttribute('aria-modal', 'true');
+      const heading = content.querySelector('h2');
+      if (heading) {
+        if (!heading.id) heading.id = 'farmModalTitle';
+        content.setAttribute('aria-labelledby', heading.id);
+        content.removeAttribute('aria-label');
+      } else {
+        content.removeAttribute('aria-labelledby');
+        content.setAttribute('aria-label', Farm.state.data.language === 'en' ? 'Farm panel' : '农场面板');
+      }
       // Cancel any in-flight close animation (rapid reopen) so we don't land
       // .hidden on top of a freshly-shown modal.
       clearTimeout(this._closeTimer);
@@ -169,7 +206,24 @@
       const xBtn = content.querySelector('.modal-close-x');
       if (xBtn) xBtn.onclick = () => this.hideModal();
       this._escHandler = (e) => {
-        if (e.key === 'Escape' && this._closeOnEsc !== false) this.hideModal();
+        if (e.key === 'Escape' && this._closeOnEsc !== false) {
+          e.preventDefault();
+          // Tutorial and other panels may attach their own close completion.
+          const close = content.querySelector('.modal-close-x');
+          if (close) close.click();
+          else this.hideModal();
+        }
+        if (e.key === 'Tab') {
+          const targets = Array.from(content.querySelectorAll('button, a[href], input, select, textarea, [tabindex]:not([tabindex="-1"])'))
+            .filter(el => !el.disabled && el.tabIndex >= 0 && el.getClientRects().length);
+          if (!targets.length) return;
+          const first = targets[0], last = targets[targets.length - 1];
+          if (e.shiftKey && (document.activeElement === first || !content.contains(document.activeElement))) {
+            e.preventDefault(); last.focus();
+          } else if (!e.shiftKey && (document.activeElement === last || !content.contains(document.activeElement))) {
+            e.preventDefault(); first.focus();
+          }
+        }
       };
       document.addEventListener('keydown', this._escHandler);
       this._ensureViewportWatch();
@@ -178,6 +232,7 @@
       if (typeof opts.onShow === 'function') {
         try { opts.onShow(); } catch (e) { console.warn('[ui] modal onShow failed:', e); }
       }
+      if (xBtn && !content.contains(document.activeElement)) xBtn.focus({ preventScroll: true });
     },
 
     // Hay Day 式入场：列表一项接一项弹出，而不是整板同时出现。
@@ -244,6 +299,9 @@
       // Dock fades back in immediately (CSS transitions the transform/opacity),
       // so it eases in as the modal eases out instead of snapping.
       document.body.classList.remove('modal-open');
+      const opener = this._modalOpener;
+      this._modalOpener = null;
+      if (opener && opener.isConnected && opener.focus) opener.focus({ preventScroll: true });
       // 商店关闭且未购买 → 清掉「买完种子回填原地块」的挂起状态（UX 第 2 批 #4）。
       // 买种成功的路径在 hideModal 之前就把 pending 消费掉了，这里只兜「放弃购买」。
       if (window.Farm && Farm.shop) Farm.shop._pendingPlotIdx = null;

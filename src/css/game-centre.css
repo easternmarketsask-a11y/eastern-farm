@@ -9,7 +9,7 @@ a:focus-visible { outline: 3px solid var(--game-focus); outline-offset: 5px; }
 .market-brand { display: inline-flex; align-items: center; min-height: 44px; }
 .market-brand img { display: block; width: 145px; height: auto; mix-blend-mode: multiply; }
 .market-link { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; color: var(--game-green); font-size: 13px; text-decoration: none; }
-.market-link span { color: var(--game-muted); font-size: 11px; }
+.market-link span { color: var(--game-muted); font-size: 12px; }
 .market-link svg, .resume-link svg { width: 19px; height: 19px; }
 .centre-intro { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin: 34px 0 27px; }
 h1, h2, p { margin: 0; }
@@ -29,8 +29,8 @@ h2 { font: 500 clamp(32px, 3.8vw, 49px)/1.25 var(--game-display); letter-spacing
 h2 span { display: block; margin-top: 8px; font: 600 clamp(19px, 2vw, 26px)/1.3 var(--game-font); letter-spacing: -.015em; }
 .farm-copy p, .table-copy p { margin-top: 19px; font-size: 15px; line-height: 1.65; }
 .farm-copy p span, .table-copy p span { display: block; font-size: 12px; }
-.enter-game { display: flex; align-items: center; gap: 9px; width: fit-content; min-height: 52px; margin-top: 24px; padding: 0 18px; border: 1px solid #fff9; border-radius: 14px; background: #fff9ed; color: #23492f; font-size: 15px; font-weight: 700; box-shadow: 0 5px 14px #122b1b26; }
-.enter-game span { font-size: 11px; font-weight: 500; }
+.enter-game { display: flex; align-items: center; gap: 9px; width: fit-content; min-height: 52px; margin-top: 24px; padding: 8px 18px; border: 1px solid #fff9; border-radius: 14px; background: #fff9ed; color: #23492f; font-size: 15px; font-weight: 700; box-shadow: 0 5px 14px #122b1b26; }
+.enter-game span { font-size: 12px; font-weight: 500; }
 .enter-game svg { width: 22px; height: 22px; margin-left: 20px; transition: transform 220ms var(--game-ease); }
 .table-world { display: flex; flex-direction: column; color: var(--game-ink); background: #e4eadb; border: 1px solid #ccd6c0; box-shadow: 0 18px 42px -28px #31422b66; }
 .table-copy { position: relative; z-index: 2; padding: 30px 30px 0; }
@@ -64,7 +64,7 @@ h2 span { display: block; margin-top: 8px; font: 600 clamp(19px, 2vw, 26px)/1.3 
   .farm-copy { inset-inline: 24px; bottom: 25px; }
   .table-copy { padding: 24px 21px 0; }
   .farm-world { min-height: 520px; }
-  .table-copy p span { font-size: 11px; }
+  .table-copy p span { font-size: 12px; }
   .enter-game { flex-wrap: wrap; gap: 7px; padding-inline: 13px; }
   .enter-game svg { margin-left: 3px; }
   .enter-table { margin-inline: 21px; }
@@ -80,7 +80,7 @@ h2 span { display: block; margin-top: 8px; font: 600 clamp(19px, 2vw, 26px)/1.3 
   h1 { font-size: 29px; line-height: 1.3; }
   h1 span { margin-top: 5px; font-size: 13px; }
   .centre-intro p { margin-top: 11px; font-size: 12px; }
-  .centre-intro p span { font-size: 11px; }
+  .centre-intro p span { font-size: 12px; }
   .resume-link { padding-bottom: 0; font-size: 12px; }
   .game-worlds { display: flex; flex-direction: column; gap: 18px; }
   .farm-world, .table-world { border-radius: 22px; }
@@ -90,7 +90,7 @@ h2 span { display: block; margin-top: 8px; font: 600 clamp(19px, 2vw, 26px)/1.3 
   h2 { font-size: 37px; }
   h2 span { margin-top: 5px; font-size: 21px; }
   .farm-copy p { margin-top: 14px; font-size: 13px; }
-  .farm-copy p span { font-size: 11px; }
+  .farm-copy p span { font-size: 12px; }
   .enter-game { min-height: 48px; margin-top: 19px; padding-inline: 15px; }
   .enter-game svg { margin-left: 17px; }
   .table-world { min-height: 370px; }
@@ -98,7 +98,7 @@ h2 span { display: block; margin-top: 8px; font: 600 clamp(19px, 2vw, 26px)/1.3 
   .table-copy h2 { font-size: 31px; }
   .table-copy h2 span { font-size: 18px; margin-top: 5px; }
   .table-copy p { max-width: 29ch; margin-top: 12px; font-size: 12px; }
-  .table-copy p span { font-size: 11px; }
+  .table-copy p span { font-size: 12px; }
   .table-scene { position: absolute; inset: 115px -14px auto auto; width: 78%; min-height: 240px; }
   .table-ring { top: 18%; }
   .preview-greens { top: 19%; }
@@ -106,8 +106,8 @@ h2 span { display: block; margin-top: 8px; font: 600 clamp(19px, 2vw, 26px)/1.3 
   .preview-soup { top: 55%; left: 19%; }
   .chopsticks { top: 31%; right: 10%; height: 95px; }
   .enter-table { align-self: flex-start; margin: auto 24px 24px; font-size: 14px; }
-  .enter-table span { font-size: 10px; }
+  .enter-table span { font-size: 12px; }
   .enter-table svg { margin-left: 3px; }
-  .centre-footer { align-items: flex-start; flex-direction: column; gap: 4px; margin-top: 23px; padding-top: 15px; font-size: 10px; }
+  .centre-footer { align-items: flex-start; flex-direction: column; gap: 4px; margin-top: 23px; padding-top: 15px; font-size: 11px; }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; animation: none !important; } }

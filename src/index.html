@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#fdf8ee">
 <!-- 部署构建号（deploy.sh 每次注入 CACHE_VERSION 时间戳）。SW 新鲜度守卫据此
      判断本页是否已过期（见页尾脚本）。ef-dev = 未部署的本地版本。 -->
-<meta name="ef-build" content="ef-2610311741">
+<meta name="ef-build" content="ef-2611062150">
 
 <!-- ==================== PWA (add to home screen) ==================== -->
 <link rel="manifest" href="manifest.webmanifest">
@@ -56,7 +56,10 @@
      already gives a system-font fallback until the webfont arrives. -->
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;700&family=ZCOOL+XiaoWei&display=swap" media="print" onload="this.media='all'">
 <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;700&family=ZCOOL+XiaoWei&display=swap"></noscript>
+<link rel="stylesheet" href="css/game-shell.css">
 <link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/farm-premium.css">
+<script defer src="js/game-shell.js"></script>
 
 <!-- ⚠️ 开屏按钮的「保命接管」——必须在 <head>，必须用事件委托（2026-08-11）
      ================================================================
@@ -309,7 +312,7 @@
      css/js/赛程数据（原来「按钮藏了文件照下」，每次打开白拉约 254KB）。
      回顾页 worldcup.html 独立保留，它自己会加载 css/worldcup.css + js/worldcup.js。 -->
 </head>
-<body>
+<body data-game="farm">
 
 <!-- ==================== UI icon sprite（2026-07-11 视觉升级第1批） ====================
      手绘贴纸风 chrome 图标：统一深可可描边 #4a3629 + 游戏原生暖色填充，替换
@@ -317,6 +320,9 @@
      保留不动。引用方式：<svg class="ui-icon"><use href="#ui-xxx"/></svg> -->
 <svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
   <defs>
+    <symbol id="ui-home" viewBox="0 0 24 24">
+      <g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m14 5-7 7 7 7M7 12h14"/></g>
+    </symbol>
     <symbol id="ui-tasks" viewBox="0 0 24 24">
       <rect x="4.5" y="4" width="15" height="17" rx="2.5" fill="#fffdf6" stroke="#4a3629" stroke-width="1.5"/>
       <rect x="8.5" y="2.4" width="7" height="4" rx="1.6" fill="#f7c948" stroke="#4a3629" stroke-width="1.5"/>
@@ -498,15 +504,22 @@
       <a class="brandbar-logo-link" href="https://easternmarket.ca/" title="访问东方超市官网 · Visit Eastern Market">
         <img class="brandbar-logo" src="assets/images/logo-horizontal-560.webp" alt="东方超市 Eastern Market">
       </a>
-      <span class="topbar-level" id="topbarLevel">Lv 1</span>
+      <div class="farm-identity">
+        <span class="farm-identity-zh">东方农场</span><span class="farm-identity-en">Eastern Farm</span>
+      </div>
+      <div class="hud-level" aria-label="等级与经验 Level and experience">
+        <span class="topbar-level" id="topbarLevel">Lv 1</span>
+        <div class="hud-xp" id="hudXp" role="progressbar" aria-label="经验 Experience" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="hudXpFill"></span></div>
+      </div>
       <!-- weatherChip injected here by weather.js -->
     </div>
+    <a class="game-home-link farm-home" href="/" aria-label="游戏中心 Game centre"><svg class="ui-icon" aria-hidden="true"><use href="#ui-home"/></svg><span class="hud-zh">游戏中心</span><span class="hud-en">Games</span></a>
     <div class="topbar-right">
-      <button class="topbar-cur coins currency-tappable" id="coinsCard" title="农场币 — 点开看获取规则与兑换">
-        <span class="icon coin-icon"></span><span class="value" id="coinsValue">100</span>
+      <button class="topbar-cur coins currency-tappable" id="coinsCard" title="农场币与兑换 Farm coins and exchange">
+        <span class="icon coin-icon" aria-hidden="true"></span><span class="currency-info"><span class="currency-name"><span class="hud-zh">农场币</span><span class="hud-en">Farm coins</span></span><span class="value" id="coinsValue">100</span></span>
       </button>
-      <button class="topbar-cur points currency-tappable" id="pointsCard" title="超市积分 — 点开兑换与积分明细">
-        <span class="icon points-icon"></span><span class="value" id="pointsValue">0</span>
+      <button class="topbar-cur points currency-tappable" id="pointsCard" title="超市积分与明细 Store points and history">
+        <span class="icon points-icon" aria-hidden="true"></span><span class="currency-info"><span class="currency-name"><span class="hud-zh">超市积分</span><span class="hud-en">Store points</span></span><span class="value" id="pointsValue">0</span></span>
       </button>
       <div id="memberButton" class="topbar-member-slot"></div>
       <button id="todayButton" class="today-button" title="今日签到 · 活动" aria-label="今日签到 · 活动 / Today's check-in &amp; events">
@@ -530,10 +543,10 @@
   <!-- Floating "when are my crops ready" status pill — overlays the top of the farm
        (currencies moved into the top bar; this no longer takes a layout row). -->
   <div id="harvestStatusBar" class="harvest-status-bar">
-    <div class="harvest-status-center" id="harvestStatusCenter">
+    <button type="button" class="harvest-status-center" id="harvestStatusCenter">
       <span class="harvest-status-text" id="harvestStatusText"></span>
-      <button class="btn harvest-status-btn hidden" id="harvestStatusBtn"></button>
-    </div>
+    </button>
+    <button class="btn harvest-status-btn hidden" id="harvestStatusBtn" hidden></button>
   </div>
 
   <!-- 没留邮箱的常驻提醒条（Chris 8/17 定：常驻不打断，不要每次登录弹窗）。

@@ -3,38 +3,74 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#f7fbf8">
-<meta name="description" content="今晚餐桌。四道菜，一碗汤。东方超市。">
-<title>今晚餐桌 · 东方超市</title>
-<meta property="og:title" content="今晚餐桌 · 东方超市">
-<meta property="og:description" content="四道菜，一碗汤。">
+<meta name="theme-color" content="#f8f4e9">
+<meta name="description" content="今晚餐桌。动手摆好四道菜和一碗汤，分享给家里人。Tonight’s Table, by Eastern Market.">
+<title>今晚餐桌 Tonight’s Table · 东方超市</title>
+<meta property="og:title" content="今晚餐桌 · Tonight’s Table">
+<meta property="og:description" content="四道菜，一碗汤。Set a table to share.">
 <meta property="og:locale" content="zh_CN">
 <link rel="icon" href="assets/images/logo-horizontal-560.webp">
-<link rel="stylesheet" href="css/dinner.css?v=8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!-- Match the farm: an external font must never hold up the local game scripts. -->
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet"></noscript>
+<link rel="stylesheet" href="css/game-shell.css?v=1">
+<link rel="stylesheet" href="css/dinner.css?v=9">
+<script defer src="js/game-shell.js?v=1"></script>
+<script defer src="js/table.js?v=7"></script>
 </head>
-<body>
+<body data-game="table">
+  <header class="table-header">
+    <a class="game-home-link" href="/" aria-label="返回游戏中心 · Game centre"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="m14 6-6 6 6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span>游戏中心 <span lang="en">Games</span></span></a>
+    <img class="mark" src="assets/images/logo-horizontal-560.webp" width="560" height="148" alt="东方超市 Eastern Market">
+  </header>
   <main class="world" id="world">
-    <img class="mark" src="assets/images/logo-horizontal-560.webp" alt="东方超市 Eastern Market">
-    <div class="table" id="table">
-      <div class="surface" id="surface" role="group" aria-label="餐桌完成后可拖动旋转，也可用左右方向键旋转。 Drag to rotate the finished table, or use the arrow keys.">
-        <div class="seat" data-seat="0"></div>
-        <div class="seat" data-seat="1"></div>
-        <div class="seat" data-seat="2"></div>
-        <div class="seat" data-seat="3"></div>
-        <div class="seat soup" data-seat="4"></div>
-      </div>
+    <div class="introduction">
+      <h1>今晚餐桌 <span lang="en">Tonight’s Table</span></h1>
+      <p class="instruction" id="instruction">将当前菜拖到空盘，或点击菜盘上桌。摆好四道菜和一碗汤。</p>
+      <p class="instruction-en" lang="en">Drag a dish to an empty plate, or tap it to serve. Set four dishes and one soup.</p>
     </div>
-    <p class="settle" id="settle" aria-live="polite" hidden>今晚餐桌</p>
-    <p class="settle-en" id="settleEn" hidden>Tonight’s Table</p>
-    <p class="ready-copy" id="readyCopy" hidden>四道菜和一碗汤，今晚已经备好。</p>
-    <p class="ready-copy-en" id="readyCopyEn" hidden>Four dishes and soup are ready for tonight.</p>
-    <p class="turn-hint" id="turnHint" hidden>左右拖动桌面可转动，甩动后会继续旋转。 · Drag left or right; flick to keep it spinning.</p>
-    <div class="pass" id="pass"></div>
-    <p class="note" id="note" hidden></p>
-    <ul class="menu" id="menu" hidden></ul>
-    <p class="hours" id="hours" hidden>周一至周六 10:00–18:30 · 133-412 Willowgrove Square</p>
-    <button type="button" class="send" id="send" hidden>给家里人看</button>
+    <div class="meal-progress" aria-label="摆桌进度 · Table progress">
+      <div class="progress-main"><span>四道菜 <span lang="en">Dishes</span></span><span class="progress-dots" aria-hidden="true"><i></i><i></i><i></i><i></i></span><strong id="mainCount">0 / 4</strong></div>
+      <div class="progress-soup"><span>一碗汤 <span lang="en">Soup</span></span><span class="progress-dots" aria-hidden="true"><i></i></span><strong id="soupCount">0 / 1</strong></div>
+    </div>
+    <div class="play-layout">
+      <section class="table-stage" aria-label="摆放餐桌 · Your table">
+        <div class="table" id="table">
+          <div class="surface" id="surface" role="group" aria-label="餐桌。完成后可拖动或用左右方向键旋转。 Table. Drag or use arrow keys to rotate after serving.">
+            <div class="seat" data-seat="0" role="button" tabindex="0" aria-label="空菜盘 1 · Empty dish plate 1"><span class="seat-label" aria-hidden="true">菜 <span>Dish</span></span></div>
+            <div class="seat" data-seat="1" role="button" tabindex="0" aria-label="空菜盘 2 · Empty dish plate 2"><span class="seat-label" aria-hidden="true">菜 <span>Dish</span></span></div>
+            <div class="seat" data-seat="2" role="button" tabindex="0" aria-label="空菜盘 3 · Empty dish plate 3"><span class="seat-label" aria-hidden="true">菜 <span>Dish</span></span></div>
+            <div class="seat" data-seat="3" role="button" tabindex="0" aria-label="空菜盘 4 · Empty dish plate 4"><span class="seat-label" aria-hidden="true">菜 <span>Dish</span></span></div>
+            <div class="seat soup" data-seat="4" role="button" tabindex="0" aria-label="空汤碗 · Empty soup bowl"><span class="seat-label" aria-hidden="true">汤 <span>Soup</span></span></div>
+          </div>
+        </div>
+        <p class="turn-hint" id="turnHint" hidden>左右拖动桌面或按方向键旋转，甩动后会继续旋转。<span lang="en">Drag or use the arrow keys to turn. Flick to keep it spinning.</span></p>
+      </section>
+      <section class="serving-panel" aria-label="当前菜 · Current dish">
+        <div class="serving" id="serving">
+          <div class="current-label">当前菜 <span lang="en">Ready to serve</span></div>
+          <div class="pass" id="pass" aria-busy="true"></div>
+          <div class="serve-actions">
+            <button type="button" class="primary-action" id="placeCurrent" disabled><span>将这道菜上桌</span><span lang="en">Serve this dish</span></button>
+            <button type="button" class="secondary-action" id="nextDish" disabled><span>换一道</span><span lang="en">Next dish</span></button>
+          </div>
+          <p class="serving-tip">也可以点击空盘选择位置。<span lang="en">You can also tap an empty plate to choose a place.</span></p>
+        </div>
+        <div class="load-state" id="loadState" role="status"><p id="loadMessage">正在准备菜单。<span lang="en">Preparing the menu.</span></p><button type="button" class="text-action" id="retry" hidden>重载菜单 <span lang="en">Reload menu</span></button></div>
+        <p class="note" id="note" role="status" hidden></p>
+        <div class="completion" id="completion" hidden>
+          <h2 id="settle" tabindex="-1">今晚已经备好。<span id="settleEn" lang="en">Your table is ready.</span></h2>
+          <p class="menu-label">点击菜名查看做法。<span lang="en">Choose a dish to see the recipe.</span></p>
+          <ul class="menu" id="menu"></ul>
+          <div class="finish-actions"><button type="button" class="primary-action" id="send"><span>给家里人看</span><span lang="en">Share the table</span></button><button type="button" class="secondary-action" id="restart"><span>重新摆桌</span><span lang="en">Set it again</span></button></div>
+          <div class="share-fallback" id="shareFallback" hidden><label for="shareText">请复制以下菜单分享。<span lang="en">Select and copy this menu to share.</span></label><textarea id="shareText" readonly rows="8"></textarea></div>
+        </div>
+      </section>
+    </div>
+    <p class="hours" id="hours">东方超市 Eastern Market <span>周一至周六 Mon–Sat 10:00–18:30</span><span>133-412 Willowgrove Square · Saskatoon</span></p>
+    <p class="sr-only" id="announcement" aria-live="polite" aria-atomic="true"></p>
   </main>
-  <script src="js/table.js?v=6"></script>
 </body>
 </html>

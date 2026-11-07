@@ -27,11 +27,31 @@
       // Set the pill's clickable state + visual variant in one place.
       const setAction = (handler, variant) => {
         centerEl.onclick = handler || null;
+        centerEl.disabled = !handler;
+        centerEl.setAttribute('aria-busy', variant === 'working' ? 'true' : 'false');
         centerEl.classList.toggle('is-actionable', !!handler);
         centerEl.classList.toggle('is-warning', variant === 'warning');
+        centerEl.classList.toggle('is-working', variant === 'working');
       };
 
+      // Keep the action already requested visible until the farmer finishes.
+      // This also prevents repeated taps from re-enqueueing the same harvest.
+      if (Farm.farmer && Farm.farmer.doingFarmWork && Farm.farmer.doingFarmWork()) {
+        const actor = Farm.farmer._actor && Farm.farmer._actor();
+        const kind = actor && actor.job && actor.job.kind;
+        const labels = {
+          plant: ['农户正在种植', 'Planting crops'],
+          harvest: ['农户正在收获', 'Harvesting crops'],
+          water: ['农户正在浇水', 'Watering crops'],
+        };
+        const label = labels[kind] || ['农户正在前往地块', 'On the way to the plots'];
+        textEl.textContent = label[lang === 'en' ? 1 : 0];
+        setAction(null, 'working');
+        return;
+      }
+
       const plots = (Farm.state.data.plots || []).filter(p => p.unlocked && p.crop);
+      const emptyIdx = (Farm.state.data.plots || []).findIndex(p => p.unlocked && !p.crop);
       let matureCount = 0;
       let earliestRemaining = null;
       plots.forEach(plot => {
@@ -60,6 +80,14 @@
           textEl.textContent = Farm.i18n.t('harvest_status_ready', { n: matureCount });
           setAction(() => this.harvestAll(), 'ready');
         }
+      } else if (Farm.orders && Farm.orders.open &&
+          ((Farm.orders.fillableCount && Farm.orders.fillableCount()) ||
+           (Farm.orders.stapleReadyCount && Farm.orders.stapleReadyCount()))) {
+        textEl.textContent = lang === 'en' ? 'Deliver produce to Eastern Market' : '按东超订单交货';
+        setAction(() => Farm.orders.open(), 'ready');
+      } else if (emptyIdx >= 0 && Farm.shop && Farm.shop.openSeedPickerForPlot) {
+        textEl.textContent = lang === 'en' ? 'Choose seeds to plant' : '选择种子，种植菜地';
+        setAction(() => Farm.shop.openSeedPickerForPlot(emptyIdx), 'ready');
       } else if (earliestRemaining !== null) {
         if (this._signHintDue()) {
           this._renderSignHint(textEl, setAction, lang);
