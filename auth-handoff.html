@@ -12,9 +12,10 @@
 /* Session handoff receiver for the Eastern Market app iframe.
    The parent posts one one-time code. This page redeems it for a Firebase
    custom token on project eastern-market-members (same config and LOCAL
-   persistence as src/js/firebase-init.js) and leaves for /. The code is
-   held only in the request body — never in storage, cookies, or the URL.
-   Any other opener, origin, or failure leaves for / with no sign-in. */
+   persistence as src/js/firebase-init.js) and opens the farm game.
+   The code is held only in the request body — never in storage, cookies,
+   or the URL. A direct visit, a rejected message, or a redeem/sign-in
+   failure leaves for / with no sign-in, and tells the parent first. */
 (function () {
   var ALLOWED = [
     'https://easternmarket.ca',
@@ -47,6 +48,19 @@
     left = true;
     if (timer) clearTimeout(timer);
     window.location.replace('/');
+  }
+
+  function fail() {
+    if (left) return;
+    notify({ type: 'eastern-market-handoff-failed' });
+    leave();
+  }
+
+  function enterFarm() {
+    if (left) return;
+    left = true;
+    if (timer) clearTimeout(timer);
+    window.location.replace('/src/index.html');
   }
 
   function notify(msg) {
@@ -129,9 +143,9 @@
       if (!token) throw new Error('token');
       return signIn(token);
     }).then(function () {
-      leave();
+      enterFarm();
     }).catch(function () {
-      leave();
+      fail();
     });
   }
 
@@ -160,7 +174,7 @@
   window.addEventListener('message', onMessage);
   notify({ type: 'eastern-market-handoff-ready' });
   timer = setTimeout(function () {
-    if (!accepted) leave();
+    if (!accepted) fail();
   }, 8000);
 })();
 </script>
