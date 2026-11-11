@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<meta name="referrer" content="no-referrer">
+<title>东方农场 · Eastern Farm</title>
+</head>
+<body>
+<script>
+/* Session handoff receiver for the Eastern Market app iframe.
+   The parent posts one one-time code. This page redeems it for a Firebase
+   custom token on project eastern-market-members (same config and LOCAL
+   persistence as src/js/firebase-init.js) and opens the farm game.
+   The code is held only in the request body — never in storage, cookies,
+   or the URL. A direct visit, a rejected message, or a redeem/sign-in
+   failure leaves for / with no sign-in, and tells the parent first. */
+(function () {
+  var ALLOWED = [
+    'https://easternmarket.ca',
+    'https://www.easternmarket.ca',
+    'https://localhost',
+    'capacitor://localhost',
+    'http://localhost:5173'
+  ];
+  var REDEEM_URL = 'https://us-central1-eastern-market-members.cloudfunctions.net/redeemSessionHandoffCall';
+  var FIREBASE_CONFIG = {
+    apiKey: 'AIzaSyDDhVm_n_TyV2mtp517qUoLU4A9HB1k3No',
+    authDomain: 'eastern-market-members.firebaseapp.com',
+    projectId: 'eastern-market-members',
+    storageBucket: 'eastern-market-members.firebasestorage.app',
+    messagingSenderId: '515107029536',
+    appId: '1:515107029536:web:9f6caef22bae67aa5af245',
+    measurementId: 'G-9V0MS15QQ7'
+  };
+  var left = false;
+  var accepted = false;
+  var timer = 0;
+  var sdkPromise = null;
+
+  function allowedOrigin(origin) {
+    return ALLOWED.indexOf(origin) !== -1;
+  }
+
+  function leave() {
+    if (left) return;
+    left = true;
+    if (timer) clearTimeout(timer);
+    window.location.replace('/');
+  }
+
+  function fail() {
+    if (left) return;
+    notify({ type: 'eastern-market-handoff-failed' });
+    leave();
+  }
+
+  function enterFarm() {
+    if (left) return;
+    left = true;
+    if (timer) clearTimeout(timer);
+    window.location.replace('/src/index.html');
+  }
+
+  function notify(msg) {
+    for (var i = 0; i < ALLOWED.length; i++) {
+      try { window.parent.postMessage(msg, ALLOWED[i]); } catch (e) {}
+    }
+  }
+
+  function tokenFrom(json) {
+    if (!json || typeof json !== 'object') return '';
+    if (typeof json.customToken === 'string' && json.customToken) return json.customToken;
+    if (typeof json.token === 'string' && json.token) return json.token;
+    var result = json.result;
+    if (result && typeof result === 'object') {
+      if (typeof result.customToken === 'string' && result.customToken) return result.customToken;
+      if (typeof result.token === 'string' && result.token) return result.token;
+    }
+    return '';
+  }
+
+  function loadSdk() {
+    if (sdkPromise) return sdkPromise;
+    sdkPromise = new Promise(function (resolve, reject) {
+      var base = 'https://www.gstatic.com/firebasejs/10.14.1/';
+      var files = ['firebase-app-compat.js', 'firebase-auth-compat.js'];
+      var i = 0;
+      function next() {
+        if (typeof firebase !== 'undefined' && firebase.auth && i >= files.length) {
+          resolve();
+          return;
+        }
+        if (i >= files.length) {
+          if (typeof firebase !== 'undefined' && firebase.auth) resolve();
+          else reject(new Error('sdk'));
+          return;
+        }
+        var s = document.createElement('script');
+        s.src = base + files[i];
+        i += 1;
+        s.onload = next;
+        s.onerror = function () { reject(new Error('sdk')); };
+        (document.head || document.documentElement).appendChild(s);
+      }
+      next();
+    });
+    return sdkPromise;
+  }
+
+  function signIn(token) {
+    return loadSdk().then(function () {
+      if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+      var auth = firebase.auth();
+      return auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(function () {}).then(function () {
+        return auth.signInWithCustomToken(token);
+      });
+    });
+  }
+
+  function redeem(code) {
+    var payload = JSON.stringify({ code: code });
+    code = '';
+    var ac = typeof AbortController === 'function' ? new AbortController() : null;
+    var kill = setTimeout(function () { if (ac) ac.abort(); }, 8000);
+    fetch(REDEEM_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: payload,
+      credentials: 'omit',
+      cache: 'no-store',
+      redirect: 'error',
+      signal: ac ? ac.signal : undefined
+    }).then(function (res) {
+      clearTimeout(kill);
+      return res.json().then(function (json) {
+        if (!res.ok) throw new Error('http');
+        return json;
+      });
+    }).then(function (json) {
+      var token = tokenFrom(json);
+      if (!token) throw new Error('token');
+      return signIn(token);
+    }).then(function () {
+      enterFarm();
+    }).catch(function () {
+      fail();
+    });
+  }
+
+  function onMessage(ev) {
+    if (accepted || left) return;
+    if (!allowedOrigin(ev.origin)) return;
+    if (ev.source !== window.parent) return;
+    var data = ev.data;
+    if (!data || typeof data !== 'object' || data.type !== 'eastern-market-handoff') return;
+    var code = data.code;
+    if (typeof code !== 'string' || code.length < 1 || code.length > 2048) {
+      leave();
+      return;
+    }
+    accepted = true;
+    if (timer) clearTimeout(timer);
+    redeem(code);
+  }
+
+  if (window.parent === window) {
+    leave();
+    return;
+  }
+
+  loadSdk();
+  window.addEventListener('message', onMessage);
+  notify({ type: 'eastern-market-handoff-ready' });
+  timer = setTimeout(function () {
+    if (!accepted) fail();
+  }, 8000);
+})();
+</script>
+</body>
+</html>
